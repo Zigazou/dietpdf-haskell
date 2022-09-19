@@ -1,0 +1,160 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           dietpdf
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/zigazou/dietpdf#readme>
+homepage:       https://github.com/zigazou/dietpdf#readme
+bug-reports:    https://github.com/zigazou/dietpdf/issues
+author:         Frédéric BISSON
+maintainer:     zigazou@protonmail.com
+copyright:      2022 Frédéric BISSON
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/zigazou/dietpdf
+
+library
+  exposed-modules:
+      Codec.Compression.Flate
+      Codec.Compression.LZW
+      Codec.Compression.Predictor
+      Codec.Compression.RunLength
+      Codec.Compression.XML
+      Formatting.ByteStringFormatter
+      Pdf.Object.Collection
+      Pdf.Object.Container
+      Pdf.Object.Encode
+      Pdf.Object.Linearization
+      Pdf.Object.Object
+      Pdf.Object.Optimize
+      Pdf.Object.Partition
+      Pdf.Object.String
+      Pdf.Object.XRef
+      Pdf.Parser.Comment
+      Pdf.Parser.Container
+      Pdf.Parser.EmptyContent
+      Pdf.Parser.HexString
+      Pdf.Parser.IndirectObject
+      Pdf.Parser.Keyword
+      Pdf.Parser.LooseEndOfLine
+      Pdf.Parser.Name
+      Pdf.Parser.Number
+      Pdf.Parser.Parser
+      Pdf.Parser.Reference
+      Pdf.Parser.StartXRef
+      Pdf.Parser.String
+      Pdf.Parser.Trailer
+      Pdf.Parser.XRef
+      Util.Ascii
+      Util.ByteString
+      Util.Errors
+      Util.Name
+      Util.Number
+      Util.OrderedSet
+      Util.String
+  other-modules:
+      Paths_dietpdf
+  hs-source-dirs:
+      src
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe
+  build-depends:
+      base >=4.7 && <5
+    , binary
+    , binary-parsers
+    , bytestring
+    , containers
+    , formatting
+    , hopfli
+    , monad-loops
+    , mtl
+    , ordered-containers
+    , sort
+    , split
+    , text
+    , unordered-containers
+    , utf8-string
+    , xml
+    , zlib
+  default-language: Haskell2010
+
+executable dietpdf
+  main-is: Main.hs
+  other-modules:
+      Paths_dietpdf
+  hs-source-dirs:
+      app
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , bytestring
+    , dietpdf
+    , formatting
+    , optparse-applicative
+    , text
+  default-language: Haskell2010
+
+test-suite dietpdf-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Codec.Compression.FlateSpec
+      Codec.Compression.LZWSpec
+      Codec.Compression.PredictorSpec
+      Codec.Compression.RunLengthSpec
+      Codec.Compression.XMLSpec
+      Pdf.Object.ArraySpec
+      Pdf.Object.CollectionSpec
+      Pdf.Object.ContainerSpec
+      Pdf.Object.DictionarySpec
+      Pdf.Object.HexStringSpec
+      Pdf.Object.IndirectObjectSpec
+      Pdf.Object.LinearizationSpec
+      Pdf.Object.NameSpec
+      Pdf.Object.NumberSpec
+      Pdf.Object.OptimizeSpec
+      Pdf.Object.PartitionSpec
+      Pdf.Object.ReferenceSpec
+      Pdf.Object.StringSpec
+      Pdf.Object.XRefSpec
+      Pdf.Parser.ArraySpec
+      Pdf.Parser.CommentSpec
+      Pdf.Parser.DictionarySpec
+      Pdf.Parser.IndirectObjectSpec
+      Pdf.Parser.LooseEndOfLineSpec
+      Pdf.Parser.NameSpec
+      Pdf.Parser.NumberSpec
+      Pdf.Parser.StartXRefSpec
+      Pdf.Parser.StringSpec
+      Pdf.Parser.TrailerSpec
+      Pdf.Parser.XRefSpec
+      Util.ByteStringSpec
+      Util.NumberSpec
+      Util.OrderedSetSpec
+      Util.ParserHelper
+      Util.StringSpec
+      Paths_dietpdf
+  hs-source-dirs:
+      test
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      QuickCheck
+    , base >=4.7 && <5
+    , binary-parsers
+    , bytestring
+    , dietpdf
+    , extra
+    , hspec
+    , ordered-containers
+    , unordered-containers
+    , zlib
+  default-language: Haskell2010

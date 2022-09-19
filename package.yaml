@@ -1,0 +1,88 @@
+name:                dietpdf
+version:             0.1.0.0
+github:              "zigazou/dietpdf"
+license:             BSD3
+author:              "Frédéric BISSON"
+maintainer:          "zigazou@protonmail.com"
+copyright:           "2022 Frédéric BISSON"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub at <https://github.com/zigazou/dietpdf#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+ghc-options:
+- -fwrite-ide-info
+- -hiedir=.hie
+- -Weverything
+- -Wno-missing-safe-haskell-mode
+- -Wno-implicit-prelude
+- -Wno-prepositive-qualified-module
+- -Wno-all-missed-specialisations
+- -Wno-unsafe
+- -Wno-safe
+
+library:
+  source-dirs: src
+  dependencies:
+  - bytestring
+  - binary
+  - binary-parsers
+  - unordered-containers
+  - ordered-containers
+  - containers
+  - mtl
+  - monad-loops
+  - utf8-string
+  - split
+  - sort
+  - zlib
+  - hopfli
+  - text
+  - formatting
+  - xml
+
+executables:
+  dietpdf:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - bytestring
+    - optparse-applicative
+    - dietpdf
+    - text
+    - formatting
+
+tests:
+  dietpdf-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dietpdf
+    - hspec
+    - QuickCheck
+    - zlib
+    - bytestring
+    - unordered-containers
+    - ordered-containers
+    - extra
+    - binary-parsers
