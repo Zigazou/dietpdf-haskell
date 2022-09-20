@@ -21,14 +21,14 @@ changed on every scanline.
 -}
 module Codec.Compression.Predictor
   ( Predictor
-    ( TIFFNoPrediction
-    , TIFFPredictor2
+    ( PNGAverage
     , PNGNone
+    , PNGOptimum
+    , PNGPaeth
     , PNGSub
     , PNGUp
-    , PNGAverage
-    , PNGPaeth
-    , PNGOptimum
+    , TIFFNoPrediction
+    , TIFFPredictor2
     )
   , toPredictor
   , toWord8
@@ -39,11 +39,12 @@ module Codec.Compression.Predictor
   ) where
 
 import qualified Data.ByteString               as BS
+import           Data.Maybe                     ( fromMaybe )
 import           Data.Word                      ( Word8 )
 import           Util.ByteString                ( splitRaw )
 import           Util.Errors                    ( UnifiedError
-                                                  ( InvalidPredictor
-                                                  , InvalidNumberOfBytes
+                                                  ( InvalidNumberOfBytes
+                                                  , InvalidPredictor
                                                   )
                                                 )
 
@@ -126,16 +127,32 @@ The TIFF group is applied globally, it adds no data to the stream.
 isTIFFGroup :: Predictor -> Bool
 isTIFFGroup = not . isPNGGroup
 
+{- |
+A `Scanline` is a line of pixels.
+
+Each scanline may have an associated `Predictor` indicating the state in which
+the pixels are stored.
+-}
 data Scanline = Scanline
   { slPredictor :: Maybe Predictor
   , slStream    :: BS.ByteString
   }
 
+{- |
+An empty `Scanline` is used as a default `Scanline` when using PNG predictors
+`PNGUp`, `PNGAverage` and `PNGPaeth`.
+
+It’s just a serie of zero bytes.
+-}
 emptyScanline :: Int -> Scanline
 emptyScanline width = Scanline { slPredictor = Just TIFFNoPrediction
                                , slStream    = BS.pack $ replicate width 0
                                }
 
+{-|
+An image stream is a structure holding samples from an image stream while
+allowing easier handling when applying predictors.
+-}
 data ImageStream = ImageStream
   { iWidth            :: Int
   , iBitsPerComponent :: Int
@@ -143,6 +160,10 @@ data ImageStream = ImageStream
   , iLines            :: [Scanline]
   }
 
+{- |
+A `Samples` is a utilitary structure used to facilitate computations of
+predictors. It holds a sample and it’s 3 preceding samples.
+-}
 data Samples = Samples
   { sUpperLeft :: Word8
   , sAbove     :: Word8
@@ -150,14 +171,25 @@ data Samples = Samples
   , sCurrent   :: Word8
   }
 
+{- |
+A predictor function is a function taking samples as input and returning the
+resulting sample.
+-}
 type PredictorFunc = Samples -> Word8
 
+{- |
+The `PNGAverage` predictor needs to do average on a larger scale than a simple
+byte.
+-}
 average :: Word8 -> Word8 -> Word8
 average a b =
   let a', b' :: Int
       (a', b') = (fromIntegral a, fromIntegral b)
-  in  (fromIntegral . snd) (divMod (a' + b') 2)
+  in  (fromIntegral . fst) (divMod (a' + b') 2)
 
+{- |
+The Paeth algorithm needs this estimating function.
+-}
 paethBest :: Word8 -> Word8 -> Word8 -> Word8
 paethBest left above upperLeft =
   let estimate :: Int
@@ -172,6 +204,11 @@ paethBest left above upperLeft =
         then left
         else if distanceAbove <= distanceUpperLeft then above else upperLeft
 
+{- |
+Returns the predictor function for a specified `Predictor`.
+
+The function works on uncoded samples.
+-}
 predictF :: Predictor -> PredictorFunc
 predictF PNGNone    = sCurrent
 predictF PNGSub     = \s -> sCurrent s - sLeft s
@@ -181,6 +218,11 @@ predictF PNGPaeth =
   \s -> sCurrent s - paethBest (sLeft s) (sAbove s) (sUpperLeft s)
 predictF _anyOtherPredictor = sCurrent
 
+{- |
+Returns the un-predictor function for a specified `Predictor`.
+
+The function works on encoded samples.
+-}
 unpredictF :: Predictor -> PredictorFunc
 unpredictF PNGNone    = sCurrent
 unpredictF PNGSub     = \s -> sCurrent s + sLeft s
@@ -190,6 +232,9 @@ unpredictF PNGPaeth =
   \s -> sCurrent s + paethBest (sLeft s) (sAbove s) (sUpperLeft s)
 unpredictF _anyOtherPredictor = sCurrent
 
+{- |
+Given a `Predictor` and 2 consecutive `Scanline`, encode the last `Scanline`.
+-}
 applyPredictor :: Predictor -> (Scanline, Scanline) -> Scanline
 applyPredictor predictor (Scanline _ prior, Scanline _ current) = Scanline
   { slPredictor = Just predictor
@@ -204,6 +249,9 @@ applyPredictor predictor (Scanline _ prior, Scanline _ current) = Scanline
     fn (Samples upperLeft above left sample)
       : applyPredictor' fn (above, sample) remain
 
+{- |
+Encode an entire image stream using a specified `Predictor`
+-}
 predictImageStream :: Predictor -> ImageStream -> ImageStream
 predictImageStream predictor imgStm = imgStm
   { iPredictor = Just predictor
@@ -215,12 +263,20 @@ predictImageStream predictor imgStm = imgStm
   previousCurrent :: a -> [a] -> [(a, a)]
   previousCurrent previous currents = zip (previous : currents) currents
 
+{- |
+Given a `Predictor` and 2 consecutive `Scanline`, uncode the last `Scanline`.
+-}
 applyUnpredictor :: Predictor -> (Scanline, Scanline) -> Scanline
-applyUnpredictor predictor (Scanline _ prior, Scanline _ current) = Scanline
-  { slPredictor = Nothing
-  , slStream    = BS.pack
-    (applyUnpredictor' (unpredictF predictor) (0, 0) (BS.zip prior current))
-  }
+applyUnpredictor predictor (Scanline _ prior, Scanline linePredictor current) =
+  Scanline
+    { slPredictor = Nothing
+    , slStream    = BS.pack
+                      (applyUnpredictor'
+                        (unpredictF (fromMaybe predictor linePredictor))
+                        (0, 0)
+                        (BS.zip prior current)
+                      )
+    }
  where
   applyUnpredictor'
     :: PredictorFunc -> (Word8, Word8) -> [(Word8, Word8)] -> [Word8]
@@ -229,6 +285,9 @@ applyUnpredictor predictor (Scanline _ prior, Scanline _ current) = Scanline
     let decodedSample = fn (Samples upperLeft above left sample)
     in  decodedSample : applyUnpredictor' fn (above, decodedSample) remain
 
+{- |
+Decode an entire image stream using a specified `Predictor`
+-}
 unpredictImageStream :: Predictor -> ImageStream -> ImageStream
 unpredictImageStream predictor imgStm = imgStm
   { iPredictor = Nothing
@@ -241,6 +300,9 @@ unpredictImageStream predictor imgStm = imgStm
     let decodedLine = applyUnpredictor predictor (previous, current)
     in  decodedLine : unpredictScanlines decodedLine remain
 
+{- |
+Convert a `ByteString` to a `Scanline` according to a `Predictor`.
+-}
 fromPredictedLine :: Predictor -> BS.ByteString -> Either UnifiedError Scanline
 fromPredictedLine predictor raw
   | isPNGGroup predictor = do
@@ -250,6 +312,10 @@ fromPredictedLine predictor raw
   | otherwise = return
   $ Scanline { slPredictor = Just predictor, slStream = raw }
 
+{- |
+Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
+line width.
+-}
 fromPredictedStream
   :: Predictor -> Int -> BS.ByteString -> Either UnifiedError ImageStream
 fromPredictedStream predictor width raw = do
@@ -261,6 +327,9 @@ fromPredictedStream predictor width raw = do
                      , iLines            = scanlines
                      }
 
+{- |
+Convert an `ImageStream` to a `ByteString`.
+-}
 packStream :: ImageStream -> BS.ByteString
 packStream = BS.concat . fmap packScanline . iLines
  where
@@ -270,6 +339,9 @@ packStream = BS.concat . fmap packScanline . iLines
     | isPNGGroup predictor = BS.cons (toWord8 predictor) stream
     | otherwise            = stream
 
+{- |
+Convert an unpredicted `Bytestring` to an `ImageStream` given its line width.
+-}
 fromUnpredictedStream
   :: Int -> BS.ByteString -> Either UnifiedError ImageStream
 fromUnpredictedStream width raw = return ImageStream

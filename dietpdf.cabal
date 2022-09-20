@@ -30,6 +30,7 @@ library
       Codec.Compression.Predictor
       Codec.Compression.RunLength
       Codec.Compression.XML
+      Codec.Filter.ASCIIHex
       Formatting.ByteStringFormatter
       Pdf.Object.Collection
       Pdf.Object.Container

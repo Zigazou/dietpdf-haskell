@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE StrictData #-}
 
 {-|
 This modules implements several optimization techniques targeted at PDF objects.
@@ -8,40 +9,68 @@ module Pdf.Object.Optimize
   ( optimize
   ) where
 
-import qualified Data.HashMap.Strict           as HM
 import qualified Codec.Compression.Flate       as FL
-import qualified Codec.Compression.RunLength   as RL
 import qualified Codec.Compression.LZW         as LZ
+import qualified Codec.Compression.RunLength   as RL
 import           Codec.Compression.XML          ( optimizeXML )
 import qualified Data.ByteString               as BS
 import           Data.Foldable                  ( minimumBy )
+import qualified Data.HashMap.Strict           as HM
 import qualified Data.Sequence                 as SQ
+import           Pdf.Object.Container           ( deepMap )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
+                                                  ( PDFArray
                                                   , PDFDictionary
+                                                  , PDFIndirectObject
                                                   , PDFName
-                                                  , PDFArray
                                                   , PDFTrailer
+                                                  , PDFNull
                                                   )
                                                 , updateStream
                                                 )
 import           Pdf.Object.String              ( optimizeString )
-import           Pdf.Object.Container           ( deepMap )
-import           Util.Errors                    ( UnifiedError )
+import           Util.Errors                    ( UnifiedError
+                                                  ( InvalidFilterParm
+                                                  )
+                                                )
+
+data Filter = Filter
+  { fFilter      :: PDFObject
+  , fDecodeParms :: PDFObject
+  }
 
 unfilterStream
-  :: ([PDFObject], BS.ByteString)
-  -> Either UnifiedError ([PDFObject], BS.ByteString)
+  :: ([Filter], BS.ByteString) -> Either UnifiedError ([Filter], BS.ByteString)
 unfilterStream (filters@(pdfFilter : otherFilters), stream)
-  | pdfFilter == PDFName "FlateDecode"
+  | fFilter pdfFilter == PDFName "FlateDecode"
   = FL.decompress stream >>= unfilterStream . (otherFilters, )
-  | pdfFilter == PDFName "RLEDecode"
+  | fFilter pdfFilter == PDFName "RLEDecode"
   = RL.decompress stream >>= unfilterStream . (otherFilters, )
-  | pdfFilter == PDFName "LZWDecode"
+  | fFilter pdfFilter == PDFName "LZWDecode"
   = LZ.decompress stream >>= unfilterStream . (otherFilters, )
   | otherwise
   = Right (filters, stream)
 unfilterStream (filters, stream) = Right (filters, stream)
+
+getFilters :: PDFObject -> Either UnifiedError [Filter]
+getFilters (PDFDictionary dict) =
+  case (HM.lookup "Filter" dict, HM.lookup "DecodeParms" dict) of
+    (Just (  PDFArray fs), Just PDFNull      ) -> return $ group fs []
+    (Just (  PDFArray fs), Nothing           ) -> return $ group fs []
+    (Just (  PDFArray fs), Just (PDFArray ps)) -> return $ group fs ps
+    (Just (  PDFArray fs), Just object       ) -> return $ group fs [object]
+
+    (Just f@(PDFName  _ ), Just PDFNull      ) -> return $ group [f] []
+    (Just f@(PDFName  _ ), Nothing           ) -> return $ group [f] []
+    (Just f@(PDFName  _ ), Just (PDFArray ps)) -> return $ group [f] ps
+    (Just f@(PDFName  _ ), Just p            ) -> return $ group [f] [p]
+
+    (Nothing             , _                 ) -> return []
+    (_                   , _                 ) -> Left InvalidFilterParm
+ where
+  group :: [PDFObject] -> [PDFObject] -> [Filter]
+  group fs ps = zipWith Filter fs (ps ++ repeat PDFNull)
+getFilters _ = return []
 
 unfilter :: PDFObject -> Either UnifiedError PDFObject
 unfilter (PDFIndirectObject num gen (PDFDictionary dict) (Just stream)) = do
@@ -53,10 +82,7 @@ unfilter (PDFIndirectObject num gen (PDFDictionary dict) (Just stream)) = do
     (Just unfilteredStream)
  where
   unfiltered :: Either UnifiedError ([PDFObject], BS.ByteString)
-  unfiltered = unfilterStream $ case HM.lookup "Filter" dict of
-    Just aName@(PDFName  _      ) -> ([aName], stream)
-    Just (      PDFArray filters) -> (filters, stream)
-    _anyOtherSettings             -> ([], stream)
+  unfiltered = unfilterStream (getFilters dict, stream)
 unfilter object = return object
 
 eMinOrder
@@ -109,11 +135,20 @@ streamOptimize object@(PDFIndirectObject _ _ (PDFDictionary _) (Just stream))
   | otherwise          = return object
 streamOptimize object = return object
 
+{- |
+Completely refilter a stream by finding the best filter combination.
+
+It also optimized nested strings and XML streams.
+-}
 refilter :: PDFObject -> Either UnifiedError PDFObject
 refilter object@(PDFIndirectObject _ _ (PDFDictionary _) (Just _)) =
   unfilter (deepMap optimizeString object) >>= streamOptimize >>= filterOptimize
 refilter object = return (deepMap optimizeString object)
 
+{- |
+Determine if a `PDFObject` is optimizable, whether because its filters are
+known by DietPDF or because its structure is optimizable.
+-}
 optimizable :: PDFObject -> Bool
 optimizable (PDFIndirectObject _ _ (PDFDictionary dictionary) (Just _)) =
   case HM.lookup "Filter" dictionary of
@@ -122,9 +157,9 @@ optimizable (PDFIndirectObject _ _ (PDFDictionary dictionary) (Just _)) =
     Just (PDFName "LZWDecode"  ) -> True
     Nothing                      -> True
     _anyOtherFilter              -> False
-optimizable PDFIndirectObject {} = True
-optimizable PDFTrailer {} = True
-optimizable _ = False
+optimizable PDFIndirectObject{} = True
+optimizable PDFTrailer{}        = True
+optimizable _                   = False
 
 {- |
 Optimize a PDF object.

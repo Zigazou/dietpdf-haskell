@@ -7,30 +7,30 @@ This module helps with the handling of linearized PDF.
 module Pdf.Object.Linearization
   ( Linearization
     ( Linearization
-    , lnVersion
     , lnFileLength
-    , lnPrimaryHintOffset
-    , lnPrimaryHintLength
-    , lnOverflowHintOffset
-    , lnOverflowHintLength
-    , lnFirstPageObjectNumber
     , lnFirstPageEndOffset
-    , lnNumberOfPages
-    , lnXRefFirstEntryOffset
     , lnFirstPageNumber
+    , lnFirstPageObjectNumber
+    , lnNumberOfPages
+    , lnOverflowHintLength
+    , lnOverflowHintOffset
+    , lnPrimaryHintLength
+    , lnPrimaryHintOffset
+    , lnVersion
+    , lnXRefFirstEntryOffset
     )
   , getLinearization
   ) where
 
+import           Control.Monad                  ( msum )
 import qualified Data.HashMap.Strict           as HM
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFNumber
+                                                  ( PDFArray
+                                                  , PDFDictionary
                                                   , PDFIndirectObject
-                                                  , PDFArray
+                                                  , PDFNumber
                                                   )
                                                 )
-import           Control.Monad                  ( msum )
 
 data Linearization = Linearization
   { lnVersion               :: Double

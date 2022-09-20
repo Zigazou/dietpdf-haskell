@@ -46,6 +46,8 @@ data UnifiedError
   | InvalidPredictor Word8
   -- | Number of bytes is invalid according to the predictor (expected, actual)
   | InvalidNumberOfBytes Int Int
+  -- | Invalid combination of Filter and DecodeParms
+  | InvalidFilterParm
   deriving stock Eq
 
 errorType :: UnifiedError -> ErrorType
@@ -62,6 +64,7 @@ errorType (NotEnoughBytes _ _)       = ParsingError
 errorType InternalError              = ParsingError
 errorType (InvalidPredictor _      ) = ParsingError
 errorType (InvalidNumberOfBytes _ _) = ParsingError
+errorType InvalidFilterParm          = EncodingError
 
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
@@ -99,3 +102,5 @@ instance Show UnifiedError where
       , " bytes"
       ]
     )
+  show err@InvalidFilterParm =
+    show' err "Invalid combination of Filter and DecodeParms"
