@@ -26,6 +26,7 @@ module Pdf.Object.Object
     , PDFTrailer
     , PDFStartXRef
     )
+  , Dictionary
   , fromPDFObject
   , objectInfo
   , getValue
@@ -212,6 +213,8 @@ data XRefStmFieldType =
   | XRSFCompressedObject
   deriving stock (Eq, Show)
 
+type Dictionary = HM.HashMap BS.ByteString PDFObject
+
 {-|
 A PDF is a collection of objects, here named PDF objects.
 
@@ -239,7 +242,7 @@ data PDFObject
   | -- | An array containing a list of objects
     PDFArray [PDFObject]
   | -- | A dictionary containing key-value pairs
-    PDFDictionary (HM.HashMap BS.ByteString PDFObject)
+    PDFDictionary Dictionary
   | -- | An indirect object, object number, generation, object itself and stream
     PDFIndirectObject Int Int PDFObject (Maybe BS.ByteString)
   | -- | A boolean (true or false)

@@ -18,13 +18,14 @@ import           Data.Foldable                  ( minimumBy )
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Sequence                 as SQ
 import           Pdf.Object.Container           ( deepMap )
-import           Pdf.Object.Object              ( PDFObject
+import           Pdf.Object.Object              ( Dictionary
+                                                , PDFObject
                                                   ( PDFArray
                                                   , PDFDictionary
                                                   , PDFIndirectObject
                                                   , PDFName
-                                                  , PDFTrailer
                                                   , PDFNull
+                                                  , PDFTrailer
                                                   )
                                                 , updateStream
                                                 )
@@ -39,6 +40,9 @@ data Filter = Filter
   , fDecodeParms :: PDFObject
   }
 
+hasNoDecodeParms :: Filter -> Bool
+hasNoDecodeParms = (== PDFNull) . fDecodeParms
+
 unfilterStream
   :: ([Filter], BS.ByteString) -> Either UnifiedError ([Filter], BS.ByteString)
 unfilterStream (filters@(pdfFilter : otherFilters), stream)
@@ -52,8 +56,8 @@ unfilterStream (filters@(pdfFilter : otherFilters), stream)
   = Right (filters, stream)
 unfilterStream (filters, stream) = Right (filters, stream)
 
-getFilters :: PDFObject -> Either UnifiedError [Filter]
-getFilters (PDFDictionary dict) =
+getFilters :: Dictionary -> Either UnifiedError [Filter]
+getFilters dict =
   case (HM.lookup "Filter" dict, HM.lookup "DecodeParms" dict) of
     (Just (  PDFArray fs), Just PDFNull      ) -> return $ group fs []
     (Just (  PDFArray fs), Nothing           ) -> return $ group fs []
@@ -72,17 +76,45 @@ getFilters (PDFDictionary dict) =
   group fs ps = zipWith Filter fs (ps ++ repeat PDFNull)
 getFilters _ = return []
 
+setFilters :: [Filter] -> Maybe PDFObject
+setFilters []                           = Nothing
+setFilters [Filter aName@(PDFName _) _] = Just aName
+setFilters filters                      = Just (PDFArray $ fFilter <$> filters)
+
+setDecodeParms :: [Filter] -> Maybe PDFObject
+setDecodeParms []                      = Nothing
+setDecodeParms [Filter _ PDFNull     ] = Nothing
+setDecodeParms [Filter _ aDecodeParms] = Just aDecodeParms
+setDecodeParms filters | all hasNoDecodeParms filters = Nothing
+                       | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
+
+insertMaybe :: Dictionary -> BS.ByteString -> Maybe PDFObject -> Dictionary
+insertMaybe dict name (Just object) = HM.insert name object dict
+insertMaybe dict _    Nothing       = dict
+
+insertMaybes :: Dictionary -> [(BS.ByteString, Maybe PDFObject)] -> Dictionary
+insertMaybes dict [] = dict
+insertMaybes dict ((name, value) : remains) =
+  insertMaybes (insertMaybe dict name value) remains
+
 unfilter :: PDFObject -> Either UnifiedError PDFObject
 unfilter (PDFIndirectObject num gen (PDFDictionary dict) (Just stream)) = do
   (remainingFilters, unfilteredStream) <- unfiltered
   return $ PDFIndirectObject
     num
     gen
-    (PDFDictionary $ HM.insert "Filter" (PDFArray remainingFilters) dict)
+    ( PDFDictionary
+    $ (insertMaybes
+        dict
+        [ ("DecodeParms", setDecodeParms remainingFilters)
+        , ("Filter"     , setFilters remainingFilters)
+        ]
+      )
+    )
     (Just unfilteredStream)
  where
-  unfiltered :: Either UnifiedError ([PDFObject], BS.ByteString)
-  unfiltered = unfilterStream (getFilters dict, stream)
+  unfiltered :: Either UnifiedError ([Filter], BS.ByteString)
+  unfiltered = getFilters dict >>= \filters -> unfilterStream (filters, stream)
 unfilter object = return object
 
 eMinOrder

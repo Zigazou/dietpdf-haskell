@@ -30,7 +30,8 @@ library
       Codec.Compression.Predictor
       Codec.Compression.RunLength
       Codec.Compression.XML
-      Codec.Filter.ASCIIHex
+      Codec.Filter.Ascii85
+      Codec.Filter.AsciiHex
       Formatting.ByteStringFormatter
       Pdf.Object.Collection
       Pdf.Object.Container
@@ -59,6 +60,7 @@ library
       Util.Ascii
       Util.ByteString
       Util.Errors
+      Util.Hex
       Util.Name
       Util.Number
       Util.OrderedSet
@@ -139,6 +141,7 @@ test-suite dietpdf-test
       Pdf.Parser.TrailerSpec
       Pdf.Parser.XRefSpec
       Util.ByteStringSpec
+      Util.HexSpec
       Util.NumberSpec
       Util.OrderedSetSpec
       Util.ParserHelper
