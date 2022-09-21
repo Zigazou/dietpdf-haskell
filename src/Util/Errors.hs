@@ -9,9 +9,9 @@ long if then else if then else.
 module Util.Errors
   ( UnifiedError(..)
   ) where
+import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
-import           Data.Binary.Get                ( ByteOffset )
 
 data ErrorType = ParsingError | EncodingError deriving stock Eq
 
@@ -48,6 +48,8 @@ data UnifiedError
   | InvalidNumberOfBytes Int Int
   -- | Invalid combination of Filter and DecodeParms
   | InvalidFilterParm
+  -- | Invalid Ascii85 stream
+  | InvalidAscii85Stream String
   deriving stock Eq
 
 errorType :: UnifiedError -> ErrorType
@@ -62,7 +64,8 @@ errorType (FlateDecodeError _)       = ParsingError
 errorType LZWStopCodeNotFound        = ParsingError
 errorType (NotEnoughBytes _ _)       = ParsingError
 errorType InternalError              = ParsingError
-errorType (InvalidPredictor _      ) = ParsingError
+errorType (InvalidAscii85Stream _  ) = ParsingError
+errorType (InvalidPredictor     _  ) = ParsingError
 errorType (InvalidNumberOfBytes _ _) = ParsingError
 errorType InvalidFilterParm          = EncodingError
 
@@ -104,3 +107,5 @@ instance Show UnifiedError where
     )
   show err@InvalidFilterParm =
     show' err "Invalid combination of Filter and DecodeParms"
+  show err@(InvalidAscii85Stream msg) =
+    show' err ("Invalid Ascii85 stream: " ++ msg)

@@ -1,41 +1,42 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StrictData #-}
 module Main
   ( main
   ) where
 
+import           Control.Monad                  ( when )
 import qualified Data.ByteString               as BS
-import           Pdf.Parser.Parser              ( pdfParse )
-import           Formatting                     ( format
-                                                , (%)
+import qualified Data.Text.Lazy.IO             as T
+import           Formatting                     ( (%)
+                                                , format
                                                 , int
                                                 )
-import qualified Data.Text.Lazy.IO             as T
-import           Control.Monad                  ( when )
-import           Options.Applicative            ( Parser
-                                                , metavar
-                                                , help
-                                                , header
-                                                , progDesc
+import           Options.Applicative            ( (<**>)
+                                                , Parser
+                                                , argument
+                                                , command
+                                                , execParser
                                                 , fullDesc
+                                                , header
+                                                , help
                                                 , helper
                                                 , info
-                                                , execParser
-                                                , str
-                                                , (<**>)
-                                                , argument
-                                                , switch
                                                 , long
+                                                , metavar
+                                                , progDesc
                                                 , short
+                                                , str
                                                 , subparser
-                                                , command
+                                                , switch
                                                 )
-import           Pdf.Object.Encode              ( pdfEncode )
-import           Pdf.Object.Object              ( objectInfo )
+import           Pdf.Document.Encode            ( pdfEncode )
 import           Pdf.Object.Linearization       ( getLinearization )
+import           Pdf.Object.Object              ( objectInfo )
+import           Pdf.Parser.Parser              ( pdfParse )
 
 data DietPDFOptions
-  = OptimizeOptions !Bool !FilePath !FilePath
-  | InfoOptions !FilePath
+  = OptimizeOptions Bool FilePath FilePath
+  | InfoOptions FilePath
 
 dietPDFOptions :: Parser DietPDFOptions
 dietPDFOptions = subparser
@@ -68,7 +69,7 @@ runDietPDF (InfoOptions inputPDF) = do
       T.putStrLn $ format ("Found " % int % " objects") (length objects)
       mapM_ (T.putStrLn . objectInfo) objects
       case getLinearization objects of
-        Nothing -> T.putStrLn "PDF is not linearized"
+        Nothing            -> T.putStrLn "PDF is not linearized"
         Just linearization -> print linearization
 
 runDietPDF (OptimizeOptions verbose inputPDF outputPDF) = do
