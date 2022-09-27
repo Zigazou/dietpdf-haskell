@@ -35,15 +35,16 @@ library
       Formatting.ByteStringFormatter
       Pdf.Document.Encode
       Pdf.Document.ObjectStream
+      Pdf.Document.Parser
       Pdf.Document.XRef
       Pdf.Object.Collection
       Pdf.Object.Container
-      Pdf.Object.Encode
       Pdf.Object.Linearization
       Pdf.Object.Object
       Pdf.Object.Optimize
       Pdf.Object.Partition
       Pdf.Object.String
+      Pdf.Object.Unfilter
       Pdf.Object.XRef
       Pdf.Parser.Comment
       Pdf.Parser.Container
@@ -54,7 +55,6 @@ library
       Pdf.Parser.LooseEndOfLine
       Pdf.Parser.Name
       Pdf.Parser.Number
-      Pdf.Parser.Parser
       Pdf.Parser.Reference
       Pdf.Parser.StartXRef
       Pdf.Parser.String
@@ -96,6 +96,10 @@ library
 executable dietpdf
   main-is: Main.hs
   other-modules:
+      AppOptions
+      Extract
+      Info
+      Optimize
       Paths_dietpdf
   hs-source-dirs:
       app
@@ -119,6 +123,7 @@ test-suite dietpdf-test
       Codec.Compression.RunLengthSpec
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
+      Pdf.Document.ObjectStreamSpec
       Pdf.Object.ArraySpec
       Pdf.Object.CollectionSpec
       Pdf.Object.ContainerSpec

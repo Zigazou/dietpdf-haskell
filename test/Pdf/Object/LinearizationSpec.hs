@@ -10,7 +10,7 @@ import           Test.Hspec                     ( describe
                                                 )
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
-import           Pdf.Parser.Parser              ( pdfParse )
+import           Pdf.Document.Parser            ( pdfParse )
 import           Pdf.Object.Object              ( PDFObject )
 import           Pdf.Object.Linearization       ( Linearization
                                                   ( Linearization

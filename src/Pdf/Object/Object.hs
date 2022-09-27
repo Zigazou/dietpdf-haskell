@@ -20,6 +20,8 @@ module Pdf.Object.Object
     , PDFArray
     , PDFDictionary
     , PDFIndirectObject
+    , PDFIndirectObjectWithStream
+    , PDFObjectStream
     , PDFBool
     , PDFNull
     , PDFXRef
@@ -33,6 +35,7 @@ module Pdf.Object.Object
 
     -- * PDF indirect object
   , updateStream
+  , getStream
 
     -- * PDF characters
   , isDelimiter
@@ -87,6 +90,7 @@ import           Util.Number                    ( fromInt
 import           Util.String                    ( fromHexString
                                                 , fromString
                                                 )
+import           Util.Errors                    ( UnifiedError(NoStream) )
 
 {-|
 Test if a byte is a PDF delimiter.
@@ -215,6 +219,9 @@ data XRefStmFieldType =
 
 type Dictionary = HM.HashMap BS.ByteString PDFObject
 
+emptyDictionary :: Dictionary
+emptyDictionary = HM.fromList []
+
 {-|
 A PDF is a collection of objects, here named PDF objects.
 
@@ -243,8 +250,12 @@ data PDFObject
     PDFArray [PDFObject]
   | -- | A dictionary containing key-value pairs
     PDFDictionary Dictionary
-  | -- | An indirect object, object number, generation, object itself and stream
-    PDFIndirectObject Int Int PDFObject (Maybe BS.ByteString)
+  | -- | An indirect object, object number, generation, object itself
+    PDFIndirectObject Int Int PDFObject
+  | -- | An object stream, object number, generation, dictionary and stream
+    PDFIndirectObjectWithStream Int Int Dictionary BS.ByteString
+  | -- | An object stream, object number, generation, dictionary and stream
+    PDFObjectStream Int Int Dictionary BS.ByteString
   | -- | A boolean (true or false)
     PDFBool Bool
   | -- | A null value
@@ -258,42 +269,46 @@ data PDFObject
   deriving stock (Eq, Show)
 
 endsWithDelimiter :: PDFObject -> Bool
-endsWithDelimiter PDFComment{}        = True
-endsWithDelimiter PDFVersion{}        = True
-endsWithDelimiter PDFEndOfFile        = True
-endsWithDelimiter PDFNumber{}         = False
-endsWithDelimiter PDFKeyword{}        = False
-endsWithDelimiter PDFName{}           = False
-endsWithDelimiter PDFString{}         = True
-endsWithDelimiter PDFHexString{}      = True
-endsWithDelimiter PDFReference{}      = False
-endsWithDelimiter PDFArray{}          = True
-endsWithDelimiter PDFDictionary{}     = True
-endsWithDelimiter PDFIndirectObject{} = True
-endsWithDelimiter PDFBool{}           = False
-endsWithDelimiter PDFNull             = False
-endsWithDelimiter PDFXRef{}           = False
-endsWithDelimiter PDFTrailer{}        = True
-endsWithDelimiter PDFStartXRef{}      = True
+endsWithDelimiter PDFComment{}                  = True
+endsWithDelimiter PDFVersion{}                  = True
+endsWithDelimiter PDFEndOfFile                  = True
+endsWithDelimiter PDFNumber{}                   = False
+endsWithDelimiter PDFKeyword{}                  = False
+endsWithDelimiter PDFName{}                     = False
+endsWithDelimiter PDFString{}                   = True
+endsWithDelimiter PDFHexString{}                = True
+endsWithDelimiter PDFReference{}                = False
+endsWithDelimiter PDFArray{}                    = True
+endsWithDelimiter PDFDictionary{}               = True
+endsWithDelimiter PDFIndirectObject{}           = True
+endsWithDelimiter PDFIndirectObjectWithStream{} = True
+endsWithDelimiter PDFObjectStream{}             = True
+endsWithDelimiter PDFBool{}                     = False
+endsWithDelimiter PDFNull                       = False
+endsWithDelimiter PDFXRef{}                     = False
+endsWithDelimiter PDFTrailer{}                  = True
+endsWithDelimiter PDFStartXRef{}                = True
 
 startsWithDelimiter :: PDFObject -> Bool
-startsWithDelimiter PDFComment{}        = True
-startsWithDelimiter PDFVersion{}        = True
-startsWithDelimiter PDFEndOfFile        = True
-startsWithDelimiter PDFNumber{}         = False
-startsWithDelimiter PDFKeyword{}        = False
-startsWithDelimiter PDFName{}           = True
-startsWithDelimiter PDFString{}         = True
-startsWithDelimiter PDFHexString{}      = True
-startsWithDelimiter PDFReference{}      = False
-startsWithDelimiter PDFArray{}          = True
-startsWithDelimiter PDFDictionary{}     = True
-startsWithDelimiter PDFIndirectObject{} = False
-startsWithDelimiter PDFBool{}           = False
-startsWithDelimiter PDFNull             = False
-startsWithDelimiter PDFXRef{}           = False
-startsWithDelimiter PDFTrailer{}        = False
-startsWithDelimiter PDFStartXRef{}      = False
+startsWithDelimiter PDFComment{}                  = True
+startsWithDelimiter PDFVersion{}                  = True
+startsWithDelimiter PDFEndOfFile                  = True
+startsWithDelimiter PDFNumber{}                   = False
+startsWithDelimiter PDFKeyword{}                  = False
+startsWithDelimiter PDFName{}                     = True
+startsWithDelimiter PDFString{}                   = True
+startsWithDelimiter PDFHexString{}                = True
+startsWithDelimiter PDFReference{}                = False
+startsWithDelimiter PDFArray{}                    = True
+startsWithDelimiter PDFDictionary{}               = True
+startsWithDelimiter PDFIndirectObject{}           = False
+startsWithDelimiter PDFIndirectObjectWithStream{} = False
+startsWithDelimiter PDFObjectStream{}             = False
+startsWithDelimiter PDFBool{}                     = False
+startsWithDelimiter PDFNull                       = False
+startsWithDelimiter PDFXRef{}                     = False
+startsWithDelimiter PDFTrailer{}                  = False
+startsWithDelimiter PDFStartXRef{}                = False
 
 spaceIfNeeded :: PDFObject -> PDFObject -> BS.ByteString
 spaceIfNeeded object1 object2 | endsWithDelimiter object1   = ""
@@ -313,8 +328,12 @@ fromPDFObject (PDFReference number revision) =
   BS.concat [fromInt number, " ", fromInt revision, " R"]
 fromPDFObject (PDFArray      objects   ) = fromArray objects
 fromPDFObject (PDFDictionary dictionary) = fromDictionary dictionary
-fromPDFObject (PDFIndirectObject number revision object stream) =
-  fromIndirectObject number revision object stream
+fromPDFObject (PDFIndirectObject number revision object) =
+  fromIndirectObject number revision object
+fromPDFObject (PDFIndirectObjectWithStream number revision dict stream) =
+  fromIndirectObjectWithStream number revision dict stream
+fromPDFObject (PDFObjectStream number revision dict stream) =
+  fromIndirectObjectWithStream number revision dict stream
 fromPDFObject (PDFBool True ) = "true"
 fromPDFObject (PDFBool False) = "false"
 fromPDFObject PDFNull         = "null"
@@ -347,16 +366,31 @@ objectInfo (PDFDictionary dictionary) = case objectType dictionary of
                        value
                        (HM.size dictionary)
   Nothing -> format ("[dictionary:count=" % int % "]") (HM.size dictionary)
-objectInfo (PDFIndirectObject number revision object Nothing) = format
+objectInfo (PDFIndirectObject number revision object) = format
   ("object(" % int % "," % int % ")=" % text)
   number
   revision
   (objectInfo object)
-objectInfo (PDFIndirectObject number revision object (Just stream)) = format
+objectInfo (PDFIndirectObjectWithStream number revision dict stream) = format
   ("object(" % int % "," % int % ")=" % text % "+[stream:length=" % int % "]")
   number
   revision
-  (objectInfo object)
+  (objectInfo . PDFDictionary $ dict)
+  (BS.length stream)
+objectInfo (PDFObjectStream number revision object stream) = format
+  ( "objectstream("
+  % int
+  % ","
+  % int
+  % ")="
+  % text
+  % "+[stream:length="
+  % int
+  % "]"
+  )
+  number
+  revision
+  (objectInfo . PDFDictionary $ object)
   (BS.length stream)
 objectInfo (PDFBool True ) = "true"
 objectInfo (PDFBool False) = "false"
@@ -389,9 +423,8 @@ fromDictionary keyValues = BS.concat
   splitCouple ((key, value) : remains) =
     PDFName key : value : splitCouple remains
 
-fromIndirectObject
-  :: Int -> Int -> PDFObject -> Maybe BS.ByteString -> BS.ByteString
-fromIndirectObject number revision object Nothing = BS.concat
+fromIndirectObject :: Int -> Int -> PDFObject -> BS.ByteString
+fromIndirectObject number revision object = BS.concat
   [ BSU.fromString (show number)
   , " "
   , BSU.fromString (show revision)
@@ -401,33 +434,41 @@ fromIndirectObject number revision object Nothing = BS.concat
   , spaceIfNeeded object (PDFKeyword "endobj")
   , "endobj\n"
   ]
-fromIndirectObject number revision object (Just stream) = BS.concat
+
+fromIndirectObjectWithStream
+  :: Int -> Int -> Dictionary -> BS.ByteString -> BS.ByteString
+fromIndirectObjectWithStream number revision dict stream = BS.concat
   [ BSU.fromString (show number)
   , " "
   , BSU.fromString (show revision)
   , " obj"
-  , spaceIfNeeded (PDFKeyword "obj") object
-  , fromPDFObject object
-  , spaceIfNeeded object (PDFKeyword "stream")
+  , spaceIfNeeded (PDFKeyword "obj") (PDFDictionary emptyDictionary)
+  , fromDictionary dict
+  , spaceIfNeeded (PDFDictionary emptyDictionary) (PDFKeyword "stream")
   , "stream\n"
   , stream
   , "\nendstream"
   , " endobj\n"
   ]
 
+getStream :: PDFObject -> Either UnifiedError BS.ByteString
+getStream (PDFIndirectObjectWithStream _ _ _ stream) = return stream
+getStream (PDFObjectStream _ _ _ stream) = return stream
+getStream _ = Left $ NoStream ""
+
 updateStream :: PDFObject -> BS.ByteString -> PDFObject
-updateStream (PDFIndirectObject number revision (PDFDictionary dictionary) _) stream
-  = PDFIndirectObject number
-                      revision
-                      (PDFDictionary newDictionary)
-                      (Just stream)
+updateStream object newStream = case object of
+  (PDFIndirectObjectWithStream number revision dict _) ->
+    PDFIndirectObjectWithStream number revision (newDict dict) newStream
+  (PDFObjectStream number revision dict _) ->
+    PDFObjectStream number revision (newDict dict) newStream
+  _anyOtherObject -> object
  where
   newLength :: PDFObject
-  newLength = PDFNumber . fromIntegral . BS.length $ stream
+  newLength = PDFNumber . fromIntegral . BS.length $ newStream
 
-  newDictionary :: HM.HashMap BS.ByteString PDFObject
-  newDictionary = HM.adjust (const newLength) "Length" dictionary
-updateStream anyOtherObject _ = anyOtherObject
+  newDict :: Dictionary -> Dictionary
+  newDict = HM.adjust (const newLength) "Length"
 
 xrefCount :: PDFObject -> Int
 xrefCount (PDFXRef subsections) = foldl' (+) 0 $ xrssCount <$> subsections
@@ -443,8 +484,9 @@ objectType dictionary = case HM.lookup "Type" dictionary of
 
 -- | Get value in a dictionary from a `PDFObject`
 getValue :: BS.ByteString -> PDFObject -> Maybe PDFObject
-getValue name (PDFDictionary dictionary) = dictionary HM.!? name
-getValue name (PDFIndirectObject _ _ (PDFDictionary dictionary) _) =
-  dictionary HM.!? name
-getValue name (PDFTrailer (PDFDictionary dictionary)) = dictionary HM.!? name
+getValue name (PDFDictionary dict) = dict HM.!? name
+getValue name (PDFIndirectObjectWithStream _ _ dict _) = dict HM.!? name
+getValue name (PDFObjectStream _ _ dict _) = dict HM.!? name
+getValue name (PDFIndirectObject _ _ (PDFDictionary dict)) = dict HM.!? name
+getValue name (PDFTrailer (PDFDictionary dict)) = dict HM.!? name
 getValue _    _ = Nothing

@@ -75,7 +75,6 @@ getValueExamples =
           ]
         )
       )
-      Nothing
     , Nothing
     )
   , ( PDFIndirectObject
@@ -91,7 +90,6 @@ getValueExamples =
           ]
         )
       )
-      Nothing
     , Just $ PDFNumber 4.0
     )
   , ( PDFTrailer

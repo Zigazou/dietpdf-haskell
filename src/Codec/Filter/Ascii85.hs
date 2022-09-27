@@ -1,5 +1,48 @@
 {-# LANGUAGE OverloadedStrings #-}
--- | 
+{- |
+This module handles Ascii85 streams.
+
+The ASCII base-85 encoding shall use the ASCII characters ! through u
+((21h) - (75h)) and the character z (7Ah), with the 2-character sequence ~>
+(7Eh)(3Eh) as its EOD marker.
+
+All white-space characters are ignored.
+
+Any other characters, and any character sequences that represent impossible
+combinations in the ASCII base-85 encoding shall cause an error.
+
+Specifically, ASCII base-85 encoding shall produce 5 ASCII characters for
+every 4 bytes of binary data. Each group of 4 binary input bytes,
+shall be converted to a group of 5 output bytes.
+
+4 bytes of binary data shall be interpreted as a base-256 number and then shall
+be converted to a base-85 number.
+
+The five bytes of the base-85 number shall then be converted to ASCII
+characters by adding 33 (the ASCII code for the character ! ) to each.
+
+The resulting encoded data shall contain only printable ASCII characters with
+codes in the range 33 (!) to 117 (u). As a special case, if all five bytes are
+0, they shall be represented by the character with code 122 (z) instead of by
+five exclamation points (!!!!!).
+
+If the length of the data to be encoded is not a multiple of 4 bytes, the last,
+partial group of 4 shall be used to produce a last, partial group of 5 output
+characters.
+
+Given n (1, 2, or 3) bytes of binary data, the encoder shall first append 4-n
+zero bytes to make a complete group of 4. It shall encode this group in the
+usual way, but shall not apply the special z case. Finally, it shall write
+only the first n + 1 characters of the resulting group of 5.
+
+These characters shall be immediately followed by the ~> EOD marker.
+
+The following conditions shall never occur in a correctly encoded byte sequence:
+
+- The value represented by a group of 5 characters is greater than 2^32-1.
+- A z character occurs in the middle of a group.
+- A final partial group contains only one character.
+-}
 module Codec.Filter.Ascii85
   ( decode
   , encode
@@ -61,8 +104,7 @@ base256ToBase85 b1 b2 b3 b4 =
       c   = b1' * 16777216 + b2' * 65536 + b3' * 256 + b4'
   in  return
         . BS.pack
-        . fmap (+ asciiEXCLAMATIONMARK)
-        . fmap fromIntegral
+        . fmap ((+ asciiEXCLAMATIONMARK) . fromIntegral)
         $ baseN 5 85 c
 
 base85ToBase256
@@ -128,9 +170,19 @@ decodeAscii85P = label "ascii85" $ do
   return (BS.concat values)
 
 {-|
-Decode an Ascii85 stream.
+Decodes data encoded in an ASCII base-85 representation, reproducing the
+original binary data.
+
+>>> decode "87cURD_*#4DfTZ)+T~>"
+Right "Hello, World!"
+
+>>> decode "z~>"
+Right "\x00\x00\x00\x00"
 -}
-decode :: BS.ByteString -> Either UnifiedError BS.ByteString
+decode
+  :: BS.ByteString -- ^ Data to encode
+  -> Either UnifiedError BS.ByteString
+  -- ^ An `InvalidAscii85Stream` is returned if the stream is not valid
 decode stream = case parseOnly (decodeAscii85P <* endOfInput) stream of
   Left  msg     -> Left (InvalidAscii85Stream msg)
   Right decoded -> Right decoded
@@ -168,9 +220,20 @@ encodeAscii85P = label "ascii85" $ do
   return (BS.concat values)
 
 {-|
-Encode a bytestring to an Ascii85 stream.
+Encodes binary data in an ASCII base-85 representation.
+
+>>> encode "ABCDEFGHI"
+Right "5sdq,77Kd<8H~>"
+
+>>> encode "ABCDEFGHIJ"
+Right "5sdq,77Kd<8P/~>"
+
+>>> encode "ABCDEFGHIJK"
+Right "5sdq,77Kd<8P2V~z"
 -}
-encode :: BS.ByteString -> Either UnifiedError BS.ByteString
+encode
+  :: BS.ByteString -- ^ Data to encode
+  -> Either UnifiedError BS.ByteString
 encode stream = case parseOnly (encodeAscii85P <* endOfInput) stream of
   Left  msg     -> Left (InvalidAscii85Stream msg)
   Right encoded -> Right (BS.concat [encoded, "~>"])

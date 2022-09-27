@@ -14,6 +14,8 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFComment
                                                   , PDFDictionary
                                                   , PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFObjectStream
                                                   , PDFName
                                                   )
                                                 )
@@ -31,17 +33,16 @@ toPartitionExamples :: [([PDFObject], PDFPartition)]
 toPartitionExamples =
   [ ( [ PDFVersion "1.7"
       , PDFComment "foo"
-      , PDFIndirectObject 1 0 (PDFName "bar") Nothing
-      , PDFIndirectObject
-        4
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "foo")]))
-        (Just "abc")
-      , PDFIndirectObject
-        3
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "bar")]))
-        (Just "def")
+      , PDFIndirectObject 1 0 (PDFName "bar")
+      , PDFIndirectObjectWithStream 3
+                                    0
+                                    (HM.fromList [("Name", PDFName "bar")])
+                                    "def"
+      , PDFIndirectObjectWithStream 4
+                                    0
+                                    (HM.fromList [("Name", PDFName "foo")])
+                                    "abc"
+      , PDFObjectStream 5 0 (HM.fromList [("Name", PDFName "baz")]) "xyz"
       , PDFXRef []
       , PDFTrailer
         (PDFDictionary
@@ -51,17 +52,16 @@ toPartitionExamples =
       , PDFEndOfFile
       ]
     , PDFPartition
-      [ PDFIndirectObject 1 0 (PDFName "bar") Nothing
-      , PDFIndirectObject
-        4
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "foo")]))
-        (Just "abc")
-      , PDFIndirectObject
-        3
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "bar")]))
-        (Just "def")
+      [ PDFIndirectObject 1 0 (PDFName "bar")
+      , PDFIndirectObjectWithStream 3
+                                    0
+                                    (HM.fromList [("Name", PDFName "bar")])
+                                    "def"
+      , PDFIndirectObjectWithStream 4
+                                    0
+                                    (HM.fromList [("Name", PDFName "foo")])
+                                    "abc"
+      , PDFObjectStream 5 0 (HM.fromList [("Name", PDFName "baz")]) "xyz"
       ]
       [PDFVersion "1.7"]
       [ PDFTrailer

@@ -44,14 +44,17 @@ import           Data.Binary.Parser             ( Get
                                                 , word8
                                                 )
 import qualified Data.ByteString               as BS
-import           Data.HashMap.Strict            ( (!?) )
 import           Data.Word                      ( Word8 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFDictionary
                                                   , PDFNumber
+                                                  , PDFName
                                                   , PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFObjectStream
                                                   )
                                                 , isWhiteSpace
+                                                , getValue
                                                 )
 import           Pdf.Parser.Container           ( arrayP
                                                 , dictionaryP
@@ -131,14 +134,17 @@ indirectObjectP = label "indirectObject" $ do
   emptyContentP
   object <- itemP
   emptyContentP
-  stream <- case object of
-    PDFDictionary dictionary -> case dictionary !? "Length" of
-      Just (PDFNumber count) -> Just <$> streamWithCountP (round count)
-      Just _                 -> Just <$> streamWithoutCountP
-      Nothing                -> return Nothing
-    _anyOtherPDFObject -> return Nothing
+  stream <- case getValue "Length" object of
+    Just (PDFNumber count) -> Just <$> streamWithCountP (round count)
+    Just _                 -> Just <$> streamWithoutCountP
+    Nothing                -> return Nothing
 
   emptyContentP
   string "endobj"
 
-  return $ PDFIndirectObject objectNumber revisionNumber object stream
+  return $ case (getValue "Type" object, object, stream) of
+    (Just (PDFName "ObjStm"), PDFDictionary dict, Just s) ->
+      PDFObjectStream objectNumber revisionNumber dict s
+    (_, PDFDictionary dict, Just s) ->
+      PDFIndirectObjectWithStream objectNumber revisionNumber dict s
+    _anyOtherCase -> PDFIndirectObject objectNumber revisionNumber object

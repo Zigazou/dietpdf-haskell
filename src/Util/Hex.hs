@@ -49,11 +49,11 @@ fromHexDigits = BS.pack . fmap toHexByte . chunksOf 2 . BS.foldr toHexBytes []
   toHexBytes digit digits = case fromHexDigit digit of
     Just byte -> byte : digits
     Nothing   -> digits
-  
+
   toHexByte :: [Word8] -> Word8
   toHexByte [upper, lower] = upper * 16 + lower
-  toHexByte [upper] = upper * 16
-  toHexByte _ = 0
+  toHexByte [upper]        = upper * 16
+  toHexByte _              = 0
 
 toHexDigit :: Word8 -> Word8
 toHexDigit byte | byte < 10 = byte + asciiDIGITZERO

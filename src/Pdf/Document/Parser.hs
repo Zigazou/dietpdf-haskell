@@ -1,4 +1,4 @@
-module Pdf.Parser.Parser
+module Pdf.Document.Parser
   ( pdfParse
   ) where
 

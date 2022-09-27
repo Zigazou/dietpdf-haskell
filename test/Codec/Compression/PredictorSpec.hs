@@ -14,13 +14,10 @@ import           Codec.Compression.Predictor    ( predict
                                                 , unpredict
                                                 , Predictor
                                                   ( TIFFNoPrediction
-                                                  , TIFFPredictor2
                                                   , PNGNone
                                                   , PNGSub
                                                   , PNGUp
                                                   , PNGAverage
-                                                  , PNGPaeth
-                                                  , PNGOptimum
                                                   )
                                                 )
 

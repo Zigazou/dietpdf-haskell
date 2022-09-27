@@ -1,97 +1,63 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE LambdaCase #-}
 module Main
   ( main
   ) where
 
-import           Control.Monad                  ( when )
-import qualified Data.ByteString               as BS
-import qualified Data.Text.Lazy.IO             as T
-import           Formatting                     ( (%)
-                                                , format
-                                                , int
+import           Control.Monad                  ( guard
                                                 )
+import qualified Data.ByteString               as BS
 import           Options.Applicative            ( (<**>)
-                                                , Parser
-                                                , argument
-                                                , command
                                                 , execParser
                                                 , fullDesc
                                                 , header
-                                                , help
                                                 , helper
                                                 , info
-                                                , long
-                                                , metavar
                                                 , progDesc
-                                                , short
-                                                , str
-                                                , subparser
-                                                , switch
                                                 )
-import           Pdf.Document.Encode            ( pdfEncode )
-import           Pdf.Object.Linearization       ( getLinearization )
-import           Pdf.Object.Object              ( objectInfo )
-import           Pdf.Parser.Parser              ( pdfParse )
+import           Pdf.Object.Object              ( PDFObject )
+import           Pdf.Document.Parser            ( pdfParse )
+import           Control.Exception              ( tryJust )
+import           Util.Errors                    ( UnifiedError(UnableToOpenFile)
+                                                )
+import           System.IO.Error                ( isDoesNotExistError )
+import           AppOptions                     ( AppOptions
+                                                  ( OptimizeOptions
+                                                  , InfoOptions
+                                                  , ExtractOptions
+                                                  )
+                                                , appOptions
+                                                )
+import           Optimize                       ( optimize )
+import           Info                           ( showInfo )
+import           Extract                        ( extract )
 
-data DietPDFOptions
-  = OptimizeOptions Bool FilePath FilePath
-  | InfoOptions FilePath
+readPDF :: FilePath -> IO (Either UnifiedError [PDFObject])
+readPDF filename = do
+  bytesE <- tryJust (guard . isDoesNotExistError) (BS.readFile filename)
 
-dietPDFOptions :: Parser DietPDFOptions
-dietPDFOptions = subparser
-  (  command
-      "info"
-      (info
-        (   InfoOptions
-        <$> argument str (metavar "IN" <> help "PDF file to analyze")
-        )
-        (progDesc "Print information about a PDF file")
-      )
-  <> command
-       "optimize"
-       (info
-         (   OptimizeOptions
-         <$> switch (short 'v' <> long "verbose" <> help "Verbose output")
-         <*> argument str (metavar "IN" <> help "PDF file to process")
-         <*> argument str (metavar "OUT" <> help "PDF file to create")
-         )
-         (progDesc "Optimize a PDF file")
-       )
-  )
+  return $ case bytesE of
+    Left  _     -> Left UnableToOpenFile
+    Right bytes -> pdfParse bytes
 
-runDietPDF :: DietPDFOptions -> IO ()
-runDietPDF (InfoOptions inputPDF) = do
-  parsed <- pdfParse <$> BS.readFile inputPDF
-  case parsed of
+runApp :: AppOptions -> IO ()
+runApp (InfoOptions inputPDF) = readPDF inputPDF >>= \case
+  Left  err     -> print err
+  Right objects -> showInfo objects
+runApp (ExtractOptions objectNumber inputPDF) = readPDF inputPDF >>= \case
+  Left  err     -> print err
+  Right objects -> extract objectNumber objects
+runApp (OptimizeOptions verbose inputPDF outputPDF) =
+  readPDF inputPDF >>= \case
     Left  err     -> print err
-    Right objects -> do
-      T.putStrLn $ format ("Found " % int % " objects") (length objects)
-      mapM_ (T.putStrLn . objectInfo) objects
-      case getLinearization objects of
-        Nothing            -> T.putStrLn "PDF is not linearized"
-        Just linearization -> print linearization
-
-runDietPDF (OptimizeOptions verbose inputPDF outputPDF) = do
-  parsed <- pdfParse <$> BS.readFile inputPDF
-  case parsed of
-    Left err -> do
-      when verbose $ do
-        T.putStrLn "Unable to parse PDF file"
-      print err
-    Right objects -> do
-      when verbose $ do
-        T.putStrLn $ format ("Found " % int % " objects") (length objects)
-        mapM_ (T.putStrLn . objectInfo) objects
-      case pdfEncode objects of
-        Left  err -> print err
-        Right pdf -> BS.writeFile outputPDF pdf
+    Right objects -> optimize verbose objects outputPDF
 
 main :: IO ()
-main = runDietPDF =<< execParser opts
+main = runApp =<< execParser opts
  where
   opts = info
-    (dietPDFOptions <**> helper)
+    (appOptions <**> helper)
     (fullDesc <> progDesc "Reduce PDF file size or analyze PDF file" <> header
       "dietpdf - reduce PDF file size"
     )

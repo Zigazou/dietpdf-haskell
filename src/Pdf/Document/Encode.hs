@@ -16,6 +16,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFEndOfFile
                                                   , PDFNumber
                                                   , PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
                                                   , PDFStartXRef
                                                   , PDFTrailer
                                                   )
@@ -64,7 +65,9 @@ removeUnused :: [PDFObject] -> [PDFObject]
 removeUnused = filter noLinearized
  where
   noLinearized :: PDFObject -> Bool
-  noLinearized (PDFIndirectObject _ _ (PDFDictionary dictionary) _) =
+  noLinearized (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
+    isNothing $ dictionary HM.!? "Linearized"
+  noLinearized (PDFIndirectObjectWithStream _ _ dictionary _) =
     isNothing $ dictionary HM.!? "Linearized"
   noLinearized _ = True
 

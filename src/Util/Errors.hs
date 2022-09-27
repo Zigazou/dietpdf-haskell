@@ -1,5 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE InstanceSigs #-}
 {-|
 This module groups all the errors that DietPDF may generate.
 
@@ -8,20 +10,27 @@ long if then else if then else.
 -}
 module Util.Errors
   ( UnifiedError(..)
+  , putError
+  , putErrorLn
   ) where
 import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
+import           System.IO                      ( stderr )
 
-data ErrorType = ParsingError | EncodingError deriving stock Eq
+data ErrorType = ReadingError | ParsingError | EncodingError deriving stock Eq
 
 instance Show ErrorType where
+  show :: ErrorType -> String
+  show ReadingError  = "reading"
   show ParsingError  = "parsing"
   show EncodingError = "encoding"
 
 data UnifiedError
   -- | Parsing error (Remaining bytes, offset of the error and error message)
   = ParseError (BS.ByteString, ByteOffset, String)
+  -- | The PDF file cannot be opened
+  | UnableToOpenFile
   -- | The PDF file contains no indirect object
   | EncodeNoIndirectObject
   -- | The PDF file contains no version comment
@@ -50,10 +59,15 @@ data UnifiedError
   | InvalidFilterParm
   -- | Invalid Ascii85 stream
   | InvalidAscii85Stream String
+  -- | No stream
+  | NoStream String
+  -- | No object to encode
+  | NoObjectToEncode
   deriving stock Eq
 
 errorType :: UnifiedError -> ErrorType
 errorType (ParseError _)             = ParsingError
+errorType UnableToOpenFile           = ReadingError
 errorType EncodeNoIndirectObject     = EncodingError
 errorType EncodeNoVersion            = EncodingError
 errorType EncodeNoTrailer            = EncodingError
@@ -68,12 +82,16 @@ errorType (InvalidAscii85Stream _  ) = ParsingError
 errorType (InvalidPredictor     _  ) = ParsingError
 errorType (InvalidNumberOfBytes _ _) = ParsingError
 errorType InvalidFilterParm          = EncodingError
+errorType (NoStream _)               = ParsingError
+errorType NoObjectToEncode           = EncodingError
 
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
 
 instance Show UnifiedError where
+  show :: UnifiedError -> String
   show err@(ParseError (_, _, msg))         = show' err msg
+  show err@UnableToOpenFile                 = show' err "Unable to open file"
   show err@EncodeNoIndirectObject = show' err "No indirect object to encode"
   show err@EncodeNoVersion                  = show' err "No version to encode"
   show err@EncodeNoTrailer                  = show' err "No trailer to encode"
@@ -109,3 +127,11 @@ instance Show UnifiedError where
     show' err "Invalid combination of Filter and DecodeParms"
   show err@(InvalidAscii85Stream msg) =
     show' err ("Invalid Ascii85 stream: " ++ msg)
+  show err@(NoStream msg)   = show' err ("No stream: " ++ msg)
+  show err@NoObjectToEncode = show' err "No object to encode"
+
+putError :: BS.ByteString -> IO ()
+putError = BS.hPutStr stderr
+
+putErrorLn :: BS.ByteString -> IO ()
+putErrorLn msg = BS.hPutStr stderr msg >> BS.hPutStr stderr "\n"

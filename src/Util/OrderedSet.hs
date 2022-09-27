@@ -1,15 +1,9 @@
 module Util.OrderedSet
   ( fromMostRecents
-  -- , head
-  -- , last
   ) where
 
 import           Data.Foldable                  ( Foldable(foldl') )
 import qualified Data.Set.Ordered              as OS
-{- import           Prelude                 hiding ( head
-                                                , last
-                                                )
- -}
 {-
 head :: OS.OSet a -> Maybe a
 head set = OS.elemAt set 0

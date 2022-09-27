@@ -75,7 +75,7 @@ getNumberValue (Just (PDFNumber value)) = Just value
 getNumberValue _                        = Nothing
 
 extractLinearization :: PDFObject -> Maybe Linearization
-extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary) Nothing)
+extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary))
   = case dictionaryEntries of
     [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray [PDFNumber primaryOffset, PDFNumber primaryLength]), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
       -> Just Linearization

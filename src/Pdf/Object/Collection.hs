@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE InstanceSigs #-}
 {- |
 This module manipulates collections of `PDFObject`.
 
@@ -22,7 +23,11 @@ module Pdf.Object.Collection
 import qualified Data.ByteString               as BS
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Set.Ordered              as OS
-import           Pdf.Object.Object              ( PDFObject(PDFIndirectObject)
+import           Pdf.Object.Object              ( PDFObject
+                                                  ( PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFObjectStream
+                                                  )
                                                 , fromPDFObject
                                                 )
 import           Data.Maybe                     ( isJust )
@@ -46,12 +51,23 @@ data EncodedObject = EncodedObject
 type EncodedObjects = OS.OSet EncodedObject
 
 instance Ord EncodedObject where
+  compare :: EncodedObject -> EncodedObject -> Ordering
   compare (EncodedObject objNum1 _ _) (EncodedObject objNum2 _ _) =
     compare objNum1 objNum2
 
 -- | Encodes a PDF object and keep track of its number and length.
 encodeObject :: PDFObject -> EncodedObject
-encodeObject object@(PDFIndirectObject number _ _ _) = EncodedObject
+encodeObject object@(PDFIndirectObject number _ _) = EncodedObject
+  number
+  (BS.length bytes)
+  bytes
+  where bytes = fromPDFObject object
+encodeObject object@(PDFIndirectObjectWithStream number _ _ _) = EncodedObject
+  number
+  (BS.length bytes)
+  bytes
+  where bytes = fromPDFObject object
+encodeObject object@(PDFObjectStream number _ _ _) = EncodedObject
   number
   (BS.length bytes)
   bytes

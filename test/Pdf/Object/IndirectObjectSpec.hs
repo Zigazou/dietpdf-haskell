@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Pdf.Object.IndirectObjectSpec
   ( spec
-  )
-where
+  ) where
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
@@ -20,7 +19,7 @@ import           Test.Hspec                     ( Spec
 
 indirectObjectExamples :: [(PDFObject, BS.ByteString)]
 indirectObjectExamples =
-  [(PDFIndirectObject 1 0 (PDFNumber 1.0) Nothing, "1 0 obj 1 endobj\n")]
+  [(PDFIndirectObject 1 0 (PDFNumber 1.0), "1 0 obj 1 endobj\n")]
 
 spec :: Spec
 spec =
