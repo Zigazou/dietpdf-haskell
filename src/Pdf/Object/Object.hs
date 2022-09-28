@@ -1,6 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE InstanceSigs #-}
 {-|
 This module defines what is a PDF object and functions in relation with the
 PDF specification.
@@ -173,6 +174,13 @@ data XRefState
   | FreeEntry -- ^ Free entry
   deriving stock (Eq, Show)
 
+instance Ord XRefState where
+  compare :: XRefState -> XRefState -> Ordering
+  compare InUseEntry InUseEntry = EQ
+  compare FreeEntry  FreeEntry  = EQ
+  compare InUseEntry FreeEntry  = GT
+  compare FreeEntry  InUseEntry = LT
+
 -- | Entry in an XRef table (old format).
 data XRefEntry = XRefEntry
   { xreOffset     :: !Int
@@ -183,6 +191,11 @@ data XRefEntry = XRefEntry
     -- ^ State of the entry
   }
   deriving stock (Eq, Show)
+
+instance Ord XRefEntry where
+  compare :: XRefEntry -> XRefEntry -> Ordering
+  compare (XRefEntry xo xg xs) (XRefEntry yo yg ys) =
+    compare xo yo <> compare xg yg <> compare xs ys
 
 -- | Create an XRef entry with the `InUseEntry` state.
 inUseEntry :: Int -> Int -> XRefEntry
@@ -210,6 +223,11 @@ data XRefSubsection = XRefSubsection
     -- ^ Entries
   }
   deriving stock (Eq, Show)
+
+instance Ord XRefSubsection where
+  compare :: XRefSubsection -> XRefSubsection -> Ordering
+  compare (XRefSubsection xs xc xe) (XRefSubsection ys yc ye) =
+    compare xs ys <> compare xc yc <> compare xe ye
 
 data XRefStmFieldType =
     XRSFFreeEntry
@@ -266,7 +284,81 @@ data PDFObject
     PDFTrailer PDFObject
   | -- | A reference to an XRef table (offset from beginning of a PDF)
     PDFStartXRef Int
-  deriving stock (Eq, Show)
+  deriving stock Show
+
+instance Eq PDFObject where
+  (==) :: PDFObject -> PDFObject -> Bool
+  (PDFComment x)       == (PDFComment y)       = x == y
+  (PDFVersion _)       == (PDFVersion _)       = True
+  PDFEndOfFile         == PDFEndOfFile         = True
+  (PDFNumber    x    ) == (PDFNumber    y    ) = x == y
+  (PDFKeyword   x    ) == (PDFKeyword   y    ) = x == y
+  (PDFName      x    ) == (PDFName      y    ) = x == y
+  (PDFString    x    ) == (PDFString    y    ) = x == y
+  (PDFHexString x    ) == (PDFHexString y    ) = x == y
+  (PDFReference xn xr) == (PDFReference yn yr) = xn == yn && xr == yr
+  (PDFArray      x   ) == (PDFArray      y   ) = x == y
+  (PDFDictionary x   ) == (PDFDictionary y   ) = x == y
+  (PDFIndirectObject xn xr _) == (PDFIndirectObject yn yr _) =
+    xn == yn && xr == yr
+  (PDFIndirectObjectWithStream xn xr _ _) == (PDFIndirectObjectWithStream yn yr _ _)
+    = xn == yn && xr == yr
+  (PDFObjectStream xn xr _ _) == (PDFObjectStream yn yr _ _) =
+    xn == yn && xr == yr
+  (PDFBool x)      == (PDFBool y)      = x == y
+  PDFNull          == PDFNull          = True
+  (PDFXRef      x) == (PDFXRef      y) = x == y
+  (PDFTrailer   x) == (PDFTrailer   y) = x == y
+  (PDFStartXRef x) == (PDFStartXRef y) = x == y
+  _anyObjectA      == _anyObjectB      = False
+
+objectRank :: PDFObject -> Int
+objectRank (PDFVersion _)                = 0
+objectRank (PDFComment _)                = 1
+objectRank PDFNull                       = 2
+objectRank (PDFBool      _  )            = 3
+objectRank (PDFNumber    _  )            = 4
+objectRank (PDFKeyword   _  )            = 5
+objectRank (PDFName      _  )            = 6
+objectRank (PDFString    _  )            = 7
+objectRank (PDFHexString _  )            = 8
+objectRank (PDFReference _ _)            = 9
+objectRank (PDFArray      _ )            = 10
+objectRank (PDFDictionary _ )            = 11
+objectRank PDFIndirectObject{}           = 12
+objectRank PDFIndirectObjectWithStream{} = 13
+objectRank PDFObjectStream{}             = 14
+objectRank (PDFXRef      _)              = 15
+objectRank (PDFTrailer   _)              = 16
+objectRank (PDFStartXRef _)              = 17
+objectRank PDFEndOfFile                  = 18
+
+instance Ord PDFObject where
+  compare :: PDFObject -> PDFObject -> Ordering
+  compare (PDFComment x)   (PDFComment y)   = compare x y
+  compare (PDFVersion _)   (PDFVersion _)   = EQ
+  compare PDFEndOfFile     PDFEndOfFile     = EQ
+  compare (PDFNumber    x) (PDFNumber    y) = compare x y
+  compare (PDFKeyword   x) (PDFKeyword   y) = compare x y
+  compare (PDFName      x) (PDFName      y) = compare x y
+  compare (PDFString    x) (PDFString    y) = compare x y
+  compare (PDFHexString x) (PDFHexString y) = compare x y
+  compare (PDFReference xn xr) (PDFReference yn yr) =
+    compare xn yn <> compare xr yr
+  compare (PDFArray      x) (PDFArray      y) = compare x y
+  compare (PDFDictionary x) (PDFDictionary y) = compare x y
+  compare (PDFIndirectObject xn xr _) (PDFIndirectObject yn yr _) =
+    compare xn yn <> compare xr yr
+  compare (PDFIndirectObjectWithStream xn xr _ _) (PDFIndirectObjectWithStream yn yr _ _)
+    = compare xn yn <> compare xr yr
+  compare (PDFObjectStream xn xr _ _) (PDFObjectStream yn yr _ _) =
+    compare xn yn <> compare xr yr
+  compare (PDFBool x)      (PDFBool y)      = compare x y
+  compare PDFNull          PDFNull          = EQ
+  compare (PDFXRef      x) (PDFXRef      y) = compare x y
+  compare (PDFTrailer   x) (PDFTrailer   y) = compare x y
+  compare (PDFStartXRef x) (PDFStartXRef y) = compare x y
+  compare objectA objectB = compare (objectRank objectA) (objectRank objectB)
 
 endsWithDelimiter :: PDFObject -> Bool
 endsWithDelimiter PDFComment{}                  = True
