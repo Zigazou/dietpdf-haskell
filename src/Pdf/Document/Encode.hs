@@ -24,6 +24,9 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , xrefCount
                                                 , getValue
                                                 )
+import           Pdf.Document.Document          ( PDFDocument
+                                                , dFilter
+                                                )
 import           Pdf.Object.Partition           ( PDFPartition
                                                   ( ppHeads
                                                   , ppIndirectObjects
@@ -61,8 +64,8 @@ updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
   )
 updateTrailer _ _ object = object
 
-removeUnused :: [PDFObject] -> [PDFObject]
-removeUnused = filter noLinearized
+removeUnused :: PDFDocument -> PDFDocument
+removeUnused = dFilter noLinearized
  where
   noLinearized :: PDFObject -> Bool
   noLinearized (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
@@ -86,7 +89,7 @@ An error is signaled in the following cases:
 - no trailer in the list of PDF objects
 -}
 pdfEncode
-  :: [PDFObject] -- ^ A list of PDF objects (order matters)
+  :: PDFDocument -- ^ A list of PDF objects (order matters)
   -> Either UnifiedError BS.ByteString -- ^ A unified error or the bytestring
 pdfEncode objects
   | null (ppIndirectObjects partObjects) = Left EncodeNoIndirectObject

@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -33,6 +33,7 @@ library
       Codec.Filter.Ascii85
       Codec.Filter.AsciiHex
       Formatting.ByteStringFormatter
+      Pdf.Document.Document
       Pdf.Document.Encode
       Pdf.Document.ObjectStream
       Pdf.Document.Parser
@@ -45,7 +46,6 @@ library
       Pdf.Object.Partition
       Pdf.Object.String
       Pdf.Object.Unfilter
-      Pdf.Object.XRef
       Pdf.Parser.Comment
       Pdf.Parser.Container
       Pdf.Parser.EmptyContent
@@ -123,7 +123,9 @@ test-suite dietpdf-test
       Codec.Compression.RunLengthSpec
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
+      Pdf.Document.DocumentSpec
       Pdf.Document.ObjectStreamSpec
+      Pdf.Document.XRefSpec
       Pdf.Object.ArraySpec
       Pdf.Object.CollectionSpec
       Pdf.Object.ContainerSpec
@@ -137,7 +139,6 @@ test-suite dietpdf-test
       Pdf.Object.PartitionSpec
       Pdf.Object.ReferenceSpec
       Pdf.Object.StringSpec
-      Pdf.Object.XRefSpec
       Pdf.Parser.ArraySpec
       Pdf.Parser.CommentSpec
       Pdf.Parser.DictionarySpec

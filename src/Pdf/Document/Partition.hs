@@ -7,7 +7,7 @@
 -- This modules allows partitioning of PDF objects.
 --
 -- Partitioning is used when encoded a whole PDF file from PDF objects.
-module Pdf.Object.Partition
+module Pdf.Document.Partition
   ( PDFPartition(PDFPartition, ppIndirectObjects, ppHeads, ppTrailers)
   , toPartition
   , firstVersion
@@ -23,28 +23,33 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFNull
                                                   )
                                                 )
+import           Data.Foldable                  ( find )
+import           Data.Maybe                     ( fromMaybe )
+import           Pdf.Document.Document          ( PDFDocument
+                                                , singleton
+                                                )
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 data PDFPartition = PDFPartition
   { -- | Numbered objects in order of appearance
-    ppIndirectObjects :: [PDFObject]
+    ppIndirectObjects :: PDFDocument
   ,
     -- | PDF versions in order of appearance
-    ppHeads           :: [PDFObject]
+    ppHeads           :: PDFDocument
   ,
     -- | Trailers in reverse order of appearance
-    ppTrailers        :: [PDFObject]
+    ppTrailers        :: PDFDocument
   }
   deriving stock (Eq, Show)
 
 instance Semigroup PDFPartition where
   (<>) :: PDFPartition -> PDFPartition -> PDFPartition
   (<>) (PDFPartition n1 h1 t1) (PDFPartition n2 h2 t2) =
-    PDFPartition (n1 ++ n2) (h1 ++ h2) (t2 ++ t1)
+    PDFPartition (n1 <> n2) (h1 <> h2) (t2 <> t1)
 
 instance Monoid PDFPartition where
   mempty :: PDFPartition
-  mempty = PDFPartition [] [] []
+  mempty = PDFPartition mempty mempty mempty
 
 {-|
 Partition a single PDF object.
@@ -52,12 +57,14 @@ Partition a single PDF object.
 Partition of a list of PDF objects is done using monoid.
 -}
 toPartition :: PDFObject -> PDFPartition
-toPartition pno@PDFIndirectObject{} = PDFPartition [pno] [] []
-toPartition pno@PDFIndirectObjectWithStream{} = PDFPartition [pno] [] []
-toPartition pno@PDFObjectStream{} = PDFPartition [pno] [] []
-toPartition ph@(PDFVersion _) = PDFPartition [] [ph] []
-toPartition pt@(PDFTrailer _) = PDFPartition [] [] [pt]
-toPartition _                 = mempty
+toPartition pno@PDFIndirectObject{} =
+  PDFPartition (singleton pno) mempty mempty
+toPartition pno@PDFIndirectObjectWithStream{} =
+  PDFPartition (singleton pno) mempty mempty
+toPartition pno@PDFObjectStream{} = PDFPartition (singleton pno) mempty mempty
+toPartition ph@(PDFVersion _)     = PDFPartition mempty (singleton ph) mempty
+toPartition pt@(PDFTrailer _)     = PDFPartition mempty mempty (singleton pt)
+toPartition _                     = mempty
 
 {-|
 Return the first PDF version if any.
@@ -66,8 +73,11 @@ If the partition does not have a PDF version, it returns a default PDF
 version of 1.0.
 -}
 firstVersion :: PDFPartition -> PDFObject
-firstVersion (PDFPartition _ (ph@(PDFVersion _) : _) _) = ph
-firstVersion _anyOtherValue                             = PDFVersion "PDF-1.0"
+firstVersion = fromMaybe (PDFVersion "1.0") . find version . ppHeads
+ where
+  version :: PDFObject -> Bool
+  version (PDFVersion _) = True
+  version _              = False
 
 {-|
 Return the last trailer if any.
