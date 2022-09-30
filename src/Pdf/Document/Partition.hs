@@ -8,25 +8,25 @@
 --
 -- Partitioning is used when encoded a whole PDF file from PDF objects.
 module Pdf.Document.Partition
-  ( PDFPartition(PDFPartition, ppIndirectObjects, ppHeads, ppTrailers)
+  ( PDFPartition(PDFPartition, ppHeads, ppIndirectObjects, ppTrailers)
   , toPartition
   , firstVersion
   , lastTrailer
   ) where
 
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFVersion
-                                                  , PDFTrailer
-                                                  , PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
-                                                  , PDFNull
-                                                  )
-                                                )
 import           Data.Foldable                  ( find )
 import           Data.Maybe                     ( fromMaybe )
 import           Pdf.Document.Document          ( PDFDocument
                                                 , singleton
+                                                )
+import           Pdf.Object.Object              ( PDFObject
+                                                  ( PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFNull
+                                                  , PDFObjectStream
+                                                  , PDFTrailer
+                                                  , PDFVersion
+                                                  )
                                                 )
 
 -- | A partition separates numbered objects from PDF versions and trailers.
@@ -85,5 +85,8 @@ Return the last trailer if any.
 If the partition does not have a trailer, it returns an empty trailer.
 -}
 lastTrailer :: PDFPartition -> PDFObject
-lastTrailer (PDFPartition _ _ (pt@(PDFTrailer _) : _)) = pt
-lastTrailer _anyOtherValue                             = PDFTrailer PDFNull
+lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
+ where
+  trailer :: PDFObject -> Bool
+  trailer (PDFTrailer _) = True
+  trailer _              = False

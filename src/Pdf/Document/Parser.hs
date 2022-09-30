@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Document.Parser
   ( pdfParse
   ) where
@@ -8,10 +9,12 @@ import           Data.Binary.Parser             ( Get
                                                 , many'
                                                 , parseDetail
                                                 , satisfy
-                                                , sepBy
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
+import           Pdf.Document.Document          ( PDFDocument
+                                                , dSepBy
+                                                )
 import           Pdf.Object.Object              ( PDFObject
                                                 , isWhiteSpace
                                                 )
@@ -28,8 +31,8 @@ whiteSpaces = many' (satisfy isWhiteSpace)
 topObjectP :: Get PDFObject
 topObjectP = commentP <|> indirectObjectP <|> trailerP <|> xrefP <|> startXRefP
 
-pdfRawP :: Get [PDFObject]
-pdfRawP = label "pdf" $ topObjectP `sepBy` whiteSpaces
+pdfRawP :: Get PDFDocument
+pdfRawP = label "pdf" $ topObjectP `dSepBy` whiteSpaces
 
 {-|
 Parses a PDF from a bytestring.
@@ -39,7 +42,9 @@ returning errors.
 -}
 pdfParse
   :: BS.ByteString -- ^ The bytestring to parse coming from a file.
-  -> Either UnifiedError [PDFObject] -- ^ Error or a list of PDF objects.
+  -> Either UnifiedError PDFDocument -- ^ Error or a `PDFDocument`.
 pdfParse source = case parseDetail pdfRawP source of
-  Left  err            -> Left (ParseError err)
-  Right (_, _, result) -> Right result
+  Left  err                      -> Left (ParseError err)
+  Right (""    , _     , result) -> Right result
+  Right (remain, offset, _     ) -> Left
+    (ParseError (remain, offset, "Stopped to read at offset " ++ show offset))

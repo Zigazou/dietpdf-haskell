@@ -10,7 +10,6 @@ module Pdf.Document.Encode
 
 import qualified Data.ByteString               as BS
 import qualified Data.HashMap.Strict           as HM
-import qualified Data.Set.Ordered              as OS
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFDictionary
                                                   , PDFEndOfFile
@@ -22,12 +21,14 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 , fromPDFObject
                                                 , xrefCount
-                                                , getValue
+                                                , hasKey
                                                 )
 import           Pdf.Document.Document          ( PDFDocument
                                                 , dFilter
+                                                , findLast
+                                                , cMap
                                                 )
-import           Pdf.Object.Partition           ( PDFPartition
+import           Pdf.Document.Partition         ( PDFPartition
                                                   ( ppHeads
                                                   , ppIndirectObjects
                                                   , ppTrailers
@@ -42,14 +43,12 @@ import           Util.Errors                    ( UnifiedError
                                                   , EncodeNoTrailer
                                                   )
                                                 )
-import qualified Util.OrderedSet               as OS
 import           Pdf.Object.Optimize            ( optimize )
 import           Pdf.Document.XRef              ( calcOffsets
                                                 , xrefTable
                                                 )
 import           Data.Maybe                     ( isNothing )
-import           Pdf.Object.Collection          ( findLastValue
-                                                , encodeObject
+import           Pdf.Document.Collection        ( encodeObject
                                                 , eoBinaryData
                                                 )
 
@@ -74,8 +73,8 @@ removeUnused = dFilter noLinearized
     isNothing $ dictionary HM.!? "Linearized"
   noLinearized _ = True
 
-findRoot :: [PDFObject] -> Maybe PDFObject
-findRoot = findLastValue (getValue "Root")
+findRoot :: PDFDocument -> Maybe PDFObject
+findRoot = findLast (hasKey "Root")
 
 {-|
 Given a list of PDF objects, generate the PDF file content.
@@ -89,7 +88,7 @@ An error is signaled in the following cases:
 - no trailer in the list of PDF objects
 -}
 pdfEncode
-  :: PDFDocument -- ^ A list of PDF objects (order matters)
+  :: PDFDocument -- ^ A `PDFDocument` containing `PDFObject` (order matters)
   -> Either UnifiedError BS.ByteString -- ^ A unified error or the bytestring
 pdfEncode objects
   | null (ppIndirectObjects partObjects) = Left EncodeNoIndirectObject
@@ -98,15 +97,14 @@ pdfEncode objects
   | otherwise = Right
   $ BS.concat [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]
  where
-  partObjects = mconcat (toPartition <$> removeUnused objects)
+  partObjects = foldr ((<>) . toPartition) mempty (removeUnused objects)
   pdfTrailer  = lastTrailer partObjects
 
   pdfHead     = (fromPDFObject . firstVersion) partObjects
   pdfEnd      = fromPDFObject PDFEndOfFile
 
-  encodeds    = OS.fromMostRecents
-    (encodeObject . optimize <$> ppIndirectObjects partObjects)
-  body        = BS.concat $ eoBinaryData <$> OS.toAscList encodeds
+  encodeds    = cMap (encodeObject . optimize) (ppIndirectObjects partObjects)
+  body        = foldMap eoBinaryData encodeds
 
   xref        = xrefTable encodeds
   encodedXRef = fromPDFObject xref
@@ -118,9 +116,5 @@ pdfEncode objects
     (xrefCount xref)
     pdfTrailer
 
-  totalLength =
-    BS.length pdfHead
-      + BS.length body
-      + BS.length encodedXRef
-      + BS.length trailer
-  startxref = fromPDFObject (PDFStartXRef totalLength)
+  totalLength = BS.length pdfHead + BS.length body
+  startxref   = fromPDFObject (PDFStartXRef totalLength)

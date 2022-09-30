@@ -5,17 +5,18 @@ module Extract
   ) where
 
 import qualified Data.ByteString               as BS
+import           Data.List                      ( find )
+import           Pdf.Document.Document          ( PDFDocument )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObjectWithStream
+                                                  ( PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
                                                   , PDFObjectStream
-                                                  , PDFIndirectObject
                                                   )
                                                 )
-import           Data.List                      ( find )
 import           Pdf.Object.Unfilter            ( unfilter )
 import           Util.Errors                    ( putErrorLn )
 
-extract :: Int -> [PDFObject] -> IO ()
+extract :: Int -> PDFDocument -> IO ()
 extract objectNumber objects = do
   case find (objectWithNumber objectNumber) objects of
     Just object@PDFIndirectObjectWithStream{} -> case unfilter object of

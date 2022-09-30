@@ -4,29 +4,30 @@ module Pdf.Object.PartitionSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
+import qualified Data.HashMap.Strict           as HM
+import           Pdf.Document.Document          ( fromList )
+import           Pdf.Document.Partition         ( PDFPartition(PDFPartition)
+                                                , toPartition
+                                                )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFVersion
-                                                  , PDFEndOfFile
-                                                  , PDFXRef
-                                                  , PDFNumber
-                                                  , PDFStartXRef
-                                                  , PDFTrailer
-                                                  , PDFComment
+                                                  ( PDFComment
                                                   , PDFDictionary
+                                                  , PDFEndOfFile
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
                                                   , PDFName
+                                                  , PDFNumber
+                                                  , PDFObjectStream
+                                                  , PDFStartXRef
+                                                  , PDFTrailer
+                                                  , PDFVersion
+                                                  , PDFXRef
                                                   )
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
                                                 , shouldBe
-                                                )
-import qualified Data.HashMap.Strict           as HM
-import           Pdf.Object.Partition           ( toPartition
-                                                , PDFPartition(PDFPartition)
                                                 )
 
 toPartitionExamples :: [([PDFObject], PDFPartition)]
@@ -52,23 +53,28 @@ toPartitionExamples =
       , PDFEndOfFile
       ]
     , PDFPartition
-      [ PDFIndirectObject 1 0 (PDFName "bar")
-      , PDFIndirectObjectWithStream 3
-                                    0
-                                    (HM.fromList [("Name", PDFName "bar")])
-                                    "def"
-      , PDFIndirectObjectWithStream 4
-                                    0
-                                    (HM.fromList [("Name", PDFName "foo")])
-                                    "abc"
-      , PDFObjectStream 5 0 (HM.fromList [("Name", PDFName "baz")]) "xyz"
-      ]
-      [PDFVersion "1.7"]
-      [ PDFTrailer
-          (PDFDictionary
-            (HM.fromList [("Size", PDFNumber 2000.0), ("Root", PDFNumber 1.0)])
-          )
-      ]
+      (fromList
+        [ PDFIndirectObject 1 0 (PDFName "bar")
+        , PDFIndirectObjectWithStream 3
+                                      0
+                                      (HM.fromList [("Name", PDFName "bar")])
+                                      "def"
+        , PDFIndirectObjectWithStream 4
+                                      0
+                                      (HM.fromList [("Name", PDFName "foo")])
+                                      "abc"
+        , PDFObjectStream 5 0 (HM.fromList [("Name", PDFName "baz")]) "xyz"
+        ]
+      )
+      (fromList [PDFVersion "1.7"])
+      (fromList
+        [ PDFTrailer
+            (PDFDictionary
+              (HM.fromList [("Size", PDFNumber 2000.0), ("Root", PDFNumber 1.0)]
+              )
+            )
+        ]
+      )
     )
   ]
 

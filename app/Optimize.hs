@@ -11,12 +11,11 @@ import           Formatting                     ( (%)
                                                 , format
                                                 , int
                                                 )
+import           Pdf.Document.Document          ( PDFDocument )
 import           Pdf.Document.Encode            ( pdfEncode )
-import           Pdf.Object.Object              ( objectInfo
-                                                , PDFObject
-                                                )
+import           Pdf.Object.Object              ( objectInfo )
 
-optimize :: Bool -> [PDFObject] -> FilePath -> IO ()
+optimize :: Bool -> PDFDocument -> FilePath -> IO ()
 optimize verbose objects outputPDF = do
   when verbose $ do
     T.putStrLn $ format ("Found " % int % " objects") (length objects)

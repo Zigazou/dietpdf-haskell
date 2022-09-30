@@ -17,26 +17,15 @@ import qualified Data.HashMap.Strict           as HM
 import           Data.Ix                        ( range
                                                 , rangeSize
                                                 )
-import qualified Data.Set.Ordered              as OS
 import           Data.Sort                      ( sort )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFIndirectObject
-                                                  , PDFEndOfFile
-                                                  , PDFNumber
-                                                  , PDFIndirectObject
-                                                  , PDFStartXRef
-                                                  , PDFTrailer
-                                                  , PDFXRef
+                                                  ( PDFXRef
                                                   )
                                                 , XRefSubsection(XRefSubsection)
                                                 , freeEntry
-                                                , fromPDFObject
                                                 , inUseEntry
-                                                , xrefCount
-                                                , getValue
                                                 )
-import           Pdf.Object.Collection          ( PDFObjects
+import           Pdf.Document.Collection         ( PDFObjects
                                                 , EncodedObjects
                                                 , ObjectOffsets
                                                 , EncodedObject
@@ -45,11 +34,11 @@ import           Pdf.Object.Collection          ( PDFObjects
                                                   )
                                                 , encodeObject
                                                 )
-
+import Pdf.Document.Document (toList)
 
 -- | Given a collection of encoded objects, calculates their offsets
 calcOffsets :: EncodedObjects -> ObjectOffsets
-calcOffsets = snd . calcOffset . sort . OS.toAscList
+calcOffsets = snd .  calcOffset . sort . toList
  where
   calcOffset :: [EncodedObject] -> (Int, ObjectOffsets)
   calcOffset = foldl'
@@ -60,7 +49,7 @@ calcOffsets = snd . calcOffset . sort . OS.toAscList
 
 -- | Given a collection of encoded objects, generates an old format XRef table
 xrefTable :: EncodedObjects -> PDFObject
-xrefTable objects | OS.null objects = PDFXRef []
+xrefTable objects | objects == mempty = PDFXRef []
                   | otherwise       = PDFXRef [xrefSubsection]
  where
   offsets  = calcOffsets objects

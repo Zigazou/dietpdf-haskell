@@ -25,35 +25,38 @@ module Pdf.Document.ObjectStream
   , isObjectStreamable
   ) where
 
-import qualified Data.HashMap.Strict           as HM
-import qualified Data.ByteString               as BS
-import           Util.Number                    ( fromInt )
 import           Control.Applicative            ( (<|>) )
 import           Data.Binary.Parser             ( Get
                                                 , isDigit
-                                                , takeWhile1
-                                                , parseOnly
                                                 , many'
+                                                , parseOnly
                                                 , skipWhile
+                                                , takeWhile1
                                                 )
-import           Pdf.Object.Object              ( PDFObject
+import qualified Data.ByteString               as BS
+import qualified Data.HashMap.Strict           as HM
+import           Util.Number                    ( fromInt )
+
+import           Pdf.Document.Document          ( PDFDocument
+                                                , dFilter
+                                                , fromList
+                                                , singleton
+                                                )
+import           Pdf.Object.Object              ( Dictionary
+                                                , PDFObject
                                                   ( PDFIndirectObject
-                                                  , PDFObjectStream
                                                   , PDFName
                                                   , PDFNumber
+                                                  , PDFObjectStream
                                                   )
-                                                , Dictionary
+                                                , fromPDFObject
                                                 , getStream
                                                 , isWhiteSpace
-                                                , fromPDFObject
                                                 )
 
+import           Control.Monad                  ( forM )
+import           Data.Functor                   ( (<&>) )
 import           Pdf.Object.Unfilter            ( unfilter )
-import           Util.Errors                    ( UnifiedError
-                                                  ( ParseError
-                                                  , NoObjectToEncode
-                                                  )
-                                                )
 import           Pdf.Parser.Container           ( arrayP
                                                 , dictionaryP
                                                 )
@@ -64,8 +67,11 @@ import           Pdf.Parser.Number              ( numberP )
 import           Pdf.Parser.Reference           ( referenceP )
 import           Pdf.Parser.String              ( stringP )
 import           Util.Ascii                     ( asciiDIGITZERO )
-import           Data.Functor                   ( (<&>) )
-import           Control.Monad                  ( forM )
+import           Util.Errors                    ( UnifiedError
+                                                  ( NoObjectToEncode
+                                                  , ParseError
+                                                  )
+                                                )
 
 data ObjectStream = ObjectStream
   { osCount   :: Int
@@ -113,13 +119,14 @@ parseObjectNumberOffsets indices =
     Left  err    -> Left (ParseError ("", 0, err))
     Right result -> Right result
 
-extractObjects :: ObjectStream -> Either UnifiedError [PDFObject]
+extractObjects :: ObjectStream -> Either UnifiedError PDFDocument
 extractObjects (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
-  forM numOffsets $ \(objectNumber, offset) -> do
+  exploded <- forM numOffsets $ \(objectNumber, offset) -> do
     case parseOnly itemP (BS.drop offset objects) of
       Left  msg    -> Left $ ParseError ("", fromIntegral offset, msg)
       Right object -> return $ PDFIndirectObject objectNumber 0 object
+  return $ fromList exploded
 
 getObjectStream :: PDFObject -> Either UnifiedError (Maybe ObjectStream)
 getObjectStream object@(PDFObjectStream _ _ dict _) = do
@@ -153,19 +160,19 @@ If the `PDFObject` contains no object stream, an empty list is returned.
 -}
 extract
   :: PDFObject -- ^ A `PDFIndirectObject` of type /ObjStm with a stream
-  -> Either UnifiedError [PDFObject]
+  -> Either UnifiedError PDFDocument
 extract object = getObjectStream object >>= \case
-  Nothing     -> return []
+  Nothing     -> return mempty
   Just objStm -> extractObjects objStm
 
-explode :: [PDFObject] -> [PDFObject]
-explode = foldr explode' []
+explode :: PDFDocument -> PDFDocument
+explode = foldr explode' mempty
  where
-  explode' :: PDFObject -> [PDFObject] -> [PDFObject]
+  explode' :: PDFObject -> PDFDocument -> PDFDocument
   explode' objstm@PDFObjectStream{} result = case extract objstm of
-    Left  _       -> result ++ [objstm]
-    Right objects -> result ++ objects
-  explode' object result = result ++ [object]
+    Left  _       -> result <> singleton objstm
+    Right objects -> result <> objects
+  explode' object result = result <> singleton object
 
 {- |
 Tells if a `PDFObject` may be embedded in an object stream.
@@ -192,7 +199,7 @@ appendObject objStm (PDFIndirectObject num _ object) = ObjectStream
   newObjects = BS.concat [osObjects objStm, fromPDFObject object, " "]
 appendObject objStm _ = objStm
 
-insertObjects :: [PDFObject] -> ObjectStream
+insertObjects :: PDFDocument -> ObjectStream
 insertObjects = foldl appendObject emptyObjectStream
 
 dropLastByte :: BS.ByteString -> BS.ByteString
@@ -206,14 +213,14 @@ Object which are not streamable are simply ignored.
 The object stream is uncompressed. It can be compressed later.
 -}
 insert
-  :: [PDFObject] -- ^ List of `PDFObject` to embed in the object stream
+  :: PDFDocument -- ^ A `CollectionOf` `PDFObject` to embed in the object stream
   -> Int -- ^ The number of the resulting `PDFObjectStream`
   -> Either UnifiedError PDFObject
-insert [] _ = Left NoObjectToEncode
-insert objects num | osCount objStm == 0 = Left NoObjectToEncode
+insert objects num | objects == mempty = Left NoObjectToEncode
+                   | osCount objStm == 0 = Left NoObjectToEncode
                    | otherwise = return $ PDFObjectStream num 0 dict stream
  where
-  objStm = insertObjects (filter isObjectStreamable objects)
+  objStm = insertObjects (dFilter isObjectStreamable objects)
   dict :: Dictionary
   dict = HM.fromList
     [ ("Type" , PDFName "ObjStm")

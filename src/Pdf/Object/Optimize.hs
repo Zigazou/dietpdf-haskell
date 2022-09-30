@@ -20,15 +20,16 @@ import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
                                                   , PDFName
+                                                  , PDFObjectStream
                                                   , PDFTrailer
                                                   )
+                                                , setValue
                                                 , updateStream
                                                 )
 import           Pdf.Object.String              ( optimizeString )
-import           Util.Errors                    ( UnifiedError )
 import           Pdf.Object.Unfilter            ( unfilter )
+import           Util.Errors                    ( UnifiedError )
 
 eMinOrder
   :: (a, Either b BS.ByteString) -> (a, Either b BS.ByteString) -> Ordering
@@ -54,20 +55,18 @@ rleZopfli stream =
   )
 
 filterOptimize :: PDFObject -> Either UnifiedError PDFObject
-filterOptimize (PDFIndirectObjectWithStream num gen dict stream) = do
+filterOptimize object@(PDFIndirectObjectWithStream _ _ _ stream) = do
   let (bestFilters, bestStream) = minimumBy
         eMinOrder
         (SQ.fromList [zopfli stream, rle stream, rleZopfli stream])
-  PDFIndirectObjectWithStream
-      num
-      gen
-      (HM.insert "Filter" (reduceArray bestFilters) dict)
+  updateStream (setValue "Filter" (reduceArray bestFilters) object)
     <$> bestStream
-filterOptimize (PDFObjectStream num gen dict stream) = do
+
+filterOptimize object@(PDFObjectStream _ _ _ stream) = do
   let (bestFilters, bestStream) = minimumBy
         eMinOrder
         (SQ.fromList [zopfli stream, rle stream, rleZopfli stream])
-  PDFObjectStream num gen (HM.insert "Filter" (reduceArray bestFilters) dict)
+  updateStream (setValue "Filter" (reduceArray bestFilters) object)
     <$> bestStream
 
 filterOptimize object = return object

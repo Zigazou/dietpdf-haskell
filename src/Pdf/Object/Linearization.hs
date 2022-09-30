@@ -24,6 +24,9 @@ module Pdf.Object.Linearization
 
 import           Control.Monad                  ( msum )
 import qualified Data.HashMap.Strict           as HM
+import           Pdf.Document.Document          ( PDFDocument
+                                                , lMap
+                                                )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
                                                   , PDFDictionary
@@ -75,8 +78,8 @@ getNumberValue (Just (PDFNumber value)) = Just value
 getNumberValue _                        = Nothing
 
 extractLinearization :: PDFObject -> Maybe Linearization
-extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary))
-  = case dictionaryEntries of
+extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
+  case dictionaryEntries of
     [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray [PDFNumber primaryOffset, PDFNumber primaryLength]), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
       -> Just Linearization
         { lnVersion               = version
@@ -115,8 +118,8 @@ extractLinearization _ = Nothing
 Given a list of `PDFObject`, extract the linearization information.
 -}
 getLinearization
-  :: [PDFObject] -- ^ The list of `PDFObject`
+  :: PDFDocument -- ^ The list of `PDFObject`
   -> Maybe Linearization
      -- ^ The `Linearization` object or `Nothing`. `Nothing` may be returned if
      --   there is no linearization entry or  if it is invalid.
-getLinearization = msum . fmap extractLinearization
+getLinearization = msum . lMap extractLinearization

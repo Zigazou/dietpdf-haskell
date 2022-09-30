@@ -33,6 +33,8 @@ module Pdf.Object.Object
   , fromPDFObject
   , objectInfo
   , getValue
+  , setValue
+  , hasKey
 
     -- * PDF indirect object
   , updateStream
@@ -62,10 +64,13 @@ module Pdf.Object.Object
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.UTF8          as BSU
 import qualified Data.Text.Lazy                as TL
+import qualified Data.Text                     as TS
+import           Data.Text.Encoding             ( encodeUtf8 )
 import           Formatting                     ( format
                                                 , (%)
                                                 , int
                                                 , text
+                                                , left
                                                 )
 import           Formatting.ByteStringFormatter ( utf8 )
 import qualified Data.HashMap.Strict           as HM
@@ -429,7 +434,7 @@ fromPDFObject (PDFObjectStream number revision dict stream) =
 fromPDFObject (PDFBool True ) = "true"
 fromPDFObject (PDFBool False) = "false"
 fromPDFObject PDFNull         = "null"
-fromPDFObject (PDFXRef _)     = ""
+fromPDFObject (PDFXRef xrss)  = fromXRef xrss
 fromPDFObject (PDFTrailer (PDFDictionary dictionary)) =
   BS.concat ["trailer\n", fromDictionary dictionary, "\n"]
 fromPDFObject (PDFTrailer _) = error "a trailer can only contain a dictionary"
@@ -503,6 +508,24 @@ separateObjects (object1 : object2 : others) = BS.concat
   , spaceIfNeeded object1 object2
   , separateObjects (object2 : others)
   ]
+
+fromXRefEntry :: XRefEntry -> BS.ByteString
+fromXRefEntry xre = encodeUtf8 . TL.toStrict $ format
+  (left 10 '0' % " " % left 5 '0' % " " % utf8 % "\r\n")
+  (xreOffset xre)
+  (xreGeneration xre)
+  (if xreState xre == InUseEntry then "n" else "f")
+
+fromXRefSubsection :: XRefSubsection -> BS.ByteString
+fromXRefSubsection xrss = BS.concat
+  [encodeUtf8 subsectionInfo, BS.concat (fromXRefEntry <$> xrssEntries xrss)]
+ where
+  subsectionInfo :: TS.Text
+  subsectionInfo = TL.toStrict
+    $ format ("" % int % " " % int % "\n") (xrssStart xrss) (xrssCount xrss)
+
+fromXRef :: [XRefSubsection] -> BS.ByteString
+fromXRef xrss = BS.concat ["xref\n", BS.concat (fmap fromXRefSubsection xrss)]
 
 fromArray :: [PDFObject] -> BS.ByteString
 fromArray items = BS.concat ["[", separateObjects items, "]"]
@@ -582,3 +605,21 @@ getValue name (PDFObjectStream _ _ dict _) = dict HM.!? name
 getValue name (PDFIndirectObject _ _ (PDFDictionary dict)) = dict HM.!? name
 getValue name (PDFTrailer (PDFDictionary dict)) = dict HM.!? name
 getValue _    _ = Nothing
+
+-- | Set value in a dictionary contained in a `PDFObject`
+setValue :: BS.ByteString -> PDFObject -> PDFObject -> PDFObject
+setValue name value (PDFDictionary dict) =
+  PDFDictionary (HM.insert name value dict)
+setValue name value (PDFIndirectObjectWithStream num gen dict stream) =
+  PDFIndirectObjectWithStream num gen (HM.insert name value dict) stream
+setValue name value (PDFObjectStream num gen dict stream) =
+  PDFObjectStream num gen (HM.insert name value dict) stream
+setValue name value (PDFIndirectObject num gen (PDFDictionary dict)) =
+  PDFIndirectObject num gen (PDFDictionary (HM.insert name value dict))
+setValue name value (PDFTrailer (PDFDictionary dict)) =
+  PDFTrailer (PDFDictionary (HM.insert name value dict))
+setValue _ _ object = object
+
+-- | Determine if a key is in a dictionary from a `PDFObject`
+hasKey :: BS.ByteString -> PDFObject -> Bool
+hasKey = (isJust .) . getValue

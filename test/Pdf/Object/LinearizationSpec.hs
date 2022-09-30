@@ -3,30 +3,30 @@ module Pdf.Object.LinearizationSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                , shouldBe
-                                                , it
-                                                )
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
+import           Pdf.Document.Document          ( PDFDocument )
 import           Pdf.Document.Parser            ( pdfParse )
-import           Pdf.Object.Object              ( PDFObject )
 import           Pdf.Object.Linearization       ( Linearization
                                                   ( Linearization
-                                                  , lnVersion
                                                   , lnFileLength
-                                                  , lnPrimaryHintOffset
-                                                  , lnPrimaryHintLength
-                                                  , lnOverflowHintOffset
-                                                  , lnOverflowHintLength
-                                                  , lnFirstPageObjectNumber
                                                   , lnFirstPageEndOffset
-                                                  , lnNumberOfPages
-                                                  , lnXRefFirstEntryOffset
                                                   , lnFirstPageNumber
+                                                  , lnFirstPageObjectNumber
+                                                  , lnNumberOfPages
+                                                  , lnOverflowHintLength
+                                                  , lnOverflowHintOffset
+                                                  , lnPrimaryHintLength
+                                                  , lnPrimaryHintOffset
+                                                  , lnVersion
+                                                  , lnXRefFirstEntryOffset
                                                   )
                                                 , getLinearization
+                                                )
+import           Test.Hspec                     ( Spec
+                                                , describe
+                                                , it
+                                                , shouldBe
                                                 )
 
 linearizationExamples :: [(BS.ByteString, Maybe Linearization)]
@@ -107,9 +107,9 @@ linearizationBadExamples =
     )
   ]
 
-toObjects :: BS.ByteString -> [PDFObject]
+toObjects :: BS.ByteString -> PDFDocument
 toObjects stream = case pdfParse stream of
-  Left  _       -> []
+  Left  _       -> mempty
   Right objects -> objects
 
 spec :: Spec

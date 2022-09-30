@@ -3,58 +3,62 @@ module Pdf.Document.ObjectStreamSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , it
-                                                , shouldBe
-                                                , Spec
-                                                )
 import           Control.Monad                  ( forM_ )
-import           Data.HashMap.Strict            ( fromList )
+import qualified Data.HashMap.Strict           as HM
+import           Pdf.Document.Document          ( PDFDocument
+                                                , fromList
+                                                )
 import           Pdf.Document.ObjectStream      ( extract
                                                 , insert
                                                 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
-                                                  , PDFNumber
                                                   , PDFName
-                                                  , PDFString
                                                   , PDFNull
+                                                  , PDFNumber
+                                                  , PDFObjectStream
+                                                  , PDFString
                                                   )
+                                                )
+import           Test.Hspec                     ( Spec
+                                                , describe
+                                                , it
+                                                , shouldBe
                                                 )
 import           Util.Errors                    ( UnifiedError(NoObjectToEncode)
                                                 )
 
-fromObjectStreamExamples :: [(PDFObject, Either UnifiedError [PDFObject])]
+fromObjectStreamExamples :: [(PDFObject, Either UnifiedError PDFDocument)]
 fromObjectStreamExamples =
   [ ( PDFObjectStream
       1
       0
-      (fromList
+      (HM.fromList
         [ ("Type" , PDFName "ObjStm")
         , ("N"    , PDFNumber 2)
         , ("First", PDFNumber 10)
         ]
       )
       "24 0 18 3 10 (Hello)"
-    , Right
+    , Right $ fromList
       [ PDFIndirectObject 24 0 (PDFNumber 10.0)
       , PDFIndirectObject 18 0 (PDFString "Hello")
       ]
     )
-  , (PDFNull, Right [])
+  , (PDFNull, Right mempty)
   ]
 
-toObjectStreamExamples :: [([PDFObject], Either UnifiedError PDFObject)]
+toObjectStreamExamples :: [(PDFDocument, Either UnifiedError PDFObject)]
 toObjectStreamExamples =
-  [ ( [ PDFIndirectObject 24 0 (PDFNumber 10.0)
+  [ ( fromList
+      [ PDFIndirectObject 24 0 (PDFNumber 10.0)
       , PDFIndirectObject 18 0 (PDFString "Hello")
       ]
     , Right $ PDFObjectStream
       1
       0
-      (fromList
+      (HM.fromList
         [ ("Type" , PDFName "ObjStm")
         , ("N"    , PDFNumber 2)
         , ("First", PDFNumber 10)
@@ -62,9 +66,10 @@ toObjectStreamExamples =
       )
       "24 0 18 3 10 (Hello)"
     )
-  , ([]       , Left NoObjectToEncode)
-  , ([PDFNull], Left NoObjectToEncode)
-  , ( [PDFIndirectObjectWithStream 1 0 (fromList []) "Hello, World!"]
+  , (fromList []       , Left NoObjectToEncode)
+  , (fromList [PDFNull], Left NoObjectToEncode)
+  , ( fromList
+      [PDFIndirectObjectWithStream 1 0 (HM.fromList []) "Hello, World!"]
     , Left NoObjectToEncode
     )
   ]
