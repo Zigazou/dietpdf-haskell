@@ -16,6 +16,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFIndirectObject
                                                   )
                                                 , Dictionary
+                                                , update
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
@@ -25,6 +26,8 @@ import           Test.Hspec                     ( Spec
 
 import           Pdf.Object.Container           ( deepMap
                                                 , insertMaybes
+                                                , Filter(Filter)
+                                                , setFilters
                                                 )
 
 deepMapExamples :: [(PDFObject, PDFObject -> PDFObject, PDFObject)]
@@ -75,6 +78,43 @@ insertMaybesExamples =
     )
   ]
 
+updateFiltersExamples :: [([Filter], PDFObject, PDFObject)]
+updateFiltersExamples =
+  [ ( [Filter (PDFName "FlateDecode") PDFNull]
+    , PDFIndirectObject 1 0 (PDFDictionary (fromList []))
+    , PDFIndirectObject
+      1
+      0
+      (PDFDictionary (fromList [("Filter", PDFName "FlateDecode")]))
+    )
+  , ( [Filter (PDFName "FlateDecode") (PDFName "Foo")]
+    , PDFIndirectObject 1 0 (PDFDictionary (fromList []))
+    , PDFIndirectObject
+      1
+      0
+      (PDFDictionary
+        (fromList
+          [("Filter", PDFName "FlateDecode"), ("DecodeParms", PDFName "Foo")]
+        )
+      )
+    )
+  , ( [ Filter (PDFName "RLEDecode")   PDFNull
+      , Filter (PDFName "FlateDecode") (PDFName "foo")
+      ]
+    , PDFIndirectObject 1 0 (PDFDictionary (fromList []))
+    , PDFIndirectObject
+      1
+      0
+      (PDFDictionary
+        (fromList
+          [ ("Filter", PDFArray [PDFName "RLEDecode", PDFName "FlateDecode"])
+          , ("DecodeParms", PDFArray [PDFNull, PDFName "Foo"])
+          ]
+        )
+      )
+    )
+  ]
+
 spec :: Spec
 spec = do
   describe "deepMap" $ forM_ deepMapExamples $ \(example, fn, expected) ->
@@ -87,4 +127,11 @@ spec = do
     $ \(example, expected) ->
         it ("should give right result for " ++ show example)
           $          insertMaybes (fromList []) example
+          `shouldBe` expected
+
+  describe "update+setFilters"
+    $ forM_ updateFiltersExamples
+    $ \(filters, example, expected) ->
+        it ("should give right result for " ++ show filters)
+          $          update example (setFilters filters)
           `shouldBe` expected

@@ -21,7 +21,6 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 )
 
-
 indirectObjectExamples :: [(BS.ByteString, PDFObject)]
 indirectObjectExamples =
   [ ( "1 0 obj<</a 1>>endobj"
@@ -73,6 +72,23 @@ indirectObjectExamples =
       (PDFDictionary
         (fromList [("Type", PDFName "Page"), ("Parent", PDFReference 1 0)])
       )
+    )
+  , ( "1 0 obj<</Length 2437/N 100/Type/ObjStm/First 808/Filter/FlateDecode>>\
+      \stream\n\
+      \NotEnoughBytes\n\
+      \endstream endobj"
+    , PDFObjectStream
+      1
+      0
+      (fromList
+        [ ("Length", PDFNumber 2437.0)
+        , ("N"     , PDFNumber 100)
+        , ("Type"  , PDFName "ObjStm")
+        , ("First" , PDFNumber 808)
+        , ("Filter", PDFName "FlateDecode")
+        ]
+      )
+      "NotEnoughBytes"
     )
   ]
 

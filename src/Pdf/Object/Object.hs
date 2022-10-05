@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
+
 {-|
 This module defines what is a PDF object and functions in relation with the
 PDF specification.
@@ -34,10 +36,18 @@ module Pdf.Object.Object
   , objectInfo
   , getValue
   , setValue
+  , (.=)
+  , setMaybe
+  , (?=)
   , hasKey
+  , hasDictionary
+  , hasStream
 
     -- * PDF indirect object
+  , update
+  , query
   , updateStream
+  , setStream
   , getStream
 
     -- * PDF characters
@@ -97,6 +107,12 @@ import           Util.String                    ( fromHexString
                                                 , fromString
                                                 )
 import           Util.Errors                    ( UnifiedError(NoStream) )
+import           Control.Monad.State            ( State
+                                                , execState
+                                                , evalState
+                                                , get
+                                                , put
+                                                )
 
 {-|
 Test if a byte is a PDF delimiter.
@@ -289,7 +305,7 @@ data PDFObject
     PDFTrailer PDFObject
   | -- | A reference to an XRef table (offset from beginning of a PDF)
     PDFStartXRef Int
-  deriving stock Show
+  deriving stock (Show)
 
 instance Eq PDFObject where
   (==) :: PDFObject -> PDFObject -> Bool
@@ -566,10 +582,17 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   , " endobj\n"
   ]
 
+{-
 getStream :: PDFObject -> Either UnifiedError BS.ByteString
 getStream (PDFIndirectObjectWithStream _ _ _ stream) = return stream
 getStream (PDFObjectStream _ _ _ stream) = return stream
 getStream _ = Left $ NoStream ""
+-}
+getStream :: State PDFObject (Either UnifiedError BS.ByteString)
+getStream = get >>= \case
+  (PDFIndirectObjectWithStream _ _ _ stream) -> return $ Right stream
+  (PDFObjectStream             _ _ _ stream) -> return $ Right stream
+  _anyOtherObject                            -> return $ Left (NoStream "")
 
 updateStream :: PDFObject -> BS.ByteString -> PDFObject
 updateStream object newStream = case object of
@@ -598,28 +621,79 @@ objectType dictionary = case HM.lookup "Type" dictionary of
   _anyOtherValue -> Nothing
 
 -- | Get value in a dictionary from a `PDFObject`
-getValue :: BS.ByteString -> PDFObject -> Maybe PDFObject
-getValue name (PDFDictionary dict) = dict HM.!? name
-getValue name (PDFIndirectObjectWithStream _ _ dict _) = dict HM.!? name
-getValue name (PDFObjectStream _ _ dict _) = dict HM.!? name
-getValue name (PDFIndirectObject _ _ (PDFDictionary dict)) = dict HM.!? name
-getValue name (PDFTrailer (PDFDictionary dict)) = dict HM.!? name
-getValue _    _ = Nothing
+--getValue :: BS.ByteString -> PDFObject -> Maybe PDFObject
+--getValue name (PDFDictionary dict) = dict HM.!? name
+--getValue name (PDFIndirectObjectWithStream _ _ dict _) = dict HM.!? name
+--getValue name (PDFObjectStream _ _ dict _) = dict HM.!? name
+--getValue name (PDFIndirectObject _ _ (PDFDictionary dict)) = dict HM.!? name
+--getValue name (PDFTrailer (PDFDictionary dict)) = dict HM.!? name
+--getValue _    _ = Nothing
+
+getValue :: BS.ByteString -> State PDFObject (Maybe PDFObject)
+getValue name = get >>= \case
+  (PDFDictionary dict) -> return $ dict HM.!? name
+  (PDFIndirectObjectWithStream _ _ dict _) -> return $ dict HM.!? name
+  (PDFObjectStream _ _ dict _) -> return $ dict HM.!? name
+  (PDFIndirectObject _ _ (PDFDictionary dict)) -> return $ dict HM.!? name
+  (PDFTrailer (PDFDictionary dict)) -> return $ dict HM.!? name
+  _ -> return Nothing
 
 -- | Set value in a dictionary contained in a `PDFObject`
-setValue :: BS.ByteString -> PDFObject -> PDFObject -> PDFObject
-setValue name value (PDFDictionary dict) =
-  PDFDictionary (HM.insert name value dict)
-setValue name value (PDFIndirectObjectWithStream num gen dict stream) =
-  PDFIndirectObjectWithStream num gen (HM.insert name value dict) stream
-setValue name value (PDFObjectStream num gen dict stream) =
-  PDFObjectStream num gen (HM.insert name value dict) stream
-setValue name value (PDFIndirectObject num gen (PDFDictionary dict)) =
-  PDFIndirectObject num gen (PDFDictionary (HM.insert name value dict))
-setValue name value (PDFTrailer (PDFDictionary dict)) =
-  PDFTrailer (PDFDictionary (HM.insert name value dict))
-setValue _ _ object = object
+setValue :: BS.ByteString -> PDFObject -> State PDFObject ()
+setValue name value = get >>= \case
+  (PDFDictionary dict) -> put (PDFDictionary (HM.insert name value dict))
+  (PDFIndirectObjectWithStream num gen dict stream) ->
+    put (PDFIndirectObjectWithStream num gen (HM.insert name value dict) stream)
+  (PDFObjectStream num gen dict stream) ->
+    put (PDFObjectStream num gen (HM.insert name value dict) stream)
+  (PDFIndirectObject num gen (PDFDictionary dict)) ->
+    put (PDFIndirectObject num gen (PDFDictionary (HM.insert name value dict)))
+  (PDFTrailer (PDFDictionary dict)) ->
+    put (PDFTrailer (PDFDictionary (HM.insert name value dict)))
+  object -> put object
+
+setMaybe :: BS.ByteString -> Maybe PDFObject -> State PDFObject ()
+setMaybe _    Nothing      = return ()
+setMaybe name (Just value) = setValue name value
+
+infixr 9 .=
+(.=) :: BS.ByteString -> PDFObject -> State PDFObject ()
+(.=) = setValue
+
+infixr 9 ?=
+(?=) :: BS.ByteString -> Maybe PDFObject -> State PDFObject ()
+(?=) = setMaybe
+
+setStream :: BS.ByteString -> State PDFObject ()
+setStream newStream = get >>= \case
+  (PDFIndirectObjectWithStream number revision dict _) -> do
+    put (PDFIndirectObjectWithStream number revision dict newStream)
+    "Length" .= newLength
+  (PDFObjectStream number revision dict _) -> do
+    put (PDFObjectStream number revision dict newStream)
+    "Length" .= newLength
+  _anyOtherObject -> return ()
+ where
+  newLength :: PDFObject
+  newLength = PDFNumber . fromIntegral . BS.length $ newStream
 
 -- | Determine if a key is in a dictionary from a `PDFObject`
 hasKey :: BS.ByteString -> PDFObject -> Bool
-hasKey = (isJust .) . getValue
+hasKey = (isJust .) . flip query . getValue
+
+hasDictionary :: PDFObject -> Bool
+hasDictionary (PDFIndirectObject _ _ (PDFDictionary _)) = True
+hasDictionary PDFIndirectObjectWithStream{}             = True
+hasDictionary PDFObjectStream{}                         = True
+hasDictionary _anyOtherObject                           = False
+
+hasStream :: PDFObject -> Bool
+hasStream PDFIndirectObjectWithStream{} = True
+hasStream PDFObjectStream{}             = True
+hasStream _anyOtherObject               = False
+
+update :: PDFObject -> State PDFObject a -> PDFObject
+update object modifier = execState modifier object
+
+query :: PDFObject -> State PDFObject a -> a
+query object request = evalState request object

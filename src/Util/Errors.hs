@@ -2,6 +2,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE InstanceSigs #-}
+
 {-|
 This module groups all the errors that DietPDF may generate.
 
@@ -13,6 +14,7 @@ module Util.Errors
   , putError
   , putErrorLn
   ) where
+
 import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
@@ -63,7 +65,7 @@ data UnifiedError
   | NoStream String
   -- | No object to encode
   | NoObjectToEncode
-  deriving stock Eq
+  deriving stock (Eq)
 
 errorType :: UnifiedError -> ErrorType
 errorType (ParseError _)             = ParsingError

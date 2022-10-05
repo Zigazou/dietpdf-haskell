@@ -9,27 +9,44 @@ module Pdf.Object.Optimize
   ) where
 
 import qualified Codec.Compression.Flate       as FL
+import           Codec.Compression.Predictor    ( Predictor(PNGUp, PNGSub)
+                                                , predict
+                                                , toWord8
+                                                )
 import qualified Codec.Compression.RunLength   as RL
 import           Codec.Compression.XML          ( optimizeXML )
 import qualified Data.ByteString               as BS
 import           Data.Foldable                  ( minimumBy )
 import qualified Data.HashMap.Strict           as HM
 import qualified Data.Sequence                 as SQ
-import           Pdf.Object.Container           ( deepMap )
+import           Pdf.Object.Container           ( Filter(Filter)
+                                                , deepMap
+                                                , setFilters
+                                                )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
+                                                  ( PDFDictionary
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFName
+                                                  , PDFNull
+                                                  , PDFNumber
                                                   , PDFObjectStream
                                                   , PDFTrailer
                                                   )
-                                                , setValue
-                                                , updateStream
+                                                , getValue
+                                                , update
+                                                , query
+                                                , setStream
+                                                , getStream
                                                 )
 import           Pdf.Object.String              ( optimizeString )
-import           Pdf.Object.Unfilter            ( unfilter )
-import           Util.Errors                    ( UnifiedError )
+import           Pdf.Object.Unfilter            ( unfilter
+                                                )
+import           Util.Errors                    ( UnifiedError
+                                                  ( InvalidFilterParm
+                                                  )
+                                                )
+import           Control.Monad.State            ( State )
 
 eMinOrder
   :: (a, Either b BS.ByteString) -> (a, Either b BS.ByteString) -> Ordering
@@ -38,38 +55,111 @@ eMinOrder (_, Right _) (_, Left _ ) = LT
 eMinOrder (_, Left _ ) (_, Right _) = GT
 eMinOrder _            _            = EQ
 
-reduceArray :: [PDFObject] -> PDFObject
-reduceArray [item] = item
-reduceArray items  = PDFArray items
+zopfli
+  :: Maybe (Int, Int)
+  -> BS.ByteString
+  -> ([Filter], Either UnifiedError BS.ByteString)
+zopfli _ stream =
+  ([Filter (PDFName "FlateDecode") PDFNull], FL.compress stream)
 
-zopfli :: BS.ByteString -> ([PDFObject], Either UnifiedError BS.ByteString)
-zopfli stream = ([PDFName "FlateDecode"], FL.compress stream)
+rle
+  :: Maybe (Int, Int)
+  -> BS.ByteString
+  -> ([Filter], Either UnifiedError BS.ByteString)
+rle _ stream =
+  ([Filter (PDFName "RunLengthDecode") PDFNull], RL.compress stream)
 
-rle :: BS.ByteString -> ([PDFObject], Either UnifiedError BS.ByteString)
-rle stream = ([PDFName "RunLengthDecode"], RL.compress stream)
-
-rleZopfli :: BS.ByteString -> ([PDFObject], Either UnifiedError BS.ByteString)
-rleZopfli stream =
-  ( [PDFName "FlateDecode", PDFName "RunLengthDecode"]
-  , snd (rle stream) >>= FL.compress
+rleZopfli
+  :: Maybe (Int, Int)
+  -> BS.ByteString
+  -> ([Filter], Either UnifiedError BS.ByteString)
+rleZopfli _ stream =
+  ( [ Filter (PDFName "FlateDecode")     PDFNull
+    , Filter (PDFName "RunLengthDecode") PDFNull
+    ]
+  , snd (rle Nothing stream) >>= FL.compress
   )
 
+predZopfli
+  :: Maybe (Int, Int)
+  -> BS.ByteString
+  -> ([Filter], Either UnifiedError BS.ByteString)
+predZopfli (Just (width, components)) stream =
+  ( [ Filter
+        (PDFName "FlateDecode")
+        (PDFDictionary
+          (HM.fromList
+            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
+            , ("Columns"  , PDFNumber (fromIntegral width))
+            , ("Colors"   , PDFNumber (fromIntegral components))
+            ]
+          )
+        )
+    ]
+  , predict PNGUp width components stream >>= FL.compress
+  )
+predZopfli _noWidth _stream = ([], Left InvalidFilterParm)
+
+predRleZopfli
+  :: Maybe (Int, Int)
+  -> BS.ByteString
+  -> ([Filter], Either UnifiedError BS.ByteString)
+predRleZopfli (Just (width, components)) stream =
+  ( [ Filter
+        (PDFName "FlateDecode")
+        (PDFDictionary
+          (HM.fromList
+            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
+            , ("Columns"  , PDFNumber (fromIntegral width))
+            , ("Colors"   , PDFNumber (fromIntegral components))
+            ]
+          )
+        )
+    ]
+  , predict PNGSub width components stream >>= FL.compress
+  )
+predRleZopfli _noWidth _stream = ([], Left InvalidFilterParm)
+
+applyEveryFilter
+  :: Maybe (Int, Int)
+  -> BS.ByteString
+  -> [([Filter], Either UnifiedError BS.ByteString)]
+applyEveryFilter widthComponents stream =
+  [zopfli, rle, predRleZopfli, rleZopfli, predZopfli]
+    <*> pure widthComponents
+    <*> pure stream
+
+getWidthComponents :: State PDFObject (Maybe (Int, Int))
+getWidthComponents = do
+  width      <- getValue "Width"
+  colorSpace <- getValue "ColorSpace"
+
+  let components :: Int
+      components = case colorSpace of
+        Just (PDFName "DeviceRGB" ) -> 3
+        Just (PDFName "DeviceCMYK") -> 4
+        _anyOtherValue              -> 1
+
+  case width of
+    Just (PDFNumber width') -> return $ Just (round width', components)
+    _anyOtherValue          -> return Nothing
+
 filterOptimize :: PDFObject -> Either UnifiedError PDFObject
-filterOptimize object@(PDFIndirectObjectWithStream _ _ _ stream) = do
-  let (bestFilters, bestStream) = minimumBy
-        eMinOrder
-        (SQ.fromList [zopfli stream, rle stream, rleZopfli stream])
-  updateStream (setValue "Filter" (reduceArray bestFilters) object)
-    <$> bestStream
-
-filterOptimize object@(PDFObjectStream _ _ _ stream) = do
-  let (bestFilters, bestStream) = minimumBy
-        eMinOrder
-        (SQ.fromList [zopfli stream, rle stream, rleZopfli stream])
-  updateStream (setValue "Filter" (reduceArray bestFilters) object)
-    <$> bestStream
-
-filterOptimize object = return object
+filterOptimize object = case object of
+  (PDFIndirectObjectWithStream _ _ _ stream) -> findBest stream
+  (PDFObjectStream             _ _ _ stream) -> findBest stream
+  _anyOtherObject                            -> return object
+ where
+  findBest :: BS.ByteString -> Either UnifiedError PDFObject
+  findBest stream = do
+    let (bestFilters, bestStream) = minimumBy
+          eMinOrder
+          (SQ.fromList
+            (applyEveryFilter (query object getWidthComponents) stream)
+          )
+    bestStream >>= \newStream -> return $ update object $ do
+      setFilters bestFilters
+      setStream newStream
 
 streamIsXML :: PDFObject -> Bool
 streamIsXML (PDFIndirectObjectWithStream _ _ dictionary _) =
@@ -79,13 +169,11 @@ streamIsXML (PDFIndirectObjectWithStream _ _ dictionary _) =
 streamIsXML _ = False
 
 streamOptimize :: PDFObject -> Either UnifiedError PDFObject
-streamOptimize object@(PDFIndirectObjectWithStream _ _ _ stream)
-  | streamIsXML object = return $ updateStream object (optimizeXML stream)
-  | otherwise          = return object
-streamOptimize object@(PDFObjectStream _ _ _ stream)
-  | streamIsXML object = return $ updateStream object (optimizeXML stream)
-  | otherwise          = return object
-streamOptimize object = return object
+streamOptimize object
+  | streamIsXML object = do
+    stream <- query object getStream
+    return . update object . setStream . optimizeXML $ stream
+  | otherwise = return object
 
 {- |
 Completely refilter a stream by finding the best filter combination.

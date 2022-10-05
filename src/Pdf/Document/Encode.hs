@@ -16,8 +16,10 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFNumber
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
+                                                  , PDFObjectStream
                                                   , PDFStartXRef
                                                   , PDFTrailer
+                                                  , PDFReference
                                                   )
                                                 , fromPDFObject
                                                 , xrefCount
@@ -27,6 +29,7 @@ import           Pdf.Document.Document          ( PDFDocument
                                                 , dFilter
                                                 , findLast
                                                 , cMap
+                                                , deepFind
                                                 )
 import           Pdf.Document.Partition         ( PDFPartition
                                                   ( ppHeads
@@ -47,10 +50,10 @@ import           Pdf.Object.Optimize            ( optimize )
 import           Pdf.Document.XRef              ( calcOffsets
                                                 , xrefTable
                                                 )
-import           Data.Maybe                     ( isNothing )
 import           Pdf.Document.Collection        ( encodeObject
                                                 , eoBinaryData
                                                 )
+import Pdf.Document.Uncompress (uncompress)
 
 updateTrailer :: PDFObject -> Int -> PDFObject -> PDFObject
 updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
@@ -64,14 +67,26 @@ updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
 updateTrailer _ _ object = object
 
 removeUnused :: PDFDocument -> PDFDocument
-removeUnused = dFilter noLinearized
+removeUnused doc = dFilter used doc
  where
-  noLinearized :: PDFObject -> Bool
-  noLinearized (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
-    isNothing $ dictionary HM.!? "Linearized"
-  noLinearized (PDFIndirectObjectWithStream _ _ dictionary _) =
-    isNothing $ dictionary HM.!? "Linearized"
-  noLinearized _ = True
+  used :: PDFObject -> Bool
+  used object = isNotLinearized object && isReferenced object
+
+  isNotLinearized :: PDFObject -> Bool
+  isNotLinearized = not . hasKey "Linearized"
+
+  isReference :: PDFObject -> Bool
+  isReference PDFReference{} = True
+  isReference _anyOtherObject = False
+
+  references :: PDFDocument
+  references = deepFind isReference (uncompress doc)
+
+  isReferenced :: PDFObject -> Bool
+  isReferenced (PDFIndirectObject num gen _) = PDFReference num gen `elem` references
+  isReferenced (PDFIndirectObjectWithStream num gen _ _) = PDFReference num gen `elem` references
+  isReferenced (PDFObjectStream num gen _ _) = PDFReference num gen `elem` references
+  isReferenced _anyOtherObject = True
 
 findRoot :: PDFDocument -> Maybe PDFObject
 findRoot = findLast (hasKey "Root")

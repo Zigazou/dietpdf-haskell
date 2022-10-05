@@ -6,6 +6,7 @@ This module facilitates unfiltering of `PDFObject`.
 -}
 module Pdf.Object.Unfilter
   ( unfilter
+  , supportedFilters
   ) where
 
 import qualified Codec.Compression.Flate       as FL
@@ -20,14 +21,23 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFObjectStream
                                                   )
                                                 , Dictionary
+                                                , update
+                                                , setStream
                                                 )
 import           Pdf.Object.Container           ( Filter(fFilter)
-                                                , insertMaybes
-                                                , setDecodeParms
                                                 , setFilters
                                                 , getFilters
                                                 )
 import           Util.Errors                    ( UnifiedError )
+
+supportedFilters :: [BS.ByteString]
+supportedFilters =
+  [ "FlateDecode"
+  , "RunLengthDecode"
+  , "LZWDecode"
+  , "ASCII85Decode"
+  , "ASCIIHexDecode"
+  ]
 
 unfilterStream
   :: ([Filter], BS.ByteString) -> Either UnifiedError ([Filter], BS.ByteString)
@@ -53,23 +63,15 @@ unfiltered
 unfiltered dict stream =
   getFilters dict >>= \filters -> unfilterStream (filters, stream)
 
-updateDictionary :: Dictionary -> [Filter] -> Dictionary
-updateDictionary dict filters = insertMaybes
-  dict
-  [("DecodeParms", setDecodeParms filters), ("Filter", setFilters filters)]
-
 unfilter :: PDFObject -> Either UnifiedError PDFObject
-unfilter (PDFIndirectObjectWithStream num gen dict stream) = do
-  (remainingFilters, unfilteredStream) <- unfiltered dict stream
-  return $ PDFIndirectObjectWithStream
-    num
-    gen
-    (updateDictionary dict remainingFilters)
-    unfilteredStream
-unfilter (PDFObjectStream num gen dict stream) = do
-  (remainingFilters, unfilteredStream) <- unfiltered dict stream
-  return $ PDFObjectStream num
-                           gen
-                           (updateDictionary dict remainingFilters)
-                           unfilteredStream
-unfilter object = return object
+unfilter object = case object of
+  (PDFIndirectObjectWithStream _ _ dict stream) -> unfilter' dict stream
+  (PDFObjectStream             _ _ dict stream) -> unfilter' dict stream
+  _anyOtherObject                               -> return object
+ where
+  unfilter' :: Dictionary -> BS.ByteString -> Either UnifiedError PDFObject
+  unfilter' dict stream = do
+    (remainingFilters, unfilteredStream) <- unfiltered dict stream
+    return $ update object $ do
+      setStream unfilteredStream
+      setFilters remainingFilters

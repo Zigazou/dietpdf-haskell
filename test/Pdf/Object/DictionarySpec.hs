@@ -17,6 +17,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 , fromPDFObject
                                                 , getValue
+                                                , query
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
@@ -116,5 +117,5 @@ spec = describe "PDFDictionary" $ do
 
   forM_ getValueExamples $ \(example, expected) ->
     it ("should get value from Dictionary " ++ show example)
-      $          getValue "Test" example
+      $          query example (getValue "Test")
       `shouldBe` expected

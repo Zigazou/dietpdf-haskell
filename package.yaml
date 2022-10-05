@@ -35,6 +35,12 @@ ghc-options:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -O2
+  - -funfolding-use-threshold=16
+  - -fexcess-precision
+  - -optc-O3
+  - -optc-ffast-math
   dependencies:
   - bytestring
   - binary
@@ -58,6 +64,11 @@ executables:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
+    - -O2
+    - -funfolding-use-threshold=16
+    - -fexcess-precision
+    - -optc-O3
+    - -optc-ffast-math
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

@@ -1,5 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE LambdaCase #-}
 
 {- |
 This module contains functions facilitating container manipulation (`PDFArray`,
@@ -7,30 +9,35 @@ This module contains functions facilitating container manipulation (`PDFArray`,
 -}
 module Pdf.Object.Container
   ( deepMap
-  , Filter(Filter, fFilter, fDecodeParms)
+  , Filter(Filter, fDecodeParms, fFilter)
   , setFilters
-  , setDecodeParms
+  , filtersFilter
+  , filtersParms
   , insertMaybe
   , insertMaybes
   , getFilters
   ) where
 
-import qualified Data.HashMap.Strict           as HM
 import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
+import qualified Data.HashMap.Strict           as HM
+import           Pdf.Object.Object              ( Dictionary
+                                                , PDFObject
+                                                  ( PDFArray
                                                   , PDFDictionary
-                                                  , PDFArray
-                                                  , PDFNull
+                                                  , PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
                                                   , PDFName
+                                                  , PDFNull
+                                                  , PDFObjectStream
                                                   )
-                                                , Dictionary
+                                                , (?=)
                                                 )
 import           Util.Errors                    ( UnifiedError
                                                   ( InvalidFilterParm
                                                   )
+                                                )
+import           Control.Monad.State            ( State
+                                                , get
                                                 )
 
 {- |
@@ -58,6 +65,7 @@ data Filter = Filter
   { fFilter      :: PDFObject
   , fDecodeParms :: PDFObject
   }
+  deriving stock Show
 
 hasNoDecodeParms :: Filter -> Bool
 hasNoDecodeParms = (== PDFNull) . fDecodeParms
@@ -93,10 +101,10 @@ If the list contains only one `Filter`, it returns `Just` a `PDFName`.
 
 In any other cases, it returns `Just` a `PDFArray`.
 -}
-setFilters :: [Filter] -> Maybe PDFObject
-setFilters []                           = Nothing
-setFilters [Filter aName@(PDFName _) _] = Just aName
-setFilters filters                      = Just (PDFArray $ fFilter <$> filters)
+filtersFilter :: [Filter] -> Maybe PDFObject
+filtersFilter [] = Nothing
+filtersFilter [Filter aName@(PDFName _) _] = Just aName
+filtersFilter filters = Just (PDFArray $ fFilter <$> filters)
 
 {- |
 Given a list of `Filter`, return the corresponding `PDFObject` of filters
@@ -108,12 +116,25 @@ If the list contains only one `Filter`, it returns `Just` a `PDFObject`.
 
 In any other cases, it returns `Just` a `PDFArray`.
 -}
-setDecodeParms :: [Filter] -> Maybe PDFObject
-setDecodeParms []                      = Nothing
-setDecodeParms [Filter _ PDFNull     ] = Nothing
-setDecodeParms [Filter _ aDecodeParms] = Just aDecodeParms
-setDecodeParms filters | all hasNoDecodeParms filters = Nothing
-                       | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
+filtersParms :: [Filter] -> Maybe PDFObject
+filtersParms []                      = Nothing
+filtersParms [Filter _ PDFNull     ] = Nothing
+filtersParms [Filter _ aDecodeParms] = Just aDecodeParms
+filtersParms filters | all hasNoDecodeParms filters = Nothing
+                     | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
+
+setFilters :: [Filter] -> State PDFObject ()
+setFilters filters = get >>= \case
+  PDFIndirectObject{} -> do
+    "Filter" ?= filtersFilter filters
+    "DecodeParms" ?= filtersParms filters
+  PDFIndirectObjectWithStream{} -> do
+    "Filter" ?= filtersFilter filters
+    "DecodeParms" ?= filtersParms filters
+  PDFObjectStream{} -> do
+    "Filter" ?= filtersFilter filters
+    "DecodeParms" ?= filtersParms filters
+  _anyOtherValue -> return ()
 
 {- |
 Insert a key-value pair inside a `Dictionary`.

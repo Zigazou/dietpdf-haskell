@@ -52,6 +52,7 @@ import           Pdf.Object.Object              ( Dictionary
                                                 , fromPDFObject
                                                 , getStream
                                                 , isWhiteSpace
+                                                , query
                                                 )
 
 import           Control.Monad                  ( forM )
@@ -132,7 +133,7 @@ getObjectStream :: PDFObject -> Either UnifiedError (Maybe ObjectStream)
 getObjectStream object@(PDFObjectStream _ _ dict _) = do
   case objStmInfo of
     Just (PDFNumber n, PDFNumber offset) -> do
-      unfilteredStream <- unfilter object >>= getStream
+      unfilteredStream <- unfilter object >>= flip query getStream
       let (indices, objects) = BS.splitAt (floor offset) unfilteredStream
       return $ Just ObjectStream { osCount   = floor n
                                  , osOffset  = floor offset

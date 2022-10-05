@@ -13,6 +13,7 @@ module Pdf.Document.Document
   , dSepBy1
   , dSepBy
   , dFilter
+  , deepFind
   , findLast
   , clean
   ) where
@@ -21,17 +22,20 @@ import           Control.Applicative            ( (<|>)
                                                 , Alternative
                                                 , liftA2
                                                 )
+import           Data.Foldable                  ( foldl' )
 import qualified Data.Set.Ordered              as OS
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFEndOfFile
+                                                  ( PDFArray
+                                                  , PDFComment
+                                                  , PDFDictionary
+                                                  , PDFEndOfFile
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFObjectStream
+                                                  , PDFStartXRef
                                                   , PDFTrailer
                                                   , PDFVersion
                                                   , PDFXRef
-                                                  , PDFStartXRef
-                                                  , PDFComment
                                                   )
                                                 )
 
@@ -80,7 +84,7 @@ Only the last `PDFVersion`, `PDFXRef`, `PDFTrailer` are kept.
 Only the last indirect object with a specific number is kept.
 -}
 fromList :: Ord a => [a] -> CollectionOf a
-fromList = CollectionOf . OS.fromList
+fromList = CollectionOf . foldl' (OS.>|) OS.empty
 
 toList :: CollectionOf a -> [a]
 toList (CollectionOf objects) = OS.toAscList objects
@@ -111,6 +115,26 @@ dFilter
 dFilter p = foldr
   (\x (CollectionOf dict) -> CollectionOf (if p x then x OS.|< dict else dict))
   mempty
+
+{- |
+Find every `PDFObject` satisfiying a predicate, even when deeply nested in
+containers.
+-}
+deepFind :: (PDFObject -> Bool) -> PDFDocument -> PDFDocument
+deepFind p = foldr walk mempty
+ where
+  walk :: PDFObject -> PDFDocument -> PDFDocument
+  walk object collection@(CollectionOf objects)
+    | p object = CollectionOf (object OS.|< objects)
+    | otherwise = case object of
+      (PDFTrailer eObject           ) -> walk eObject collection
+      (PDFIndirectObject _ _ eObject) -> walk eObject collection
+      (PDFIndirectObjectWithStream _ _ dict _) ->
+        walk (PDFDictionary dict) collection
+      (PDFObjectStream _ _ dict _) -> walk (PDFDictionary dict) collection
+      (PDFArray      lObjects    ) -> collection <> foldr walk mempty lObjects
+      (PDFDictionary dict        ) -> collection <> foldr walk mempty dict
+      _anyOtherValue               -> collection
 
 {- |
 Remove objects that are not top-level from the PDFDocument.

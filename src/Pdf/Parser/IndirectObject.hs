@@ -37,8 +37,6 @@ import           Data.Binary.Parser             ( Get
                                                 , label
                                                 , manyTill
                                                 , satisfy
-                                                , scan
-                                                , skipWhile
                                                 , some'
                                                 , string
                                                 , word8
@@ -47,25 +45,26 @@ import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFDictionary
-                                                  , PDFNumber
-                                                  , PDFName
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
+                                                  , PDFName
                                                   , PDFObjectStream
                                                   )
-                                                , isWhiteSpace
                                                 , getValue
+                                                , query
+                                                , isWhiteSpace
+                                                , updateStream
                                                 )
 import           Pdf.Parser.Container           ( arrayP
                                                 , dictionaryP
                                                 )
+import           Pdf.Parser.EmptyContent        ( emptyContentP )
 import           Pdf.Parser.HexString           ( hexStringP )
 import           Pdf.Parser.Keyword             ( keywordP )
 import           Pdf.Parser.Name                ( nameP )
 import           Pdf.Parser.Number              ( numberP )
 import           Pdf.Parser.Reference           ( referenceP )
 import           Pdf.Parser.String              ( stringP )
-import           Pdf.Parser.EmptyContent        ( emptyContentP )
 import           Util.Ascii                     ( asciiCR
                                                 , asciiLF
                                                 )
@@ -93,25 +92,6 @@ whiteSpaceP = do
   byte <- satisfy isWhiteSpace
   when (byte == asciiCR) (word8 asciiLF)
 
-whiteSpacesP :: Get ()
-whiteSpacesP = skipWhile isWhiteSpace
-
-takeN :: Int -> Get BS.ByteString
-takeN count = scan count counter
- where
-  counter :: Int -> p -> Maybe Int
-  counter 0 _ = Nothing
-  counter n _ = Just (n - 1)
-
-streamWithCountP :: Int -> Get BS.ByteString
-streamWithCountP count = do
-  string "stream"
-  whiteSpaceP
-  stream <- takeN count
-  whiteSpacesP
-  string "endstream"
-  return stream
-
 streamWithoutCountP :: Get BS.ByteString
 streamWithoutCountP = do
   string "stream"
@@ -134,17 +114,18 @@ indirectObjectP = label "indirectObject" $ do
   emptyContentP
   object <- itemP
   emptyContentP
-  stream <- case getValue "Length" object of
-    Just (PDFNumber count) -> Just <$> streamWithCountP (round count)
+
+  stream <- case query object (getValue "Length") of
     Just _                 -> Just <$> streamWithoutCountP
     Nothing                -> return Nothing
 
   emptyContentP
   string "endobj"
 
-  return $ case (getValue "Type" object, object, stream) of
+  return $ case (query object (getValue "Type"), object, stream) of
     (Just (PDFName "ObjStm"), PDFDictionary dict, Just s) ->
-      PDFObjectStream objectNumber revisionNumber dict s
-    (_, PDFDictionary dict, Just s) ->
-      PDFIndirectObjectWithStream objectNumber revisionNumber dict s
+      updateStream (PDFObjectStream objectNumber revisionNumber dict "") s
+    (_, PDFDictionary dict, Just s) -> updateStream
+      (PDFIndirectObjectWithStream objectNumber revisionNumber dict "")
+      s
     _anyOtherCase -> PDFIndirectObject objectNumber revisionNumber object

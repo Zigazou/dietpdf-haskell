@@ -5,7 +5,10 @@ module Util.ByteStringSpec
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
-import           Util.ByteString                ( splitRaw )
+import           Util.ByteString                ( splitRaw
+                                                , separateComponents
+                                                , groupComponents
+                                                )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
@@ -20,8 +23,24 @@ splitRawExamples =
   , (""    , 3, [])
   ]
 
+separateComponentsExamples :: [(BS.ByteString, Int, [BS.ByteString])]
+separateComponentsExamples =
+  [ ("ABCD", 2, ["AC", "BD"])
+  , ("ABCD", 1, ["ABCD"])
+  , ("ABCD", 3, ["AD", "B", "C"])
+  , (""    , 1, [""])
+  ]
+
+groupComponentsExamples :: [([BS.ByteString], BS.ByteString)]
+groupComponentsExamples =
+  [ (["AC", "BD"]    , "ABCD")
+  , (["ABCD"]        , "ABCD")
+  , (["AD", "B", "C"], "ABCD")
+  , ([""]            , "")
+  ]
+
 spec :: Spec
-spec =
+spec = do
   describe "splitRaw" $ forM_ splitRawExamples $ \(example, width, expected) ->
     it
         (  "should split ByteString in strings of "
@@ -31,3 +50,22 @@ spec =
         )
       $          splitRaw width example
       `shouldBe` expected
+
+  describe "separateComponents"
+    $ forM_ separateComponentsExamples
+    $ \(example, components, expected) ->
+        it
+            (  "should separate components strings of "
+            ++ show components
+            ++ " components "
+            ++ show example
+            )
+          $          separateComponents components example
+          `shouldBe` expected
+
+  describe "groupComponents"
+    $ forM_ groupComponentsExamples
+    $ \(example, expected) ->
+        it ("should group components strings " ++ show example)
+          $          groupComponents example
+          `shouldBe` expected
