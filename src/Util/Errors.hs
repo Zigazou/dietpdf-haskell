@@ -13,20 +13,28 @@ module Util.Errors
   ( UnifiedError(..)
   , putError
   , putErrorLn
+  , unifiedError
   ) where
 
+import           Control.Monad.State            ( lift )
+import           Control.Monad.Trans.Class      ( MonadTrans )
 import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
 import           System.IO                      ( stderr )
 
-data ErrorType = ReadingError | ParsingError | EncodingError deriving stock Eq
+data ErrorType = ReadingError
+               | ParsingError
+               | EncodingError
+               | StructureError
+               deriving stock Eq
 
 instance Show ErrorType where
   show :: ErrorType -> String
-  show ReadingError  = "reading"
-  show ParsingError  = "parsing"
-  show EncodingError = "encoding"
+  show ReadingError   = "reading"
+  show ParsingError   = "parsing"
+  show EncodingError  = "encoding"
+  show StructureError = "structure"
 
 data UnifiedError
   -- | Parsing error (Remaining bytes, offset of the error and error message)
@@ -61,11 +69,18 @@ data UnifiedError
   | InvalidFilterParm
   -- | Invalid Ascii85 stream
   | InvalidAscii85Stream String
-  -- | No stream
+  -- | No stream in the object
   | NoStream String
+  -- | No dictionary in the object
+  | NoDictionary String
+  -- | Invalid object to embed
+  | InvalidObjectToEmbed String
   -- | No object to encode
   | NoObjectToEncode
   deriving stock (Eq)
+
+unifiedError :: MonadTrans t => UnifiedError -> t (Either UnifiedError) a
+unifiedError = lift . Left
 
 errorType :: UnifiedError -> ErrorType
 errorType (ParseError _)             = ParsingError
@@ -84,7 +99,9 @@ errorType (InvalidAscii85Stream _  ) = ParsingError
 errorType (InvalidPredictor     _  ) = ParsingError
 errorType (InvalidNumberOfBytes _ _) = ParsingError
 errorType InvalidFilterParm          = EncodingError
-errorType (NoStream _)               = ParsingError
+errorType (NoStream             _)   = StructureError
+errorType (NoDictionary         _)   = StructureError
+errorType (InvalidObjectToEmbed _)   = StructureError
 errorType NoObjectToEncode           = EncodingError
 
 show' :: UnifiedError -> String -> String
@@ -129,7 +146,10 @@ instance Show UnifiedError where
     show' err "Invalid combination of Filter and DecodeParms"
   show err@(InvalidAscii85Stream msg) =
     show' err ("Invalid Ascii85 stream: " ++ msg)
-  show err@(NoStream msg)   = show' err ("No stream: " ++ msg)
+  show err@(NoStream     msg) = show' err ("No stream: " ++ msg)
+  show err@(NoDictionary msg) = show' err ("No dictionary: " ++ msg)
+  show err@(InvalidObjectToEmbed msg) =
+    show' err ("Invalid object to embed: " ++ msg)
   show err@NoObjectToEncode = show' err "No object to encode"
 
 putError :: BS.ByteString -> IO ()

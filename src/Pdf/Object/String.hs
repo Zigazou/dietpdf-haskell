@@ -16,6 +16,7 @@ import           Util.String                    ( hexStringToString )
 import           Util.Ascii                     ( asciiNUL
                                                 , asciiDELETE
                                                 )
+import           Util.Errors                    ( UnifiedError )
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"
@@ -46,11 +47,11 @@ isAsciiEncoded = BS.all (\char -> char > asciiNUL && char < asciiDELETE)
 {- |
 Optimize `PDFHexString` into `PDFString`.
 -}
-optimizeString :: PDFObject -> PDFObject
+optimizeString :: PDFObject -> Either UnifiedError PDFObject
 optimizeString object@(PDFHexString values)
-  | isUTF16Encoded encoded = PDFString
+  | isUTF16Encoded encoded = return $ PDFString
   $ fromMaybe encoded (utf16beToAscii encoded)
-  | isAsciiEncoded encoded = PDFString encoded
-  | otherwise = object
+  | isAsciiEncoded encoded = return $ PDFString encoded
+  | otherwise = return object
   where encoded = hexStringToString values
-optimizeString object = object
+optimizeString object = return object

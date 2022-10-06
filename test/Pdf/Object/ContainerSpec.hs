@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+
 module Pdf.Object.ContainerSpec
   ( spec
   ) where
@@ -16,7 +17,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFIndirectObject
                                                   )
                                                 , Dictionary
-                                                , update
+                                                , updateE
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
@@ -29,8 +30,11 @@ import           Pdf.Object.Container           ( deepMap
                                                 , Filter(Filter)
                                                 , setFilters
                                                 )
+import           Control.Monad.State            ( put )
+import           Util.Errors                    ( UnifiedError )
 
-deepMapExamples :: [(PDFObject, PDFObject -> PDFObject, PDFObject)]
+deepMapExamples
+  :: [(PDFObject, PDFObject -> Either UnifiedError PDFObject, PDFObject)]
 deepMapExamples =
   [ ( PDFArray [PDFDictionary (fromList []), PDFNumber 3.0, PDFName "ABCD"]
     , addOneToAnyNumber
@@ -64,9 +68,9 @@ deepMapExamples =
     )
   ]
  where
-  addOneToAnyNumber :: PDFObject -> PDFObject
-  addOneToAnyNumber (PDFNumber x) = PDFNumber (x + 1.0)
-  addOneToAnyNumber object        = object
+  addOneToAnyNumber :: PDFObject -> Either UnifiedError PDFObject
+  addOneToAnyNumber (PDFNumber x) = return (PDFNumber (x + 1.0))
+  addOneToAnyNumber object        = return object
 
 insertMaybesExamples :: [([(BS.ByteString, Maybe PDFObject)], Dictionary)]
 insertMaybesExamples =
@@ -119,8 +123,8 @@ spec :: Spec
 spec = do
   describe "deepMap" $ forM_ deepMapExamples $ \(example, fn, expected) ->
     it ("should give right result for " ++ show example)
-      $          deepMap fn example
-      `shouldBe` expected
+      $          updateE example (deepMap fn)
+      `shouldBe` Right expected
 
   describe "insertMaybes"
     $ forM_ insertMaybesExamples
@@ -133,5 +137,5 @@ spec = do
     $ forM_ updateFiltersExamples
     $ \(filters, example, expected) ->
         it ("should give right result for " ++ show filters)
-          $          update example (setFilters filters)
-          `shouldBe` expected
+          $          updateE example (setFilters filters)
+          `shouldBe` Right expected

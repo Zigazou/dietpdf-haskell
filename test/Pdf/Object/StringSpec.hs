@@ -48,4 +48,4 @@ spec = describe "PDFString" $ do
   forM_ optimizeStringExamples $ \(example, expected) ->
     it ("should convert to PDFString " ++ show example)
       $          optimizeString example
-      `shouldBe` expected
+      `shouldBe` Right expected

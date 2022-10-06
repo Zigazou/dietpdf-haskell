@@ -51,8 +51,9 @@ import           Pdf.Object.Object              ( Dictionary
                                                   )
                                                 , fromPDFObject
                                                 , getStream
+                                                , getValue
                                                 , isWhiteSpace
-                                                , query
+                                                , queryE
                                                 )
 
 import           Control.Monad                  ( forM )
@@ -123,17 +124,20 @@ parseObjectNumberOffsets indices =
 extractObjects :: ObjectStream -> Either UnifiedError PDFDocument
 extractObjects (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
-  exploded <- forM numOffsets $ \(objectNumber, offset) -> do
+  exploded   <- forM numOffsets $ \(objectNumber, offset) -> do
     case parseOnly itemP (BS.drop offset objects) of
       Left  msg    -> Left $ ParseError ("", fromIntegral offset, msg)
       Right object -> return $ PDFIndirectObject objectNumber 0 object
   return $ fromList exploded
 
 getObjectStream :: PDFObject -> Either UnifiedError (Maybe ObjectStream)
-getObjectStream object@(PDFObjectStream _ _ dict _) = do
-  case objStmInfo of
-    Just (PDFNumber n, PDFNumber offset) -> do
-      unfilteredStream <- unfilter object >>= flip query getStream
+getObjectStream object@PDFObjectStream{} = queryE object $ do
+  objectN      <- getValue "N"
+  objectOffset <- getValue "First"
+
+  case (objectN, objectOffset) of
+    (Just (PDFNumber n), Just (PDFNumber offset)) -> do
+      unfilteredStream <- unfilter >> getStream
       let (indices, objects) = BS.splitAt (floor offset) unfilteredStream
       return $ Just ObjectStream { osCount   = floor n
                                  , osOffset  = floor offset
@@ -142,13 +146,6 @@ getObjectStream object@(PDFObjectStream _ _ dict _) = do
                                  }
 
     _anyOtherValue -> return Nothing
- where
-  objStmInfo :: Maybe (PDFObject, PDFObject)
-  objStmInfo = do
-    objectN      <- dict HM.!? "N"
-    objectOffset <- dict HM.!? "First"
-    return (objectN, objectOffset)
-
 getObjectStream _ = return Nothing
 
 {- |

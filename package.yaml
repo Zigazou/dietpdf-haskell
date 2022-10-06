@@ -58,6 +58,7 @@ library:
   - text
   - formatting
   - xml
+  - transformers
 
 executables:
   dietpdf:
@@ -97,3 +98,4 @@ tests:
     - ordered-containers
     - extra
     - binary-parsers
+    - mtl

@@ -89,6 +89,7 @@ library
     , sort
     , split
     , text
+    , transformers
     , unordered-containers
     , utf8-string
     , xml
@@ -171,6 +172,7 @@ test-suite dietpdf-test
     , dietpdf
     , extra
     , hspec
+    , mtl
     , ordered-containers
     , unordered-containers
     , zlib

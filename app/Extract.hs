@@ -12,6 +12,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFObjectStream
                                                   )
+                                                , updateE
                                                 )
 import           Pdf.Object.Unfilter            ( unfilter )
 import           Util.Errors                    ( putErrorLn )
@@ -19,11 +20,12 @@ import           Util.Errors                    ( putErrorLn )
 extract :: Int -> PDFDocument -> IO ()
 extract objectNumber objects = do
   case find (objectWithNumber objectNumber) objects of
-    Just object@PDFIndirectObjectWithStream{} -> case unfilter object of
-      Right (PDFIndirectObjectWithStream _ _ _ unfilteredStream) ->
-        BS.putStr unfilteredStream
-      _anyotherValue -> putErrorLn "Unable to unfilter stream"
-    Just object@PDFObjectStream{} -> case unfilter object of
+    Just object@PDFIndirectObjectWithStream{} ->
+      case updateE object unfilter of
+        Right (PDFIndirectObjectWithStream _ _ _ unfilteredStream) ->
+          BS.putStr unfilteredStream
+        _anyotherValue -> putErrorLn "Unable to unfilter stream"
+    Just object@PDFObjectStream{} -> case updateE object unfilter of
       Right (PDFObjectStream _ _ _ unfilteredStream) ->
         BS.putStr unfilteredStream
       _anyotherValue -> putErrorLn "Unable to unfilter stream"

@@ -45,10 +45,16 @@ module Pdf.Object.Object
 
     -- * PDF indirect object
   , update
+  , updateE
   , query
+  , queryE
   , updateStream
   , setStream
   , getStream
+  , getDictionary
+  , setDictionary
+  , embedObject
+  , modifyObject
 
     -- * PDF characters
   , isDelimiter
@@ -106,12 +112,16 @@ import           Util.Number                    ( fromInt
 import           Util.String                    ( fromHexString
                                                 , fromString
                                                 )
-import           Util.Errors                    ( UnifiedError(NoStream) )
+import           Util.Errors                    ( UnifiedError(NoStream, NoDictionary, InvalidObjectToEmbed), unifiedError )
 import           Control.Monad.State            ( State
                                                 , execState
                                                 , evalState
                                                 , get
                                                 , put
+                                                , StateT
+                                                , execStateT
+                                                , evalStateT
+                                                ,lift
                                                 )
 
 {-|
@@ -582,17 +592,17 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   , " endobj\n"
   ]
 
-{-
-getStream :: PDFObject -> Either UnifiedError BS.ByteString
-getStream (PDFIndirectObjectWithStream _ _ _ stream) = return stream
-getStream (PDFObjectStream _ _ _ stream) = return stream
-getStream _ = Left $ NoStream ""
--}
-getStream :: State PDFObject (Either UnifiedError BS.ByteString)
+getStream :: StateT PDFObject (Either UnifiedError) BS.ByteString
 getStream = get >>= \case
-  (PDFIndirectObjectWithStream _ _ _ stream) -> return $ Right stream
-  (PDFObjectStream             _ _ _ stream) -> return $ Right stream
-  _anyOtherObject                            -> return $ Left (NoStream "")
+  (PDFIndirectObjectWithStream _ _ _ stream) -> return stream
+  (PDFObjectStream             _ _ _ stream) -> return stream
+  _anyOtherObject                            -> lift $ Left (NoStream "")
+
+getDictionary :: StateT PDFObject (Either UnifiedError) Dictionary
+getDictionary = get >>= \case
+  (PDFIndirectObjectWithStream _ _ dict _) -> return dict
+  (PDFObjectStream             _ _ dict _) -> return dict
+  _anyOtherObject                            -> lift $ Left (NoDictionary "")
 
 updateStream :: PDFObject -> BS.ByteString -> PDFObject
 updateStream object newStream = case object of
@@ -621,15 +631,7 @@ objectType dictionary = case HM.lookup "Type" dictionary of
   _anyOtherValue -> Nothing
 
 -- | Get value in a dictionary from a `PDFObject`
---getValue :: BS.ByteString -> PDFObject -> Maybe PDFObject
---getValue name (PDFDictionary dict) = dict HM.!? name
---getValue name (PDFIndirectObjectWithStream _ _ dict _) = dict HM.!? name
---getValue name (PDFObjectStream _ _ dict _) = dict HM.!? name
---getValue name (PDFIndirectObject _ _ (PDFDictionary dict)) = dict HM.!? name
---getValue name (PDFTrailer (PDFDictionary dict)) = dict HM.!? name
---getValue _    _ = Nothing
-
-getValue :: BS.ByteString -> State PDFObject (Maybe PDFObject)
+getValue :: Monad m => BS.ByteString -> StateT PDFObject m (Maybe PDFObject)
 getValue name = get >>= \case
   (PDFDictionary dict) -> return $ dict HM.!? name
   (PDFIndirectObjectWithStream _ _ dict _) -> return $ dict HM.!? name
@@ -639,7 +641,7 @@ getValue name = get >>= \case
   _ -> return Nothing
 
 -- | Set value in a dictionary contained in a `PDFObject`
-setValue :: BS.ByteString -> PDFObject -> State PDFObject ()
+setValue :: Monad m => BS.ByteString -> PDFObject -> StateT PDFObject m ()
 setValue name value = get >>= \case
   (PDFDictionary dict) -> put (PDFDictionary (HM.insert name value dict))
   (PDFIndirectObjectWithStream num gen dict stream) ->
@@ -652,19 +654,19 @@ setValue name value = get >>= \case
     put (PDFTrailer (PDFDictionary (HM.insert name value dict)))
   object -> put object
 
-setMaybe :: BS.ByteString -> Maybe PDFObject -> State PDFObject ()
+setMaybe :: Monad m => BS.ByteString -> Maybe PDFObject -> StateT PDFObject m ()
 setMaybe _    Nothing      = return ()
 setMaybe name (Just value) = setValue name value
 
 infixr 9 .=
-(.=) :: BS.ByteString -> PDFObject -> State PDFObject ()
+(.=) :: Monad m => BS.ByteString -> PDFObject -> StateT PDFObject m ()
 (.=) = setValue
 
 infixr 9 ?=
-(?=) :: BS.ByteString -> Maybe PDFObject -> State PDFObject ()
+(?=) :: Monad m => BS.ByteString -> Maybe PDFObject -> StateT PDFObject m ()
 (?=) = setMaybe
 
-setStream :: BS.ByteString -> State PDFObject ()
+setStream :: Monad m => BS.ByteString -> StateT PDFObject m ()
 setStream newStream = get >>= \case
   (PDFIndirectObjectWithStream number revision dict _) -> do
     put (PDFIndirectObjectWithStream number revision dict newStream)
@@ -685,7 +687,35 @@ hasDictionary :: PDFObject -> Bool
 hasDictionary (PDFIndirectObject _ _ (PDFDictionary _)) = True
 hasDictionary PDFIndirectObjectWithStream{}             = True
 hasDictionary PDFObjectStream{}                         = True
+hasDictionary PDFDictionary{}                         = True
 hasDictionary _anyOtherObject                           = False
+
+setDictionary :: Dictionary -> StateT PDFObject (Either UnifiedError) ()
+setDictionary dict = get >>= \case
+  (PDFIndirectObjectWithStream num gen _ stream) -> put (PDFIndirectObjectWithStream num gen dict stream)
+  (PDFObjectStream             num gen _ stream) -> put (PDFObjectStream num gen dict stream)
+  (PDFIndirectObject           num gen (PDFDictionary _)) -> put (PDFIndirectObject num gen (PDFDictionary dict))
+  (PDFDictionary  _) -> put (PDFDictionary dict)
+  _anyOtherObject                            -> unifiedError (InvalidObjectToEmbed "")
+
+embedObject :: PDFObject -> StateT PDFObject (Either UnifiedError) ()
+embedObject (PDFDictionary dict) = get >>= \case
+  (PDFIndirectObjectWithStream num gen _ stream) -> put (PDFIndirectObjectWithStream num gen dict stream)
+  (PDFObjectStream             num gen _ stream) -> put (PDFObjectStream num gen dict stream)
+  (PDFIndirectObject           num gen (PDFDictionary _)) -> put (PDFIndirectObject num gen (PDFDictionary dict))
+  (PDFDictionary  _) -> put (PDFDictionary dict)
+  _anyOtherObject -> unifiedError (InvalidObjectToEmbed "")
+embedObject object = get >>= \case
+  (PDFIndirectObject           num gen (PDFDictionary _)) -> put (PDFIndirectObject num gen object)
+  _anyOtherObject -> unifiedError (InvalidObjectToEmbed "")
+
+modifyObject :: (PDFObject -> Either UnifiedError PDFObject) -> StateT PDFObject (Either UnifiedError) ()
+modifyObject fn = get >>= \case
+  (PDFIndirectObjectWithStream _ _ dict _) -> lift (fn (PDFDictionary dict)) >>= embedObject 
+  (PDFObjectStream             _ _ dict _) -> lift (fn (PDFDictionary dict)) >>= embedObject
+  (PDFIndirectObject           _ _ object@PDFDictionary{}) -> lift (fn object) >>= embedObject
+  object@PDFDictionary{} -> lift (fn object) >>= embedObject
+  _anyOtherObject -> unifiedError (InvalidObjectToEmbed "")
 
 hasStream :: PDFObject -> Bool
 hasStream PDFIndirectObjectWithStream{} = True
@@ -695,5 +725,17 @@ hasStream _anyOtherObject               = False
 update :: PDFObject -> State PDFObject a -> PDFObject
 update object modifier = execState modifier object
 
+updateE
+  :: PDFObject
+  -> StateT PDFObject (Either UnifiedError) a
+  -> Either UnifiedError PDFObject
+updateE object modifier = execStateT modifier object
+
 query :: PDFObject -> State PDFObject a -> a
 query object request = evalState request object
+
+queryE
+  :: PDFObject
+  -> StateT PDFObject (Either UnifiedError) a
+  ->  Either UnifiedError a
+queryE object request = evalStateT request object

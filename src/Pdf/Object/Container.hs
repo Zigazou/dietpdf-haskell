@@ -9,6 +9,7 @@ This module contains functions facilitating container manipulation (`PDFArray`,
 -}
 module Pdf.Object.Container
   ( deepMap
+  , deepMapM
   , Filter(Filter, fDecodeParms, fFilter)
   , setFilters
   , filtersFilter
@@ -18,9 +19,15 @@ module Pdf.Object.Container
   , getFilters
   ) where
 
+import           Control.Monad.State            ( StateT
+                                                , get
+                                                , lift
+                                                , put
+                                                )
 import qualified Data.ByteString               as BS
 import qualified Data.HashMap.Strict           as HM
-import           Pdf.Object.Object              ( Dictionary
+import           Pdf.Object.Object              ( (?=)
+                                                , Dictionary
                                                 , PDFObject
                                                   ( PDFArray
                                                   , PDFDictionary
@@ -30,33 +37,55 @@ import           Pdf.Object.Object              ( Dictionary
                                                   , PDFNull
                                                   , PDFObjectStream
                                                   )
-                                                , (?=)
+                                                , getValue
+                                                , modifyObject
+                                                , embedObject
+                                                , updateE
                                                 )
 import           Util.Errors                    ( UnifiedError
                                                   ( InvalidFilterParm
                                                   )
-                                                )
-import           Control.Monad.State            ( State
-                                                , get
+                                                , unifiedError
                                                 )
 
 {- |
 Apply a function to any object contained by an object at any level.
 -}
-deepMap :: (PDFObject -> PDFObject) -> PDFObject -> PDFObject
-deepMap fn (PDFIndirectObject number revision object) =
-  PDFIndirectObject number revision (deepMap fn object)
-deepMap fn (PDFIndirectObjectWithStream number revision dict stream) =
-  PDFIndirectObjectWithStream number revision (deepMapDict fn dict) stream
-deepMap fn (PDFObjectStream number revision dict stream) =
-  PDFObjectStream number revision (deepMapDict fn dict) stream
-deepMap fn (PDFDictionary dictionary) =
-  PDFDictionary (deepMapDict fn dictionary)
-deepMap fn (PDFArray items) = PDFArray (deepMap fn <$> items)
-deepMap fn object           = fn object
+deepMap
+  :: (PDFObject -> Either UnifiedError PDFObject)
+  -> StateT PDFObject (Either UnifiedError) ()
+deepMap fn = get >>= \case
+  PDFIndirectObject{}           -> modifyObject (`updateE` deepMap fn)
+  PDFIndirectObjectWithStream{} -> modifyObject (`updateE` deepMap fn)
+  PDFObjectStream{}             -> modifyObject (`updateE` deepMap fn)
+  PDFDictionary dict ->
+    lift (sequence (HM.map (`updateE` deepMap fn) dict))
+      >>= embedObject
+      .   PDFDictionary
+  PDFArray items ->
+    lift (sequence (flip updateE (deepMap fn) <$> items)) >>= put . PDFArray
+  object -> lift (fn object) >>= put
 
-deepMapDict :: (PDFObject -> PDFObject) -> Dictionary -> Dictionary
-deepMapDict fn = HM.map (deepMap fn)
+{- |
+Apply a function to any object contained by an object at any level.
+-}
+deepMapM
+  :: StateT PDFObject (Either UnifiedError) ()
+  -> StateT PDFObject (Either UnifiedError) ()
+deepMapM fn = get >>= \case
+  PDFIndirectObject _ _ object ->
+    lift (updateE object (deepMapM fn)) >>= embedObject
+  PDFIndirectObjectWithStream _ _ dict _ -> do
+    lift (updateE (PDFDictionary dict) (deepMapM fn)) >>= embedObject
+  PDFObjectStream _ _ dict _ ->
+    lift (updateE (PDFDictionary dict) (deepMapM fn)) >>= embedObject
+  PDFDictionary dict ->
+    lift (sequence (HM.map (`updateE` deepMapM fn) dict))
+      >>= embedObject
+      .   PDFDictionary
+  PDFArray items ->
+    lift (sequence (flip updateE (deepMapM fn) <$> items)) >>= put . PDFArray
+  object -> lift (updateE object fn) >>= put
 
 {- |
 A filter with its parameters.
@@ -73,24 +102,27 @@ hasNoDecodeParms = (== PDFNull) . fDecodeParms
 {- |
 Return a list of filters contained in a `PDFDictionary`.
 -}
-getFilters :: Dictionary -> Either UnifiedError [Filter]
-getFilters dict =
-  case (HM.lookup "Filter" dict, HM.lookup "DecodeParms" dict) of
-    (Just (  PDFArray fs), Just PDFNull      ) -> group fs []
-    (Just (  PDFArray fs), Nothing           ) -> group fs []
-    (Just (  PDFArray fs), Just (PDFArray ps)) -> group fs ps
-    (Just (  PDFArray fs), Just object       ) -> group fs [object]
+getFilters :: StateT PDFObject (Either UnifiedError) [Filter]
+getFilters = do
+  filters <- getValue "Filter"
+  parms   <- getValue "DecodeParms"
 
-    (Just f@(PDFName  _ ), Just PDFNull      ) -> group [f] []
-    (Just f@(PDFName  _ ), Nothing           ) -> group [f] []
-    (Just f@(PDFName  _ ), Just (PDFArray ps)) -> group [f] ps
-    (Just f@(PDFName  _ ), Just p            ) -> group [f] [p]
+  case (filters, parms) of
+    (Just (  PDFArray fs), Just PDFNull      ) -> return $ group fs []
+    (Just (  PDFArray fs), Nothing           ) -> return $ group fs []
+    (Just (  PDFArray fs), Just (PDFArray ps)) -> return $ group fs ps
+    (Just (  PDFArray fs), Just object       ) -> return $ group fs [object]
+
+    (Just f@(PDFName  _ ), Just PDFNull      ) -> return $ group [f] []
+    (Just f@(PDFName  _ ), Nothing           ) -> return $ group [f] []
+    (Just f@(PDFName  _ ), Just (PDFArray ps)) -> return $ group [f] ps
+    (Just f@(PDFName  _ ), Just p            ) -> return $ group [f] [p]
 
     (Nothing             , _                 ) -> return []
-    (_                   , _                 ) -> Left InvalidFilterParm
+    (_                   , _                 ) -> unifiedError InvalidFilterParm
  where
-  group :: [PDFObject] -> [PDFObject] -> Either UnifiedError [Filter]
-  group fs ps = return $ zipWith Filter fs (ps ++ repeat PDFNull)
+  group :: [PDFObject] -> [PDFObject] -> [Filter]
+  group fs ps = zipWith Filter fs (ps ++ repeat PDFNull)
 
 {- |
 Given a list of `Filter`, return the corresponding `PDFObject` of filter names.
@@ -123,7 +155,7 @@ filtersParms [Filter _ aDecodeParms] = Just aDecodeParms
 filtersParms filters | all hasNoDecodeParms filters = Nothing
                      | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
 
-setFilters :: [Filter] -> State PDFObject ()
+setFilters :: Monad m => [Filter] -> StateT PDFObject m ()
 setFilters filters = get >>= \case
   PDFIndirectObject{} -> do
     "Filter" ?= filtersFilter filters
