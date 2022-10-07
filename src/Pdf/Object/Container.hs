@@ -24,7 +24,7 @@ import           Control.Monad.State            ( get
                                                 , put
                                                 )
 import qualified Data.ByteString               as BS
-import qualified Data.Map.Strict           as Map
+import qualified Data.Map.Strict               as Map
 import           Pdf.Object.Object              ( Dictionary
                                                 , PDFObject
                                                   ( PDFArray
@@ -43,6 +43,8 @@ import           Pdf.Object.State               ( FallibleComputation
                                                 , embedObject
                                                 , updateE
                                                 , (?=)
+                                                , ifObject
+                                                , hasDictionaryS
                                                 )
 import           Util.Errors                    ( UnifiedError
                                                   ( InvalidFilterParm
@@ -155,17 +157,9 @@ filtersParms filters | all hasNoDecodeParms filters = Nothing
                      | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
 
 setFilters :: Monad m => [Filter] -> ObjectComputation m ()
-setFilters filters = get >>= \case
-  PDFIndirectObject{} -> do
-    "Filter" ?= filtersFilter filters
-    "DecodeParms" ?= filtersParms filters
-  PDFIndirectObjectWithStream{} -> do
-    "Filter" ?= filtersFilter filters
-    "DecodeParms" ?= filtersParms filters
-  PDFObjectStream{} -> do
-    "Filter" ?= filtersFilter filters
-    "DecodeParms" ?= filtersParms filters
-  _anyOtherValue -> return ()
+setFilters filters = ifObject hasDictionaryS $ do
+  "Filter" ?= filtersFilter filters
+  "DecodeParms" ?= filtersParms filters
 
 {- |
 Insert a key-value pair inside a `Dictionary`.
