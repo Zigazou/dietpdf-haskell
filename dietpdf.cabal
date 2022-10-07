@@ -41,11 +41,12 @@ library
       Pdf.Document.Partition
       Pdf.Document.Uncompress
       Pdf.Document.XRef
-      Pdf.Object.Collection
+      Pdf.Graphics.Object
       Pdf.Object.Container
       Pdf.Object.Linearization
       Pdf.Object.Object
       Pdf.Object.Optimize
+      Pdf.Object.State
       Pdf.Object.String
       Pdf.Object.Unfilter
       Pdf.Parser.Comment
@@ -90,7 +91,6 @@ library
     , split
     , text
     , transformers
-    , unordered-containers
     , utf8-string
     , xml
     , zlib
@@ -131,7 +131,6 @@ test-suite dietpdf-test
       Pdf.Document.ObjectStreamSpec
       Pdf.Document.XRefSpec
       Pdf.Object.ArraySpec
-      Pdf.Object.CollectionSpec
       Pdf.Object.ContainerSpec
       Pdf.Object.DictionarySpec
       Pdf.Object.HexStringSpec
@@ -142,6 +141,7 @@ test-suite dietpdf-test
       Pdf.Object.OptimizeSpec
       Pdf.Object.PartitionSpec
       Pdf.Object.ReferenceSpec
+      Pdf.Object.StateSpec
       Pdf.Object.StringSpec
       Pdf.Parser.ArraySpec
       Pdf.Parser.CommentSpec
@@ -169,11 +169,10 @@ test-suite dietpdf-test
     , base >=4.7 && <5
     , binary-parsers
     , bytestring
+    , containers
     , dietpdf
     , extra
     , hspec
-    , mtl
     , ordered-containers
-    , unordered-containers
     , zlib
   default-language: Haskell2010

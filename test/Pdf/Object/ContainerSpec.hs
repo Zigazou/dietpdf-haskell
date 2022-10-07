@@ -5,40 +5,41 @@ module Pdf.Object.ContainerSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
-import           Data.HashMap.Strict            ( fromList )
 import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFNumber
-                                                  , PDFName
-                                                  , PDFDictionary
-                                                  , PDFArray
-                                                  , PDFNull
-                                                  , PDFString
-                                                  , PDFIndirectObject
-                                                  )
-                                                , Dictionary
-                                                , updateE
+import           Data.Map.Strict                ( fromList
+                                                , empty
                                                 )
+import           Pdf.Object.Object              ( Dictionary
+                                                , PDFObject
+                                                  ( PDFArray
+                                                  , PDFDictionary
+                                                  , PDFIndirectObject
+                                                  , PDFName
+                                                  , PDFNull
+                                                  , PDFNumber
+                                                  , PDFString
+                                                  )
+                                                )
+import           Pdf.Object.State               ( updateE )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
                                                 , shouldBe
                                                 )
 
-import           Pdf.Object.Container           ( deepMap
+import           Pdf.Object.Container           ( Filter(Filter)
+                                                , deepMap
                                                 , insertMaybes
-                                                , Filter(Filter)
                                                 , setFilters
                                                 )
-import           Control.Monad.State            ( put )
 import           Util.Errors                    ( UnifiedError )
 
 deepMapExamples
   :: [(PDFObject, PDFObject -> Either UnifiedError PDFObject, PDFObject)]
 deepMapExamples =
-  [ ( PDFArray [PDFDictionary (fromList []), PDFNumber 3.0, PDFName "ABCD"]
+  [ ( PDFArray [PDFDictionary empty, PDFNumber 3.0, PDFName "ABCD"]
     , addOneToAnyNumber
-    , PDFArray [PDFDictionary (fromList []), PDFNumber 4.0, PDFName "ABCD"]
+    , PDFArray [PDFDictionary empty, PDFNumber 4.0, PDFName "ABCD"]
     )
   , ( PDFDictionary (fromList [("X", PDFNumber 1.0), ("Y", PDFString "abcd")])
     , addOneToAnyNumber
@@ -85,14 +86,14 @@ insertMaybesExamples =
 updateFiltersExamples :: [([Filter], PDFObject, PDFObject)]
 updateFiltersExamples =
   [ ( [Filter (PDFName "FlateDecode") PDFNull]
-    , PDFIndirectObject 1 0 (PDFDictionary (fromList []))
+    , PDFIndirectObject 1 0 (PDFDictionary empty)
     , PDFIndirectObject
       1
       0
       (PDFDictionary (fromList [("Filter", PDFName "FlateDecode")]))
     )
   , ( [Filter (PDFName "FlateDecode") (PDFName "Foo")]
-    , PDFIndirectObject 1 0 (PDFDictionary (fromList []))
+    , PDFIndirectObject 1 0 (PDFDictionary empty)
     , PDFIndirectObject
       1
       0
@@ -105,7 +106,7 @@ updateFiltersExamples =
   , ( [ Filter (PDFName "RLEDecode")   PDFNull
       , Filter (PDFName "FlateDecode") (PDFName "foo")
       ]
-    , PDFIndirectObject 1 0 (PDFDictionary (fromList []))
+    , PDFIndirectObject 1 0 (PDFDictionary empty)
     , PDFIndirectObject
       1
       0
@@ -130,7 +131,7 @@ spec = do
     $ forM_ insertMaybesExamples
     $ \(example, expected) ->
         it ("should give right result for " ++ show example)
-          $          insertMaybes (fromList []) example
+          $          insertMaybes empty example
           `shouldBe` expected
 
   describe "update+setFilters"

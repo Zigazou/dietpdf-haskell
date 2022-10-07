@@ -4,7 +4,7 @@ module Pdf.Document.ObjectStreamSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict               as Map
 import           Pdf.Document.Document          ( PDFDocument
                                                 , fromList
                                                 )
@@ -34,7 +34,7 @@ fromObjectStreamExamples =
   [ ( PDFObjectStream
       1
       0
-      (HM.fromList
+      (Map.fromList
         [ ("Type" , PDFName "ObjStm")
         , ("N"    , PDFNumber 2)
         , ("First", PDFNumber 10)
@@ -58,7 +58,7 @@ toObjectStreamExamples =
     , Right $ PDFObjectStream
       1
       0
-      (HM.fromList
+      (Map.fromList
         [ ("Type" , PDFName "ObjStm")
         , ("N"    , PDFNumber 2)
         , ("First", PDFNumber 10)
@@ -69,7 +69,7 @@ toObjectStreamExamples =
   , (fromList []       , Left NoObjectToEncode)
   , (fromList [PDFNull], Left NoObjectToEncode)
   , ( fromList
-      [PDFIndirectObjectWithStream 1 0 (HM.fromList []) "Hello, World!"]
+      [PDFIndirectObjectWithStream 1 0 Map.empty "Hello, World!"]
     , Left NoObjectToEncode
     )
   ]

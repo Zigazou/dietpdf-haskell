@@ -23,7 +23,7 @@ module Pdf.Object.Linearization
   ) where
 
 import           Control.Monad                  ( msum )
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict               as Map
 import           Pdf.Document.Document          ( PDFDocument
                                                 , lMap
                                                 )
@@ -111,7 +111,7 @@ extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
     _anyOtherValue -> Nothing
  where
   dictionaryEntries =
-    (HM.!?) dictionary <$> ["Linearized", "L", "H", "O", "E", "N", "T", "P"]
+    (Map.!?) dictionary <$> ["Linearized", "L", "H", "O", "E", "N", "T", "P"]
 extractLinearization _ = Nothing
 
 {- |

@@ -7,7 +7,7 @@ import           Test.Hspec                     ( describe
                                                 , Spec
                                                 )
 import qualified Data.ByteString               as BS
-import           Data.HashMap.Strict            ( fromList )
+import           Data.Map.Strict                ( fromList )
 import           Util.ParserHelper              ( itWith )
 import           Pdf.Parser.IndirectObject      ( indirectObjectP )
 import           Pdf.Object.Object              ( PDFObject

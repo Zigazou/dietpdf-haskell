@@ -1,3 +1,3 @@
 check = []
-remove = []
+remove = ["test/"]
 ignore = []

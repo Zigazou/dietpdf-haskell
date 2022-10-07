@@ -45,7 +45,6 @@ library:
   - bytestring
   - binary
   - binary-parsers
-  - unordered-containers
   - ordered-containers
   - containers
   - mtl
@@ -94,8 +93,7 @@ tests:
     - QuickCheck
     - zlib
     - bytestring
-    - unordered-containers
+    - containers
     - ordered-containers
     - extra
     - binary-parsers
-    - mtl

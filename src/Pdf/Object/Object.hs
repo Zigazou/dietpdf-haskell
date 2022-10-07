@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE LambdaCase #-}
 
 {-|
 This module defines what is a PDF object and functions in relation with the
@@ -32,29 +31,18 @@ module Pdf.Object.Object
     , PDFStartXRef
     )
   , Dictionary
+
+    -- * Conversion
   , fromPDFObject
+
+    -- * Getting info about a `PDFObject`
   , objectInfo
-  , getValue
-  , setValue
-  , (.=)
-  , setMaybe
-  , (?=)
   , hasKey
   , hasDictionary
   , hasStream
 
     -- * PDF indirect object
-  , update
-  , updateE
-  , query
-  , queryE
   , updateStream
-  , setStream
-  , getStream
-  , getDictionary
-  , setDictionary
-  , embedObject
-  , modifyObject
 
     -- * PDF characters
   , isDelimiter
@@ -66,10 +54,9 @@ module Pdf.Object.Object
   , isStringRegularChar
   , isNameRegularChar
   , spaceIfNeeded
-  ,
 
     -- * XRef
-    xrefCount
+  , xrefCount
   , inUseEntry
   , freeEntry
   , XRefState(InUseEntry, FreeEntry)
@@ -89,7 +76,7 @@ import           Formatting                     ( format
                                                 , left
                                                 )
 import           Formatting.ByteStringFormatter ( utf8 )
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict as Map
 import           Data.Ix                        ( inRange )
 import           Data.List                      ( foldl' )
 import           Data.Maybe                     ( isJust
@@ -111,17 +98,6 @@ import           Util.Number                    ( fromInt
                                                 )
 import           Util.String                    ( fromHexString
                                                 , fromString
-                                                )
-import           Util.Errors                    ( UnifiedError(NoStream, NoDictionary, InvalidObjectToEmbed), unifiedError )
-import           Control.Monad.State            ( State
-                                                , execState
-                                                , evalState
-                                                , get
-                                                , put
-                                                , StateT
-                                                , execStateT
-                                                , evalStateT
-                                                ,lift
                                                 )
 
 {-|
@@ -266,10 +242,18 @@ data XRefStmFieldType =
   | XRSFCompressedObject
   deriving stock (Eq, Show)
 
-type Dictionary = HM.HashMap BS.ByteString PDFObject
+{- |
+A `Dictionary` is a handy type.
 
+It is a `Map` of `PDFObject` indexed by `ByteString`.
+
+The keys are the `ByteString` contained in `PDFName`.
+-}
+type Dictionary = Map.Map BS.ByteString PDFObject
+
+-- | Returns an empty `Dictionary`
 emptyDictionary :: Dictionary
-emptyDictionary = HM.fromList []
+emptyDictionary = Map.empty
 
 {-|
 A PDF is a collection of objects, here named PDF objects.
@@ -391,6 +375,10 @@ instance Ord PDFObject where
   compare (PDFStartXRef x) (PDFStartXRef y) = compare x y
   compare objectA objectB = compare (objectRank objectA) (objectRank objectB)
 
+{- |
+Indicates whether the `PDFObject` ends with a delimiter when converted to a
+`ByteString`.
+-}
 endsWithDelimiter :: PDFObject -> Bool
 endsWithDelimiter PDFComment{}                  = True
 endsWithDelimiter PDFVersion{}                  = True
@@ -412,6 +400,10 @@ endsWithDelimiter PDFXRef{}                     = False
 endsWithDelimiter PDFTrailer{}                  = True
 endsWithDelimiter PDFStartXRef{}                = True
 
+{- |
+Indicates whether the `PDFObject` starts with a delimiter when converted to a
+`ByteString`.
+-}
 startsWithDelimiter :: PDFObject -> Bool
 startsWithDelimiter PDFComment{}                  = True
 startsWithDelimiter PDFVersion{}                  = True
@@ -433,11 +425,19 @@ startsWithDelimiter PDFXRef{}                     = False
 startsWithDelimiter PDFTrailer{}                  = False
 startsWithDelimiter PDFStartXRef{}                = False
 
+{- |
+Tells if a space must be inserted between 2 `PDFObject` when converted to
+`ByteString`.
+-}
 spaceIfNeeded :: PDFObject -> PDFObject -> BS.ByteString
 spaceIfNeeded object1 object2 | endsWithDelimiter object1   = ""
                               | startsWithDelimiter object2 = ""
                               | otherwise                   = " "
 
+{- |
+Converts a `PDFObject` to a `ByteString` ready to be inserted in an output
+PDF file.
+-}
 fromPDFObject :: PDFObject -> BS.ByteString
 fromPDFObject (PDFComment comment)     = BS.concat ["%", comment, "\n"]
 fromPDFObject (PDFVersion version)     = BS.concat ["%PDF-", version, "\n"]
@@ -467,7 +467,8 @@ fromPDFObject (PDFTrailer _) = error "a trailer can only contain a dictionary"
 fromPDFObject (PDFStartXRef offset) =
   BS.concat ["startxref\n", fromInt offset, "\n"]
 
-{- | Returns a `Text` string describing a PDFObject.
+{- |
+Returns a `Text` string describing a PDFObject.
 -}
 objectInfo :: PDFObject -> TL.Text
 objectInfo (PDFComment comment) = format ("{- " % utf8 % " -}") comment
@@ -487,8 +488,8 @@ objectInfo (PDFArray objects) =
 objectInfo (PDFDictionary dictionary) = case objectType dictionary of
   Just value -> format ("[dictionary:type=" % utf8 % ";count=" % int % "]")
                        value
-                       (HM.size dictionary)
-  Nothing -> format ("[dictionary:count=" % int % "]") (HM.size dictionary)
+                       (Map.size dictionary)
+  Nothing -> format ("[dictionary:count=" % int % "]") (Map.size dictionary)
 objectInfo (PDFIndirectObject number revision object) = format
   ("object(" % int % "," % int % ")=" % text)
   number
@@ -526,6 +527,10 @@ objectInfo (PDFTrailer _) = "<trailer without dictionary>"
 objectInfo (PDFStartXRef offset) =
   format ("[startxref:offset=" % int % "]") offset
 
+{- |
+Takes a `List` of `PDFObject`, converts them to the `ByteString` representation
+and inserts spaces between them if necessary.
+-}
 separateObjects :: [PDFObject] -> BS.ByteString
 separateObjects []                           = ""
 separateObjects [object1                   ] = fromPDFObject object1
@@ -556,9 +561,9 @@ fromXRef xrss = BS.concat ["xref\n", BS.concat (fmap fromXRefSubsection xrss)]
 fromArray :: [PDFObject] -> BS.ByteString
 fromArray items = BS.concat ["[", separateObjects items, "]"]
 
-fromDictionary :: HM.HashMap BS.ByteString PDFObject -> BS.ByteString
+fromDictionary :: Dictionary -> BS.ByteString
 fromDictionary keyValues = BS.concat
-  ["<<", separateObjects (splitCouple (HM.toList keyValues)), ">>"]
+  ["<<", separateObjects (splitCouple (Map.toList keyValues)), ">>"]
  where
   splitCouple [] = []
   splitCouple ((key, value) : remains) =
@@ -592,18 +597,12 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   , " endobj\n"
   ]
 
-getStream :: StateT PDFObject (Either UnifiedError) BS.ByteString
-getStream = get >>= \case
-  (PDFIndirectObjectWithStream _ _ _ stream) -> return stream
-  (PDFObjectStream             _ _ _ stream) -> return stream
-  _anyOtherObject                            -> lift $ Left (NoStream "")
+{- |
+Update the stream embedded in a `PDFObject`.
 
-getDictionary :: StateT PDFObject (Either UnifiedError) Dictionary
-getDictionary = get >>= \case
-  (PDFIndirectObjectWithStream _ _ dict _) -> return dict
-  (PDFObjectStream             _ _ dict _) -> return dict
-  _anyOtherObject                            -> lift $ Left (NoDictionary "")
-
+It also updates the Length entry in the associated dictionary to reflect the
+change.
+-}
 updateStream :: PDFObject -> BS.ByteString -> PDFObject
 updateStream object newStream = case object of
   (PDFIndirectObjectWithStream number revision dict _) ->
@@ -616,126 +615,62 @@ updateStream object newStream = case object of
   newLength = PDFNumber . fromIntegral . BS.length $ newStream
 
   newDict :: Dictionary -> Dictionary
-  newDict = HM.adjust (const newLength) "Length"
+  newDict = Map.adjust (const newLength) "Length"
 
+{- |
+Returns the count of cross-references in a `PDFXRef` object.
+
+If the object is not a `PDFXRef`, it returns 0.
+-}
 xrefCount :: PDFObject -> Int
 xrefCount (PDFXRef subsections) = foldl' (+) 0 $ xrssCount <$> subsections
 xrefCount _                     = 0
 
-objectType :: HM.HashMap BS.ByteString PDFObject -> Maybe BS.ByteString
-objectType dictionary = case HM.lookup "Type" dictionary of
-  Just (PDFName typeValue) -> case HM.lookup "Subtype" dictionary of
-    Just (PDFName subtypeValue) ->
+{- |
+Given a `Dictionary`, generate a human `ByteString` describing the object based
+on the Type and Subtype keys.
+
+If the dictionary contains does not contain a Type key, it returns `Nothing`.
+-}
+objectType :: Dictionary -> Maybe BS.ByteString
+objectType dictionary =
+  case (Map.lookup "Type" dictionary, Map.lookup "Type" dictionary) of
+    (Just (PDFName typeValue), Just (PDFName subtypeValue)) ->
       Just $ BS.concat [typeValue, "/", subtypeValue]
-    _anyOtherValue -> Just typeValue
-  _anyOtherValue -> Nothing
+    (Just (PDFName typeValue), _noSubtype) -> Just typeValue
+    _noType -> Nothing
 
--- | Get value in a dictionary from a `PDFObject`
-getValue :: Monad m => BS.ByteString -> StateT PDFObject m (Maybe PDFObject)
-getValue name = get >>= \case
-  (PDFDictionary dict) -> return $ dict HM.!? name
-  (PDFIndirectObjectWithStream _ _ dict _) -> return $ dict HM.!? name
-  (PDFObjectStream _ _ dict _) -> return $ dict HM.!? name
-  (PDFIndirectObject _ _ (PDFDictionary dict)) -> return $ dict HM.!? name
-  (PDFTrailer (PDFDictionary dict)) -> return $ dict HM.!? name
-  _ -> return Nothing
+{- |
+Determine if a key is in a dictionary from a `PDFObject`.
 
--- | Set value in a dictionary contained in a `PDFObject`
-setValue :: Monad m => BS.ByteString -> PDFObject -> StateT PDFObject m ()
-setValue name value = get >>= \case
-  (PDFDictionary dict) -> put (PDFDictionary (HM.insert name value dict))
-  (PDFIndirectObjectWithStream num gen dict stream) ->
-    put (PDFIndirectObjectWithStream num gen (HM.insert name value dict) stream)
-  (PDFObjectStream num gen dict stream) ->
-    put (PDFObjectStream num gen (HM.insert name value dict) stream)
-  (PDFIndirectObject num gen (PDFDictionary dict)) ->
-    put (PDFIndirectObject num gen (PDFDictionary (HM.insert name value dict)))
-  (PDFTrailer (PDFDictionary dict)) ->
-    put (PDFTrailer (PDFDictionary (HM.insert name value dict)))
-  object -> put object
+If the `PDFObject` has no dictionary, it returns `False`.
+-}
+hasKey
+  :: BS.ByteString -- ^ The key to search for
+  -> PDFObject -- ^ The `PDFObject` to search in
+  -> Bool
+hasKey key  (PDFDictionary dict                        ) = isJust $ dict Map.!? key
+hasKey key  (PDFIndirectObjectWithStream _ _ dict _    ) = isJust $ dict Map.!? key
+hasKey key  (PDFObjectStream             _ _ dict _    ) = isJust $ dict Map.!? key
+hasKey key  (PDFIndirectObject _ _ (PDFDictionary dict)) = isJust $ dict Map.!? key
+hasKey key  (PDFTrailer (PDFDictionary dict)           ) = isJust $ dict Map.!? key
+hasKey _    _anyOtherObject                              = False
 
-setMaybe :: Monad m => BS.ByteString -> Maybe PDFObject -> StateT PDFObject m ()
-setMaybe _    Nothing      = return ()
-setMaybe name (Just value) = setValue name value
-
-infixr 9 .=
-(.=) :: Monad m => BS.ByteString -> PDFObject -> StateT PDFObject m ()
-(.=) = setValue
-
-infixr 9 ?=
-(?=) :: Monad m => BS.ByteString -> Maybe PDFObject -> StateT PDFObject m ()
-(?=) = setMaybe
-
-setStream :: Monad m => BS.ByteString -> StateT PDFObject m ()
-setStream newStream = get >>= \case
-  (PDFIndirectObjectWithStream number revision dict _) -> do
-    put (PDFIndirectObjectWithStream number revision dict newStream)
-    "Length" .= newLength
-  (PDFObjectStream number revision dict _) -> do
-    put (PDFObjectStream number revision dict newStream)
-    "Length" .= newLength
-  _anyOtherObject -> return ()
- where
-  newLength :: PDFObject
-  newLength = PDFNumber . fromIntegral . BS.length $ newStream
-
--- | Determine if a key is in a dictionary from a `PDFObject`
-hasKey :: BS.ByteString -> PDFObject -> Bool
-hasKey = (isJust .) . flip query . getValue
-
+{- |
+Determine if a `PDFObject` has a dictionary.
+-}
 hasDictionary :: PDFObject -> Bool
 hasDictionary (PDFIndirectObject _ _ (PDFDictionary _)) = True
 hasDictionary PDFIndirectObjectWithStream{}             = True
 hasDictionary PDFObjectStream{}                         = True
-hasDictionary PDFDictionary{}                         = True
+hasDictionary PDFDictionary{}                           = True
+hasDictionary (PDFTrailer (PDFDictionary _)) = True
 hasDictionary _anyOtherObject                           = False
 
-setDictionary :: Dictionary -> StateT PDFObject (Either UnifiedError) ()
-setDictionary dict = get >>= \case
-  (PDFIndirectObjectWithStream num gen _ stream) -> put (PDFIndirectObjectWithStream num gen dict stream)
-  (PDFObjectStream             num gen _ stream) -> put (PDFObjectStream num gen dict stream)
-  (PDFIndirectObject           num gen (PDFDictionary _)) -> put (PDFIndirectObject num gen (PDFDictionary dict))
-  (PDFDictionary  _) -> put (PDFDictionary dict)
-  _anyOtherObject                            -> unifiedError (InvalidObjectToEmbed "")
-
-embedObject :: PDFObject -> StateT PDFObject (Either UnifiedError) ()
-embedObject (PDFDictionary dict) = get >>= \case
-  (PDFIndirectObjectWithStream num gen _ stream) -> put (PDFIndirectObjectWithStream num gen dict stream)
-  (PDFObjectStream             num gen _ stream) -> put (PDFObjectStream num gen dict stream)
-  (PDFIndirectObject           num gen (PDFDictionary _)) -> put (PDFIndirectObject num gen (PDFDictionary dict))
-  (PDFDictionary  _) -> put (PDFDictionary dict)
-  _anyOtherObject -> unifiedError (InvalidObjectToEmbed "")
-embedObject object = get >>= \case
-  (PDFIndirectObject           num gen (PDFDictionary _)) -> put (PDFIndirectObject num gen object)
-  _anyOtherObject -> unifiedError (InvalidObjectToEmbed "")
-
-modifyObject :: (PDFObject -> Either UnifiedError PDFObject) -> StateT PDFObject (Either UnifiedError) ()
-modifyObject fn = get >>= \case
-  (PDFIndirectObjectWithStream _ _ dict _) -> lift (fn (PDFDictionary dict)) >>= embedObject 
-  (PDFObjectStream             _ _ dict _) -> lift (fn (PDFDictionary dict)) >>= embedObject
-  (PDFIndirectObject           _ _ object@PDFDictionary{}) -> lift (fn object) >>= embedObject
-  object@PDFDictionary{} -> lift (fn object) >>= embedObject
-  _anyOtherObject -> unifiedError (InvalidObjectToEmbed "")
-
+{- |
+Determine if a `PDFObject` has a stream.
+-}
 hasStream :: PDFObject -> Bool
 hasStream PDFIndirectObjectWithStream{} = True
 hasStream PDFObjectStream{}             = True
 hasStream _anyOtherObject               = False
-
-update :: PDFObject -> State PDFObject a -> PDFObject
-update object modifier = execState modifier object
-
-updateE
-  :: PDFObject
-  -> StateT PDFObject (Either UnifiedError) a
-  -> Either UnifiedError PDFObject
-updateE object modifier = execStateT modifier object
-
-query :: PDFObject -> State PDFObject a -> a
-query object request = evalState request object
-
-queryE
-  :: PDFObject
-  -> StateT PDFObject (Either UnifiedError) a
-  ->  Either UnifiedError a
-queryE object request = evalStateT request object

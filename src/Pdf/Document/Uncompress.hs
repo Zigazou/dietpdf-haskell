@@ -6,9 +6,8 @@ import           Pdf.Document.Document          ( PDFDocument
                                                 , cMap
                                                 )
 import           Pdf.Document.ObjectStream      ( explode )
-import           Pdf.Object.Object              ( PDFObject
-                                                , updateE
-                                                )
+import           Pdf.Object.Object              ( PDFObject )
+import           Pdf.Object.State               ( updateE )
 import           Pdf.Object.Unfilter            ( unfilter )
 
 uncompress :: PDFDocument -> PDFDocument

@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE InstanceSigs #-}
+
 {- |
 This module manipulates collections of `PDFObject`.
 
@@ -21,7 +22,7 @@ module Pdf.Document.Collection
   ) where
 
 import qualified Data.ByteString               as BS
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.IntMap.Strict            as IM
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
@@ -29,15 +30,15 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 , fromPDFObject
                                                 )
-import Pdf.Document.Document (CollectionOf)
+import           Pdf.Document.Document          ( CollectionOf )
 import           Data.Maybe                     ( isJust )
 import           Control.Monad                  ( (<=<) )
 
 -- | A collection of objects indexed by the object number
-type PDFObjects = HM.HashMap Int PDFObject
+type PDFObjects = IM.IntMap PDFObject
 
 -- | A collection of object offsets indexed by the object number
-type ObjectOffsets = HM.HashMap Int Int
+type ObjectOffsets = IM.IntMap Int
 
 -- | An object that has been encoded
 data EncodedObject = EncodedObject

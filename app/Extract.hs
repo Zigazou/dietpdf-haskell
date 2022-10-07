@@ -12,8 +12,8 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFObjectStream
                                                   )
-                                                , updateE
                                                 )
+import           Pdf.Object.State               ( updateE )
 import           Pdf.Object.Unfilter            ( unfilter )
 import           Util.Errors                    ( putErrorLn )
 

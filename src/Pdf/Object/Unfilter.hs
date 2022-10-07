@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE LambdaCase #-}
 
 {-|
 This module facilitates unfiltering of `PDFObject`.
@@ -15,25 +14,24 @@ import qualified Codec.Compression.LZW         as LZ
 import qualified Codec.Compression.RunLength   as RL
 import qualified Codec.Filter.Ascii85          as A8
 import qualified Codec.Filter.AsciiHex         as AH
-import           Control.Monad.State            ( StateT
-                                                , get
-                                                , lift
-                                                )
+import           Control.Monad.State            ( lift )
 import qualified Data.ByteString               as BS
 import           Pdf.Object.Container           ( Filter(fFilter)
                                                 , getFilters
                                                 , setFilters
                                                 )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObjectWithStream
-                                                  , PDFName
-                                                  , PDFObjectStream
-                                                  )
-                                                , getStream
+import           Pdf.Object.Object              ( PDFObject(PDFName) )
+import           Pdf.Object.State               ( getStream
                                                 , setStream
+                                                , FallibleComputation
+                                                , ifObject
+                                                , hasStreamS
                                                 )
 import           Util.Errors                    ( UnifiedError )
 
+{- |
+List of all filters that the `unfilter` function supports.
+-}
 supportedFilters :: [BS.ByteString]
 supportedFilters =
   [ "FlateDecode"
@@ -60,20 +58,19 @@ unfilterStream (filters@(pdfFilter : otherFilters), stream)
   = Right (filters, stream)
 unfilterStream (filters, stream) = Right (filters, stream)
 
-unfiltered :: StateT PDFObject (Either UnifiedError) ([Filter], BS.ByteString)
+unfiltered :: FallibleComputation ([Filter], BS.ByteString)
 unfiltered = do
   stream <- getStream
-  getFilters >>= \filters -> lift (unfilterStream (filters, stream))
+  filters <- getFilters
+  lift (unfilterStream (filters, stream))
 
-unfilter :: StateT PDFObject (Either UnifiedError) ()
-unfilter = do
-  get >>= \case
-    PDFIndirectObjectWithStream{} -> unfilter'
-    PDFObjectStream{}             -> unfilter'
-    _anyOtherObject               -> return ()
- where
-  unfilter' :: StateT PDFObject (Either UnifiedError) ()
-  unfilter' = do
-    (remainingFilters, unfilteredStream) <- unfiltered
-    setStream unfilteredStream
-    setFilters remainingFilters
+{- |
+Tries to decode every filter of an object with a stream.
+
+It usually decompresses the stream.
+-}
+unfilter :: FallibleComputation ()
+unfilter = ifObject hasStreamS $ do
+  (remainingFilters, unfilteredStream) <- unfiltered
+  setStream unfilteredStream
+  setFilters remainingFilters

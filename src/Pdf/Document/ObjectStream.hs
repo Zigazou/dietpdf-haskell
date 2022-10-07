@@ -34,7 +34,7 @@ import           Data.Binary.Parser             ( Get
                                                 , takeWhile1
                                                 )
 import qualified Data.ByteString               as BS
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict               as Map
 import           Util.Number                    ( fromInt )
 
 import           Pdf.Document.Document          ( PDFDocument
@@ -50,12 +50,12 @@ import           Pdf.Object.Object              ( Dictionary
                                                   , PDFObjectStream
                                                   )
                                                 , fromPDFObject
-                                                , getStream
-                                                , getValue
                                                 , isWhiteSpace
+                                                )
+import           Pdf.Object.State               ( getStream
+                                                , getValue
                                                 , queryE
                                                 )
-
 import           Control.Monad                  ( forM )
 import           Data.Functor                   ( (<&>) )
 import           Pdf.Object.Unfilter            ( unfilter )
@@ -74,6 +74,7 @@ import           Util.Errors                    ( UnifiedError
                                                   , ParseError
                                                   )
                                                 )
+import           Data.Foldable                  ( foldl' )
 
 data ObjectStream = ObjectStream
   { osCount   :: Int
@@ -198,7 +199,7 @@ appendObject objStm (PDFIndirectObject num _ object) = ObjectStream
 appendObject objStm _ = objStm
 
 insertObjects :: PDFDocument -> ObjectStream
-insertObjects = foldl appendObject emptyObjectStream
+insertObjects = foldl' appendObject emptyObjectStream
 
 dropLastByte :: BS.ByteString -> BS.ByteString
 dropLastByte str = BS.take (BS.length str - 1) str
@@ -220,7 +221,7 @@ insert objects num | objects == mempty = Left NoObjectToEncode
  where
   objStm = insertObjects (dFilter isObjectStreamable objects)
   dict :: Dictionary
-  dict = HM.fromList
+  dict = Map.fromList
     [ ("Type" , PDFName "ObjStm")
     , ("N"    , PDFNumber . fromIntegral . osCount $ objStm)
     , ("First", PDFNumber . fromIntegral . osOffset $ objStm)

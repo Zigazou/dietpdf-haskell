@@ -20,15 +20,15 @@ import           Util.Ascii                     ( asciiDIGITNINE
                                                 , asciiUPPERF
                                                 )
 
-(><) :: Word8 -> (Word8, Word8) -> Bool
-(><) byte (lower, upper) = byte >= lower && byte <= upper
-
 fromHexDigit :: Word8 -> Maybe Word8
 fromHexDigit byte
-  | byte >< (asciiDIGITZERO, asciiDIGITNINE) = Just $ byte - asciiDIGITZERO
-  | byte >< (asciiLOWERA, asciiLOWERF) = Just $ 10 + byte - asciiLOWERA
-  | byte >< (asciiUPPERA, asciiUPPERF) = Just $ 10 + byte - asciiUPPERA
-  | otherwise                          = Nothing
+  | between byte asciiDIGITZERO asciiDIGITNINE = Just $ byte - asciiDIGITZERO
+  | between byte asciiLOWERA asciiLOWERF = Just $ 10 + byte - asciiLOWERA
+  | between byte asciiUPPERA asciiUPPERF = Just $ 10 + byte - asciiUPPERA
+  | otherwise                            = Nothing
+ where
+  between :: Word8 -> Word8 -> Word8 -> Bool
+  between value lower upper = value >= lower && value <= upper
 
 {- |
 Convert an hexadecimal string to a string of bytes.

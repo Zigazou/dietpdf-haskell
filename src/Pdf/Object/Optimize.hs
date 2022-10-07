@@ -16,13 +16,12 @@ import           Codec.Compression.Predictor    ( Predictor(PNGSub, PNGUp)
 import qualified Codec.Compression.RunLength   as RL
 import           Codec.Compression.XML          ( optimizeXML )
 import           Control.Monad                  ( when )
-import           Control.Monad.State            ( StateT
-                                                , get
+import           Control.Monad.State            ( get
                                                 , lift
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Foldable                  ( minimumBy )
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict               as Map
 import qualified Data.Sequence                 as SQ
 import           Pdf.Object.Container           ( Filter(Filter)
                                                 , deepMap
@@ -38,11 +37,14 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFObjectStream
                                                   , PDFTrailer
                                                   )
+                                                )
+import           Pdf.Object.State               ( FallibleComputation
                                                 , getStream
-                                                , hasStream
+                                                , hasStreamS
                                                 , getValue
                                                 , setStream
                                                 , updateE
+                                                , ifObject
                                                 )
 import           Pdf.Object.String              ( optimizeString )
 import           Pdf.Object.Unfilter            ( unfilter )
@@ -91,7 +93,7 @@ predZopfli (Just (width, components)) stream =
   ( [ Filter
         (PDFName "FlateDecode")
         (PDFDictionary
-          (HM.fromList
+          (Map.fromList
             [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
             , ("Columns"  , PDFNumber (fromIntegral width))
             , ("Colors"   , PDFNumber (fromIntegral components))
@@ -111,7 +113,7 @@ predRleZopfli (Just (width, components)) stream =
   ( [ Filter
         (PDFName "FlateDecode")
         (PDFDictionary
-          (HM.fromList
+          (Map.fromList
             [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
             , ("Columns"  , PDFNumber (fromIntegral width))
             , ("Colors"   , PDFNumber (fromIntegral components))
@@ -132,7 +134,7 @@ applyEveryFilter widthComponents stream =
     <*> pure widthComponents
     <*> pure stream
 
-getWidthComponents :: StateT PDFObject (Either UnifiedError) (Maybe (Int, Int))
+getWidthComponents :: FallibleComputation (Maybe (Int, Int))
 getWidthComponents = do
   width      <- getValue "Width"
   colorSpace <- getValue "ColorSpace"
@@ -147,26 +149,24 @@ getWidthComponents = do
     Just (PDFNumber width') -> return $ Just (round width', components)
     _anyOtherValue          -> return Nothing
 
-filterOptimize :: StateT PDFObject (Either UnifiedError) ()
-filterOptimize = do
-  object <- get
-  when (hasStream object) $ do
-    stream          <- getStream
-    widthComponents <- getWidthComponents
-    let (bestFilters, bestStream) = minimumBy
-          eMinOrder
-          (SQ.fromList (applyEveryFilter widthComponents stream))
-    setStream =<< lift bestStream
-    setFilters bestFilters
+filterOptimize :: FallibleComputation ()
+filterOptimize = ifObject hasStreamS $ do
+  stream          <- getStream
+  widthComponents <- getWidthComponents
+  let (bestFilters, bestStream) = minimumBy
+        eMinOrder
+        (SQ.fromList (applyEveryFilter widthComponents stream))
+  setStream =<< lift bestStream
+  setFilters bestFilters
 
 streamIsXML :: PDFObject -> Bool
 streamIsXML (PDFIndirectObjectWithStream _ _ dictionary _) =
-  case dictionary HM.!? "Subtype" of
+  case dictionary Map.!? "Subtype" of
     Just (PDFName "XML") -> True
     _anyOtherValue       -> False
 streamIsXML _ = False
 
-streamOptimize :: StateT PDFObject (Either UnifiedError) ()
+streamOptimize :: FallibleComputation ()
 streamOptimize = do
   object <- get
   stream <- getStream
@@ -177,16 +177,14 @@ Completely refilter a stream by finding the best filter combination.
 
 It also optimized nested strings and XML streams.
 -}
-refilter :: StateT PDFObject (Either UnifiedError) ()
+refilter :: FallibleComputation ()
 refilter = do
-  object <- get
-  if hasStream object
-    then do
-      deepMap optimizeString
-      unfilter
-      streamOptimize
-      filterOptimize
-    else deepMap optimizeString
+  deepMap optimizeString
+  ifObject hasStreamS $ do
+    deepMap optimizeString
+    unfilter
+    streamOptimize
+    filterOptimize
 
 {- |
 Determine if a `PDFObject` is optimizable, whether because its filters are
@@ -194,14 +192,14 @@ known by DietPDF or because its structure is optimizable.
 -}
 optimizable :: PDFObject -> Bool
 optimizable (PDFIndirectObjectWithStream _ _ dictionary _) =
-  case HM.lookup "Filter" dictionary of
+  case Map.lookup "Filter" dictionary of
     Just (PDFName "FlateDecode") -> True
     Just (PDFName "RLEDecode"  ) -> True
     Just (PDFName "LZWDecode"  ) -> True
     Nothing                      -> True
     _anyOtherFilter              -> False
 optimizable (PDFObjectStream _ _ dictionary _) =
-  case HM.lookup "Filter" dictionary of
+  case Map.lookup "Filter" dictionary of
     Just (PDFName "FlateDecode") -> True
     Just (PDFName "RLEDecode"  ) -> True
     Just (PDFName "LZWDecode"  ) -> True

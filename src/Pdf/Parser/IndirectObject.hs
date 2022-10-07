@@ -50,10 +50,11 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFName
                                                   , PDFObjectStream
                                                   )
-                                                , getValue
-                                                , query
                                                 , isWhiteSpace
                                                 , updateStream
+                                                )
+import           Pdf.Object.State               ( getValue
+                                                , query
                                                 )
 import           Pdf.Parser.Container           ( arrayP
                                                 , dictionaryP
@@ -116,8 +117,8 @@ indirectObjectP = label "indirectObject" $ do
   emptyContentP
 
   stream <- case query object (getValue "Length") of
-    Just _                 -> Just <$> streamWithoutCountP
-    Nothing                -> return Nothing
+    Just _  -> Just <$> streamWithoutCountP
+    Nothing -> return Nothing
 
   emptyContentP
   string "endobj"

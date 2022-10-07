@@ -11,7 +11,7 @@ import           Data.Binary.Parser             ( Get
                                                 , word8
                                                 )
 import qualified Data.ByteString               as BS
-import           Data.HashMap.Strict            ( fromList )
+import           Data.Map.Strict                ( fromList )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
                                                   , PDFDictionary

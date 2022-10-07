@@ -19,15 +19,13 @@ module Pdf.Object.Container
   , getFilters
   ) where
 
-import           Control.Monad.State            ( StateT
-                                                , get
+import           Control.Monad.State            ( get
                                                 , lift
                                                 , put
                                                 )
 import qualified Data.ByteString               as BS
-import qualified Data.HashMap.Strict           as HM
-import           Pdf.Object.Object              ( (?=)
-                                                , Dictionary
+import qualified Data.Map.Strict           as Map
+import           Pdf.Object.Object              ( Dictionary
                                                 , PDFObject
                                                   ( PDFArray
                                                   , PDFDictionary
@@ -37,10 +35,14 @@ import           Pdf.Object.Object              ( (?=)
                                                   , PDFNull
                                                   , PDFObjectStream
                                                   )
+                                                )
+import           Pdf.Object.State               ( FallibleComputation
+                                                , ObjectComputation
                                                 , getValue
                                                 , modifyObject
                                                 , embedObject
                                                 , updateE
+                                                , (?=)
                                                 )
 import           Util.Errors                    ( UnifiedError
                                                   ( InvalidFilterParm
@@ -52,14 +54,13 @@ import           Util.Errors                    ( UnifiedError
 Apply a function to any object contained by an object at any level.
 -}
 deepMap
-  :: (PDFObject -> Either UnifiedError PDFObject)
-  -> StateT PDFObject (Either UnifiedError) ()
+  :: (PDFObject -> Either UnifiedError PDFObject) -> FallibleComputation ()
 deepMap fn = get >>= \case
   PDFIndirectObject{}           -> modifyObject (`updateE` deepMap fn)
   PDFIndirectObjectWithStream{} -> modifyObject (`updateE` deepMap fn)
   PDFObjectStream{}             -> modifyObject (`updateE` deepMap fn)
   PDFDictionary dict ->
-    lift (sequence (HM.map (`updateE` deepMap fn) dict))
+    lift (sequence (Map.map (`updateE` deepMap fn) dict))
       >>= embedObject
       .   PDFDictionary
   PDFArray items ->
@@ -69,9 +70,7 @@ deepMap fn = get >>= \case
 {- |
 Apply a function to any object contained by an object at any level.
 -}
-deepMapM
-  :: StateT PDFObject (Either UnifiedError) ()
-  -> StateT PDFObject (Either UnifiedError) ()
+deepMapM :: FallibleComputation () -> FallibleComputation ()
 deepMapM fn = get >>= \case
   PDFIndirectObject _ _ object ->
     lift (updateE object (deepMapM fn)) >>= embedObject
@@ -80,7 +79,7 @@ deepMapM fn = get >>= \case
   PDFObjectStream _ _ dict _ ->
     lift (updateE (PDFDictionary dict) (deepMapM fn)) >>= embedObject
   PDFDictionary dict ->
-    lift (sequence (HM.map (`updateE` deepMapM fn) dict))
+    lift (sequence (Map.map (`updateE` deepMapM fn) dict))
       >>= embedObject
       .   PDFDictionary
   PDFArray items ->
@@ -102,7 +101,7 @@ hasNoDecodeParms = (== PDFNull) . fDecodeParms
 {- |
 Return a list of filters contained in a `PDFDictionary`.
 -}
-getFilters :: StateT PDFObject (Either UnifiedError) [Filter]
+getFilters :: FallibleComputation [Filter]
 getFilters = do
   filters <- getValue "Filter"
   parms   <- getValue "DecodeParms"
@@ -155,7 +154,7 @@ filtersParms [Filter _ aDecodeParms] = Just aDecodeParms
 filtersParms filters | all hasNoDecodeParms filters = Nothing
                      | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
 
-setFilters :: Monad m => [Filter] -> StateT PDFObject m ()
+setFilters :: Monad m => [Filter] -> ObjectComputation m ()
 setFilters filters = get >>= \case
   PDFIndirectObject{} -> do
     "Filter" ?= filtersFilter filters
@@ -180,7 +179,7 @@ insertMaybe
   -> BS.ByteString -- ^ The key name
   -> Maybe PDFObject -- ^ The `Maybe` value to associate to the key name
   -> Dictionary -- ^ The resulting dictionary
-insertMaybe dict name (Just object) = HM.insert name object dict
+insertMaybe dict name (Just object) = Map.insert name object dict
 insertMaybe dict _    Nothing       = dict
 
 {- |

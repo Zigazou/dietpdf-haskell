@@ -9,7 +9,7 @@ module Pdf.Document.Encode
   ) where
 
 import qualified Data.ByteString               as BS
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict               as Map
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFDictionary
                                                   , PDFEndOfFile
@@ -53,14 +53,14 @@ import           Pdf.Document.XRef              ( calcOffsets
 import           Pdf.Document.Collection        ( encodeObject
                                                 , eoBinaryData
                                                 )
-import Pdf.Document.Uncompress (uncompress)
+import           Pdf.Document.Uncompress        ( uncompress )
 
 updateTrailer :: PDFObject -> Int -> PDFObject -> PDFObject
 updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
   (PDFDictionary
-    (HM.fromList
+    (Map.fromList
       [ ("Size", PDFNumber (fromIntegral entriesCount))
-      , ("Root", HM.lookupDefault root "Root" dict)
+      , ("Root", Map.findWithDefault root "Root" dict)
       ]
     )
   )
@@ -76,16 +76,19 @@ removeUnused doc = dFilter used doc
   isNotLinearized = not . hasKey "Linearized"
 
   isReference :: PDFObject -> Bool
-  isReference PDFReference{} = True
+  isReference PDFReference{}  = True
   isReference _anyOtherObject = False
 
   references :: PDFDocument
   references = deepFind isReference (uncompress doc)
 
   isReferenced :: PDFObject -> Bool
-  isReferenced (PDFIndirectObject num gen _) = PDFReference num gen `elem` references
-  isReferenced (PDFIndirectObjectWithStream num gen _ _) = PDFReference num gen `elem` references
-  isReferenced (PDFObjectStream num gen _ _) = PDFReference num gen `elem` references
+  isReferenced (PDFIndirectObject num gen _) =
+    PDFReference num gen `elem` references
+  isReferenced (PDFIndirectObjectWithStream num gen _ _) =
+    PDFReference num gen `elem` references
+  isReferenced (PDFObjectStream num gen _ _) =
+    PDFReference num gen `elem` references
   isReferenced _anyOtherObject = True
 
 findRoot :: PDFDocument -> Maybe PDFObject

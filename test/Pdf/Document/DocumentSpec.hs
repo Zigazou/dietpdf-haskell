@@ -4,7 +4,7 @@ module Pdf.Document.DocumentSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict               as Map
 import           Pdf.Document.Document          ( clean
                                                 , deepFind
                                                 , fromList
@@ -85,7 +85,8 @@ deepFindExamples =
     , [PDFName "a", PDFName "b"]
     )
   , ( [ PDFTrailer
-          (PDFDictionary (HM.fromList [("a", PDFName "a"), ("b", PDFName "b")]))
+          (PDFDictionary (Map.fromList [("a", PDFName "a"), ("b", PDFName "b")])
+          )
       ]
     , predicate
     , [PDFName "a", PDFName "b"]

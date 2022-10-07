@@ -5,18 +5,21 @@ module Pdf.Object.DictionarySpec
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
-import           Data.HashMap.Strict            ( fromList )
+import           Data.Map.Strict                ( fromList
+                                                , empty
+                                                )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
                                                   , PDFBool
                                                   , PDFDictionary
+                                                  , PDFIndirectObject
                                                   , PDFName
                                                   , PDFNumber
-                                                  , PDFIndirectObject
                                                   , PDFTrailer
                                                   )
                                                 , fromPDFObject
-                                                , getValue
+                                                )
+import           Pdf.Object.State               ( getValue
                                                 , query
                                                 )
 import           Test.Hspec                     ( Spec
@@ -27,12 +30,12 @@ import           Test.Hspec                     ( Spec
 
 dictionaryExamples :: [(PDFObject, BS.ByteString)]
 dictionaryExamples =
-  [ (PDFDictionary (fromList []), "<<>>")
+  [ (PDFDictionary empty, "<<>>")
   , ( PDFDictionary
       (fromList
         [("AB", PDFNumber 1.0), ("CD", PDFName "AB"), ("EF", PDFBool True)]
       )
-    , "<</EF true/AB 1/CD/AB>>"
+    , "<</AB 1/CD/AB/EF true>>"
     )
   , ( PDFDictionary
       (fromList
@@ -43,14 +46,14 @@ dictionaryExamples =
         , ("EF", PDFBool True)
         ]
       )
-    , "<</EF true/AB[1[2]3]/CD/AB>>"
+    , "<</AB[1[2]3]/CD/AB/EF true>>"
     )
   ]
 
 getValueExamples :: [(PDFObject, Maybe PDFObject)]
 getValueExamples =
-  [ (PDFDictionary (fromList []), Nothing)
-  , (PDFNumber 3.0              , Nothing)
+  [ (PDFDictionary empty, Nothing)
+  , (PDFNumber 3.0      , Nothing)
   , ( PDFDictionary
       (fromList
         [("AB", PDFNumber 1.0), ("Test", PDFName "AB"), ("EF", PDFBool True)]

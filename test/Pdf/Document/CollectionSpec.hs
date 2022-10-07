@@ -4,7 +4,7 @@ module Pdf.Document.CollectionSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
-import           Data.HashMap.Strict            ( fromList )
+import           Data.Map.Strict                ( empty )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFDictionary
                                                   , PDFName
@@ -23,15 +23,11 @@ import           Pdf.Document.Collection        ( findLastObject
 
 findLastObjectExamples :: [([PDFObject], PDFObject -> Bool, Maybe PDFObject)]
 findLastObjectExamples =
-  [ ( [PDFDictionary (fromList []), PDFNumber 3.0, PDFName "ABCD"]
+  [ ( [PDFDictionary empty, PDFNumber 3.0, PDFName "ABCD"]
     , isPDFNumberGreaterThan 3
     , Nothing
     )
-  , ( [ PDFDictionary (fromList [])
-      , PDFNumber 3.0
-      , PDFName "ABCD"
-      , PDFNumber 4.0
-      ]
+  , ( [PDFDictionary empty, PDFNumber 3.0, PDFName "ABCD", PDFNumber 4.0]
     , isPDFNumber
     , Just $ PDFNumber 4.0
     )
@@ -49,15 +45,11 @@ findLastObjectExamples =
 findLastValueExamples
   :: [([PDFObject], PDFObject -> Maybe Double, Maybe Double)]
 findLastValueExamples =
-  [ ( [PDFDictionary (fromList []), PDFNumber 3.0, PDFName "ABCD"]
+  [ ( [PDFDictionary empty, PDFNumber 3.0, PDFName "ABCD"]
     , isPDFNumberGreaterThan 3
     , Nothing
     )
-  , ( [ PDFDictionary (fromList [])
-      , PDFNumber 3.0
-      , PDFName "ABCD"
-      , PDFNumber 4.0
-      ]
+  , ( [PDFDictionary empty, PDFNumber 3.0, PDFName "ABCD", PDFNumber 4.0]
     , isPDFNumber
     , Just 4.0
     )
