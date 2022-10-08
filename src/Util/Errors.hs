@@ -22,6 +22,7 @@ import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
 import           System.IO                      ( stderr )
+import           Util.Ascii                     ( asciiLF )
 
 data ErrorType = ReadingError
                | ParsingError
@@ -79,6 +80,11 @@ data UnifiedError
   | NoObjectToEncode
   deriving stock (Eq)
 
+{- |
+In a monad transformer having `Either` `UnifiedError` as type, the
+`unifiedError` allows to directly generate the error without lifting the
+error.
+-}
 unifiedError :: MonadTrans t => UnifiedError -> t (Either UnifiedError) a
 unifiedError = lift . Left
 
@@ -152,8 +158,19 @@ instance Show UnifiedError where
     show' err ("Invalid object to embed: " ++ msg)
   show err@NoObjectToEncode = show' err "No object to encode"
 
+{- |
+Output a `ByteString` on the standard error output.
+
+This function outputs the bytes as is without appending a line return.
+-}
 putError :: BS.ByteString -> IO ()
 putError = BS.hPutStr stderr
 
+{- |
+Output a `ByteString` on the standard error output.
+
+This function appends a line return (`asciiLF`) to the output.
+-}
 putErrorLn :: BS.ByteString -> IO ()
-putErrorLn msg = BS.hPutStr stderr msg >> BS.hPutStr stderr "\n"
+putErrorLn msg =
+  BS.hPutStr stderr msg >> BS.hPutStr stderr (BS.singleton asciiLF)

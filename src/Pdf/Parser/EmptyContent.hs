@@ -18,6 +18,11 @@ import           Control.Monad                  ( void )
 
 {-|
 A binary parser meant to ignore empty content in a PDF file.
+
+Empty content is either:
+
+- white spaces (according to PDF specifications)
+- comments (starting with a percent sign "%" and ending with a line return)
 -}
 emptyContentP :: Get ()
 emptyContentP = label "emptycontent"

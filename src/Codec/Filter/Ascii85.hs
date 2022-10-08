@@ -88,12 +88,9 @@ a85digitP = do
   satisfy isAscii85Digit
 
 baseN :: Int -> Int -> Int -> [Int]
-baseN width base value = reverse $ baseN' width value
- where
-  baseN' :: Int -> Int -> [Int]
-  baseN' 0 _ = []
-  baseN' width' value' =
-    let (q, r) = divMod value' base in r : baseN' (width' - 1) q
+baseN 0 _ _ = []
+baseN width base value =
+  let (q, r) = divMod value base in baseN (width - 1) base q ++ [r]
 
 base256ToBase85 :: Word8 -> Word8 -> Word8 -> Word8 -> Get BS.ByteString
 base256ToBase85 b1 b2 b3 b4 =
@@ -102,10 +99,10 @@ base256ToBase85 b1 b2 b3 b4 =
       b3' = fromIntegral b3 :: Int
       b4' = fromIntegral b4 :: Int
       c   = b1' * 16777216 + b2' * 65536 + b3' * 256 + b4'
-  in  return
-        . BS.pack
-        . fmap ((+ asciiEXCLAMATIONMARK) . fromIntegral)
-        $ baseN 5 85 c
+  in  return . BS.pack . fmap ((+ asciiEXCLAMATIONMARK) . fromIntegral) $ baseN
+        5
+        85
+        c
 
 base85ToBase256
   :: Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Get BS.ByteString
