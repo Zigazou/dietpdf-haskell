@@ -16,6 +16,7 @@ import qualified Codec.Filter.Ascii85          as A8
 import qualified Codec.Filter.AsciiHex         as AH
 import           Control.Monad.State            ( lift )
 import qualified Data.ByteString               as BS
+import qualified Data.Sequence                 as SQ
 import           Pdf.Object.Container           ( Filter(fFilter)
                                                 , getFilters
                                                 , setFilters
@@ -42,8 +43,9 @@ supportedFilters =
   ]
 
 unfilterStream
-  :: ([Filter], BS.ByteString) -> Either UnifiedError ([Filter], BS.ByteString)
-unfilterStream (filters@(pdfFilter : otherFilters), stream)
+  :: (SQ.Seq Filter, BS.ByteString)
+  -> Either UnifiedError (SQ.Seq Filter, BS.ByteString)
+unfilterStream (filters@(pdfFilter SQ.:<| otherFilters), stream)
   | fFilter pdfFilter == PDFName "FlateDecode"
   = FL.decompress stream >>= unfilterStream . (otherFilters, )
   | fFilter pdfFilter == PDFName "RunLengthDecode"
@@ -58,9 +60,9 @@ unfilterStream (filters@(pdfFilter : otherFilters), stream)
   = Right (filters, stream)
 unfilterStream (filters, stream) = Right (filters, stream)
 
-unfiltered :: FallibleComputation ([Filter], BS.ByteString)
+unfiltered :: FallibleComputation (SQ.Seq Filter, BS.ByteString)
 unfiltered = do
-  stream <- getStream
+  stream  <- getStream
   filters <- getFilters
   lift (unfilterStream (filters, stream))
 

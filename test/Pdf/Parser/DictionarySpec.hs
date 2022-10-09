@@ -7,32 +7,29 @@ import           Test.Hspec                     ( describe
                                                 , Spec
                                                 )
 import qualified Data.ByteString               as BS
-import           Data.Map.Strict                ( fromList
-                                                , empty
-                                                )
 import           Util.ParserHelper              ( itWith )
 import           Pdf.Parser.Container           ( dictionaryP )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFNumber
-                                                  , PDFDictionary
                                                   , PDFReference
-                                                  , PDFArray
                                                   , PDFName
                                                   )
+                                                , mkPDFArray
+                                                , mkPDFDictionary
+                                                , mkEmptyPDFDictionary
                                                 )
 
 dictionaryExamples :: [(BS.ByteString, PDFObject)]
 dictionaryExamples =
-  [ ("<</a 1>>"  , PDFDictionary (fromList [("a", PDFNumber 1.0)]))
-  , ("<< /a 1 >>", PDFDictionary (fromList [("a", PDFNumber 1.0)]))
-  , ("<<>>"      , PDFDictionary empty)
-  , ("<<   >>"   , PDFDictionary empty)
+  [ ("<</a 1>>"  , mkPDFDictionary [("a", PDFNumber 1.0)])
+  , ("<< /a 1 >>", mkPDFDictionary [("a", PDFNumber 1.0)])
+  , ("<<>>"      , mkEmptyPDFDictionary)
+  , ("<<   >>"   , mkEmptyPDFDictionary)
   , ( "<</b 2/a 1>>"
-    , PDFDictionary (fromList [("a", PDFNumber 1.0), ("b", PDFNumber 2.0)])
+    , mkPDFDictionary [("a", PDFNumber 1.0), ("b", PDFNumber 2.0)]
     )
   , ( "<</a<</b 2>>>>"
-    , PDFDictionary
-      (fromList [("a", PDFDictionary (fromList [("b", PDFNumber 2.0)]))])
+    , mkPDFDictionary [("a", mkPDFDictionary [("b", PDFNumber 2.0)])]
     )
   , ( "<</Type/FontDescriptor/FontName/BAAAAA+LiberationSerif\
       \/Flags 4\n\
@@ -43,27 +40,25 @@ dictionaryExamples =
       \/StemV 80\n\
       \/FontFile2 7 0 R\n\
       \>>"
-    , PDFDictionary
-      (fromList
-        [ ("Type"    , PDFName "FontDescriptor")
-        , ("FontName", PDFName "BAAAAA+LiberationSerif")
-        , ("Flags"   , PDFNumber 4.0)
-        , ( "FontBBox"
-          , PDFArray
-            [ PDFNumber (-543.0)
-            , PDFNumber (-303.0)
-            , PDFNumber 1277.0
-            , PDFNumber 981.0
-            ]
-          )
-        , ("ItalicAngle", PDFNumber 0.0)
-        , ("Ascent"     , PDFNumber 0.0)
-        , ("Descent"    , PDFNumber 0.0)
-        , ("CapHeight"  , PDFNumber 981.0)
-        , ("StemV"      , PDFNumber 80.0)
-        , ("FontFile2"  , PDFReference 7 0)
-        ]
-      )
+    , mkPDFDictionary
+      [ ("Type"    , PDFName "FontDescriptor")
+      , ("FontName", PDFName "BAAAAA+LiberationSerif")
+      , ("Flags"   , PDFNumber 4.0)
+      , ( "FontBBox"
+        , mkPDFArray
+          [ PDFNumber (-543.0)
+          , PDFNumber (-303.0)
+          , PDFNumber 1277.0
+          , PDFNumber 981.0
+          ]
+        )
+      , ("ItalicAngle", PDFNumber 0.0)
+      , ("Ascent"     , PDFNumber 0.0)
+      , ("Descent"    , PDFNumber 0.0)
+      , ("CapHeight"  , PDFNumber 981.0)
+      , ("StemV"      , PDFNumber 80.0)
+      , ("FontFile2"  , PDFReference 7 0)
+      ]
     )
   ]
 

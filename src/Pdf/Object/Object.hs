@@ -31,6 +31,12 @@ module Pdf.Object.Object
     , PDFStartXRef
     )
   , Dictionary
+  , mkDictionary
+  , mkEmptyDictionary
+  , mkEmptyPDFArray
+  , mkEmptyPDFDictionary
+  , mkPDFArray
+  , mkPDFDictionary
 
     -- * Conversion
   , fromPDFObject
@@ -68,6 +74,7 @@ import qualified Data.ByteString               as BS
 import qualified Data.ByteString.UTF8          as BSU
 import qualified Data.Text.Lazy                as TL
 import qualified Data.Text                     as TS
+import qualified Data.Sequence                 as SQ
 import           Data.Text.Encoding             ( encodeUtf8 )
 import           Formatting                     ( format
                                                 , (%)
@@ -76,9 +83,10 @@ import           Formatting                     ( format
                                                 , left
                                                 )
 import           Formatting.ByteStringFormatter ( utf8 )
-import qualified Data.Map.Strict as Map
+import qualified Data.Map.Strict               as Map
 import           Data.Ix                        ( inRange )
 import           Data.List                      ( foldl' )
+import           Data.Foldable                  ( toList )
 import           Data.Maybe                     ( isJust
                                                 , isNothing
                                                 )
@@ -252,8 +260,11 @@ The keys are the `ByteString` contained in `PDFName`.
 type Dictionary = Map.Map BS.ByteString PDFObject
 
 -- | Returns an empty `Dictionary`
-emptyDictionary :: Dictionary
-emptyDictionary = Map.empty
+mkEmptyDictionary :: Dictionary
+mkEmptyDictionary = Map.empty
+
+mkDictionary :: [(BS.ByteString, PDFObject)] -> Dictionary
+mkDictionary = Map.fromList
 
 {-|
 A PDF is a collection of objects, here named PDF objects.
@@ -280,7 +291,7 @@ data PDFObject
   | -- | A reference, number and generation (two integers followed by an `R`)
     PDFReference Int Int
   | -- | An array containing a list of objects
-    PDFArray [PDFObject]
+    PDFArray (SQ.Seq PDFObject)
   | -- | A dictionary containing key-value pairs
     PDFDictionary Dictionary
   | -- | An indirect object, object number, generation, object itself
@@ -300,6 +311,30 @@ data PDFObject
   | -- | A reference to an XRef table (offset from beginning of a PDF)
     PDFStartXRef Int
   deriving stock (Show)
+
+{- |
+Create an empty `PDFDictionary`.
+-}
+mkEmptyPDFDictionary :: PDFObject
+mkEmptyPDFDictionary = PDFDictionary Map.empty
+
+{- |
+Create an empty `PDFArray`.
+-}
+mkEmptyPDFArray :: PDFObject
+mkEmptyPDFArray = PDFArray SQ.empty
+
+{- |
+Create a `PDFDictionary` from a list of couples (key, value).
+-}
+mkPDFDictionary :: [(BS.ByteString, PDFObject)] -> PDFObject
+mkPDFDictionary = PDFDictionary . Map.fromList
+
+{- |
+Create a `PDFArray` from a list of `PDFObject`.
+-}
+mkPDFArray :: [PDFObject] -> PDFObject
+mkPDFArray = PDFArray . SQ.fromList
 
 instance Eq PDFObject where
   (==) :: PDFObject -> PDFObject -> Bool
@@ -558,8 +593,8 @@ fromXRefSubsection xrss = BS.concat
 fromXRef :: [XRefSubsection] -> BS.ByteString
 fromXRef xrss = BS.concat ["xref\n", BS.concat (fmap fromXRefSubsection xrss)]
 
-fromArray :: [PDFObject] -> BS.ByteString
-fromArray items = BS.concat ["[", separateObjects items, "]"]
+fromArray :: SQ.Seq PDFObject -> BS.ByteString
+fromArray items = BS.concat ["[", separateObjects (toList items), "]"]
 
 fromDictionary :: Dictionary -> BS.ByteString
 fromDictionary keyValues = BS.concat
@@ -588,9 +623,9 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   , " "
   , BSU.fromString (show revision)
   , " obj"
-  , spaceIfNeeded (PDFKeyword "obj") (PDFDictionary emptyDictionary)
+  , spaceIfNeeded (PDFKeyword "obj") mkEmptyPDFDictionary
   , fromDictionary dict
-  , spaceIfNeeded (PDFDictionary emptyDictionary) (PDFKeyword "stream")
+  , spaceIfNeeded mkEmptyPDFDictionary (PDFKeyword "stream")
   , "stream\n"
   , stream
   , "\nendstream"
@@ -649,12 +684,13 @@ hasKey
   :: BS.ByteString -- ^ The key to search for
   -> PDFObject -- ^ The `PDFObject` to search in
   -> Bool
-hasKey key  (PDFDictionary dict                        ) = isJust $ dict Map.!? key
-hasKey key  (PDFIndirectObjectWithStream _ _ dict _    ) = isJust $ dict Map.!? key
-hasKey key  (PDFObjectStream             _ _ dict _    ) = isJust $ dict Map.!? key
-hasKey key  (PDFIndirectObject _ _ (PDFDictionary dict)) = isJust $ dict Map.!? key
-hasKey key  (PDFTrailer (PDFDictionary dict)           ) = isJust $ dict Map.!? key
-hasKey _    _anyOtherObject                              = False
+hasKey key (PDFDictionary dict                    ) = isJust $ dict Map.!? key
+hasKey key (PDFIndirectObjectWithStream _ _ dict _) = isJust $ dict Map.!? key
+hasKey key (PDFObjectStream             _ _ dict _) = isJust $ dict Map.!? key
+hasKey key (PDFIndirectObject _ _ (PDFDictionary dict)) =
+  isJust $ dict Map.!? key
+hasKey key (PDFTrailer (PDFDictionary dict)) = isJust $ dict Map.!? key
+hasKey _   _anyOtherObject                   = False
 
 {- |
 Determine if a `PDFObject` has a dictionary.
@@ -664,7 +700,7 @@ hasDictionary (PDFIndirectObject _ _ (PDFDictionary _)) = True
 hasDictionary PDFIndirectObjectWithStream{}             = True
 hasDictionary PDFObjectStream{}                         = True
 hasDictionary PDFDictionary{}                           = True
-hasDictionary (PDFTrailer (PDFDictionary _)) = True
+hasDictionary (PDFTrailer (PDFDictionary _))            = True
 hasDictionary _anyOtherObject                           = False
 
 {- |

@@ -4,21 +4,20 @@ module Pdf.Document.DocumentSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
-import qualified Data.Map.Strict               as Map
 import           Pdf.Document.Document          ( clean
                                                 , deepFind
                                                 , fromList
                                                 )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFDictionary
-                                                  , PDFIndirectObject
+                                                  ( PDFIndirectObject
                                                   , PDFName
                                                   , PDFNull
                                                   , PDFNumber
                                                   , PDFTrailer
                                                   , PDFVersion
                                                   )
+                                                , mkPDFArray
+                                                , mkPDFDictionary
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
@@ -72,22 +71,19 @@ deepFindExamples =
     , predicate
     , []
     )
-  , ( [PDFIndirectObject 1 0 (PDFArray [PDFNull, PDFName "a"])]
+  , ( [PDFIndirectObject 1 0 (mkPDFArray [PDFNull, PDFName "a"])]
     , predicate
     , [PDFName "a"]
     )
   , ( [ PDFIndirectObject
           1
           0
-          (PDFArray [PDFNull, PDFName "a", PDFArray [PDFName "b"]])
+          (mkPDFArray [PDFNull, PDFName "a", mkPDFArray [PDFName "b"]])
       ]
     , predicate
     , [PDFName "a", PDFName "b"]
     )
-  , ( [ PDFTrailer
-          (PDFDictionary (Map.fromList [("a", PDFName "a"), ("b", PDFName "b")])
-          )
-      ]
+  , ( [PDFTrailer (mkPDFDictionary [("a", PDFName "a"), ("b", PDFName "b")])]
     , predicate
     , [PDFName "a", PDFName "b"]
     )

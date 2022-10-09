@@ -24,6 +24,7 @@ module Pdf.Object.Linearization
 
 import           Control.Monad                  ( msum )
 import qualified Data.Map.Strict               as Map
+import qualified Data.Sequence                 as SQ
 import           Pdf.Document.Document          ( PDFDocument
                                                 , lMap
                                                 )
@@ -80,7 +81,7 @@ getNumberValue _                        = Nothing
 extractLinearization :: PDFObject -> Maybe Linearization
 extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
   case dictionaryEntries of
-    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray [PDFNumber primaryOffset, PDFNumber primaryLength]), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
+    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray (PDFNumber primaryOffset SQ.:<| PDFNumber primaryLength SQ.:<| SQ.Empty)), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
       -> Just Linearization
         { lnVersion               = version
         , lnFileLength            = round fileLength
@@ -94,7 +95,7 @@ extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
         , lnXRefFirstEntryOffset  = round xrefFirstEntryOffset
         , lnFirstPageNumber       = round <$> getNumberValue firstPageNumber
         }
-    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray [PDFNumber primaryOffset, PDFNumber primaryLength, PDFNumber overflowOffset, PDFNumber overflowLength]), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
+    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray (PDFNumber primaryOffset SQ.:<| PDFNumber primaryLength SQ.:<| PDFNumber overflowOffset SQ.:<| PDFNumber overflowLength SQ.:<| SQ.Empty)), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
       -> Just Linearization
         { lnVersion               = version
         , lnFileLength            = round fileLength

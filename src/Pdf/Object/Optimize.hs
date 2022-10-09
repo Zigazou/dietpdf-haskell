@@ -63,23 +63,26 @@ eMinOrder _            _            = EQ
 zopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> ([Filter], Either UnifiedError BS.ByteString)
+  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
 zopfli _ stream =
-  ([Filter (PDFName "FlateDecode") PDFNull], FL.compress stream)
+  (SQ.singleton (Filter (PDFName "FlateDecode") PDFNull), FL.compress stream)
 
 rle
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> ([Filter], Either UnifiedError BS.ByteString)
+  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
 rle _ stream =
-  ([Filter (PDFName "RunLengthDecode") PDFNull], RL.compress stream)
+  ( SQ.singleton (Filter (PDFName "RunLengthDecode") PDFNull)
+  , RL.compress stream
+  )
 
 rleZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> ([Filter], Either UnifiedError BS.ByteString)
+  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
 rleZopfli _ stream =
-  ( [ Filter (PDFName "FlateDecode")     PDFNull
+  ( SQ.fromList
+    [ Filter (PDFName "FlateDecode")     PDFNull
     , Filter (PDFName "RunLengthDecode") PDFNull
     ]
   , snd (rle Nothing stream) >>= FL.compress
@@ -88,47 +91,49 @@ rleZopfli _ stream =
 predZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> ([Filter], Either UnifiedError BS.ByteString)
+  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
 predZopfli (Just (width, components)) stream =
-  ( [ Filter
-        (PDFName "FlateDecode")
-        (PDFDictionary
-          (Map.fromList
-            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
-            , ("Columns"  , PDFNumber (fromIntegral width))
-            , ("Colors"   , PDFNumber (fromIntegral components))
-            ]
-          )
+  ( SQ.singleton
+    (Filter
+      (PDFName "FlateDecode")
+      (PDFDictionary
+        (Map.fromList
+          [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
+          , ("Columns"  , PDFNumber (fromIntegral width))
+          , ("Colors"   , PDFNumber (fromIntegral components))
+          ]
         )
-    ]
+      )
+    )
   , predict PNGUp width components stream >>= FL.compress
   )
-predZopfli _noWidth _stream = ([], Left InvalidFilterParm)
+predZopfli _noWidth _stream = (SQ.empty, Left InvalidFilterParm)
 
 predRleZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> ([Filter], Either UnifiedError BS.ByteString)
+  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
 predRleZopfli (Just (width, components)) stream =
-  ( [ Filter
-        (PDFName "FlateDecode")
-        (PDFDictionary
-          (Map.fromList
-            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
-            , ("Columns"  , PDFNumber (fromIntegral width))
-            , ("Colors"   , PDFNumber (fromIntegral components))
-            ]
-          )
+  ( SQ.singleton
+    (Filter
+      (PDFName "FlateDecode")
+      (PDFDictionary
+        (Map.fromList
+          [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
+          , ("Columns"  , PDFNumber (fromIntegral width))
+          , ("Colors"   , PDFNumber (fromIntegral components))
+          ]
         )
-    ]
+      )
+    )
   , predict PNGSub width components stream >>= FL.compress
   )
-predRleZopfli _noWidth _stream = ([], Left InvalidFilterParm)
+predRleZopfli _noWidth _stream = (SQ.empty, Left InvalidFilterParm)
 
 applyEveryFilter
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> [([Filter], Either UnifiedError BS.ByteString)]
+  -> [(SQ.Seq Filter, Either UnifiedError BS.ByteString)]
 applyEveryFilter widthComponents stream =
   [zopfli, rle, predRleZopfli, rleZopfli, predZopfli]
     <*> pure widthComponents

@@ -13,10 +13,10 @@ import           Data.Binary.Parser             ( Get
 import qualified Data.ByteString               as BS
 import           Data.Map.Strict                ( fromList )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFDictionary
+                                                  ( PDFDictionary
                                                   , PDFName
                                                   )
+                                                , mkPDFArray
                                                 )
 import           Pdf.Parser.HexString           ( hexStringP )
 import           Pdf.Parser.Keyword             ( keywordP )
@@ -67,7 +67,7 @@ arrayP = label "array" $ do
   items <- itemP `sepBy` emptyContentP
   emptyContentP
   word8 asciiRIGHTSQUAREBRACKET
-  return $ PDFArray items
+  return $ mkPDFArray items
 
 dictionaryKeyValueP :: Get (BS.ByteString, PDFObject)
 dictionaryKeyValueP = do

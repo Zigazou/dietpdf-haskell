@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Pdf.Object.ArraySpec
   ( spec
-  )
-where
+  ) where
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFBool
+                                                  ( PDFBool
                                                   , PDFName
                                                   , PDFNumber
                                                   )
+                                                , mkPDFArray
+                                                , mkEmptyPDFArray
                                                 , fromPDFObject
                                                 )
 import           Test.Hspec                     ( Spec
@@ -22,8 +22,8 @@ import           Test.Hspec                     ( Spec
 
 arrayExamples :: [(PDFObject, BS.ByteString)]
 arrayExamples =
-  [ (PDFArray [], "[]")
-  , (PDFArray [PDFNumber 1.0, PDFName "AB", PDFBool True], "[1/AB true]")
+  [ (mkEmptyPDFArray, "[]")
+  , (mkPDFArray [PDFNumber 1.0, PDFName "AB", PDFBool True], "[1/AB true]")
   ]
 
 spec :: Spec

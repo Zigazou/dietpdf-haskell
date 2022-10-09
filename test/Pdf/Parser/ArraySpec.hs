@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Pdf.Parser.ArraySpec
   ( spec
-  )
-where
+  ) where
 
 import           Test.Hspec                     ( describe
                                                 , Spec
@@ -12,19 +11,19 @@ import           Util.ParserHelper              ( itWith )
 import           Pdf.Parser.Container           ( arrayP )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFNumber
-                                                  , PDFArray
                                                   , PDFName
                                                   , PDFString
                                                   , PDFReference
                                                   )
+                                                , mkPDFArray
                                                 )
 
 arrayExamples :: [(BS.ByteString, PDFObject)]
 arrayExamples =
-  [ ("[1   2   3]", PDFArray [PDFNumber 1.0, PDFNumber 2.0, PDFNumber 3.0])
-  , ("[ 1 2 3 ]", PDFArray [PDFNumber 1.0, PDFNumber 2.0, PDFNumber 3.0])
+  [ ("[1   2   3]", mkPDFArray [PDFNumber 1.0, PDFNumber 2.0, PDFNumber 3.0])
+  , ("[ 1 2 3 ]"  , mkPDFArray [PDFNumber 1.0, PDFNumber 2.0, PDFNumber 3.0])
   , ( "[/ab/cd(abc)1 2 0 R]"
-    , PDFArray
+    , mkPDFArray
       [ PDFName "ab"
       , PDFName "cd"
       , PDFString "abc"
@@ -33,9 +32,9 @@ arrayExamples =
       ]
     )
   , ( "[[1 2][3 4]]"
-    , PDFArray
-      [ PDFArray [PDFNumber 1.0, PDFNumber 2.0]
-      , PDFArray [PDFNumber 3.0, PDFNumber 4.0]
+    , mkPDFArray
+      [ mkPDFArray [PDFNumber 1.0, PDFNumber 2.0]
+      , mkPDFArray [PDFNumber 3.0, PDFNumber 4.0]
       ]
     )
   ]

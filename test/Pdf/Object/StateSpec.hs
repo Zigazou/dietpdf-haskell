@@ -6,8 +6,7 @@ module Pdf.Object.StateSpec
 import           Control.Monad                  ( forM_ )
 import qualified Data.Map.Strict               as Map
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFDictionary
+                                                  ( PDFDictionary
                                                   , PDFEndOfFile
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
@@ -16,6 +15,12 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFNumber
                                                   , PDFObjectStream
                                                   )
+                                                , mkEmptyPDFArray
+                                                , mkPDFArray
+                                                , mkEmptyPDFDictionary
+                                                , mkPDFDictionary
+                                                , mkDictionary
+                                                , mkEmptyDictionary
                                                 )
 import           Pdf.Object.State               ( FallibleComputation
                                                 , ObjectComputation
@@ -33,14 +38,14 @@ import           Test.Hspec                     ( Spec
 
 setMaybeExamples :: Monad m => [(PDFObject, ObjectComputation m (), PDFObject)]
 setMaybeExamples =
-  [ (PDFArray [] , setMaybe "Num" (Just $ PDFNumber 1.0), PDFArray [])
-  , (PDFArray [] , setMaybe "Num" Nothing               , PDFArray [])
-  , (PDFEndOfFile, setMaybe "Num" (Just $ PDFNumber 1.0), PDFEndOfFile)
-  , ( PDFDictionary Map.empty
+  [ (mkEmptyPDFArray, setMaybe "Num" (Just $ PDFNumber 1.0), mkEmptyPDFArray)
+  , (mkEmptyPDFArray, setMaybe "Num" Nothing               , mkEmptyPDFArray)
+  , (PDFEndOfFile   , setMaybe "Num" (Just $ PDFNumber 1.0), PDFEndOfFile)
+  , ( mkEmptyPDFDictionary
     , setMaybe "Num" (Just $ PDFNumber 1.0)
-    , PDFDictionary (Map.fromList [("Num", PDFNumber 1.0)])
+    , mkPDFDictionary [("Num", PDFNumber 1.0)]
     )
-  , (PDFDictionary Map.empty, setMaybe "Num" Nothing, PDFDictionary Map.empty)
+  , (mkEmptyPDFDictionary, setMaybe "Num" Nothing, PDFDictionary Map.empty)
   , ( PDFDictionary (Map.fromList [("Num", PDFNull)])
     , setMaybe "Num" (Just $ PDFNumber 1.0)
     , PDFDictionary (Map.fromList [("Num", PDFNumber 1.0)])
@@ -54,14 +59,14 @@ setMaybeExamples =
 setStreamExamples
   :: Monad m => [(PDFObject, ObjectComputation m (), PDFObject)]
 setStreamExamples =
-  [ (PDFArray []            , setStream "abc", PDFArray [])
-  , (PDFEndOfFile           , setStream "abc", PDFEndOfFile)
-  , (PDFDictionary Map.empty, setStream "abc", PDFDictionary Map.empty)
-  , ( PDFIndirectObjectWithStream 3 4 Map.empty ""
+  [ (mkEmptyPDFArray     , setStream "abc", mkEmptyPDFArray)
+  , (PDFEndOfFile        , setStream "abc", PDFEndOfFile)
+  , (mkEmptyPDFDictionary, setStream "abc", mkEmptyPDFDictionary)
+  , ( PDFIndirectObjectWithStream 3 4 mkEmptyDictionary ""
     , setStream "abc"
     , PDFIndirectObjectWithStream 3
                                   4
-                                  (Map.fromList [("Length", PDFNumber 3.0)])
+                                  (mkDictionary [("Length", PDFNumber 3.0)])
                                   "abc"
     )
   , ( PDFObjectStream 7 8 (Map.fromList [("Length", PDFNumber 1.0)]) ""
@@ -72,14 +77,14 @@ setStreamExamples =
 
 embedObjectExamples :: [(PDFObject, FallibleComputation (), PDFObject)]
 embedObjectExamples =
-  [ (PDFArray [], embedObject (PDFArray [PDFName "a"]), PDFArray [PDFName "a"])
+  [ (mkEmptyPDFArray, embedObject (mkPDFArray [PDFName "a"]), mkPDFArray [PDFName "a"])
   , ( PDFIndirectObject 1 0 PDFNull
-    , embedObject (PDFArray [PDFName "a"])
-    , PDFIndirectObject 1 0 (PDFArray [PDFName "a"])
+    , embedObject (mkPDFArray [PDFName "a"])
+    , PDFIndirectObject 1 0 (mkPDFArray [PDFName "a"])
     )
-  , ( PDFObjectStream 8 5 Map.empty ""
-    , embedObject (PDFDictionary (Map.fromList [("a", PDFNull)]))
-    , PDFObjectStream 8 5 (Map.fromList [("a", PDFNull)]) ""
+  , ( PDFObjectStream 8 5 mkEmptyDictionary ""
+    , embedObject (mkPDFDictionary [("a", PDFNull)])
+    , PDFObjectStream 8 5 (mkDictionary [("a", PDFNull)]) ""
     )
   ]
 

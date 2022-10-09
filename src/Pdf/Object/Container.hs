@@ -11,6 +11,8 @@ module Pdf.Object.Container
   ( deepMap
   , deepMapM
   , Filter(Filter, fDecodeParms, fFilter)
+  , FilterList
+  , mkFilterList
   , setFilters
   , filtersFilter
   , filtersParms
@@ -25,6 +27,7 @@ import           Control.Monad.State            ( get
                                                 )
 import qualified Data.ByteString               as BS
 import qualified Data.Map.Strict               as Map
+import qualified Data.Sequence                 as SQ
 import           Pdf.Object.Object              ( Dictionary
                                                 , PDFObject
                                                   ( PDFArray
@@ -100,30 +103,44 @@ data Filter = Filter
 hasNoDecodeParms :: Filter -> Bool
 hasNoDecodeParms = (== PDFNull) . fDecodeParms
 
+-- | A list of `Filter`.
+type FilterList = SQ.Seq Filter
+
+-- | Create a `FilterList`.
+mkFilterList :: [Filter] -> FilterList
+mkFilterList = SQ.fromList
+
 {- |
 Return a list of filters contained in a `PDFDictionary`.
 -}
-getFilters :: FallibleComputation [Filter]
+getFilters :: FallibleComputation FilterList
 getFilters = do
   filters <- getValue "Filter"
   parms   <- getValue "DecodeParms"
 
   case (filters, parms) of
-    (Just (  PDFArray fs), Just PDFNull      ) -> return $ group fs []
-    (Just (  PDFArray fs), Nothing           ) -> return $ group fs []
-    (Just (  PDFArray fs), Just (PDFArray ps)) -> return $ group fs ps
-    (Just (  PDFArray fs), Just object       ) -> return $ group fs [object]
+    (Just (PDFArray fs), Just PDFNull      ) -> return $ group fs SQ.empty
+    (Just (PDFArray fs), Nothing           ) -> return $ group fs SQ.empty
+    (Just (PDFArray fs), Just (PDFArray ps)) -> return $ group fs ps
+    (Just (PDFArray fs), Just object) ->
+      return $ group fs (SQ.singleton object)
 
-    (Just f@(PDFName  _ ), Just PDFNull      ) -> return $ group [f] []
-    (Just f@(PDFName  _ ), Nothing           ) -> return $ group [f] []
-    (Just f@(PDFName  _ ), Just (PDFArray ps)) -> return $ group [f] ps
-    (Just f@(PDFName  _ ), Just p            ) -> return $ group [f] [p]
+    (Just f@(PDFName _), Just PDFNull) ->
+      return $ group (SQ.singleton f) SQ.empty
+    (Just f@(PDFName _), Nothing) -> return $ group (SQ.singleton f) SQ.empty
+    (Just f@(PDFName _), Just (PDFArray ps)) ->
+      return $ group (SQ.singleton f) ps
+    (Just f@(PDFName _), Just p) ->
+      return $ group (SQ.singleton f) (SQ.singleton p)
 
-    (Nothing             , _                 ) -> return []
-    (_                   , _                 ) -> unifiedError InvalidFilterParm
+    (Nothing, _) -> return SQ.empty
+    (_      , _) -> unifiedError InvalidFilterParm
  where
-  group :: [PDFObject] -> [PDFObject] -> [Filter]
-  group fs ps = zipWith Filter fs (ps ++ repeat PDFNull)
+  group :: SQ.Seq PDFObject -> SQ.Seq PDFObject -> FilterList
+  group fs ps = SQ.zipWith
+    Filter
+    fs
+    (ps SQ.>< SQ.replicate (SQ.length fs - SQ.length ps) PDFNull)
 
 {- |
 Given a list of `Filter`, return the corresponding `PDFObject` of filter names.
@@ -134,10 +151,10 @@ If the list contains only one `Filter`, it returns `Just` a `PDFName`.
 
 In any other cases, it returns `Just` a `PDFArray`.
 -}
-filtersFilter :: [Filter] -> Maybe PDFObject
-filtersFilter [] = Nothing
-filtersFilter [Filter aName@(PDFName _) _] = Just aName
-filtersFilter filters = Just (PDFArray $ fFilter <$> filters)
+filtersFilter :: FilterList -> Maybe PDFObject
+filtersFilter SQ.Empty = Nothing
+filtersFilter (Filter aName@(PDFName _) _ SQ.:<| SQ.Empty) = Just aName
+filtersFilter filters  = Just (PDFArray $ fFilter <$> filters)
 
 {- |
 Given a list of `Filter`, return the corresponding `PDFObject` of filters
@@ -149,14 +166,14 @@ If the list contains only one `Filter`, it returns `Just` a `PDFObject`.
 
 In any other cases, it returns `Just` a `PDFArray`.
 -}
-filtersParms :: [Filter] -> Maybe PDFObject
-filtersParms []                      = Nothing
-filtersParms [Filter _ PDFNull     ] = Nothing
-filtersParms [Filter _ aDecodeParms] = Just aDecodeParms
+filtersParms :: FilterList -> Maybe PDFObject
+filtersParms SQ.Empty = Nothing
+filtersParms (Filter _ PDFNull SQ.:<| SQ.Empty) = Nothing
+filtersParms (Filter _ aDecodeParms SQ.:<| SQ.Empty) = Just aDecodeParms
 filtersParms filters | all hasNoDecodeParms filters = Nothing
                      | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
 
-setFilters :: Monad m => [Filter] -> ObjectComputation m ()
+setFilters :: Monad m => FilterList -> ObjectComputation m ()
 setFilters filters = ifObject hasDictionaryS $ do
   "Filter" ?= filtersFilter filters
   "DecodeParms" ?= filtersParms filters

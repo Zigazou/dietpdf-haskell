@@ -6,19 +6,19 @@ module Pdf.Object.ContainerSpec
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
-import           Data.Map.Strict                ( fromList
-                                                , empty
-                                                )
 import           Pdf.Object.Object              ( Dictionary
                                                 , PDFObject
-                                                  ( PDFArray
-                                                  , PDFDictionary
-                                                  , PDFIndirectObject
+                                                  ( PDFIndirectObject
                                                   , PDFName
                                                   , PDFNull
                                                   , PDFNumber
                                                   , PDFString
                                                   )
+                                                , mkPDFArray
+                                                , mkPDFDictionary
+                                                , mkEmptyPDFDictionary
+                                                , mkDictionary
+                                                , mkEmptyDictionary
                                                 )
 import           Pdf.Object.State               ( updateE )
 import           Test.Hspec                     ( Spec
@@ -28,6 +28,8 @@ import           Test.Hspec                     ( Spec
                                                 )
 
 import           Pdf.Object.Container           ( Filter(Filter)
+                                                , FilterList
+                                                , mkFilterList
                                                 , deepMap
                                                 , insertMaybes
                                                 , setFilters
@@ -37,35 +39,29 @@ import           Util.Errors                    ( UnifiedError )
 deepMapExamples
   :: [(PDFObject, PDFObject -> Either UnifiedError PDFObject, PDFObject)]
 deepMapExamples =
-  [ ( PDFArray [PDFDictionary empty, PDFNumber 3.0, PDFName "ABCD"]
+  [ ( mkPDFArray [mkEmptyPDFDictionary, PDFNumber 3.0, PDFName "ABCD"]
     , addOneToAnyNumber
-    , PDFArray [PDFDictionary empty, PDFNumber 4.0, PDFName "ABCD"]
+    , mkPDFArray [mkEmptyPDFDictionary, PDFNumber 4.0, PDFName "ABCD"]
     )
-  , ( PDFDictionary (fromList [("X", PDFNumber 1.0), ("Y", PDFString "abcd")])
+  , ( mkPDFDictionary [("X", PDFNumber 1.0), ("Y", PDFString "abcd")]
     , addOneToAnyNumber
-    , PDFDictionary (fromList [("X", PDFNumber 2.0), ("Y", PDFString "abcd")])
+    , mkPDFDictionary [("X", PDFNumber 2.0), ("Y", PDFString "abcd")]
     )
   , ( PDFIndirectObject
       2
       0
-      (PDFDictionary (fromList [("X", PDFNumber 1.0), ("Y", PDFString "abcd")]))
+      (mkPDFDictionary [("X", PDFNumber 1.0), ("Y", PDFString "abcd")])
     , addOneToAnyNumber
     , PDFIndirectObject
       2
       0
-      (PDFDictionary (fromList [("X", PDFNumber 2.0), ("Y", PDFString "abcd")]))
+      (mkPDFDictionary [("X", PDFNumber 2.0), ("Y", PDFString "abcd")])
     )
-  , ( PDFArray
-      [ PDFDictionary (fromList [("X", PDFNumber 1.0)])
-      , PDFNumber 3.0
-      , PDFName "ABCD"
-      ]
+  , ( mkPDFArray
+      [mkPDFDictionary [("X", PDFNumber 1.0)], PDFNumber 3.0, PDFName "ABCD"]
     , addOneToAnyNumber
-    , PDFArray
-      [ PDFDictionary (fromList [("X", PDFNumber 2.0)])
-      , PDFNumber 4.0
-      , PDFName "ABCD"
-      ]
+    , mkPDFArray
+      [mkPDFDictionary [("X", PDFNumber 2.0)], PDFNumber 4.0, PDFName "ABCD"]
     )
   ]
  where
@@ -76,46 +72,42 @@ deepMapExamples =
 insertMaybesExamples :: [([(BS.ByteString, Maybe PDFObject)], Dictionary)]
 insertMaybesExamples =
   [ ( [("a", Just PDFNull), ("b", Nothing), ("c", Just (PDFNumber 2.0))]
-    , fromList [("a", PDFNull), ("c", PDFNumber 2.0)]
+    , mkDictionary [("a", PDFNull), ("c", PDFNumber 2.0)]
     )
   , ( [("a", Just PDFNull), ("b", Nothing), ("a", Just (PDFNumber 2.0))]
-    , fromList [("a", PDFNumber 2.0)]
+    , mkDictionary [("a", PDFNumber 2.0)]
     )
   ]
 
-updateFiltersExamples :: [([Filter], PDFObject, PDFObject)]
+updateFiltersExamples :: [(FilterList, PDFObject, PDFObject)]
 updateFiltersExamples =
-  [ ( [Filter (PDFName "FlateDecode") PDFNull]
-    , PDFIndirectObject 1 0 (PDFDictionary empty)
-    , PDFIndirectObject
-      1
-      0
-      (PDFDictionary (fromList [("Filter", PDFName "FlateDecode")]))
+  [ ( mkFilterList [Filter (PDFName "FlateDecode") PDFNull]
+    , PDFIndirectObject 1 0 mkEmptyPDFDictionary
+    , PDFIndirectObject 1
+                        0
+                        (mkPDFDictionary [("Filter", PDFName "FlateDecode")])
     )
-  , ( [Filter (PDFName "FlateDecode") (PDFName "Foo")]
-    , PDFIndirectObject 1 0 (PDFDictionary empty)
+  , ( mkFilterList [Filter (PDFName "FlateDecode") (PDFName "Foo")]
+    , PDFIndirectObject 1 0 mkEmptyPDFDictionary
     , PDFIndirectObject
       1
       0
-      (PDFDictionary
-        (fromList
-          [("Filter", PDFName "FlateDecode"), ("DecodeParms", PDFName "Foo")]
-        )
+      (mkPDFDictionary
+        [("Filter", PDFName "FlateDecode"), ("DecodeParms", PDFName "Foo")]
       )
     )
-  , ( [ Filter (PDFName "RLEDecode")   PDFNull
+  , ( mkFilterList
+      [ Filter (PDFName "RLEDecode")   PDFNull
       , Filter (PDFName "FlateDecode") (PDFName "foo")
       ]
-    , PDFIndirectObject 1 0 (PDFDictionary empty)
+    , PDFIndirectObject 1 0 mkEmptyPDFDictionary
     , PDFIndirectObject
       1
       0
-      (PDFDictionary
-        (fromList
-          [ ("Filter", PDFArray [PDFName "RLEDecode", PDFName "FlateDecode"])
-          , ("DecodeParms", PDFArray [PDFNull, PDFName "Foo"])
-          ]
-        )
+      (mkPDFDictionary
+        [ ("Filter", mkPDFArray [PDFName "RLEDecode", PDFName "FlateDecode"])
+        , ("DecodeParms", mkPDFArray [PDFNull, PDFName "Foo"])
+        ]
       )
     )
   ]
@@ -131,7 +123,7 @@ spec = do
     $ forM_ insertMaybesExamples
     $ \(example, expected) ->
         it ("should give right result for " ++ show example)
-          $          insertMaybes empty example
+          $          insertMaybes mkEmptyDictionary example
           `shouldBe` expected
 
   describe "update+setFilters"
