@@ -10,6 +10,16 @@ import           Pdf.Object.Object              ( PDFObject )
 import           Pdf.Object.State               ( updateE )
 import           Pdf.Object.Unfilter            ( unfilter )
 
+{- |
+Uncompress all `PDFObject` contained in a `PDFDocument`.
+
+Objects embedded in object streams are extracted and the object stream is
+removed.
+
+If a `PDFObject` cannot be uncompressed (meaning its processing generated an
+error), the object is left as is. Thus this function may leave object
+uncompressed.
+-}
 uncompress :: PDFDocument -> PDFDocument
 uncompress = cMap unfilter' . explode
  where

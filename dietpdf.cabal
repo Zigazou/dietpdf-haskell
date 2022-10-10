@@ -42,6 +42,20 @@ library
       Pdf.Document.Uncompress
       Pdf.Document.XRef
       Pdf.Graphics.Object
+      Pdf.Graphics.Parser.Comment
+      Pdf.Graphics.Parser.Container
+      Pdf.Graphics.Parser.EmptyContent
+      Pdf.Graphics.Parser.HexString
+      Pdf.Graphics.Parser.IndirectObject
+      Pdf.Graphics.Parser.Keyword
+      Pdf.Graphics.Parser.LooseEndOfLine
+      Pdf.Graphics.Parser.Name
+      Pdf.Graphics.Parser.Number
+      Pdf.Graphics.Parser.Reference
+      Pdf.Graphics.Parser.StartXRef
+      Pdf.Graphics.Parser.String
+      Pdf.Graphics.Parser.Trailer
+      Pdf.Graphics.Parser.XRef
       Pdf.Object.Container
       Pdf.Object.Linearization
       Pdf.Object.Object

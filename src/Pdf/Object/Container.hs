@@ -173,6 +173,15 @@ filtersParms (Filter _ aDecodeParms SQ.:<| SQ.Empty) = Just aDecodeParms
 filtersParms filters | all hasNoDecodeParms filters = Nothing
                      | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
 
+{- |
+Update the Filter and DecodeParms dictionary entries according to a
+`FilterList`.
+
+This function works on any `PDFObject` having a dictionary, it does not check
+that the object has a stream.
+
+It does nothing on any other object.
+-}
 setFilters :: Monad m => FilterList -> ObjectComputation m ()
 setFilters filters = ifObject hasDictionaryS $ do
   "Filter" ?= filtersFilter filters

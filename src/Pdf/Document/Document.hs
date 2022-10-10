@@ -57,6 +57,7 @@ instance Foldable CollectionOf where
   foldMap :: Monoid m => (a -> m) -> CollectionOf a -> m
   foldMap f (CollectionOf dict) = foldMap f dict
 
+-- | The `<>` operator does a concatenation when used with `CollectionOf`.
 instance Ord a => Semigroup (CollectionOf a) where
   (<>) :: CollectionOf a -> CollectionOf a -> CollectionOf a
   (<>) (CollectionOf x) (CollectionOf y) = CollectionOf (x OS.<>| y)
@@ -65,9 +66,19 @@ instance Ord a => Monoid (CollectionOf a) where
   mempty :: CollectionOf a
   mempty = CollectionOf OS.empty
 
+{- |
+A `map` function for objects of type `CollectionOf`.
+
+The destination type must be an instance of `Ord`.
+-}
 cMap :: Ord b => (a -> b) -> CollectionOf a -> CollectionOf b
 cMap f = foldr (cCons . f) mempty
 
+{- |
+A `map` function for objects of type `CollectionOf` which converts to a `List`.
+
+This allows to get rid of the `Ord` constraint of cMap.
+-}
 lMap :: (a -> b) -> CollectionOf a -> [b]
 lMap f (CollectionOf objects) = (fmap f . OS.toAscList) objects
 
@@ -86,19 +97,36 @@ Only the last indirect object with a specific number is kept.
 fromList :: Ord a => [a] -> CollectionOf a
 fromList = CollectionOf . foldl' (OS.>|) OS.empty
 
+{- |
+Convert a `CollectionOf` to a `List`.
+-}
 toList :: CollectionOf a -> [a]
 toList (CollectionOf objects) = OS.toAscList objects
 
+{- |
+The cons function for `CollectionOf` type.
+-}
 cCons :: Ord a => a -> CollectionOf a -> CollectionOf a
 cCons object (CollectionOf objects) = CollectionOf (object OS.|< objects)
 
+{- |
+The `sepBy1` function for `CollectionOf` (`sepBy1` only generates `List`).
+-}
 dSepBy1 :: (Alternative f, Ord a) => f a -> f s -> f (CollectionOf a)
 dSepBy1 p s = go where go = liftA2 cCons p ((s *> go) <|> pure mempty)
 
+{- |
+The `sepBy` function for `CollectionOf` (`sepBy` only generates `List`).
+-}
 dSepBy :: (Alternative f, Ord a) => f a -> f s -> f (CollectionOf a)
 dSepBy p s =
   liftA2 cCons p ((s *> dSepBy1 p s) <|> pure mempty) <|> pure mempty
 
+{- |
+Find last value in a `CollectionOf` satisfying a predicate.
+
+If the predicate is never satisfied, the function returns `Nothing`.
+-}
 findLast :: (a -> Bool) -> CollectionOf a -> Maybe a
 findLast p =
   foldr (\object found -> if p object then Just object else found) Nothing

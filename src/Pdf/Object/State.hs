@@ -7,33 +7,39 @@
 This module defines functions working on `StateT` monad with `PDFObject`.
 -}
 module Pdf.Object.State
-  ( FallibleComputation
+  ( -- * Types
+    FallibleComputation
   , ObjectComputation
+
+    -- * Query
   , getValue
+  , query
+  , queryE
+  , getStream
+  , getDictionary
+  , hasDictionaryS
+  , hasKeyS
+  , hasStreamS
+
+    -- * Modify
   , setValue
   , (.=)
   , setMaybe
   , (?=)
   , update
   , updateE
-  , query
-  , queryE
   , setStream
-  , getStream
-  , getDictionary
   , setDictionary
   , embedObject
   , modifyObject
+
+    -- * Check
   , ifObject
   , ifObjectElse
-  , hasDictionaryS
-  , hasKeyS
-  , hasStreamS
   ) where
 
 import           Control.Monad                  ( when )
-import           Control.Monad.State            ( State
-                                                , StateT
+import           Control.Monad.State            ( StateT
                                                 , evalState
                                                 , evalStateT
                                                 , execState
@@ -71,6 +77,7 @@ import           Util.Errors                    ( UnifiedError
                                                   )
                                                 , unifiedError
                                                 )
+import           Control.Monad.Identity         ( Identity )
 
 {- |
 A `FallibleComputation` is a computation running in a `State` monad, working on
@@ -164,8 +171,8 @@ setValue
   -> ObjectComputation m () -- ^ The `StateT` monad in which to operate
 setValue name value = get >>= \case
   (PDFDictionary dict) -> put (PDFDictionary (Map.insert name value dict))
-  (PDFIndirectObjectWithStream num gen dict stream) ->
-    put (PDFIndirectObjectWithStream num gen (Map.insert name value dict) stream)
+  (PDFIndirectObjectWithStream num gen dict stream) -> put
+    (PDFIndirectObjectWithStream num gen (Map.insert name value dict) stream)
   (PDFObjectStream num gen dict stream) ->
     put (PDFObjectStream num gen (Map.insert name value dict) stream)
   (PDFIndirectObject num gen (PDFDictionary dict)) ->
@@ -372,7 +379,15 @@ This function is meant to be used with functions like `ifObject` or
 hasStreamS :: Monad m => ObjectComputation m Bool
 hasStreamS = get <&> hasStream
 
-update :: PDFObject -> State PDFObject a -> PDFObject
+{- |
+Update an object using a `StateT` monad.
+
+Any error while evaluating the monad will be ignored.
+-}
+update
+  :: PDFObject -- ^ Object to update
+  -> ObjectComputation Identity a -- ^ Computation
+  -> PDFObject -- ^ The updated object
 update = flip execState
 
 {- |
@@ -386,7 +401,15 @@ updateE
   -> Either UnifiedError PDFObject -- ^ The updated object or an error
 updateE = flip execStateT
 
-query :: PDFObject -> State PDFObject a -> a
+{- |
+Query an object using a `StateT` monad.
+
+Any error while evaluating the monad will be ignored.
+-}
+query
+  :: PDFObject -- ^ The object to inspect
+  -> ObjectComputation Identity a -- ^ Query
+  -> a -- ^ The result
 query = flip evalState
 
 {- |
