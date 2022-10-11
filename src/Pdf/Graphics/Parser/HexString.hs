@@ -20,7 +20,7 @@ odd number of digits—the final digit shall be assumed to be 0.
 codes are 90, 1F, and A3, but `<901FA>` is a 3-byte string containing the
 characters whose hexadecimal codes are 90, 1F, and A0.
 -}
-module Pdf.Parser.HexString
+module Pdf.Graphics.Parser.HexString
   ( hexStringP
   ) where
 
@@ -30,7 +30,7 @@ import           Data.Binary.Parser             ( Get
                                                 , takeWhile1
                                                 , word8
                                                 )
-import           Pdf.Object.Object              ( PDFObject(PDFHexString)
+import           Pdf.Graphics.Object              ( GFXObject(GFXHexString)
                                                 , isWhiteSpace
                                                 )
 import           Util.Ascii                     ( asciiGREATERTHANSIGN
@@ -39,15 +39,15 @@ import           Util.Ascii                     ( asciiGREATERTHANSIGN
 import           Util.String                    ( normalizeHexString )
 
 {- |
-A binary parser for a PDF hexstring.
+A binary parser for a GFX hexstring.
 
-A PDF hexstring is a structure signaled by angle brackets.
+A GFX hexstring is a structure signaled by angle brackets.
 
-It returns a `PDFHexString`.
+It returns a `GFXHexString`.
 -}
-hexStringP :: Get PDFObject
+hexStringP :: Get GFXObject
 hexStringP = label "hexstring" $ do
   word8 asciiLESSTHANSIGN
   content <- takeWhile1 (\byte -> isHexDigit byte || isWhiteSpace byte)
   word8 asciiGREATERTHANSIGN
-  return $ PDFHexString (normalizeHexString content)
+  return $ GFXHexString (normalizeHexString content)

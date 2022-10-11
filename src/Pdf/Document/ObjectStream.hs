@@ -34,7 +34,6 @@ import           Data.Binary.Parser             ( Get
                                                 , takeWhile1
                                                 )
 import qualified Data.ByteString               as BS
-import qualified Data.Map.Strict               as Map
 import           Util.Number                    ( fromInt )
 
 import           Pdf.Document.Document          ( PDFDocument
@@ -42,8 +41,7 @@ import           Pdf.Document.Document          ( PDFDocument
                                                 , fromList
                                                 , singleton
                                                 )
-import           Pdf.Object.Object              ( Dictionary
-                                                , PDFObject
+import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFName
                                                   , PDFNumber
@@ -59,15 +57,15 @@ import           Pdf.Object.State               ( getStream
 import           Control.Monad                  ( forM )
 import           Data.Functor                   ( (<&>) )
 import           Pdf.Object.Unfilter            ( unfilter )
-import           Pdf.Parser.Container           ( arrayP
+import           Pdf.Object.Parser.Container    ( arrayP
                                                 , dictionaryP
                                                 )
-import           Pdf.Parser.HexString           ( hexStringP )
-import           Pdf.Parser.Keyword             ( keywordP )
-import           Pdf.Parser.Name                ( nameP )
-import           Pdf.Parser.Number              ( numberP )
-import           Pdf.Parser.Reference           ( referenceP )
-import           Pdf.Parser.String              ( stringP )
+import           Pdf.Object.Parser.HexString    ( hexStringP )
+import           Pdf.Object.Parser.Keyword      ( keywordP )
+import           Pdf.Object.Parser.Name         ( nameP )
+import           Pdf.Object.Parser.Number       ( numberP )
+import           Pdf.Object.Parser.Reference    ( referenceP )
+import           Pdf.Object.Parser.String       ( stringP )
 import           Util.Ascii                     ( asciiDIGITZERO )
 import           Util.Errors                    ( UnifiedError
                                                   ( NoObjectToEncode
@@ -75,6 +73,9 @@ import           Util.Errors                    ( UnifiedError
                                                   )
                                                 )
 import           Data.Foldable                  ( foldl' )
+import           Util.Dictionary                ( Dictionary
+                                                , mkDictionary
+                                                )
 
 data ObjectStream = ObjectStream
   { osCount   :: Int
@@ -220,8 +221,8 @@ insert objects num | objects == mempty = Left NoObjectToEncode
                    | otherwise = return $ PDFObjectStream num 0 dict stream
  where
   objStm = insertObjects (dFilter isObjectStreamable objects)
-  dict :: Dictionary
-  dict = Map.fromList
+  dict :: Dictionary PDFObject
+  dict = mkDictionary
     [ ("Type" , PDFName "ObjStm")
     , ("N"    , PDFNumber . fromIntegral . osCount $ objStm)
     , ("First", PDFNumber . fromIntegral . osOffset $ objStm)

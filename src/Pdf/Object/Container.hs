@@ -28,8 +28,7 @@ import           Control.Monad.State            ( get
 import qualified Data.ByteString               as BS
 import qualified Data.Map.Strict               as Map
 import qualified Data.Sequence                 as SQ
-import           Pdf.Object.Object              ( Dictionary
-                                                , PDFObject
+import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
                                                   , PDFDictionary
                                                   , PDFIndirectObject
@@ -39,16 +38,17 @@ import           Pdf.Object.Object              ( Dictionary
                                                   , PDFObjectStream
                                                   )
                                                 )
-import           Pdf.Object.State               ( FallibleComputation
+import           Pdf.Object.State               ( (?=)
+                                                , FallibleComputation
                                                 , ObjectComputation
-                                                , getValue
-                                                , modifyObject
                                                 , embedObject
-                                                , updateE
-                                                , (?=)
-                                                , ifObject
+                                                , getValue
                                                 , hasDictionaryS
+                                                , ifObject
+                                                , modifyObject
+                                                , updateE
                                                 )
+import           Util.Dictionary                ( Dictionary )
 import           Util.Errors                    ( UnifiedError
                                                   ( InvalidFilterParm
                                                   )
@@ -195,10 +195,10 @@ If the value is `Nothing`, the dictionary is returned without modification.
 It the value is `Just` something, the something is inserted into the dictionary.
 -}
 insertMaybe
-  :: Dictionary -- ^ The dictionary to update
+  :: Dictionary PDFObject -- ^ The dictionary to update
   -> BS.ByteString -- ^ The key name
   -> Maybe PDFObject -- ^ The `Maybe` value to associate to the key name
-  -> Dictionary -- ^ The resulting dictionary
+  -> Dictionary PDFObject -- ^ The resulting dictionary
 insertMaybe dict name (Just object) = Map.insert name object dict
 insertMaybe dict _    Nothing       = dict
 
@@ -207,7 +207,10 @@ Insert a list of key-value pair inside a `Dictionary`.
 
 Any `Nothing` value is ignored.
 -}
-insertMaybes :: Dictionary -> [(BS.ByteString, Maybe PDFObject)] -> Dictionary
+insertMaybes
+  :: Dictionary PDFObject -- ^ The original `Dictionary`
+  -> [(BS.ByteString, Maybe PDFObject)] -- ^ Key-values to insert
+  -> Dictionary PDFObject -- ^ The updated `Dictionary`
 insertMaybes dict [] = dict
 insertMaybes dict ((name, value) : remains) =
   insertMaybes (insertMaybe dict name value) remains

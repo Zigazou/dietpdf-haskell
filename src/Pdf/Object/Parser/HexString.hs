@@ -20,7 +20,7 @@ odd number of digits—the final digit shall be assumed to be 0.
 codes are 90, 1F, and A3, but `<901FA>` is a 3-byte string containing the
 characters whose hexadecimal codes are 90, 1F, and A0.
 -}
-module Pdf.Parser.HexString
+module Pdf.Object.Parser.HexString
   ( hexStringP
   ) where
 

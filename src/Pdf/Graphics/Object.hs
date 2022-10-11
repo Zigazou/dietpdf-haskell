@@ -12,7 +12,6 @@ module Pdf.Graphics.Object
     GFXObject
     ( GFXComment
     , GFXNumber
-    , GFXKeyword
     , GFXName
     , GFXString
     , GFXHexString
@@ -21,17 +20,20 @@ module Pdf.Graphics.Object
     , GFXDictionary
     , GFXBool
     , GFXNull
+    , GFXOperator
     )
-  , Dictionary
-  , mkDictionary
-  , mkEmptyDictionary
   , mkEmptyGFXArray
   , mkEmptyGFXDictionary
   , mkGFXArray
   , mkGFXDictionary
+  , objectInfo
+
+    -- * Operators
+  , GSOperator(..)
 
     -- * Conversion
   , fromGFXObject
+  , toGSOperator
 
     -- * GFX characters
   , isDelimiter
@@ -47,11 +49,9 @@ module Pdf.Graphics.Object
 
 import qualified Data.ByteString               as BS
 import qualified Data.Text.Lazy                as TL
-import qualified Data.Sequence                 as SQ
 import           Formatting                     ( format
                                                 , (%)
                                                 , int
-                                                , text
                                                 )
 import           Formatting.ByteStringFormatter ( utf8 )
 import qualified Data.Map.Strict               as Map
@@ -76,6 +76,14 @@ import           Util.Number                    ( fromInt
                                                 )
 import           Util.String                    ( fromHexString
                                                 , fromString
+                                                )
+import           Util.Dictionary                ( Dictionary
+                                                , mkDictionary
+                                                , mkEmptyDictionary
+                                                )
+import           Util.Array                     ( Array
+                                                , mkArray
+                                                , mkEmptyArray
                                                 )
 
 {-|
@@ -153,120 +161,362 @@ isNameRegularChar byte | byte == asciiNUMBERSIGN = False
                        | isDelimiter byte        = False
                        | otherwise               = True
 
-{- |
-A `Dictionary` is a handy type.
-
-It is a `Map` of `GFXObject` indexed by `ByteString`.
-
-The keys are the `ByteString` contained in `GFXName`.
--}
-type Dictionary = Map.Map BS.ByteString GFXObject
-
--- | Returns an empty `Dictionary`
-mkEmptyDictionary :: Dictionary
-mkEmptyDictionary = Map.empty
-
-mkDictionary :: [(BS.ByteString, GFXObject)] -> Dictionary
-mkDictionary = Map.fromList
-
-data GFXLineCap = GFXButtCap | GFXRoundCap | GFXProjectingSquareCap deriving stock (Eq, Show, Enum)
-data GFXLineJoin = GFXMiterJoin | GFXRoundJoin | GFXBevelJoin deriving stock (Eq, Show, Enum)
-
-data GFXTextRenderMode
-  = GFXFillText
-  | GFXStrokeText
-  | GFXInvisibleText
-  | GFXFillTextClipping
-  | GFXStrokeTextClipping
-  | GFXFillStrokeTextClipping
-  | GFXTextClipping
+-- | Line cap styles
+data GFXLineCap
+  = -- | Butt cap (0)
+    GFXButtCap
+  | -- | Round cap (1)
+    GFXRoundCap
+    -- | Projecting square cap (2)
+  | GFXProjectingSquareCap
   deriving stock (Eq, Show, Enum)
 
+-- | Line join styles
+data GFXLineJoin
+  = -- | Mitter join (0)
+    GFXMiterJoin
+  | -- | Round join (1)
+    GFXRoundJoin
+    -- | Bevel join (2)
+  | GFXBevelJoin
+  deriving stock (Eq, Show, Enum)
+
+-- | Text rendering mode
+data GFXTextRenderMode
+  = -- | Fill text (0)
+    GFXFillText
+  | -- | Stroke text (1)
+    GFXStrokeText
+  | -- | Fill then stroke text (2)
+    GFXFillStrokeText
+  | -- | Neither fill nor stroke text, invisible (3)
+    GFXInvisibleText
+  | -- | Fill text and add to path for clipping (4)
+    GFXFillTextClipping
+  | -- | Stroke text and add to path for clipping (5)
+    GFXStrokeTextClipping
+  | -- | Fill then stroke text and add path for clipping (6)
+    GFXFillStrokeTextClipping
+  | -- | Add text to path for clipping (7)
+    GFXTextClipping
+  deriving stock (Eq, Show, Enum)
+
+-- | PDF colour spaces
 data GFXColorSpace
-  = GFXDeviceGray
-  | GFXDeviceRGB
-  | GFXDeviceCMYK
-  | GFXPattern
-  | GFXLab
-  | GFXICCBased
-  | GFXIndexed
-  | GFXDeviceN
+  = -- | Gray colour space (/DeviceGray)
+    GFXDeviceGray
+  | -- | RGB colour space (/DeviceRGB)
+    GFXDeviceRGB
+  | -- | CMYK colour space (/DeviceCMYK)
+    GFXDeviceCMYK
+  | -- | CalGray colour space (/CalGray)
+    GFXCIECalGray
+  | -- | CalRGB colour space (/CalRGB)
+    GFXCIECalRGB
+  | -- | Lab colour space (/Lab)
+    GFXCIELab
+  | -- | ICC-based colour space (/ICCBased)
+    GFXCIEICCBased
+  | -- | Indexed colour space (/Indexed)
+    GFXSpecialIndexed
+  | -- | Pattern colour space (/Pattern)
+    GFXSpecialPattern
+  | -- | Separation colour space (/Separation)
+    GFXSpecialSeparation
+  | -- | DeviceN colour space (/DeviceN)
+    GFXSpecialDeviceN
   deriving stock (Eq, Show)
 
-data GSOperator 
+data GSOperator
   = -- | Save the current graphics state on the graphics state stack (q)
     GSSaveGS
-    -- | Restore the graphics state (Q)
-  | GSRestoreGS
-    -- | Modify the current transformation matrix (cm)
-  | GSSetCTM
-    -- | Set the line width in the graphics state (w)
-  | GSSetLineWidth
-    -- | Set the line cap style in the graphics state (J)
-  | GSSetLineCap
-    -- | Set the line join style in the graphics state (j)
-  | GSSetLineJoin
-    -- | Set the miter limit in the graphics state (M)
-  | GSSetMiterLimit
-    -- | Set the line dash pattern in the graphics state (d)
-  | GSSetLineDashPattern
-    -- | Set the colour rendering intent in the graphics state (ri)
-  | GSSetColourRenderingIntent
-    -- | Set the flatness tolerance in the graphics state (i)
-  | GSSetFlatnessTolerance
-    -- | Set the specified parameters in the graphics state (gs)
-  | GSSetParameters
-    -- | Begin a new subpath by moving the current point to coordinates (m)
-  | GSMoveTo
-    -- | Append a straight line segment from the current point to the point (l)
-  | GSLineTo
-    -- | Append a cubic Bézier curve to the current path (c)
-  | GSCubicBezierCurve
-  | GSCubicBezierCurve1To
-  | GSCubicBezierCurve2To
-  | GSCloseSubpath
-  | GSRectangle
-  | GSStrokePath
-  | GSCloseStrokePath
-  | GSFillPathNZWR
-  | GSFilePathEOR
-  | GSFillStrokePathNZWR
-  | GSFillStrokePathEOR
-  | GSCloseFillStrokeNZWR
-  | GSCloseFillStrokeEOR
-  | GSEndPath
-  | GSBeginText
-  | GSEndText
-  | GSMoveToNextLine
-  | GSMoveToNextLineLP
-  | GSSetTextMatrix
-  | GSNextLine
-  | GSShowText
-  | GSNLShowText
-  | GSNLShowTextWithSpacing
-  | GSShowManyText
-  | GSSetCharacterSpacing
-  | GSSetWordSpacing
-  | GSSetHorizontalScaling
-  | GSSetTextLeading
-  | GSSetTextFont
-  | GSSetTextRenderingMode
-  | GSSetTextRise
-  | GSSetGlyphWidth
-  | GSSetBoundingBoxGlyph
-  | GSSetStrokeColorspace
-  | GSSetNonStrokeColorspace
-  | GSSetStrokeColor
-  | GSSetStrokeColorN
-  | GSSetNonStrokeColor
-  | GSSetNonStrockeColorN
-  | GSSetStrokeGrayColorspace
-  | GSSetNonStrokeGrayColorspace
-  | GSSetStrokeRGBColorspace
-  | GSSetNonStrokeRGBColorspace
-  | GSSetStrokeCMYKColorspace
-  | GSSetNonStrokeCMYKColorspace
+  | -- | Restore the graphics state (Q)
+    GSRestoreGS
+  | -- | Modify the current transformation matrix (cm)
+    GSSetCTM
+  | -- | Set the line width in the graphics state (w)
+    GSSetLineWidth
+  | -- | Set the line cap style in the graphics state (J)
+    GSSetLineCap
+  | -- | Set the line join style in the graphics state (j)
+    GSSetLineJoin
+  | -- | Set the miter limit in the graphics state (M)
+    GSSetMiterLimit
+  | -- | Set the line dash pattern in the graphics state (d)
+    GSSetLineDashPattern
+  | -- | Set the colour rendering intent in the graphics state (ri)
+    GSSetColourRenderingIntent
+  | -- | Set the flatness tolerance in the graphics state (i)
+    GSSetFlatnessTolerance
+  | -- | Set the specified parameters in the graphics state (gs)
+    GSSetParameters
+  | -- | Begin a new subpath by moving the current point to coordinates (m)
+    GSMoveTo
+  | -- | Append a straight line segment from the current point to the point (l)
+    GSLineTo
+  | -- | Append a cubic Bézier curve to the current path (c)
+    GSCubicBezierCurve
+  | -- | Append a cubic Bézier curve to the current path. (v)
+    GSCubicBezierCurve1To
+  | -- | Append a cubic Bézier curve to the current path. (y)
+    GSCubicBezierCurve2To
+  | -- | Close the current subpath by appending a straight line segment (h)
+    GSCloseSubpath
+  | -- | Append a rectangle to the current path as a complete subpath (re)
+    GSRectangle
+  | -- | Stroke the path (S)
+    GSStrokePath
+  | -- | Close and stroke the path (s)
+    GSCloseStrokePath
+  | -- | Fill the path, using the nonzero winding number rule (f)
+    GSFillPathNZWR
+  | -- | Fill the path, using the even-odd rule (f*)
+    GSFilePathEOR
+  | -- | Fill and then stroke the path, using the NZW rule (B)
+    GSFillStrokePathNZWR
+  | -- | Fill and then stroke the path, using the even-odd rule (B*)
+    GSFillStrokePathEOR
+  | -- | Close, fill, and then stroke the path, using the NZW rule (b)
+    GSCloseFillStrokeNZWR
+  | -- | Close, fill, and then stroke the path, using the even-odd rule (b*)
+    GSCloseFillStrokeEOR
+  | -- | End the path object without filling or stroking it (n)
+    GSEndPath
+  | -- | Begin a text object (BT)
+    GSBeginText
+  | -- | End a text object (ET)
+    GSEndText
+  | -- | Move to start of the next line (Td)
+    GSMoveToNextLine
+  | -- | Move to start of the next line while setting the leading parameter (TD)
+    GSMoveToNextLineLP
+  | -- | Set the text matrix (Tm)
+    GSSetTextMatrix
+  | -- | Move to the start of the next line (T*)
+    GSNextLine
+  | -- | Show a text string (Tj)
+    GSShowText
+  | -- | Move to the next line and show a text string (')
+    GSNLShowText
+  | -- | Move to the next line and show a text string with word spacing (")
+    GSNLShowTextWithSpacing
+  | -- | Show one or more text strings (TJ)
+    GSShowManyText
+  | -- | Set the character spacing (Tc)
+    GSSetCharacterSpacing
+  | -- | Set the word spacing (Tw)
+    GSSetWordSpacing
+  | -- | Set the horizontal scaling (Tz)
+    GSSetHorizontalScaling
+  | -- | Set the text leading (TL)
+    GSSetTextLeading
+  | -- | Set the text font (Tf)
+    GSSetTextFont
+  | -- | Set the text rendering mode (Tr)
+    GSSetTextRenderingMode
+  | -- | Set the text rise (Ts)
+    GSSetTextRise
+  | -- | Set width information for the glyph (d0)
+    GSSetGlyphWidth
+  | -- | Set width and bounding box information for the glyph (d1)
+    GSSetBoundingBoxGlyph
+  | -- | Set the current colour space to use for stroking operations (CS)
+    GSSetStrokeColorspace
+  | -- | Set the current colour space to use for nonstroking operations (cs)
+    GSSetNonStrokeColorspace
+  | -- | Set the colour to use for stroking operations in a device (SC)
+    GSSetStrokeColor
+  | -- | Set the colour to use for stroking operations in a deviceN (SCN)
+    GSSetStrokeColorN
+  | -- | Set the colour to use for nonstroking operations in a device (sc)
+    GSSetNonStrokeColor
+  | -- | Set the colour to use for nonstroking operations in a deviceN (scn)
+    GSSetNonStrockeColorN
+  | -- | Set the stroking colour space to DeviceGray (G)
+    GSSetStrokeGrayColorspace
+  | -- | Set the nonstroking colour space to DeviceGray (g)
+    GSSetNonStrokeGrayColorspace
+  | -- | Set the stroking colour space to DeviceRGB (RG)
+    GSSetStrokeRGBColorspace
+  | -- | Set the nonstroking colour space to DeviceRGB (rg)
+    GSSetNonStrokeRGBColorspace
+  | -- | Set the stroking colour space to DeviceCMYK (K)
+    GSSetStrokeCMYKColorspace
+  | -- | Set the nonstroking colour space to DeviceCMYK (k)
+    GSSetNonStrokeCMYKColorspace
+  | -- | Paint the shape and colour shading (sh)
+    GSPaintShapeColourShading
+  | -- | Begin an inline image object (BI)
+    GSBeginInlineImage
+  | -- | Begin the image data for an inline image object (ID)
+    GSBeginImageData
+  | -- | End an inline image object (EI)
+    GSEndInlineImage
+  | -- | Paint the specified XObject (Do)
+    GSPaintXObject
+  | -- | Designate a marked-content point (MP)
+    GSMarkedContentPoint
+  | -- | Designate a marked-content point with a property list (DP)
+    GSMarkedContentPointPL
+  | -- | Begin a marked-content sequence (BMC)
+    GSBeginMarkedContentSequence
+  | -- | Begin a marked-content sequence with a property list (BDC)
+    GSBeginMarkedContentSequencePL
+  | -- | End a marked-content sequence begun by a BMC or BDC operator (EMC)
+    GSEndMarkedContentSequence
+  | -- | Begin a compatibility section (BX)
+    GSBeginCompatibilitySection
+  | -- | End a compatibility section (EX)
+    GSEndCompatibilitySection
+  | -- | Unknown operator
+    GSUnknown BS.ByteString
   deriving stock (Eq, Show)
+
+toGSOperator :: BS.ByteString -> GSOperator
+toGSOperator "q"     = GSSaveGS
+toGSOperator "Q"     = GSRestoreGS
+toGSOperator "cm"    = GSSetCTM
+toGSOperator "w"     = GSSetLineWidth
+toGSOperator "J"     = GSSetLineCap
+toGSOperator "j"     = GSSetLineJoin
+toGSOperator "M"     = GSSetMiterLimit
+toGSOperator "d"     = GSSetLineDashPattern
+toGSOperator "ri"    = GSSetColourRenderingIntent
+toGSOperator "i"     = GSSetFlatnessTolerance
+toGSOperator "gs"    = GSSetParameters
+toGSOperator "m"     = GSMoveTo
+toGSOperator "l"     = GSLineTo
+toGSOperator "c"     = GSCubicBezierCurve
+toGSOperator "v"     = GSCubicBezierCurve1To
+toGSOperator "y"     = GSCubicBezierCurve2To
+toGSOperator "h"     = GSCloseSubpath
+toGSOperator "re"    = GSRectangle
+toGSOperator "S"     = GSStrokePath
+toGSOperator "s"     = GSCloseStrokePath
+toGSOperator "f"     = GSFillPathNZWR
+toGSOperator "f*"    = GSFilePathEOR
+toGSOperator "B"     = GSFillStrokePathNZWR
+toGSOperator "B*"    = GSFillStrokePathEOR
+toGSOperator "b"     = GSCloseFillStrokeNZWR
+toGSOperator "b*"    = GSCloseFillStrokeEOR
+toGSOperator "n"     = GSEndPath
+toGSOperator "BT"    = GSBeginText
+toGSOperator "ET"    = GSEndText
+toGSOperator "Td"    = GSMoveToNextLine
+toGSOperator "TD"    = GSMoveToNextLineLP
+toGSOperator "Tm"    = GSSetTextMatrix
+toGSOperator "T*"    = GSNextLine
+toGSOperator "Tj"    = GSShowText
+toGSOperator "'"     = GSNLShowText
+toGSOperator "\""    = GSNLShowTextWithSpacing
+toGSOperator "TJ"    = GSShowManyText
+toGSOperator "Tc"    = GSSetCharacterSpacing
+toGSOperator "Tw"    = GSSetWordSpacing
+toGSOperator "Tz"    = GSSetHorizontalScaling
+toGSOperator "TL"    = GSSetTextLeading
+toGSOperator "Tf"    = GSSetTextFont
+toGSOperator "Tr"    = GSSetTextRenderingMode
+toGSOperator "Ts"    = GSSetTextRise
+toGSOperator "d0"    = GSSetGlyphWidth
+toGSOperator "d1"    = GSSetBoundingBoxGlyph
+toGSOperator "CS"    = GSSetStrokeColorspace
+toGSOperator "cs"    = GSSetNonStrokeColorspace
+toGSOperator "SC"    = GSSetStrokeColor
+toGSOperator "SCN"   = GSSetStrokeColorN
+toGSOperator "sc"    = GSSetNonStrokeColor
+toGSOperator "scn"   = GSSetNonStrockeColorN
+toGSOperator "G"     = GSSetStrokeGrayColorspace
+toGSOperator "g"     = GSSetNonStrokeGrayColorspace
+toGSOperator "RG"    = GSSetStrokeRGBColorspace
+toGSOperator "rg"    = GSSetNonStrokeRGBColorspace
+toGSOperator "K"     = GSSetStrokeCMYKColorspace
+toGSOperator "k"     = GSSetNonStrokeCMYKColorspace
+toGSOperator "sh"    = GSPaintShapeColourShading
+toGSOperator "BI"    = GSBeginInlineImage
+toGSOperator "ID"    = GSBeginImageData
+toGSOperator "EI"    = GSEndInlineImage
+toGSOperator "Do"    = GSPaintXObject
+toGSOperator "MP"    = GSMarkedContentPoint
+toGSOperator "DP"    = GSMarkedContentPointPL
+toGSOperator "BMC"   = GSBeginMarkedContentSequence
+toGSOperator "BDC"   = GSBeginMarkedContentSequencePL
+toGSOperator "EMC"   = GSEndMarkedContentSequence
+toGSOperator "BX"    = GSBeginCompatibilitySection
+toGSOperator "EX"    = GSEndCompatibilitySection
+toGSOperator unknown = GSUnknown unknown
+
+fromGSOperator :: GSOperator -> BS.ByteString
+fromGSOperator GSSaveGS                       = "q"
+fromGSOperator GSRestoreGS                    = "Q"
+fromGSOperator GSSetCTM                       = "cm"
+fromGSOperator GSSetLineWidth                 = "w"
+fromGSOperator GSSetLineCap                   = "J"
+fromGSOperator GSSetLineJoin                  = "j"
+fromGSOperator GSSetMiterLimit                = "M"
+fromGSOperator GSSetLineDashPattern           = "d"
+fromGSOperator GSSetColourRenderingIntent     = "ri"
+fromGSOperator GSSetFlatnessTolerance         = "i"
+fromGSOperator GSSetParameters                = "gs"
+fromGSOperator GSMoveTo                       = "m"
+fromGSOperator GSLineTo                       = "l"
+fromGSOperator GSCubicBezierCurve             = "c"
+fromGSOperator GSCubicBezierCurve1To          = "v"
+fromGSOperator GSCubicBezierCurve2To          = "y"
+fromGSOperator GSCloseSubpath                 = "h"
+fromGSOperator GSRectangle                    = "re"
+fromGSOperator GSStrokePath                   = "S"
+fromGSOperator GSCloseStrokePath              = "s"
+fromGSOperator GSFillPathNZWR                 = "f"
+fromGSOperator GSFilePathEOR                  = "f*"
+fromGSOperator GSFillStrokePathNZWR           = "B"
+fromGSOperator GSFillStrokePathEOR            = "B*"
+fromGSOperator GSCloseFillStrokeNZWR          = "b"
+fromGSOperator GSCloseFillStrokeEOR           = "b*"
+fromGSOperator GSEndPath                      = "n"
+fromGSOperator GSBeginText                    = "BT"
+fromGSOperator GSEndText                      = "ET"
+fromGSOperator GSMoveToNextLine               = "Td"
+fromGSOperator GSMoveToNextLineLP             = "TD"
+fromGSOperator GSSetTextMatrix                = "Tm"
+fromGSOperator GSNextLine                     = "T*"
+fromGSOperator GSShowText                     = "Tj"
+fromGSOperator GSNLShowText                   = "'"
+fromGSOperator GSNLShowTextWithSpacing        = "\""
+fromGSOperator GSShowManyText                 = "TJ"
+fromGSOperator GSSetCharacterSpacing          = "Tc"
+fromGSOperator GSSetWordSpacing               = "Tw"
+fromGSOperator GSSetHorizontalScaling         = "Tz"
+fromGSOperator GSSetTextLeading               = "TL"
+fromGSOperator GSSetTextFont                  = "Tf"
+fromGSOperator GSSetTextRenderingMode         = "Tr"
+fromGSOperator GSSetTextRise                  = "Ts"
+fromGSOperator GSSetGlyphWidth                = "d0"
+fromGSOperator GSSetBoundingBoxGlyph          = "d1"
+fromGSOperator GSSetStrokeColorspace          = "CS"
+fromGSOperator GSSetNonStrokeColorspace       = "cs"
+fromGSOperator GSSetStrokeColor               = "SC"
+fromGSOperator GSSetStrokeColorN              = "SCN"
+fromGSOperator GSSetNonStrokeColor            = "sc"
+fromGSOperator GSSetNonStrockeColorN          = "scn"
+fromGSOperator GSSetStrokeGrayColorspace      = "G"
+fromGSOperator GSSetNonStrokeGrayColorspace   = "g"
+fromGSOperator GSSetStrokeRGBColorspace       = "RG"
+fromGSOperator GSSetNonStrokeRGBColorspace    = "rg"
+fromGSOperator GSSetStrokeCMYKColorspace      = "K"
+fromGSOperator GSSetNonStrokeCMYKColorspace   = "k"
+fromGSOperator GSPaintShapeColourShading      = "sh"
+fromGSOperator GSBeginInlineImage             = "BI"
+fromGSOperator GSBeginImageData               = "ID"
+fromGSOperator GSEndInlineImage               = "EI"
+fromGSOperator GSPaintXObject                 = "Do"
+fromGSOperator GSMarkedContentPoint           = "MP"
+fromGSOperator GSMarkedContentPointPL         = "DP"
+fromGSOperator GSBeginMarkedContentSequence   = "BMC"
+fromGSOperator GSBeginMarkedContentSequencePL = "BDC"
+fromGSOperator GSEndMarkedContentSequence     = "EMC"
+fromGSOperator GSBeginCompatibilitySection    = "BX"
+fromGSOperator GSEndCompatibilitySection      = "EX"
+fromGSOperator (GSUnknown unknown)            = unknown
 
 {-|
 A GFX is a collection of objects, here named GFX objects.
@@ -278,8 +528,6 @@ data GFXObject
     GFXComment BS.ByteString
   | -- | A number (always stored as a double)
     GFXNumber Double
-  | -- | A keyword
-    GFXKeyword BS.ByteString
   | -- | A name (starting with /)
     GFXName BS.ByteString
   | -- | A string (unescaped and without parenthesis)
@@ -289,164 +537,92 @@ data GFXObject
   | -- | A reference, number and generation (two integers followed by an `R`)
     GFXReference Int Int
   | -- | An array containing a list of objects
-    GFXArray (SQ.Seq GFXObject)
+    GFXArray (Array GFXObject)
   | -- | A dictionary containing key-value pairs
-    GFXDictionary Dictionary
+    GFXDictionary (Dictionary GFXObject)
   | -- | A boolean (true or false)
     GFXBool Bool
   | -- | A null value
     GFXNull
+  | -- | An inline image
+    GFXInlineImage BS.ByteString
   | -- | An operator
     GFXOperator GSOperator
-  deriving stock (Eq, Show)
+  deriving stock Show
 
 {- |
 Create an empty `GFXDictionary`.
 -}
 mkEmptyGFXDictionary :: GFXObject
-mkEmptyGFXDictionary = GFXDictionary Map.empty
+mkEmptyGFXDictionary = GFXDictionary mkEmptyDictionary
 
 {- |
 Create an empty `GFXArray`.
 -}
 mkEmptyGFXArray :: GFXObject
-mkEmptyGFXArray = GFXArray SQ.empty
+mkEmptyGFXArray = GFXArray mkEmptyArray
 
 {- |
 Create a `GFXDictionary` from a list of couples (key, value).
 -}
 mkGFXDictionary :: [(BS.ByteString, GFXObject)] -> GFXObject
-mkGFXDictionary = GFXDictionary . Map.fromList
+mkGFXDictionary = GFXDictionary . mkDictionary
 
 {- |
 Create a `GFXArray` from a list of `GFXObject`.
 -}
 mkGFXArray :: [GFXObject] -> GFXObject
-mkGFXArray = GFXArray . SQ.fromList
+mkGFXArray = GFXArray . mkArray
 
 instance Eq GFXObject where
   (==) :: GFXObject -> GFXObject -> Bool
-  (GFXComment x)       == (GFXComment y)       = x == y
-  (GFXVersion _)       == (GFXVersion _)       = True
-  GFXEndOfFile         == GFXEndOfFile         = True
+  (GFXComment   x    ) == (GFXComment   y    ) = x == y
   (GFXNumber    x    ) == (GFXNumber    y    ) = x == y
-  (GFXKeyword   x    ) == (GFXKeyword   y    ) = x == y
   (GFXName      x    ) == (GFXName      y    ) = x == y
   (GFXString    x    ) == (GFXString    y    ) = x == y
   (GFXHexString x    ) == (GFXHexString y    ) = x == y
   (GFXReference xn xr) == (GFXReference yn yr) = xn == yn && xr == yr
   (GFXArray      x   ) == (GFXArray      y   ) = x == y
   (GFXDictionary x   ) == (GFXDictionary y   ) = x == y
-  (GFXIndirectObject xn xr _) == (GFXIndirectObject yn yr _) =
-    xn == yn && xr == yr
-  (GFXIndirectObjectWithStream xn xr _ _) == (GFXIndirectObjectWithStream yn yr _ _)
-    = xn == yn && xr == yr
-  (GFXObjectStream xn xr _ _) == (GFXObjectStream yn yr _ _) =
-    xn == yn && xr == yr
-  (GFXBool x)      == (GFXBool y)      = x == y
-  GFXNull          == GFXNull          = True
-  (GFXXRef      x) == (GFXXRef      y) = x == y
-  (GFXTrailer   x) == (GFXTrailer   y) = x == y
-  (GFXStartXRef x) == (GFXStartXRef y) = x == y
-  _anyObjectA      == _anyObjectB      = False
-
-objectRank :: GFXObject -> Int
-objectRank (GFXVersion _)                = 0
-objectRank (GFXComment _)                = 1
-objectRank GFXNull                       = 2
-objectRank (GFXBool      _  )            = 3
-objectRank (GFXNumber    _  )            = 4
-objectRank (GFXKeyword   _  )            = 5
-objectRank (GFXName      _  )            = 6
-objectRank (GFXString    _  )            = 7
-objectRank (GFXHexString _  )            = 8
-objectRank (GFXReference _ _)            = 9
-objectRank (GFXArray      _ )            = 10
-objectRank (GFXDictionary _ )            = 11
-objectRank GFXIndirectObject{}           = 12
-objectRank GFXIndirectObjectWithStream{} = 13
-objectRank GFXObjectStream{}             = 14
-objectRank (GFXXRef      _)              = 15
-objectRank (GFXTrailer   _)              = 16
-objectRank (GFXStartXRef _)              = 17
-objectRank GFXEndOfFile                  = 18
-
-instance Ord GFXObject where
-  compare :: GFXObject -> GFXObject -> Ordering
-  compare (GFXComment x)   (GFXComment y)   = compare x y
-  compare (GFXVersion _)   (GFXVersion _)   = EQ
-  compare GFXEndOfFile     GFXEndOfFile     = EQ
-  compare (GFXNumber    x) (GFXNumber    y) = compare x y
-  compare (GFXKeyword   x) (GFXKeyword   y) = compare x y
-  compare (GFXName      x) (GFXName      y) = compare x y
-  compare (GFXString    x) (GFXString    y) = compare x y
-  compare (GFXHexString x) (GFXHexString y) = compare x y
-  compare (GFXReference xn xr) (GFXReference yn yr) =
-    compare xn yn <> compare xr yr
-  compare (GFXArray      x) (GFXArray      y) = compare x y
-  compare (GFXDictionary x) (GFXDictionary y) = compare x y
-  compare (GFXIndirectObject xn xr _) (GFXIndirectObject yn yr _) =
-    compare xn yn <> compare xr yr
-  compare (GFXIndirectObjectWithStream xn xr _ _) (GFXIndirectObjectWithStream yn yr _ _)
-    = compare xn yn <> compare xr yr
-  compare (GFXObjectStream xn xr _ _) (GFXObjectStream yn yr _ _) =
-    compare xn yn <> compare xr yr
-  compare (GFXBool x)      (GFXBool y)      = compare x y
-  compare GFXNull          GFXNull          = EQ
-  compare (GFXXRef      x) (GFXXRef      y) = compare x y
-  compare (GFXTrailer   x) (GFXTrailer   y) = compare x y
-  compare (GFXStartXRef x) (GFXStartXRef y) = compare x y
-  compare objectA objectB = compare (objectRank objectA) (objectRank objectB)
+  (GFXBool       x   ) == (GFXBool       y   ) = x == y
+  GFXNull              == GFXNull              = True
+  _anyObjectA          == _anyObjectB          = False
 
 {- |
 Indicates whether the `GFXObject` ends with a delimiter when converted to a
 `ByteString`.
 -}
 endsWithDelimiter :: GFXObject -> Bool
-endsWithDelimiter GFXComment{}                  = True
-endsWithDelimiter GFXVersion{}                  = True
-endsWithDelimiter GFXEndOfFile                  = True
-endsWithDelimiter GFXNumber{}                   = False
-endsWithDelimiter GFXKeyword{}                  = False
-endsWithDelimiter GFXName{}                     = False
-endsWithDelimiter GFXString{}                   = True
-endsWithDelimiter GFXHexString{}                = True
-endsWithDelimiter GFXReference{}                = False
-endsWithDelimiter GFXArray{}                    = True
-endsWithDelimiter GFXDictionary{}               = True
-endsWithDelimiter GFXIndirectObject{}           = True
-endsWithDelimiter GFXIndirectObjectWithStream{} = True
-endsWithDelimiter GFXObjectStream{}             = True
-endsWithDelimiter GFXBool{}                     = False
-endsWithDelimiter GFXNull                       = False
-endsWithDelimiter GFXXRef{}                     = False
-endsWithDelimiter GFXTrailer{}                  = True
-endsWithDelimiter GFXStartXRef{}                = True
+endsWithDelimiter GFXComment{}     = True
+endsWithDelimiter GFXNumber{}      = False
+endsWithDelimiter GFXName{}        = False
+endsWithDelimiter GFXString{}      = True
+endsWithDelimiter GFXHexString{}   = True
+endsWithDelimiter GFXReference{}   = False
+endsWithDelimiter GFXArray{}       = True
+endsWithDelimiter GFXDictionary{}  = True
+endsWithDelimiter GFXBool{}        = False
+endsWithDelimiter GFXNull          = False
+endsWithDelimiter GFXInlineImage{} = False
+endsWithDelimiter GFXOperator{}    = False
 
 {- |
 Indicates whether the `GFXObject` starts with a delimiter when converted to a
 `ByteString`.
 -}
 startsWithDelimiter :: GFXObject -> Bool
-startsWithDelimiter GFXComment{}                  = True
-startsWithDelimiter GFXVersion{}                  = True
-startsWithDelimiter GFXEndOfFile                  = True
-startsWithDelimiter GFXNumber{}                   = False
-startsWithDelimiter GFXKeyword{}                  = False
-startsWithDelimiter GFXName{}                     = True
-startsWithDelimiter GFXString{}                   = True
-startsWithDelimiter GFXHexString{}                = True
-startsWithDelimiter GFXReference{}                = False
-startsWithDelimiter GFXArray{}                    = True
-startsWithDelimiter GFXDictionary{}               = True
-startsWithDelimiter GFXIndirectObject{}           = False
-startsWithDelimiter GFXIndirectObjectWithStream{} = False
-startsWithDelimiter GFXObjectStream{}             = False
-startsWithDelimiter GFXBool{}                     = False
-startsWithDelimiter GFXNull                       = False
-startsWithDelimiter GFXXRef{}                     = False
-startsWithDelimiter GFXTrailer{}                  = False
-startsWithDelimiter GFXStartXRef{}                = False
+startsWithDelimiter GFXComment{}     = True
+startsWithDelimiter GFXNumber{}      = False
+startsWithDelimiter GFXName{}        = True
+startsWithDelimiter GFXString{}      = True
+startsWithDelimiter GFXHexString{}   = True
+startsWithDelimiter GFXReference{}   = False
+startsWithDelimiter GFXArray{}       = True
+startsWithDelimiter GFXDictionary{}  = True
+startsWithDelimiter GFXBool{}        = False
+startsWithDelimiter GFXNull          = False
+startsWithDelimiter GFXInlineImage{} = False
+startsWithDelimiter GFXOperator{}    = False
 
 {- |
 Tells if a space must be inserted between 2 `GFXObject` when converted to
@@ -458,15 +634,12 @@ spaceIfNeeded object1 object2 | endsWithDelimiter object1   = ""
                               | otherwise                   = " "
 
 {- |
-Converts a `GFXObject` to a `ByteString` ready to be inserted in an output
-GFX file.
+Converts a `GFXObject` to a `ByteString` ready to be inserted in a graphics
+object in a stream.
 -}
 fromGFXObject :: GFXObject -> BS.ByteString
-fromGFXObject (GFXComment comment)     = BS.concat ["%", comment, "\n"]
-fromGFXObject (GFXVersion version)     = BS.concat ["%GFX-", version, "\n"]
-fromGFXObject GFXEndOfFile             = "%%EOF\n"
+fromGFXObject (GFXComment   comment  ) = BS.concat ["%", comment, "\n"]
 fromGFXObject (GFXNumber    number   ) = fromNumber number
-fromGFXObject (GFXKeyword   keyword  ) = keyword
 fromGFXObject (GFXName      name     ) = fromName name
 fromGFXObject (GFXString    bytes    ) = fromString bytes
 fromGFXObject (GFXHexString hexstring) = fromHexString hexstring
@@ -474,81 +647,35 @@ fromGFXObject (GFXReference number revision) =
   BS.concat [fromInt number, " ", fromInt revision, " R"]
 fromGFXObject (GFXArray      objects   ) = fromArray objects
 fromGFXObject (GFXDictionary dictionary) = fromDictionary dictionary
-fromGFXObject (GFXIndirectObject number revision object) =
-  fromIndirectObject number revision object
-fromGFXObject (GFXIndirectObjectWithStream number revision dict stream) =
-  fromIndirectObjectWithStream number revision dict stream
-fromGFXObject (GFXObjectStream number revision dict stream) =
-  fromIndirectObjectWithStream number revision dict stream
-fromGFXObject (GFXBool True ) = "true"
-fromGFXObject (GFXBool False) = "false"
-fromGFXObject GFXNull         = "null"
-fromGFXObject (GFXXRef xrss)  = fromXRef xrss
-fromGFXObject (GFXTrailer (GFXDictionary dictionary)) =
-  BS.concat ["trailer\n", fromDictionary dictionary, "\n"]
-fromGFXObject (GFXTrailer _) = error "a trailer can only contain a dictionary"
-fromGFXObject (GFXStartXRef offset) =
-  BS.concat ["startxref\n", fromInt offset, "\n"]
+fromGFXObject (GFXBool       True      ) = "true"
+fromGFXObject (GFXBool       False     ) = "false"
+fromGFXObject GFXNull                    = "null"
+fromGFXObject (GFXInlineImage raw     )  = raw
+fromGFXObject (GFXOperator    operator)  = fromGSOperator operator
 
 {- |
 Returns a `Text` string describing a GFXObject.
 -}
 objectInfo :: GFXObject -> TL.Text
 objectInfo (GFXComment comment) = format ("{- " % utf8 % " -}") comment
-objectInfo (GFXVersion version) = format ("VERSION=" % utf8) version
-objectInfo GFXEndOfFile         = "END-OF-FILE"
 objectInfo (GFXNumber number) =
   format ("[number:" % utf8 % "]") (fromNumber number)
-objectInfo (GFXKeyword keyword) = format ("[keyword:" % utf8 % "]") keyword
-objectInfo (GFXName    name   ) = format ("[name:" % utf8 % "]") name
-objectInfo (GFXString  bytes  ) = format ("[string:" % utf8 % "]") bytes
+objectInfo (GFXName   name ) = format ("[name:" % utf8 % "]") name
+objectInfo (GFXString bytes) = format ("[string:" % utf8 % "]") bytes
 objectInfo (GFXHexString hexstring) =
   format ("[hexstring: " % utf8 % "]") hexstring
 objectInfo (GFXReference number revision) =
   format ("[ref:" % int % "," % int % "]") number revision
 objectInfo (GFXArray objects) =
   format ("[array:count=" % int % "]") (length objects)
-objectInfo (GFXDictionary dictionary) = case objectType dictionary of
-  Just value -> format ("[dictionary:type=" % utf8 % ";count=" % int % "]")
-                       value
-                       (Map.size dictionary)
-  Nothing -> format ("[dictionary:count=" % int % "]") (Map.size dictionary)
-objectInfo (GFXIndirectObject number revision object) = format
-  ("object(" % int % "," % int % ")=" % text)
-  number
-  revision
-  (objectInfo object)
-objectInfo (GFXIndirectObjectWithStream number revision dict stream) = format
-  ("object(" % int % "," % int % ")=" % text % "+[stream:length=" % int % "]")
-  number
-  revision
-  (objectInfo . GFXDictionary $ dict)
-  (BS.length stream)
-objectInfo (GFXObjectStream number revision object stream) = format
-  ( "objectstream("
-  % int
-  % ","
-  % int
-  % ")="
-  % text
-  % "+[stream:length="
-  % int
-  % "]"
-  )
-  number
-  revision
-  (objectInfo . GFXDictionary $ object)
-  (BS.length stream)
+objectInfo (GFXDictionary dictionary) =
+  format ("[dictionary:count=" % int % "]") (Map.size dictionary)
 objectInfo (GFXBool True ) = "true"
 objectInfo (GFXBool False) = "false"
 objectInfo GFXNull         = "null"
-objectInfo xref@(GFXXRef _) =
-  format ("[xref:count=" % int % "]") (xrefCount xref)
-objectInfo (GFXTrailer dictionary@(GFXDictionary _)) =
-  format ("trailer(" % text % ")") (objectInfo dictionary)
-objectInfo (GFXTrailer _) = "<trailer without dictionary>"
-objectInfo (GFXStartXRef offset) =
-  format ("[startxref:offset=" % int % "]") offset
+objectInfo (GFXInlineImage raw) =
+  format ("[inlineimage:size=" % int % "]") (BS.length raw)
+objectInfo GFXOperator{} = "operator"
 
 {- |
 Takes a `List` of `GFXObject`, converts them to the `ByteString` representation
@@ -563,10 +690,10 @@ separateObjects (object1 : object2 : others) = BS.concat
   , separateObjects (object2 : others)
   ]
 
-fromArray :: SQ.Seq GFXObject -> BS.ByteString
+fromArray :: Array GFXObject -> BS.ByteString
 fromArray items = BS.concat ["[", separateObjects (toList items), "]"]
 
-fromDictionary :: Dictionary -> BS.ByteString
+fromDictionary :: Dictionary GFXObject -> BS.ByteString
 fromDictionary keyValues = BS.concat
   ["<<", separateObjects (splitCouple (Map.toList keyValues)), ">>"]
  where

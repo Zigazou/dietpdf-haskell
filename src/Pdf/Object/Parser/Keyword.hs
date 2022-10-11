@@ -8,7 +8,7 @@ uppercase).
 This parser recognizes true, false and null keywords. Any other sequence is
 considered generic keyword.
 -}
-module Pdf.Parser.Keyword
+module Pdf.Object.Parser.Keyword
   ( keywordP
   ) where
 

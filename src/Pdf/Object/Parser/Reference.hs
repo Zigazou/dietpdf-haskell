@@ -7,7 +7,7 @@ A PDF reference is an object value used to allow one object to refer to another.
 It has the form “n m R” where n is an indirect object number, m is its
 version number and R is the uppercase letter R.
 -}
-module Pdf.Parser.Reference
+module Pdf.Object.Parser.Reference
   ( referenceP
   ) where
 
@@ -23,7 +23,7 @@ import           Pdf.Object.Object              ( PDFObject(PDFReference)
                                                 , isKeywordCharacter
                                                 )
 import           Util.Number                    ( toNumber )
-import           Pdf.Parser.EmptyContent        ( emptyContentP )
+import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
 
 digit :: Get Word8
 digit = satisfy isDigit

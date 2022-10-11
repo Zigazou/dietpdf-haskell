@@ -26,7 +26,7 @@ Beginning with PDF 1.5, indirect objects may reside in object streams. They are
 referred to in the same way; however, their definition shall not include the
 keywords obj and endobj, and their generation number shall be zero.
 -}
-module Pdf.Parser.IndirectObject
+module Pdf.Object.Parser.IndirectObject
   ( indirectObjectP
   ) where
 
@@ -56,16 +56,16 @@ import           Pdf.Object.Object              ( PDFObject
 import           Pdf.Object.State               ( getValue
                                                 , query
                                                 )
-import           Pdf.Parser.Container           ( arrayP
+import           Pdf.Object.Parser.Container    ( arrayP
                                                 , dictionaryP
                                                 )
-import           Pdf.Parser.EmptyContent        ( emptyContentP )
-import           Pdf.Parser.HexString           ( hexStringP )
-import           Pdf.Parser.Keyword             ( keywordP )
-import           Pdf.Parser.Name                ( nameP )
-import           Pdf.Parser.Number              ( numberP )
-import           Pdf.Parser.Reference           ( referenceP )
-import           Pdf.Parser.String              ( stringP )
+import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
+import           Pdf.Object.Parser.HexString    ( hexStringP )
+import           Pdf.Object.Parser.Keyword      ( keywordP )
+import           Pdf.Object.Parser.Name         ( nameP )
+import           Pdf.Object.Parser.Number       ( numberP )
+import           Pdf.Object.Parser.Reference    ( referenceP )
+import           Pdf.Object.Parser.String       ( stringP )
 import           Util.Ascii                     ( asciiCR
                                                 , asciiLF
                                                 )

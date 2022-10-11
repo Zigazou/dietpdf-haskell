@@ -11,7 +11,7 @@ file to the beginning of the xref keyword in the last cross-reference section.
 
 The startxref line shall be preceded by the trailer dictionary.
 -}
-module Pdf.Parser.StartXRef
+module Pdf.Object.Parser.StartXRef
   ( startXRefP
   ) where
 
@@ -22,7 +22,8 @@ import           Data.Binary.Parser             ( Get
                                                 , some'
                                                 , string
                                                 )
-import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP )
+import           Pdf.Object.Parser.LooseEndOfLine
+                                                ( looseEndOfLineP )
 import           Pdf.Object.Object              ( PDFObject(PDFStartXRef) )
 import           Util.Number                    ( toNumber )
 

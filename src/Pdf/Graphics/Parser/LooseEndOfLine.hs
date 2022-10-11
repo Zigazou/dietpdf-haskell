@@ -1,7 +1,7 @@
 {-|
 This module contains a parser for loose end of line (either CR, CR+LF or LF).
 -}
-module Pdf.Parser.LooseEndOfLine
+module Pdf.Graphics.Parser.LooseEndOfLine
   ( looseEndOfLineP
   , isLooseEndOfLine
   ) where

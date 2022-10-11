@@ -31,7 +31,7 @@ Wherever a real number is expected, an integer may be used instead.
 For example, it is not necessary to write the number 1.0 in real format;
 the integer 1 is sufficient.
 -}
-module Pdf.Parser.Number
+module Pdf.Object.Parser.Number
   ( numberP
   ) where
 

@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.NameSpec
+module Pdf.Object.Parser.NameSpec
   ( spec
-  )
-where
+  ) where
 
 import           Test.Hspec                     ( describe
                                                 , it
@@ -14,7 +13,7 @@ import           Util.ParserHelper              ( shouldBeParsedAs
                                                 , shouldBeFullyParsed
                                                 , itWith
                                                 )
-import           Pdf.Parser.Name                ( nameP )
+import           Pdf.Object.Parser.Name         ( nameP )
 import           Pdf.Object.Object              ( PDFObject(PDFName) )
 
 nameExamples :: [(BS.ByteString, PDFObject)]

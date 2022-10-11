@@ -1,5 +1,5 @@
 -- | This module contains parsers for PDF containers (array and dictionary).
-module Pdf.Parser.Container
+module Pdf.Object.Parser.Container
   ( arrayP
   , dictionaryP
   ) where
@@ -18,13 +18,13 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 , mkPDFArray
                                                 )
-import           Pdf.Parser.HexString           ( hexStringP )
-import           Pdf.Parser.Keyword             ( keywordP )
-import           Pdf.Parser.Name                ( nameP )
-import           Pdf.Parser.Number              ( numberP )
-import           Pdf.Parser.Reference           ( referenceP )
-import           Pdf.Parser.String              ( stringP )
-import           Pdf.Parser.EmptyContent        ( emptyContentP )
+import           Pdf.Object.Parser.HexString    ( hexStringP )
+import           Pdf.Object.Parser.Keyword      ( keywordP )
+import           Pdf.Object.Parser.Name         ( nameP )
+import           Pdf.Object.Parser.Number       ( numberP )
+import           Pdf.Object.Parser.Reference    ( referenceP )
+import           Pdf.Object.Parser.String       ( stringP )
+import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
 import           Util.Ascii                     ( asciiGREATERTHANSIGN
                                                 , asciiLEFTSQUAREBRACKET
                                                 , asciiLESSTHANSIGN

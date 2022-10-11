@@ -1,12 +1,12 @@
 {- |
-This module contains a parser for PDF names.
+This module contains a parser for GFX names.
 
 A name object is an atomic symbol uniquely defined by a sequence of any
 characters (8-bit values) except null (character code 0).
 
 A SOLIDUS (2Fh) (/) is used to introduce a name. The SOLIDUS is not part of the
 name but is a prefix indicating that what follows is a sequence of characters
-representing the name in the PDF file.
+representing the name in the GFX file.
 
 A NUMBER SIGN (23h) (#) in a name shall be written by using its 2-digit
 hexadecimal code (23), preceded by the NUMBER SIGN.
@@ -25,7 +25,7 @@ the encoded name.
 Regular characters that are outside the range EXCLAMATION MARK(21h) (!) to
 TILDE (7Eh) (~) should be written using the hexadecimal notation.
 -}
-module Pdf.Parser.Name
+module Pdf.Graphics.Parser.Name
   ( nameP
   ) where
 
@@ -39,7 +39,7 @@ import           Data.Binary.Parser             ( Get
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( PDFObject(PDFName)
+import           Pdf.Graphics.Object            ( GFXObject(GFXName)
                                                 , isNameRegularChar
                                                 )
 import           Util.Ascii                     ( asciiDIGITNINE
@@ -68,46 +68,46 @@ charP :: Get Word8
 charP = hexadecimalCodeP <|> satisfy isNameRegularChar
 
 {- |
-Parse a `PDFName`.
+Parse a `GFXName`.
 
 The name resulting from the parsing is decoded (there is no hexadecimal value
 in the resulting bytestring).
 
 >>> parseOnly nameP "/Name1"
-Right (PDFName "Name1")
+Right (GFXName "Name1")
 
 >>> parseOnly nameP "/ASomewhatLongerName"
-Right (PDFName "ASomewhatLongerName")
+Right (GFXName "ASomewhatLongerName")
 
 >>> parseOnly nameP "/A;Name_With-Various***Characters?"
-Right (PDFName "A;Name_With-Various***Characters?")
+Right (GFXName "A;Name_With-Various***Characters?")
 
 >>> parseOnly nameP "/1.2"
-Right (PDFName "1.2")
+Right (GFXName "1.2")
 
 >>> parseOnly nameP "/$$"
-Right (PDFName "$$")
+Right (GFXName "$$")
 
 >>> parseOnly nameP "/@pattern"
-Right (PDFName "@pattern")
+Right (GFXName "@pattern")
 
 >>> parseOnly nameP "/.notdef"
-Right (PDFName ".notdef")
+Right (GFXName ".notdef")
 
 >>> parseOnly nameP "/lime#20Green"
-Right (PDFName "Lime Green")
+Right (GFXName "Lime Green")
 
 >>> parseOnly nameP "/paired#28#29parentheses"
-Right (PDFName "paired()parentheses")
+Right (GFXName "paired()parentheses")
 
 >>> parseOnly nameP "/The_Key_of_F#23_Minor"
-Right (PDFName "The_Key_of_F#_Minor")
+Right (GFXName "The_Key_of_F#_Minor")
 
 >>> parseOnly nameP "/A#42"
-Right (PDFName "AB")
+Right (GFXName "AB")
 -}
-nameP :: Get PDFObject
+nameP :: Get GFXObject
 nameP = label "name" $ do
   word8 asciiSOLIDUS
   name <- BS.pack <$> some' charP
-  return $ PDFName name
+  return $ GFXName name

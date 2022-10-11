@@ -1,15 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.XRefSpec
+module Pdf.Object.Parser.XRefSpec
   ( spec
-  )
-where
+  ) where
 
 import           Test.Hspec                     ( describe
                                                 , Spec
                                                 )
 import qualified Data.ByteString               as BS
 import           Util.ParserHelper              ( itWith )
-import           Pdf.Parser.XRef                ( xrefP )
+import           Pdf.Object.Parser.XRef         ( xrefP )
 import           Pdf.Object.Object              ( PDFObject(PDFXRef)
                                                 , XRefState
                                                   ( InUseEntry

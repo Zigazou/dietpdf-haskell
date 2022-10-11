@@ -16,7 +16,7 @@ by 255. These two bytes represent the Unicode byte order marker, U+FEFF,
 indicating that the string is encoded in the UTF-16BE (big-endian) encoding
 scheme specified in the Unicode standard.
 -}
-module Pdf.Parser.String
+module Pdf.Object.Parser.String
   ( stringP
   ) where
 
@@ -28,7 +28,8 @@ import           Data.Binary.Parser             ( Get
                                                 , some'
                                                 , word8
                                                 )
-import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP )
+import           Pdf.Object.Parser.LooseEndOfLine
+                                                ( looseEndOfLineP )
 import qualified Data.ByteString               as BS
 import           Data.Maybe                     ( catMaybes )
 import           Data.Word                      ( Word8 )

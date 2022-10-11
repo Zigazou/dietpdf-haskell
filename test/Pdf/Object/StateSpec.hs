@@ -19,7 +19,8 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , mkPDFArray
                                                 , mkEmptyPDFDictionary
                                                 , mkPDFDictionary
-                                                , mkDictionary
+                                                )
+import           Util.Dictionary                ( mkDictionary
                                                 , mkEmptyDictionary
                                                 )
 import           Pdf.Object.State               ( FallibleComputation
@@ -77,7 +78,10 @@ setStreamExamples =
 
 embedObjectExamples :: [(PDFObject, FallibleComputation (), PDFObject)]
 embedObjectExamples =
-  [ (mkEmptyPDFArray, embedObject (mkPDFArray [PDFName "a"]), mkPDFArray [PDFName "a"])
+  [ ( mkEmptyPDFArray
+    , embedObject (mkPDFArray [PDFName "a"])
+    , mkPDFArray [PDFName "a"]
+    )
   , ( PDFIndirectObject 1 0 PDFNull
     , embedObject (mkPDFArray [PDFName "a"])
     , PDFIndirectObject 1 0 (mkPDFArray [PDFName "a"])

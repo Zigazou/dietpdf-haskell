@@ -19,7 +19,8 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFObjectStream
                                                   , PDFString
                                                   )
-                                                , mkDictionary
+                                                )
+import           Util.Dictionary                ( mkDictionary
                                                 , mkEmptyDictionary
                                                 )
 import           Test.Hspec                     ( Spec

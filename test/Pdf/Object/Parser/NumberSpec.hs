@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.NumberSpec
+module Pdf.Object.Parser.NumberSpec
   ( spec
   ) where
 
@@ -8,7 +8,7 @@ import           Test.Hspec                     ( describe
                                                 )
 import qualified Data.ByteString               as BS
 import           Util.ParserHelper              ( itWith )
-import           Pdf.Parser.Number              ( numberP )
+import           Pdf.Object.Parser.Number       ( numberP )
 import           Pdf.Object.Object              ( PDFObject(PDFNumber) )
 
 numberExamples :: [(BS.ByteString, PDFObject)]

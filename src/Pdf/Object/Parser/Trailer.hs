@@ -19,7 +19,7 @@ keyword trailer followed by a series of key-value pairs enclosed in double
 angle brackets (<< … >>) (using LESS-THAN SIGNs (3Ch) and GREATER-THAN SIGNs
 (3Eh)).
 -}
-module Pdf.Parser.Trailer
+module Pdf.Object.Parser.Trailer
   ( trailerP
   ) where
 
@@ -27,9 +27,10 @@ import           Data.Binary.Parser             ( Get
                                                 , label
                                                 , string
                                                 )
-import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP )
 import           Pdf.Object.Object              ( PDFObject(PDFTrailer) )
-import           Pdf.Parser.Container           ( dictionaryP )
+import           Pdf.Object.Parser.LooseEndOfLine
+                                                ( looseEndOfLineP )
+import           Pdf.Object.Parser.Container    ( dictionaryP )
 
 {- |
 Parse a `PDFTrailer`.

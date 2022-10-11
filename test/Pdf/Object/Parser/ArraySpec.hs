@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.ArraySpec
+module Pdf.Object.Parser.ArraySpec
   ( spec
   ) where
 
@@ -8,7 +8,7 @@ import           Test.Hspec                     ( describe
                                                 )
 import qualified Data.ByteString               as BS
 import           Util.ParserHelper              ( itWith )
-import           Pdf.Parser.Container           ( arrayP )
+import           Pdf.Object.Parser.Container    ( arrayP )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFNumber
                                                   , PDFName

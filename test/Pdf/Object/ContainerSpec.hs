@@ -6,8 +6,7 @@ module Pdf.Object.ContainerSpec
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( Dictionary
-                                                , PDFObject
+import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFName
                                                   , PDFNull
@@ -17,6 +16,8 @@ import           Pdf.Object.Object              ( Dictionary
                                                 , mkPDFArray
                                                 , mkPDFDictionary
                                                 , mkEmptyPDFDictionary
+                                                )
+import           Util.Dictionary                ( Dictionary
                                                 , mkDictionary
                                                 , mkEmptyDictionary
                                                 )
@@ -69,7 +70,8 @@ deepMapExamples =
   addOneToAnyNumber (PDFNumber x) = return (PDFNumber (x + 1.0))
   addOneToAnyNumber object        = return object
 
-insertMaybesExamples :: [([(BS.ByteString, Maybe PDFObject)], Dictionary)]
+insertMaybesExamples
+  :: [([(BS.ByteString, Maybe PDFObject)], Dictionary PDFObject)]
 insertMaybesExamples =
   [ ( [("a", Just PDFNull), ("b", Nothing), ("c", Just (PDFNumber 2.0))]
     , mkDictionary [("a", PDFNull), ("c", PDFNumber 2.0)]

@@ -18,10 +18,11 @@ import           Data.Binary.Parser             ( Get
                                                 )
 import           Pdf.Graphics.Object            ( GFXObject
                                                   ( GFXBool
-                                                  , GFXKeyword
                                                   , GFXNull
+                                                  , GFXOperator
                                                   )
                                                 , isKeywordCharacter
+                                                , toGSOperator
                                                 )
 
 {- |
@@ -36,22 +37,4 @@ keywordP = label "keyword" $ do
     "true"  -> GFXBool True
     "false" -> GFXBool False
     "null"  -> GFXNull
-    _       -> GFXKeyword keyword
-
-{-
-General graphics state w, J, j, M, d, ri, i, gs
-Special graphics state q, Q, cm
-Path construction m, l, c, v, y, h, re
-Path painting S, s, f, F, f*, B, B*, b, b*, n
-Clipping paths W, W*
-Text objects BT, ET
-Text state Tc, Tw, Tz, TL, Tf, Tr, Ts Text positioning Td, TD, Tm, T*
-Text showing Tj, TJ, ', "
-Type 3 fonts d0, d1
-Color CS, cs, SC, SCN, sc, scn, G, g, RG, rg, K, k
-Shading patterns sh
-Inline images BI, ID, EI
-XObjects Do
-Marked content MP, DP, BMC, BDC, EMC
-Compatibility BX, EX
--}
+    value   -> GFXOperator (toGSOperator value)

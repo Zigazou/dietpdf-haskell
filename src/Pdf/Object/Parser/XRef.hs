@@ -50,7 +50,7 @@ first item is different "nnnnnnnnnn ggggg f eol" where:
 - f shall be a keyword identifying this as a free entry
 - eol shall be a 2-character end-of-line sequence
 -}
-module Pdf.Parser.XRef
+module Pdf.Object.Parser.XRef
   ( xrefP
   ) where
 
@@ -64,7 +64,8 @@ import           Data.Binary.Parser             ( Get
                                                 , string
                                                 , word8
                                                 )
-import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP )
+import           Pdf.Object.Parser.LooseEndOfLine
+                                                ( looseEndOfLineP )
 import           Data.Word                      ( Word8 )
 import qualified Data.ByteString               as BS
 import           Data.Ix                        ( inRange )

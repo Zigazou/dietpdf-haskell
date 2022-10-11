@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- |
-This module provides a parser for PDF strings.
+This module provides a parser for GFX strings.
 
 A string consists of a series of bytes (unsigned integer values in the range
 0 to 255) and the bytes are not integer objects, but are stored in a more
@@ -16,7 +16,7 @@ by 255. These two bytes represent the Unicode byte order marker, U+FEFF,
 indicating that the string is encoded in the UTF-16BE (big-endian) encoding
 scheme specified in the Unicode standard.
 -}
-module Pdf.Parser.String
+module Pdf.Graphics.Parser.String
   ( stringP
   ) where
 
@@ -28,11 +28,12 @@ import           Data.Binary.Parser             ( Get
                                                 , some'
                                                 , word8
                                                 )
-import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP )
+import           Pdf.Graphics.Parser.LooseEndOfLine
+                                                ( looseEndOfLineP )
 import qualified Data.ByteString               as BS
 import           Data.Maybe                     ( catMaybes )
 import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( PDFObject(PDFString)
+import           Pdf.Graphics.Object            ( GFXObject(GFXString)
                                                 , isOctal
                                                 , isStringEscapeSequence
                                                 , isStringRegularChar
@@ -115,7 +116,7 @@ rawStringP = do
   return $ BS.concat ["(", BS.concat content, ")"]
 
 {- |
-Parse a `PDFString`
+Parse a `GFXString`
 -}
-stringP :: Get PDFObject
-stringP = label "string" $ PDFString . BS.drop 1 . dropEnd 1 <$> rawStringP
+stringP :: Get GFXObject
+stringP = label "string" $ GFXString . BS.drop 1 . dropEnd 1 <$> rawStringP

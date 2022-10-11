@@ -2,7 +2,7 @@
 This module contains parser for empty contents (space or comment) used to
 separate PDF objects.
 -}
-module Pdf.Parser.EmptyContent
+module Pdf.Graphics.Parser.EmptyContent
   ( emptyContentP
   ) where
 
@@ -13,7 +13,7 @@ import           Data.Binary.Parser             ( Get
                                                 , skipMany
                                                 )
 import           Pdf.Object.Object              ( isWhiteSpace )
-import           Pdf.Parser.Comment             ( commentP )
+import           Pdf.Graphics.Parser.Comment    ( commentP )
 import           Control.Monad                  ( void )
 
 {-|

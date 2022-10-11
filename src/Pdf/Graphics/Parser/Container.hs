@@ -1,5 +1,5 @@
--- | This module contains parsers for PDF containers (array and dictionary).
-module Pdf.Parser.Container
+-- | This module contains parsers for GFX containers (array and dictionary).
+module Pdf.Graphics.Parser.Container
   ( arrayP
   , dictionaryP
   ) where
@@ -12,26 +12,27 @@ import           Data.Binary.Parser             ( Get
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Map.Strict                ( fromList )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFName
+import           Pdf.Graphics.Object            ( GFXObject
+                                                  ( GFXDictionary
+                                                  , GFXName
                                                   )
-                                                , mkPDFArray
+                                                , mkGFXArray
                                                 )
-import           Pdf.Parser.HexString           ( hexStringP )
-import           Pdf.Parser.Keyword             ( keywordP )
-import           Pdf.Parser.Name                ( nameP )
-import           Pdf.Parser.Number              ( numberP )
-import           Pdf.Parser.Reference           ( referenceP )
-import           Pdf.Parser.String              ( stringP )
-import           Pdf.Parser.EmptyContent        ( emptyContentP )
+import           Pdf.Graphics.Parser.HexString  ( hexStringP )
+import           Pdf.Graphics.Parser.Keyword    ( keywordP )
+import           Pdf.Graphics.Parser.Name       ( nameP )
+import           Pdf.Graphics.Parser.Number     ( numberP )
+import           Pdf.Graphics.Parser.Reference  ( referenceP )
+import           Pdf.Graphics.Parser.String     ( stringP )
+import           Pdf.Graphics.Parser.EmptyContent
+                                                ( emptyContentP )
 import           Util.Ascii                     ( asciiGREATERTHANSIGN
                                                 , asciiLEFTSQUAREBRACKET
                                                 , asciiLESSTHANSIGN
                                                 , asciiRIGHTSQUAREBRACKET
                                                 )
 
-itemP :: Get PDFObject
+itemP :: Get GFXObject
 itemP =
   nameP
     <|> stringP
@@ -43,11 +44,11 @@ itemP =
     <|> dictionaryP
 
 {-|
-A binary parser for a PDF array.
+A binary parser for a GFX array.
 
-A PDF array is a structure signaled by square brackets.
+A GFX array is a structure signaled by square brackets.
 
-It returns a `PDFArray`.
+It returns a `GFXArray`.
 
 An array may contain any number of the following items:
 
@@ -60,28 +61,28 @@ An array may contain any number of the following items:
 - array
 - dictionary
 -}
-arrayP :: Get PDFObject
+arrayP :: Get GFXObject
 arrayP = label "array" $ do
   word8 asciiLEFTSQUAREBRACKET
   emptyContentP
   items <- itemP `sepBy` emptyContentP
   emptyContentP
   word8 asciiRIGHTSQUAREBRACKET
-  return $ mkPDFArray items
+  return $ mkGFXArray items
 
-dictionaryKeyValueP :: Get (BS.ByteString, PDFObject)
+dictionaryKeyValueP :: Get (BS.ByteString, GFXObject)
 dictionaryKeyValueP = do
-  PDFName key <- nameP
+  GFXName key <- nameP
   emptyContentP
   value <- itemP
   return (key, value)
 
 {-|
-A binary parser for a PDF dictionary.
+A binary parser for a GFX dictionary.
 
-A PDF dictionary is a structure signaled by double less-than/greater-than signs.
+A GFX dictionary is a structure signaled by double less-than/greater-than signs.
 
-It returns a `PDFDictionary`.
+It returns a `GFXDictionary`.
 
 A dictionary may contain any number of key-value pairs of the following items:
 
@@ -94,11 +95,11 @@ A dictionary may contain any number of key-value pairs of the following items:
 - array
 - dictionary
 -}
-dictionaryP :: Get PDFObject
+dictionaryP :: Get GFXObject
 dictionaryP = label "dictionary" $ do
   word8 asciiLESSTHANSIGN >> word8 asciiLESSTHANSIGN
   emptyContentP
   dictionary <- fromList <$> sepBy dictionaryKeyValueP emptyContentP
   emptyContentP
   word8 asciiGREATERTHANSIGN >> word8 asciiGREATERTHANSIGN
-  return $ PDFDictionary dictionary
+  return $ GFXDictionary dictionary

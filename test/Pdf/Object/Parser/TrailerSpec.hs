@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.TrailerSpec
+module Pdf.Object.Parser.TrailerSpec
   ( spec
   ) where
 
@@ -9,7 +9,7 @@ import           Test.Hspec                     ( describe
 
 import qualified Data.ByteString               as BS
 import           Util.ParserHelper              ( itWith )
-import           Pdf.Parser.Trailer             ( trailerP )
+import           Pdf.Object.Parser.Trailer      ( trailerP )
 import           Data.Map.Strict                ( fromList
                                                 , empty
                                                 )

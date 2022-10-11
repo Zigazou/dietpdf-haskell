@@ -3,7 +3,7 @@
 {-|
 This module contains a parser for PDF comments.
 -}
-module Pdf.Parser.Comment
+module Pdf.Object.Parser.Comment
   ( commentP
   ) where
 
@@ -20,7 +20,8 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 )
 import           Util.Ascii                     ( asciiPERCENTSIGN )
-import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP
+import           Pdf.Object.Parser.LooseEndOfLine
+                                                ( looseEndOfLineP
                                                 , isLooseEndOfLine
                                                 )
 

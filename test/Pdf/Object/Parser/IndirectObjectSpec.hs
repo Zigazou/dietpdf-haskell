@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.IndirectObjectSpec
+module Pdf.Object.Parser.IndirectObjectSpec
   ( spec
   ) where
 
@@ -9,7 +9,8 @@ import           Test.Hspec                     ( describe
 import qualified Data.ByteString               as BS
 import           Data.Map.Strict                ( fromList )
 import           Util.ParserHelper              ( itWith )
-import           Pdf.Parser.IndirectObject      ( indirectObjectP )
+import           Pdf.Object.Parser.IndirectObject
+                                                ( indirectObjectP )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream

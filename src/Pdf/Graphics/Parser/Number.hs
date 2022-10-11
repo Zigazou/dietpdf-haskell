@@ -1,5 +1,5 @@
 {- |
-This module provides a parser for PDF numbers.
+This module provides a parser for GFX numbers.
 
 An integer shall be written as one or more decimal digits optionally preceded
 by a sign.
@@ -31,7 +31,7 @@ Wherever a real number is expected, an integer may be used instead.
 For example, it is not necessary to write the number 1.0 in real format;
 the integer 1 is sufficient.
 -}
-module Pdf.Parser.Number
+module Pdf.Graphics.Parser.Number
   ( numberP
   ) where
 
@@ -46,7 +46,7 @@ import           Data.Binary.Parser             ( Get
                                                 )
 import           Data.List                      ( foldl' )
 import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( PDFObject(PDFNumber)
+import           Pdf.Graphics.Object            ( GFXObject(GFXNumber)
                                                 , isPlusMinus
                                                 )
 import           Util.Ascii                     ( asciiDIGITZERO
@@ -93,46 +93,46 @@ integerDecimalP = do
   return (leftPart, rightPart)
 
 {- |
-Parse a `PDFNumber`.
+Parse a `GFXNumber`.
 
 Internally, all numbers (either integer or real) are stored as `Double`.
 
 >>> parseOnly numberP "123"   
-Right (PDFNumber 123.0)
+Right (GFXNumber 123.0)
 
 >>> parseOnly numberP "43445" 
-Right (PDFNumber 43445.0)
+Right (GFXNumber 43445.0)
 
 >>> parseOnly numberP "+17"   
-Right (PDFNumber 17.0)
+Right (GFXNumber 17.0)
 
 >>> parseOnly numberP "-98"   
-Right (PDFNumber (-98.0))
+Right (GFXNumber (-98.0))
 
 >>> parseOnly numberP "0"     
-Right (PDFNumber 0.0)
+Right (GFXNumber 0.0)
 
 >>> parseOnly numberP "34.5"  
-Right (PDFNumber 34.5)
+Right (GFXNumber 34.5)
 
 >>> parseOnly numberP "-3.62" 
-Right (PDFNumber (-3.62))
+Right (GFXNumber (-3.62))
 
 >>> parseOnly numberP "+123.6"
-Right (PDFNumber 123.6)
+Right (GFXNumber 123.6)
 
 >>> parseOnly numberP "4."    
-Right (PDFNumber 4.0)
+Right (GFXNumber 4.0)
 
 >>> parseOnly numberP "-.002" 
-Right (PDFNumber (-0.002))
+Right (GFXNumber (-0.002))
 
 >>> parseOnly numberP "0.0"   
-Right (PDFNumber 0.0)
+Right (GFXNumber 0.0)
 -}
-numberP :: Get PDFObject
+numberP :: Get GFXObject
 numberP = label "number" $ do
   sign                  <- option id plusMinus
   (leftPart, rightPart) <- integerDecimalP <|> integerP <|> decimalP
   let number = toNumber leftPart rightPart
-  return $ PDFNumber (sign number)
+  return $ GFXNumber (sign number)

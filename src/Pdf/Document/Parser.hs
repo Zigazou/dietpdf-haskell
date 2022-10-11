@@ -18,11 +18,12 @@ import           Pdf.Document.Document          ( PDFDocument
 import           Pdf.Object.Object              ( PDFObject
                                                 , isWhiteSpace
                                                 )
-import           Pdf.Parser.Comment             ( commentP )
-import           Pdf.Parser.IndirectObject      ( indirectObjectP )
-import           Pdf.Parser.StartXRef           ( startXRefP )
-import           Pdf.Parser.Trailer             ( trailerP )
-import           Pdf.Parser.XRef                ( xrefP )
+import           Pdf.Object.Parser.Comment      ( commentP )
+import           Pdf.Object.Parser.IndirectObject
+                                                ( indirectObjectP )
+import           Pdf.Object.Parser.StartXRef    ( startXRefP )
+import           Pdf.Object.Parser.Trailer      ( trailerP )
+import           Pdf.Object.Parser.XRef         ( xrefP )
 import           Util.Errors                    ( UnifiedError(ParseError) )
 
 whiteSpaces :: Get [Word8]

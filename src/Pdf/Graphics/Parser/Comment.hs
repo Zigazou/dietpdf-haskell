@@ -12,7 +12,6 @@ import           Data.Binary.Parser             ( Get
                                                 , takeTill
                                                 , word8
                                                 )
-import qualified Data.ByteString               as BS
 import           Pdf.Graphics.Object            ( GFXObject(GFXComment) )
 import           Util.Ascii                     ( asciiPERCENTSIGN )
 import           Pdf.Graphics.Parser.LooseEndOfLine

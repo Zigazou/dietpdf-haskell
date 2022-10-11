@@ -25,7 +25,7 @@ the encoded name.
 Regular characters that are outside the range EXCLAMATION MARK(21h) (!) to
 TILDE (7Eh) (~) should be written using the hexadecimal notation.
 -}
-module Pdf.Parser.Name
+module Pdf.Object.Parser.Name
   ( nameP
   ) where
 

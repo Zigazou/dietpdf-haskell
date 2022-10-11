@@ -1,8 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.StringSpec
+module Pdf.Object.Parser.StringSpec
   ( spec
-  )
-where
+  ) where
 
 import           Test.Hspec                     ( describe
                                                 , it
@@ -14,7 +13,7 @@ import qualified Data.ByteString               as BS
 import           Util.ParserHelper              ( shouldFail
                                                 , itWith
                                                 )
-import           Pdf.Parser.String              ( stringP )
+import           Pdf.Object.Parser.String       ( stringP )
 import           Pdf.Object.Object              ( PDFObject(PDFString) )
 
 

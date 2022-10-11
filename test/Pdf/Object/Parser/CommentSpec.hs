@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.CommentSpec
+module Pdf.Object.Parser.CommentSpec
   ( spec
   ) where
 
@@ -14,7 +14,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 )
 import           Data.Binary.Parser             ( endOfInput )
-import           Pdf.Parser.Comment             ( commentP )
+import           Pdf.Object.Parser.Comment      ( commentP )
 import           Util.ParserHelper              ( itWith )
 
 commentExamples :: [(BS.ByteString, PDFObject)]

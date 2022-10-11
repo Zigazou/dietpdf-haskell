@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Parser.LooseEndOfLineSpec
+module Pdf.Object.Parser.LooseEndOfLineSpec
   ( spec
   ) where
 
@@ -7,7 +7,8 @@ import           Test.Hspec                     ( Spec
                                                 , describe
                                                 )
 import qualified Data.ByteString               as BS
-import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP
+import           Pdf.Object.Parser.LooseEndOfLine
+                                                ( looseEndOfLineP
                                                 , isLooseEndOfLine
                                                 )
 import           Data.Binary.Parser             ( sepBy

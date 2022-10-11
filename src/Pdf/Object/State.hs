@@ -51,8 +51,7 @@ import           Control.Monad.State            ( StateT
 import qualified Data.ByteString               as BS
 import           Data.Functor                   ( (<&>) )
 import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Object              ( Dictionary
-                                                , PDFObject
+import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
                                                   , PDFComment
                                                   , PDFDictionary
@@ -78,6 +77,7 @@ import           Util.Errors                    ( UnifiedError
                                                 , unifiedError
                                                 )
 import           Control.Monad.Identity         ( Identity )
+import           Util.Dictionary                ( Dictionary )
 
 {- |
 A `FallibleComputation` is a computation running in a `State` monad, working on
@@ -130,7 +130,7 @@ Returns the dictionary embedded in a `PDFObject`.
 If the object has no dictionary, a `UnifiedError` `NoDictionary` stops the
 evaluation of the monad.
 -}
-getDictionary :: FallibleComputation Dictionary
+getDictionary :: FallibleComputation (Dictionary PDFObject)
 getDictionary = get >>= \case
   (PDFIndirectObjectWithStream _ _ dict _    ) -> return dict
   (PDFObjectStream             _ _ dict _    ) -> return dict
@@ -271,7 +271,7 @@ This function works on:
 Any other object will yield a `UnifiedError` `InvalidObjectToEmbed`, stopping
 the evaluation of the monad.
 -}
-setDictionary :: Dictionary -> FallibleComputation ()
+setDictionary :: Dictionary PDFObject -> FallibleComputation ()
 setDictionary dict = get >>= \case
   (PDFIndirectObjectWithStream num gen _ stream) ->
     put (PDFIndirectObjectWithStream num gen dict stream)

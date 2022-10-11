@@ -46,39 +46,37 @@ library
       Pdf.Graphics.Parser.Container
       Pdf.Graphics.Parser.EmptyContent
       Pdf.Graphics.Parser.HexString
-      Pdf.Graphics.Parser.IndirectObject
       Pdf.Graphics.Parser.Keyword
       Pdf.Graphics.Parser.LooseEndOfLine
       Pdf.Graphics.Parser.Name
       Pdf.Graphics.Parser.Number
       Pdf.Graphics.Parser.Reference
-      Pdf.Graphics.Parser.StartXRef
       Pdf.Graphics.Parser.String
-      Pdf.Graphics.Parser.Trailer
-      Pdf.Graphics.Parser.XRef
       Pdf.Object.Container
       Pdf.Object.Linearization
       Pdf.Object.Object
       Pdf.Object.Optimize
+      Pdf.Object.Parser.Comment
+      Pdf.Object.Parser.Container
+      Pdf.Object.Parser.EmptyContent
+      Pdf.Object.Parser.HexString
+      Pdf.Object.Parser.IndirectObject
+      Pdf.Object.Parser.Keyword
+      Pdf.Object.Parser.LooseEndOfLine
+      Pdf.Object.Parser.Name
+      Pdf.Object.Parser.Number
+      Pdf.Object.Parser.Reference
+      Pdf.Object.Parser.StartXRef
+      Pdf.Object.Parser.String
+      Pdf.Object.Parser.Trailer
+      Pdf.Object.Parser.XRef
       Pdf.Object.State
       Pdf.Object.String
       Pdf.Object.Unfilter
-      Pdf.Parser.Comment
-      Pdf.Parser.Container
-      Pdf.Parser.EmptyContent
-      Pdf.Parser.HexString
-      Pdf.Parser.IndirectObject
-      Pdf.Parser.Keyword
-      Pdf.Parser.LooseEndOfLine
-      Pdf.Parser.Name
-      Pdf.Parser.Number
-      Pdf.Parser.Reference
-      Pdf.Parser.StartXRef
-      Pdf.Parser.String
-      Pdf.Parser.Trailer
-      Pdf.Parser.XRef
+      Util.Array
       Util.Ascii
       Util.ByteString
+      Util.Dictionary
       Util.Errors
       Util.Hex
       Util.Name
@@ -153,21 +151,21 @@ test-suite dietpdf-test
       Pdf.Object.NameSpec
       Pdf.Object.NumberSpec
       Pdf.Object.OptimizeSpec
+      Pdf.Object.Parser.ArraySpec
+      Pdf.Object.Parser.CommentSpec
+      Pdf.Object.Parser.DictionarySpec
+      Pdf.Object.Parser.IndirectObjectSpec
+      Pdf.Object.Parser.LooseEndOfLineSpec
+      Pdf.Object.Parser.NameSpec
+      Pdf.Object.Parser.NumberSpec
+      Pdf.Object.Parser.StartXRefSpec
+      Pdf.Object.Parser.StringSpec
+      Pdf.Object.Parser.TrailerSpec
+      Pdf.Object.Parser.XRefSpec
       Pdf.Object.PartitionSpec
       Pdf.Object.ReferenceSpec
       Pdf.Object.StateSpec
       Pdf.Object.StringSpec
-      Pdf.Parser.ArraySpec
-      Pdf.Parser.CommentSpec
-      Pdf.Parser.DictionarySpec
-      Pdf.Parser.IndirectObjectSpec
-      Pdf.Parser.LooseEndOfLineSpec
-      Pdf.Parser.NameSpec
-      Pdf.Parser.NumberSpec
-      Pdf.Parser.StartXRefSpec
-      Pdf.Parser.StringSpec
-      Pdf.Parser.TrailerSpec
-      Pdf.Parser.XRefSpec
       Util.ByteStringSpec
       Util.HexSpec
       Util.NumberSpec
