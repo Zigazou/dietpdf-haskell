@@ -15,17 +15,16 @@ import           Codec.Compression.Predictor    ( Predictor(PNGSub, PNGUp)
                                                 )
 import qualified Codec.Compression.RunLength   as RL
 import           Codec.Compression.XML          ( optimizeXML )
-import           Control.Monad                  ( when )
 import           Control.Monad.State            ( get
                                                 , lift
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Foldable                  ( minimumBy )
 import qualified Data.Map.Strict               as Map
-import qualified Data.Sequence                 as SQ
 import           Pdf.Object.Container           ( Filter(Filter)
                                                 , deepMap
                                                 , setFilters
+                                                , FilterList
                                                 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFDictionary
@@ -52,6 +51,11 @@ import           Util.Errors                    ( UnifiedError
                                                   ( InvalidFilterParm
                                                   )
                                                 )
+import           Util.Array                     ( mkArray
+                                                , mkEmptyArray
+                                                )
+import           Pdf.Graphics.Parser.Stream     ( gfxParse )
+import           Pdf.Graphics.Object            ( separateGfx )
 
 eMinOrder
   :: (a, Either b BS.ByteString) -> (a, Either b BS.ByteString) -> Ordering
@@ -63,25 +67,23 @@ eMinOrder _            _            = EQ
 zopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
+  -> (FilterList, Either UnifiedError BS.ByteString)
 zopfli _ stream =
-  (SQ.singleton (Filter (PDFName "FlateDecode") PDFNull), FL.compress stream)
+  (mkArray [Filter (PDFName "FlateDecode") PDFNull], FL.compress stream)
 
 rle
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
+  -> (FilterList, Either UnifiedError BS.ByteString)
 rle _ stream =
-  ( SQ.singleton (Filter (PDFName "RunLengthDecode") PDFNull)
-  , RL.compress stream
-  )
+  (mkArray [Filter (PDFName "RunLengthDecode") PDFNull], RL.compress stream)
 
 rleZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
+  -> (FilterList, Either UnifiedError BS.ByteString)
 rleZopfli _ stream =
-  ( SQ.fromList
+  ( mkArray
     [ Filter (PDFName "FlateDecode")     PDFNull
     , Filter (PDFName "RunLengthDecode") PDFNull
     ]
@@ -91,49 +93,49 @@ rleZopfli _ stream =
 predZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
+  -> (FilterList, Either UnifiedError BS.ByteString)
 predZopfli (Just (width, components)) stream =
-  ( SQ.singleton
-    (Filter
-      (PDFName "FlateDecode")
-      (PDFDictionary
-        (Map.fromList
-          [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
-          , ("Columns"  , PDFNumber (fromIntegral width))
-          , ("Colors"   , PDFNumber (fromIntegral components))
-          ]
+  ( mkArray
+    [ Filter
+        (PDFName "FlateDecode")
+        (PDFDictionary
+          (Map.fromList
+            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
+            , ("Columns"  , PDFNumber (fromIntegral width))
+            , ("Colors"   , PDFNumber (fromIntegral components))
+            ]
+          )
         )
-      )
-    )
+    ]
   , predict PNGUp width components stream >>= FL.compress
   )
-predZopfli _noWidth _stream = (SQ.empty, Left InvalidFilterParm)
+predZopfli _noWidth _stream = (mkEmptyArray, Left InvalidFilterParm)
 
 predRleZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> (SQ.Seq Filter, Either UnifiedError BS.ByteString)
+  -> (FilterList, Either UnifiedError BS.ByteString)
 predRleZopfli (Just (width, components)) stream =
-  ( SQ.singleton
-    (Filter
-      (PDFName "FlateDecode")
-      (PDFDictionary
-        (Map.fromList
-          [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
-          , ("Columns"  , PDFNumber (fromIntegral width))
-          , ("Colors"   , PDFNumber (fromIntegral components))
-          ]
+  ( mkArray
+    [ Filter
+        (PDFName "FlateDecode")
+        (PDFDictionary
+          (Map.fromList
+            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
+            , ("Columns"  , PDFNumber (fromIntegral width))
+            , ("Colors"   , PDFNumber (fromIntegral components))
+            ]
+          )
         )
-      )
-    )
+    ]
   , predict PNGSub width components stream >>= FL.compress
   )
-predRleZopfli _noWidth _stream = (SQ.empty, Left InvalidFilterParm)
+predRleZopfli _noWidth _stream = (mkEmptyArray, Left InvalidFilterParm)
 
 applyEveryFilter
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> [(SQ.Seq Filter, Either UnifiedError BS.ByteString)]
+  -> [(FilterList, Either UnifiedError BS.ByteString)]
 applyEveryFilter widthComponents stream =
   [zopfli, rle, predRleZopfli, rleZopfli, predZopfli]
     <*> pure widthComponents
@@ -160,22 +162,24 @@ filterOptimize = ifObject hasStreamS $ do
   widthComponents <- getWidthComponents
   let (bestFilters, bestStream) = minimumBy
         eMinOrder
-        (SQ.fromList (applyEveryFilter widthComponents stream))
+        (mkArray (applyEveryFilter widthComponents stream))
   setStream =<< lift bestStream
   setFilters bestFilters
 
 streamIsXML :: PDFObject -> Bool
 streamIsXML (PDFIndirectObjectWithStream _ _ dictionary _) =
-  case dictionary Map.!? "Subtype" of
-    Just (PDFName "XML") -> True
-    _anyOtherValue       -> False
+  dictionary Map.!? "Subtype" == Just (PDFName "XML")
 streamIsXML _ = False
 
 streamOptimize :: FallibleComputation ()
 streamOptimize = do
   object <- get
   stream <- getStream
-  when (streamIsXML object) $ setStream (optimizeXML stream)
+  if streamIsXML object
+    then setStream (optimizeXML stream)
+    else case gfxParse stream of
+      Right objects -> setStream (separateGfx objects)
+      _error        -> return ()
 
 {- |
 Completely refilter a stream by finding the best filter combination.

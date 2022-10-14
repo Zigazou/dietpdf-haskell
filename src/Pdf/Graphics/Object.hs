@@ -21,6 +21,7 @@ module Pdf.Graphics.Object
     , GFXBool
     , GFXNull
     , GFXOperator
+    , GFXInlineImage
     )
   , mkEmptyGFXArray
   , mkEmptyGFXDictionary
@@ -34,6 +35,7 @@ module Pdf.Graphics.Object
     -- * Conversion
   , fromGFXObject
   , toGSOperator
+  , separateGfx
 
     -- * GFX characters
   , isDelimiter
@@ -48,6 +50,7 @@ module Pdf.Graphics.Object
   ) where
 
 import qualified Data.ByteString               as BS
+import qualified Data.Sequence                 as SQ
 import qualified Data.Text.Lazy                as TL
 import           Formatting                     ( format
                                                 , (%)
@@ -56,7 +59,6 @@ import           Formatting                     ( format
 import           Formatting.ByteStringFormatter ( utf8 )
 import qualified Data.Map.Strict               as Map
 import           Data.Ix                        ( inRange )
-import           Data.Foldable                  ( toList )
 import           Data.Maybe                     ( isJust
                                                 , isNothing
                                                 )
@@ -69,6 +71,9 @@ import           Util.Ascii                     ( asciiDIGITSEVEN
                                                 , asciiNUMBERSIGN
                                                 , asciiUPPERA
                                                 , asciiUPPERZ
+                                                , asciiASTERISK
+                                                , asciiAPOSTROPHE
+                                                , asciiQUOTATIONMARK
                                                 )
 import           Util.Name                      ( fromName )
 import           Util.Number                    ( fromInt
@@ -119,8 +124,15 @@ Test if a byte is a keyword character.
 Keyword characters are either lowercase or uppercase alphabetical characters.
 -}
 isKeywordCharacter :: Word8 -> Bool
-isKeywordCharacter byte =
-  inRange (asciiLOWERA, asciiLOWERZ) byte
+isKeywordCharacter byte
+  | byte == asciiASTERISK
+  = True
+  | byte == asciiAPOSTROPHE
+  = True
+  | byte == asciiQUOTATIONMARK
+  = True
+  | otherwise
+  = inRange (asciiLOWERA, asciiLOWERZ) byte
     || inRange (asciiUPPERA, asciiUPPERZ) byte
 
 {-|
@@ -347,12 +359,6 @@ data GSOperator
   | -- | Paint the shape and colour shading (sh)
     GSPaintShapeColourShading
   | -- | Begin an inline image object (BI)
-    GSBeginInlineImage
-  | -- | Begin the image data for an inline image object (ID)
-    GSBeginImageData
-  | -- | End an inline image object (EI)
-    GSEndInlineImage
-  | -- | Paint the specified XObject (Do)
     GSPaintXObject
   | -- | Designate a marked-content point (MP)
     GSMarkedContentPoint
@@ -368,10 +374,19 @@ data GSOperator
     GSBeginCompatibilitySection
   | -- | End a compatibility section (EX)
     GSEndCompatibilitySection
+  | -- | Modify current clipping path using the NZW rule (W)
+    GSIntersectClippingPathNZWR
+  | -- | Modify current clipping path using the even-odd rule (W*)
+    GSIntersectClippingPathEOR
   | -- | Unknown operator
     GSUnknown BS.ByteString
   deriving stock (Eq, Show)
 
+{- |
+Converts a `ByteString` to a `GSOperator`.
+
+If the operator is unknown it is copied as is in a `GSUnknown`.
+-}
 toGSOperator :: BS.ByteString -> GSOperator
 toGSOperator "q"     = GSSaveGS
 toGSOperator "Q"     = GSRestoreGS
@@ -432,9 +447,6 @@ toGSOperator "rg"    = GSSetNonStrokeRGBColorspace
 toGSOperator "K"     = GSSetStrokeCMYKColorspace
 toGSOperator "k"     = GSSetNonStrokeCMYKColorspace
 toGSOperator "sh"    = GSPaintShapeColourShading
-toGSOperator "BI"    = GSBeginInlineImage
-toGSOperator "ID"    = GSBeginImageData
-toGSOperator "EI"    = GSEndInlineImage
 toGSOperator "Do"    = GSPaintXObject
 toGSOperator "MP"    = GSMarkedContentPoint
 toGSOperator "DP"    = GSMarkedContentPointPL
@@ -443,8 +455,13 @@ toGSOperator "BDC"   = GSBeginMarkedContentSequencePL
 toGSOperator "EMC"   = GSEndMarkedContentSequence
 toGSOperator "BX"    = GSBeginCompatibilitySection
 toGSOperator "EX"    = GSEndCompatibilitySection
+toGSOperator "W"     = GSIntersectClippingPathNZWR
+toGSOperator "W*"    = GSIntersectClippingPathEOR
 toGSOperator unknown = GSUnknown unknown
 
+{- |
+Converts a `GSOperator` to a `ByteString`.
+-}
 fromGSOperator :: GSOperator -> BS.ByteString
 fromGSOperator GSSaveGS                       = "q"
 fromGSOperator GSRestoreGS                    = "Q"
@@ -505,9 +522,6 @@ fromGSOperator GSSetNonStrokeRGBColorspace    = "rg"
 fromGSOperator GSSetStrokeCMYKColorspace      = "K"
 fromGSOperator GSSetNonStrokeCMYKColorspace   = "k"
 fromGSOperator GSPaintShapeColourShading      = "sh"
-fromGSOperator GSBeginInlineImage             = "BI"
-fromGSOperator GSBeginImageData               = "ID"
-fromGSOperator GSEndInlineImage               = "EI"
 fromGSOperator GSPaintXObject                 = "Do"
 fromGSOperator GSMarkedContentPoint           = "MP"
 fromGSOperator GSMarkedContentPointPL         = "DP"
@@ -516,6 +530,8 @@ fromGSOperator GSBeginMarkedContentSequencePL = "BDC"
 fromGSOperator GSEndMarkedContentSequence     = "EMC"
 fromGSOperator GSBeginCompatibilitySection    = "BX"
 fromGSOperator GSEndCompatibilitySection      = "EX"
+fromGSOperator GSIntersectClippingPathNZWR    = "W"
+fromGSOperator GSIntersectClippingPathEOR     = "W*"
 fromGSOperator (GSUnknown unknown)            = unknown
 
 {-|
@@ -545,7 +561,7 @@ data GFXObject
   | -- | A null value
     GFXNull
   | -- | An inline image
-    GFXInlineImage BS.ByteString
+    GFXInlineImage (Dictionary GFXObject) BS.ByteString
   | -- | An operator
     GFXOperator GSOperator
   deriving stock Show
@@ -576,16 +592,18 @@ mkGFXArray = GFXArray . mkArray
 
 instance Eq GFXObject where
   (==) :: GFXObject -> GFXObject -> Bool
-  (GFXComment   x    ) == (GFXComment   y    ) = x == y
-  (GFXNumber    x    ) == (GFXNumber    y    ) = x == y
-  (GFXName      x    ) == (GFXName      y    ) = x == y
-  (GFXString    x    ) == (GFXString    y    ) = x == y
-  (GFXHexString x    ) == (GFXHexString y    ) = x == y
-  (GFXReference xn xr) == (GFXReference yn yr) = xn == yn && xr == yr
-  (GFXArray      x   ) == (GFXArray      y   ) = x == y
-  (GFXDictionary x   ) == (GFXDictionary y   ) = x == y
-  (GFXBool       x   ) == (GFXBool       y   ) = x == y
+  GFXComment   x       == GFXComment   y       = x == y
+  GFXNumber    x       == GFXNumber    y       = x == y
+  GFXName      x       == GFXName      y       = x == y
+  GFXString    x       == GFXString    y       = x == y
+  GFXHexString x       == GFXHexString y       = x == y
+  GFXReference xn xr   == GFXReference yn yr   = xn == yn && xr == yr
+  GFXArray      x      == GFXArray      y      = x == y
+  GFXDictionary x      == GFXDictionary y      = x == y
+  GFXBool       x      == GFXBool       y      = x == y
   GFXNull              == GFXNull              = True
+  GFXOperator x        == GFXOperator y        = x == y
+  GFXInlineImage dx ix == GFXInlineImage dy iy = dx == dy && ix == iy
   _anyObjectA          == _anyObjectB          = False
 
 {- |
@@ -650,8 +668,8 @@ fromGFXObject (GFXDictionary dictionary) = fromDictionary dictionary
 fromGFXObject (GFXBool       True      ) = "true"
 fromGFXObject (GFXBool       False     ) = "false"
 fromGFXObject GFXNull                    = "null"
-fromGFXObject (GFXInlineImage raw     )  = raw
-fromGFXObject (GFXOperator    operator)  = fromGSOperator operator
+fromGFXObject (GFXInlineImage dict raw)  = fromInlineImage dict raw
+fromGFXObject (GFXOperator operator   )  = fromGSOperator operator
 
 {- |
 Returns a `Text` string describing a GFXObject.
@@ -670,33 +688,76 @@ objectInfo (GFXArray objects) =
   format ("[array:count=" % int % "]") (length objects)
 objectInfo (GFXDictionary dictionary) =
   format ("[dictionary:count=" % int % "]") (Map.size dictionary)
-objectInfo (GFXBool True ) = "true"
-objectInfo (GFXBool False) = "false"
-objectInfo GFXNull         = "null"
-objectInfo (GFXInlineImage raw) =
-  format ("[inlineimage:size=" % int % "]") (BS.length raw)
+objectInfo (GFXBool True )           = "true"
+objectInfo (GFXBool False)           = "false"
+objectInfo GFXNull                   = "null"
+objectInfo (GFXInlineImage dict raw) = format
+  ("[inlineimage:count=" % int % ", size=" % int % "]")
+  (Map.size dict)
+  (BS.length raw)
 objectInfo GFXOperator{} = "operator"
 
 {- |
-Takes a `List` of `GFXObject`, converts them to the `ByteString` representation
-and inserts spaces between them if necessary.
+Takes an `Array` of `GFXObject`, converts them to the `ByteString`
+representation and inserts spaces between them if necessary.
 -}
-separateObjects :: [GFXObject] -> BS.ByteString
-separateObjects []                           = ""
-separateObjects [object1                   ] = fromGFXObject object1
-separateObjects (object1 : object2 : others) = BS.concat
+separateGfx :: Array GFXObject -> BS.ByteString
+separateGfx SQ.Empty = ""
+separateGfx (object1 SQ.:<| SQ.Empty) = fromGFXObject object1
+separateGfx (object1 SQ.:<| object2 SQ.:<| others) = BS.concat
   [ fromGFXObject object1
   , spaceIfNeeded object1 object2
-  , separateObjects (object2 : others)
+  , separateGfx (object2 SQ.:<| others)
   ]
 
 fromArray :: Array GFXObject -> BS.ByteString
-fromArray items = BS.concat ["[", separateObjects (toList items), "]"]
+fromArray items = BS.concat ["[", separateGfx items, "]"]
 
 fromDictionary :: Dictionary GFXObject -> BS.ByteString
 fromDictionary keyValues = BS.concat
-  ["<<", separateObjects (splitCouple (Map.toList keyValues)), ">>"]
+  ["<<", separateGfx (splitCouple (mkArray (Map.toList keyValues))), ">>"]
  where
-  splitCouple [] = []
-  splitCouple ((key, value) : remains) =
-    GFXName key : value : splitCouple remains
+  splitCouple SQ.Empty = SQ.empty
+  splitCouple ((key, value) SQ.:<| remains) =
+    GFXName key SQ.:<| value SQ.:<| splitCouple remains
+
+fromInlineImage :: Dictionary GFXObject -> BS.ByteString -> BS.ByteString
+fromInlineImage keyValues image = BS.concat
+  [ "BI "
+  , separateGfx (splitCouple (mkArray (Map.toList keyValues)))
+  , " ID\n"
+  , image
+  , "\nEI"
+  ]
+ where
+  splitCouple SQ.Empty = SQ.empty
+  splitCouple ((key, value) SQ.:<| remains) =
+    GFXName (abbreviateKey key)
+      SQ.:<| abbreviateValue value
+      SQ.:<| splitCouple remains
+
+  abbreviateValue :: GFXObject -> GFXObject
+  abbreviateValue (GFXName "DeviceGray"     ) = GFXName "G"
+  abbreviateValue (GFXName "DeviceRGB"      ) = GFXName "RGB"
+  abbreviateValue (GFXName "DeviceCMYK"     ) = GFXName "CMYK"
+  abbreviateValue (GFXName "Indexed"        ) = GFXName "I"
+  abbreviateValue (GFXName "ASCIIHexDecode" ) = GFXName "AHx"
+  abbreviateValue (GFXName "ASCII85Decode"  ) = GFXName "A85"
+  abbreviateValue (GFXName "LZWDecode"      ) = GFXName "LZW"
+  abbreviateValue (GFXName "FlateDecode"    ) = GFXName "Fl"
+  abbreviateValue (GFXName "RunLengthDecode") = GFXName "RL"
+  abbreviateValue (GFXName "CCITTFaxDecode" ) = GFXName "CCF"
+  abbreviateValue (GFXName "DCTDecode"      ) = GFXName "DCT"
+  abbreviateValue value                       = value
+
+  abbreviateKey :: BS.ByteString -> BS.ByteString
+  abbreviateKey "BitsPerComponent" = "BPC"
+  abbreviateKey "ColorSpace"       = "CS"
+  abbreviateKey "Decode"           = "D"
+  abbreviateKey "DecodeParms"      = "DP"
+  abbreviateKey "Filter"           = "F"
+  abbreviateKey "Height"           = "H"
+  abbreviateKey "ImageMask"        = "IM"
+  abbreviateKey "Interpolate"      = "I"
+  abbreviateKey "Width"            = "W"
+  abbreviateKey key                = key

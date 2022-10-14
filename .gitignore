@@ -3,3 +3,4 @@
 *.hie
 stack.yaml.lock
 *.pdf
+tmp/

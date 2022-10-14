@@ -36,6 +36,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFTrailer
                                                   , PDFVersion
                                                   , PDFXRef
+                                                  , PDFIndirectObjectWithGraphics
                                                   )
                                                 )
 
@@ -190,13 +191,14 @@ clean :: PDFDocument -> PDFDocument
 clean = dFilter topLevel
  where
   topLevel :: PDFObject -> Bool
-  topLevel (PDFComment _)                = True
-  topLevel PDFEndOfFile                  = True
-  topLevel PDFIndirectObject{}           = True
-  topLevel PDFIndirectObjectWithStream{} = True
-  topLevel PDFObjectStream{}             = True
-  topLevel PDFTrailer{}                  = True
-  topLevel PDFVersion{}                  = True
-  topLevel PDFXRef{}                     = True
-  topLevel PDFStartXRef{}                = True
-  topLevel _anyOtherObject               = False
+  topLevel (PDFComment _)                  = True
+  topLevel PDFEndOfFile                    = True
+  topLevel PDFIndirectObject{}             = True
+  topLevel PDFIndirectObjectWithStream{}   = True
+  topLevel PDFIndirectObjectWithGraphics{} = True
+  topLevel PDFObjectStream{}               = True
+  topLevel PDFTrailer{}                    = True
+  topLevel PDFVersion{}                    = True
+  topLevel PDFXRef{}                       = True
+  topLevel PDFStartXRef{}                  = True
+  topLevel _anyOtherObject                 = False

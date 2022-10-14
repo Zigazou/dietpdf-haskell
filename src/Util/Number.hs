@@ -10,9 +10,13 @@ module Util.Number
 import qualified Data.ByteString               as BS
 import           Data.ByteString.UTF8           ( fromString )
 import           Data.List                      ( foldl' )
-import           Data.List.Split                ( splitOn )
 import           Data.Word                      ( Word8 )
-import           Util.Ascii                     ( asciiDIGITZERO )
+import           Util.Ascii                     ( asciiDIGITZERO
+                                                , asciiHYPHENMINUS
+                                                )
+import           Data.Double.Conversion.ByteString
+                                                ( toShortest )
+import           Util.String                    ( startsWith )
 
 {-|
 Given a list of `Word8`, returns a number.
@@ -36,13 +40,11 @@ For example:
 - 3.0 → "3"
 -}
 fromNumber :: Double -> BS.ByteString
-fromNumber number = case splitOn "." (show number) of
-  ["0"    , "0"    ] -> "0"
-  ["-0"   , "0"    ] -> "0"
-  ["-0"   , decimal] -> BS.concat ["-.", fromString decimal]
-  ["0"    , decimal] -> BS.concat [".", fromString decimal]
-  [integer, "0"    ] -> fromString integer
-  _anyOtherResult    -> fromString (show number)
+fromNumber number
+  | startsWith "0." str  = BS.drop 1 str
+  | startsWith "-0." str = BS.cons asciiHYPHENMINUS (BS.drop 2 str)
+  | otherwise            = str
+  where str = toShortest number
 
 -- | Output an int
 fromInt :: Int -> BS.ByteString

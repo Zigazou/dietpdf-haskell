@@ -46,11 +46,13 @@ library
       Pdf.Graphics.Parser.Container
       Pdf.Graphics.Parser.EmptyContent
       Pdf.Graphics.Parser.HexString
+      Pdf.Graphics.Parser.InlineImage
       Pdf.Graphics.Parser.Keyword
       Pdf.Graphics.Parser.LooseEndOfLine
       Pdf.Graphics.Parser.Name
       Pdf.Graphics.Parser.Number
       Pdf.Graphics.Parser.Reference
+      Pdf.Graphics.Parser.Stream
       Pdf.Graphics.Parser.String
       Pdf.Object.Container
       Pdf.Object.Linearization
@@ -94,6 +96,7 @@ library
     , binary-parsers
     , bytestring
     , containers
+    , double-conversion
     , formatting
     , hopfli
     , monad-loops
@@ -142,6 +145,14 @@ test-suite dietpdf-test
       Pdf.Document.DocumentSpec
       Pdf.Document.ObjectStreamSpec
       Pdf.Document.XRefSpec
+      Pdf.Graphics.Parser.ArraySpec
+      Pdf.Graphics.Parser.CommentSpec
+      Pdf.Graphics.Parser.DictionarySpec
+      Pdf.Graphics.Parser.LooseEndOfLineSpec
+      Pdf.Graphics.Parser.NameSpec
+      Pdf.Graphics.Parser.NumberSpec
+      Pdf.Graphics.Parser.StreamSpec
+      Pdf.Graphics.Parser.StringSpec
       Pdf.Object.ArraySpec
       Pdf.Object.ContainerSpec
       Pdf.Object.DictionarySpec

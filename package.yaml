@@ -58,6 +58,7 @@ library:
   - formatting
   - xml
   - transformers
+  - double-conversion
 
 executables:
   dietpdf:

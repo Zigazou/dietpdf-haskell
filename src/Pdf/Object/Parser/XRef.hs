@@ -86,6 +86,7 @@ import           Util.Ascii                     ( asciiCR
                                                 , asciiSPACE
                                                 )
 import           Util.Number                    ( toNumber )
+import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
 
 integerP :: Get Int
 integerP = toNumber <$> some' (satisfy isDigit)
@@ -145,7 +146,7 @@ xrefSubsectionP = do
   offset <- integerP
   word8 asciiSPACE
   count <- integerP
-  looseEndOfLineP
+  emptyContentP
   entries <- takeN count xrefEntryP
   return $ XRefSubsection offset count entries
 

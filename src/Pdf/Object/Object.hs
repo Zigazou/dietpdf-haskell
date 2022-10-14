@@ -23,6 +23,7 @@ module Pdf.Object.Object
     , PDFDictionary
     , PDFIndirectObject
     , PDFIndirectObjectWithStream
+    , PDFIndirectObjectWithGraphics
     , PDFObjectStream
     , PDFBool
     , PDFNull
@@ -103,14 +104,17 @@ import           Util.Number                    ( fromInt
 import           Util.String                    ( fromHexString
                                                 , fromString
                                                 )
-import Util.Dictionary                          ( Dictionary
+import           Util.Dictionary                ( Dictionary
                                                 , mkEmptyDictionary
                                                 , mkDictionary
                                                 , dictHasKey
                                                 )
-import Util.Array                               ( Array
+import           Util.Array                     ( Array
                                                 , mkEmptyArray
                                                 , mkArray
+                                                )
+import           Pdf.Graphics.Object            ( GFXObject
+                                                , separateGfx
                                                 )
 
 {-|
@@ -285,8 +289,10 @@ data PDFObject
     PDFDictionary (Dictionary PDFObject)
   | -- | An indirect object, object number, generation, object itself
     PDFIndirectObject Int Int PDFObject
-  | -- | An object stream, object number, generation, dictionary and stream
+  | -- | An indirect object with a `ByteString` stream
     PDFIndirectObjectWithStream Int Int (Dictionary PDFObject) BS.ByteString
+  | -- | An indirect object with an `Array` of `GFXObject`
+    PDFIndirectObjectWithGraphics Int Int (Dictionary PDFObject) (Array GFXObject)
   | -- | An object stream, object number, generation, dictionary and stream
     PDFObjectStream Int Int (Dictionary PDFObject) BS.ByteString
   | -- | A boolean (true or false)
@@ -352,25 +358,26 @@ instance Eq PDFObject where
   _anyObjectA      == _anyObjectB      = False
 
 objectRank :: PDFObject -> Int
-objectRank (PDFVersion _)                = 0
-objectRank (PDFComment _)                = 1
-objectRank PDFNull                       = 2
-objectRank (PDFBool      _  )            = 3
-objectRank (PDFNumber    _  )            = 4
-objectRank (PDFKeyword   _  )            = 5
-objectRank (PDFName      _  )            = 6
-objectRank (PDFString    _  )            = 7
-objectRank (PDFHexString _  )            = 8
-objectRank (PDFReference _ _)            = 9
-objectRank (PDFArray      _ )            = 10
-objectRank (PDFDictionary _ )            = 11
-objectRank PDFIndirectObject{}           = 12
-objectRank PDFIndirectObjectWithStream{} = 13
-objectRank PDFObjectStream{}             = 14
-objectRank (PDFXRef      _)              = 15
-objectRank (PDFTrailer   _)              = 16
-objectRank (PDFStartXRef _)              = 17
-objectRank PDFEndOfFile                  = 18
+objectRank (PDFVersion _)                  = 0
+objectRank (PDFComment _)                  = 1
+objectRank PDFNull                         = 2
+objectRank (PDFBool      _  )              = 3
+objectRank (PDFNumber    _  )              = 4
+objectRank (PDFKeyword   _  )              = 5
+objectRank (PDFName      _  )              = 6
+objectRank (PDFString    _  )              = 7
+objectRank (PDFHexString _  )              = 8
+objectRank (PDFReference _ _)              = 9
+objectRank (PDFArray      _ )              = 10
+objectRank (PDFDictionary _ )              = 11
+objectRank PDFIndirectObject{}             = 12
+objectRank PDFIndirectObjectWithStream{}   = 13
+objectRank PDFIndirectObjectWithGraphics{} = 14
+objectRank PDFObjectStream{}               = 15
+objectRank (PDFXRef      _)                = 16
+objectRank (PDFTrailer   _)                = 17
+objectRank (PDFStartXRef _)                = 18
+objectRank PDFEndOfFile                    = 19
 
 instance Ord PDFObject where
   compare :: PDFObject -> PDFObject -> Ordering
@@ -404,50 +411,52 @@ Indicates whether the `PDFObject` ends with a delimiter when converted to a
 `ByteString`.
 -}
 endsWithDelimiter :: PDFObject -> Bool
-endsWithDelimiter PDFComment{}                  = True
-endsWithDelimiter PDFVersion{}                  = True
-endsWithDelimiter PDFEndOfFile                  = True
-endsWithDelimiter PDFNumber{}                   = False
-endsWithDelimiter PDFKeyword{}                  = False
-endsWithDelimiter PDFName{}                     = False
-endsWithDelimiter PDFString{}                   = True
-endsWithDelimiter PDFHexString{}                = True
-endsWithDelimiter PDFReference{}                = False
-endsWithDelimiter PDFArray{}                    = True
-endsWithDelimiter PDFDictionary{}               = True
-endsWithDelimiter PDFIndirectObject{}           = True
-endsWithDelimiter PDFIndirectObjectWithStream{} = True
-endsWithDelimiter PDFObjectStream{}             = True
-endsWithDelimiter PDFBool{}                     = False
-endsWithDelimiter PDFNull                       = False
-endsWithDelimiter PDFXRef{}                     = False
-endsWithDelimiter PDFTrailer{}                  = True
-endsWithDelimiter PDFStartXRef{}                = True
+endsWithDelimiter PDFComment{}                    = True
+endsWithDelimiter PDFVersion{}                    = True
+endsWithDelimiter PDFEndOfFile                    = True
+endsWithDelimiter PDFNumber{}                     = False
+endsWithDelimiter PDFKeyword{}                    = False
+endsWithDelimiter PDFName{}                       = False
+endsWithDelimiter PDFString{}                     = True
+endsWithDelimiter PDFHexString{}                  = True
+endsWithDelimiter PDFReference{}                  = False
+endsWithDelimiter PDFArray{}                      = True
+endsWithDelimiter PDFDictionary{}                 = True
+endsWithDelimiter PDFIndirectObject{}             = True
+endsWithDelimiter PDFIndirectObjectWithStream{}   = True
+endsWithDelimiter PDFIndirectObjectWithGraphics{} = True
+endsWithDelimiter PDFObjectStream{}               = True
+endsWithDelimiter PDFBool{}                       = False
+endsWithDelimiter PDFNull                         = False
+endsWithDelimiter PDFXRef{}                       = False
+endsWithDelimiter PDFTrailer{}                    = True
+endsWithDelimiter PDFStartXRef{}                  = True
 
 {- |
 Indicates whether the `PDFObject` starts with a delimiter when converted to a
 `ByteString`.
 -}
 startsWithDelimiter :: PDFObject -> Bool
-startsWithDelimiter PDFComment{}                  = True
-startsWithDelimiter PDFVersion{}                  = True
-startsWithDelimiter PDFEndOfFile                  = True
-startsWithDelimiter PDFNumber{}                   = False
-startsWithDelimiter PDFKeyword{}                  = False
-startsWithDelimiter PDFName{}                     = True
-startsWithDelimiter PDFString{}                   = True
-startsWithDelimiter PDFHexString{}                = True
-startsWithDelimiter PDFReference{}                = False
-startsWithDelimiter PDFArray{}                    = True
-startsWithDelimiter PDFDictionary{}               = True
-startsWithDelimiter PDFIndirectObject{}           = False
-startsWithDelimiter PDFIndirectObjectWithStream{} = False
-startsWithDelimiter PDFObjectStream{}             = False
-startsWithDelimiter PDFBool{}                     = False
-startsWithDelimiter PDFNull                       = False
-startsWithDelimiter PDFXRef{}                     = False
-startsWithDelimiter PDFTrailer{}                  = False
-startsWithDelimiter PDFStartXRef{}                = False
+startsWithDelimiter PDFComment{}                    = True
+startsWithDelimiter PDFVersion{}                    = True
+startsWithDelimiter PDFEndOfFile                    = True
+startsWithDelimiter PDFNumber{}                     = False
+startsWithDelimiter PDFKeyword{}                    = False
+startsWithDelimiter PDFName{}                       = True
+startsWithDelimiter PDFString{}                     = True
+startsWithDelimiter PDFHexString{}                  = True
+startsWithDelimiter PDFReference{}                  = False
+startsWithDelimiter PDFArray{}                      = True
+startsWithDelimiter PDFDictionary{}                 = True
+startsWithDelimiter PDFIndirectObject{}             = False
+startsWithDelimiter PDFIndirectObjectWithStream{}   = False
+startsWithDelimiter PDFIndirectObjectWithGraphics{} = False
+startsWithDelimiter PDFObjectStream{}               = False
+startsWithDelimiter PDFBool{}                       = False
+startsWithDelimiter PDFNull                         = False
+startsWithDelimiter PDFXRef{}                       = False
+startsWithDelimiter PDFTrailer{}                    = False
+startsWithDelimiter PDFStartXRef{}                  = False
 
 {- |
 Tells if a space must be inserted between 2 `PDFObject` when converted to
@@ -479,6 +488,8 @@ fromPDFObject (PDFIndirectObject number revision object) =
   fromIndirectObject number revision object
 fromPDFObject (PDFIndirectObjectWithStream number revision dict stream) =
   fromIndirectObjectWithStream number revision dict stream
+fromPDFObject (PDFIndirectObjectWithGraphics number revision dict gfx) =
+  fromIndirectObjectWithGraphics number revision dict gfx
 fromPDFObject (PDFObjectStream number revision dict stream) =
   fromIndirectObjectWithStream number revision dict stream
 fromPDFObject (PDFBool True ) = "true"
@@ -525,6 +536,11 @@ objectInfo (PDFIndirectObjectWithStream number revision dict stream) = format
   revision
   (objectInfo . PDFDictionary $ dict)
   (BS.length stream)
+objectInfo (PDFIndirectObjectWithGraphics number revision dict _) = format
+  ("graphics(" % int % "," % int % ")=" % text % "]")
+  number
+  revision
+  (objectInfo . PDFDictionary $ dict)
 objectInfo (PDFObjectStream number revision object stream) = format
   ( "objectstream("
   % int
@@ -621,6 +637,22 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   , " endobj\n"
   ]
 
+fromIndirectObjectWithGraphics
+  :: Int -> Int -> Dictionary PDFObject -> Array GFXObject -> BS.ByteString
+fromIndirectObjectWithGraphics number revision dict gfx = BS.concat
+  [ BSU.fromString (show number)
+  , " "
+  , BSU.fromString (show revision)
+  , " obj"
+  , spaceIfNeeded (PDFKeyword "obj") mkEmptyPDFDictionary
+  , fromDictionary dict
+  , spaceIfNeeded mkEmptyPDFDictionary (PDFKeyword "stream")
+  , "stream\n"
+  , separateGfx gfx
+  , "\nendstream"
+  , " endobj\n"
+  ]
+
 {- |
 Update the stream embedded in a `PDFObject`.
 
@@ -673,12 +705,12 @@ hasKey
   :: BS.ByteString -- ^ The key to search for
   -> PDFObject -- ^ The `PDFObject` to search in
   -> Bool
-hasKey key (PDFDictionary dict                    ) = dictHasKey key dict
-hasKey key (PDFIndirectObjectWithStream _ _ dict _) = dictHasKey key dict
-hasKey key (PDFObjectStream             _ _ dict _) = dictHasKey key dict
+hasKey key (PDFDictionary dict                        ) = dictHasKey key dict
+hasKey key (PDFIndirectObjectWithStream _ _ dict _    ) = dictHasKey key dict
+hasKey key (PDFObjectStream             _ _ dict _    ) = dictHasKey key dict
 hasKey key (PDFIndirectObject _ _ (PDFDictionary dict)) = dictHasKey key dict
-hasKey key (PDFTrailer (PDFDictionary dict)) = dictHasKey key dict
-hasKey _   _anyOtherObject                   = False
+hasKey key (PDFTrailer (PDFDictionary dict)           ) = dictHasKey key dict
+hasKey _   _anyOtherObject                              = False
 
 {- |
 Determine if a `PDFObject` has a dictionary.
