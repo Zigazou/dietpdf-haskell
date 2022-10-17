@@ -32,6 +32,7 @@ library
       Codec.Compression.XML
       Codec.Filter.Ascii85
       Codec.Filter.AsciiHex
+      Font.TrueType.FontDirectory
       Formatting.ByteStringFormatter
       Pdf.Document.Collection
       Pdf.Document.Document
@@ -83,7 +84,6 @@ library
       Util.Hex
       Util.Name
       Util.Number
-      Util.OrderedSet
       Util.String
   other-modules:
       Paths_dietpdf
@@ -180,7 +180,6 @@ test-suite dietpdf-test
       Util.ByteStringSpec
       Util.HexSpec
       Util.NumberSpec
-      Util.OrderedSetSpec
       Util.ParserHelper
       Util.StringSpec
       Paths_dietpdf
