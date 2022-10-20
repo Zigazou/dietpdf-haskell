@@ -3,115 +3,93 @@
 {-# LANGUAGE StrictData #-}
 
 module Font.TrueType.FontDirectory
-  ( TableIdentifier(..)
-  , ScalerType
-    ( FontTrueTypeTrue
-    , FontTrueType00010000
-    , FontOldStyleSFNT
-    , FontOpenType
+  ( TableDirectory
+  , FontDirectory(FontDirectory, fdOffsetSubtable, fdTableDirectory)
+  , OffsetSubtable
+    ( OffsetSubtable
+    , osScalerType
+    , osNumTables
+    , osSearchRange
+    , osEntrySelector
+    , osRangeShift
     )
-  , OffsetSubtable(..)
-  , TableEntry
-  , TableDirectory
-  , FontDirectory(..)
+  , TableEntry(TableEntry, teTag, teChecksum, teOffset, teLength, teData)
+  , loadContent
+  , calcChecksum
   , calcTableChecksum
   ) where
 
 import qualified Data.ByteString               as BS
-import           Data.Bits                      ( (.&.) )
+import           Data.Either                    ( fromRight )
 import           Data.Binary.Parser             ( parseOnly
-                                                , Get
+                                                , many'
+                                                , getWord32be
                                                 )
-import           Data.Binary.Parser.Word8       ( anyWord8 )
-import           Control.Applicative            ( (<|>) )
 import           Util.Array                     ( Array )
+import           Data.Binary                    ( Word16
+                                                , Word32
+                                                )
+import           Font.TrueType.FontTable        ( FontTable(FTRaw, FTHead)
+                                                , fromHead
+                                                , Head(hCheckSumAdjustment)
+                                                )
+import           Font.TrueType.TableIdentifier  ( TableIdentifier(RTTFontHeader)
+                                                )
+import           Font.TrueType.ScalerType       ( ScalerType )
+import           Font.TrueType.Parser.Head      ( headP )
+import           Data.Bits                      ( shiftL )
 
-data TableIdentifier
-  = OAccentAttachment -- ^ 'acnt' (optional)
-  | OAnchorPointTable -- ^ 'ankr' (optional)
-  | OAxisVariation -- ^ 'avar' (optional)
-  | OBitmapData -- ^ 'bdat' (optional)
-  | OBitmapFontHeader -- ^ 'bhed' (optional)
-  | OBitmapLocation -- ^ 'bloc' (optional)
-  | OBaseline -- ^ 'bsln' (optional)
-  | RCharacterToGlyphMappin -- ^ 'cmap' (required)
-  | OCVTVariations -- ^ 'cvar' (optional)
-  | OControlValue -- ^ 'cvt ' (optional)
-  | OEmbeddedBitmapScalerType -- ^ 'EBSC' (optional)
-  | OFontDescriptors -- ^ 'fdsc' (optional)
-  | OFeatureName -- ^ 'feat' (optional)
-  | OFontMetrix -- ^ 'fmtx' (optional)
-  | ODataForkFont -- ^ 'fond' (optional)
-  | OFontProgram -- ^ 'fpgm' (optional)
-  | OFontVariations -- ^ 'fvar' (optional)
-  | OGrayScaleParameters -- ^ 'gasp' (optional)
-  | OCIDMappings -- ^ 'gcid' (optional)
-  | RGlyphData -- ^ 'glyf' (required)
-  | OGlyphVariations -- ^ 'gvar' (optional)
-  | OHorizontalDeviceMetrics -- ^ 'hdmx' (optional)
-  | RFontHeader -- ^ 'head' (required)
-  | RHorizontalHeader -- ^ 'hhea' (required)
-  | RHorizontalMetrics -- ^ 'hmtx' (required)
-  | OJustification -- ^ 'just' (optional)
-  | OKerning -- ^ 'kern' (optional)
-  | OExtendedKerning -- ^ 'kerx' (optional)
-  | OLigatureCaret -- ^ 'lcar' (optional)
-  | RIndexToLocation -- ^ 'loca' (required)
-  | OLanguageTags -- ^ 'ltag' (optiional)
-  | RMaximumProfile -- ^ 'maxp' (required)
-  | OMetadata -- ^ 'meta' (optional)
-  | OGlyphMetamorphosis -- ^ 'mort' (optional)
-  | OExtendedGlyphMetamorphosis -- ^ 'morx' (optional)
-  | RNaming -- ^ 'name' (required)
-  | OOpticalBounds -- ^ 'opbd' (optional)
-  | OOS2 -- ^ 'OS/2' (optional)
-  | RPostScript -- ^ 'post' (required)
-  | OControlValueProgram -- ^ 'prep' (optional)
-  | OGlyphProperties -- ^ 'prop' (optional)
-  | OBitmapFontStrikes -- ^ 'sbix' (optional)
-  | OTracking -- ^ 'trak' (optional)
-  | OVerticalHeader -- ^ 'vhea' (optional)
-  | OVerticalMetrics -- ^ 'vmtx' (optional)
-  | OCrossReference -- ^ 'xref' (optional)
-  | OGlyphsInformation -- ^ 'Zapf' (optional)
-  | OUnknownIdentifier BS.ByteString
-  deriving stock (Eq, Show)
-
-getUInt32 :: Get Int
-getUInt32 =
-  (do
-      a <- fromIntegral <$> anyWord8
-      b <- fromIntegral <$> anyWord8
-      c <- fromIntegral <$> anyWord8
-      d <- fromIntegral <$> anyWord8
-      return (a * 16777216 + b * 65536 + c * 256 + d)
-    )
-    <|> return 0
-
-calcTableChecksum :: BS.ByteString -> Int
-calcTableChecksum bytes =
-  foldr (\long acc -> (acc + long) .&. 0xFFFFFFFF) 0 (parseOnly getUInt32 bytes)
-
-data ScalerType =
-  FontTrueTypeTrue | FontTrueType00010000 | FontOldStyleSFNT | FontOpenType
-  deriving stock (Eq, Show)
+calcChecksum :: BS.ByteString -> Word32
+calcChecksum raw =
+  foldr (+) lastValue . fromRight [] . parseOnly (many' getWord32be) $ raw
+ where
+  lastValue :: Word32
+  lastValue =
+    case BS.unpack (BS.drop (BS.length raw - (BS.length raw `rem` 4)) raw) of
+      []     -> 0
+      [a]    -> fromIntegral a `shiftL` 24
+      [a, b] -> (fromIntegral a `shiftL` 24) + (fromIntegral b `shiftL` 16)
+      [a, b, c] ->
+        (fromIntegral a `shiftL` 24)
+          + (fromIntegral b `shiftL` 16)
+          + (fromIntegral c `shiftL` 8)
+      _anyError -> 0
 
 data OffsetSubtable = OffsetSubtable
   { osScalerType    :: ScalerType -- ^ Scaler to be used to rasterize this font
-  , osNumTables     :: Int -- ^ Number of tables
-  , osSearchRange   :: Int -- ^ Search range (max power of 2 <= numTables)*16
-  , osEntrySelector :: Int -- ^ log2(maximum power of 2 <= numTables)
-  , osRangeShift    :: Int -- ^ numTables*16-searchRange
+  , osNumTables     :: Word16 -- ^ Number of tables
+  , osSearchRange   :: Word16 -- ^ Search range (max power of 2 <= numTables)*16
+  , osEntrySelector :: Word16 -- ^ log2(maximum power of 2 <= numTables)
+  , osRangeShift    :: Word16 -- ^ numTables*16-searchRange
   }
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 data TableEntry = TableEntry
-  { tdTag      :: TableIdentifier -- ^ 4-byte identifier
-  , tdChecksum :: Int -- ^ Checksum for this table
-  , tdOffset   :: Int -- ^ Offset from beginning of sfnt
-  , tdLength   :: Int -- ^ Length of this table in byte (actual length)
+  { teTag      :: TableIdentifier -- ^ 4-byte identifier
+  , teChecksum :: Word32 -- ^ Checksum for this table
+  , teOffset   :: Word32 -- ^ Offset from beginning of sfnt
+  , teLength   :: Word32 -- ^ Length of this table in byte (actual length)
+  , teData     :: FontTable -- ^ Raw table data
   }
-  deriving stock Show
+  deriving stock (Eq, Show)
+
+getBytes :: BS.ByteString -> TableEntry -> BS.ByteString
+getBytes bytes entry = BS.take
+  (fromIntegral $ teLength entry)
+  (BS.drop (fromIntegral $ teOffset entry) bytes)
+
+loadContent :: BS.ByteString -> TableEntry -> TableEntry
+loadContent bytes entry@TableEntry { teTag = RTTFontHeader } =
+  let raw = getBytes bytes entry
+  in  case parseOnly headP raw of
+        Left  _      -> entry { teData = FTRaw raw }
+        Right teHead -> entry { teData = FTHead teHead }
+loadContent bytes entry = entry { teData = FTRaw (getBytes bytes entry) }
+
+calcTableChecksum :: TableEntry -> Word32
+calcTableChecksum TableEntry { teData = FTRaw raw } = calcChecksum raw
+calcTableChecksum TableEntry { teData = FTHead fontHead } =
+  calcChecksum (fromHead fontHead { hCheckSumAdjustment = 0 })
 
 type TableDirectory = Array TableEntry
 
@@ -119,3 +97,4 @@ data FontDirectory = FontDirectory
   { fdOffsetSubtable :: OffsetSubtable
   , fdTableDirectory :: TableDirectory
   }
+  deriving stock (Eq, Show)

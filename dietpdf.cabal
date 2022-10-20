@@ -33,6 +33,13 @@ library
       Codec.Filter.Ascii85
       Codec.Filter.AsciiHex
       Font.TrueType.FontDirectory
+      Font.TrueType.FontTable
+      Font.TrueType.Parser.Font
+      Font.TrueType.Parser.Head
+      Font.TrueType.Parser.ScalerType
+      Font.TrueType.Parser.TableIdentifier
+      Font.TrueType.ScalerType
+      Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
       Pdf.Document.Collection
       Pdf.Document.Document
@@ -141,6 +148,8 @@ test-suite dietpdf-test
       Codec.Compression.RunLengthSpec
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
+      Font.TrueType.Parser.FontSpec
+      Font.TrueType.Parser.HeadSpec
       Pdf.Document.CollectionSpec
       Pdf.Document.DocumentSpec
       Pdf.Document.ObjectStreamSpec

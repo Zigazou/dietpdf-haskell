@@ -78,6 +78,7 @@ data UnifiedError
   | InvalidObjectToEmbed String
   -- | No object to encode
   | NoObjectToEncode
+  | UnknownScalerType String
   deriving stock (Eq)
 
 {- |
@@ -109,6 +110,7 @@ errorType (NoStream             _)   = StructureError
 errorType (NoDictionary         _)   = StructureError
 errorType (InvalidObjectToEmbed _)   = StructureError
 errorType NoObjectToEncode           = EncodingError
+errorType (UnknownScalerType _) = ParsingError
 
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
@@ -157,6 +159,8 @@ instance Show UnifiedError where
   show err@(InvalidObjectToEmbed msg) =
     show' err ("Invalid object to embed: " ++ msg)
   show err@NoObjectToEncode = show' err "No object to encode"
+  show err@(UnknownScalerType msg) =
+    show' err ("Unknown scaler type: " ++ msg)
 
 {- |
 Output a `ByteString` on the standard error output.
