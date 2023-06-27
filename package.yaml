@@ -86,3 +86,5 @@ tests:
     - ordered-containers
     - extra
     - binary-parsers
+    - text
+    - mtl

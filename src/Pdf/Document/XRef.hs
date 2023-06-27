@@ -1,6 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
-module Pdf.Object.XRef
+module Pdf.Document.XRef
   ( -- * XRef generation
     calcOffsets
   , encodeObject
@@ -19,22 +19,10 @@ import           Data.Ix                        ( range
                                                 )
 import qualified Data.Set.Ordered              as OS
 import           Data.Sort                      ( sort )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFIndirectObject
-                                                  , PDFEndOfFile
-                                                  , PDFNumber
-                                                  , PDFIndirectObject
-                                                  , PDFStartXRef
-                                                  , PDFTrailer
-                                                  , PDFXRef
-                                                  )
+import           Pdf.Object.Object              ( PDFObject(PDFXRef)
                                                 , XRefSubsection(XRefSubsection)
                                                 , freeEntry
-                                                , fromPDFObject
                                                 , inUseEntry
-                                                , xrefCount
-                                                , getValue
                                                 )
 import           Pdf.Object.Collection          ( PDFObjects
                                                 , EncodedObjects
@@ -75,6 +63,7 @@ xrefTable objects | OS.null objects = PDFXRef []
     | index <- range numRange
     ]
   xrefSubsection = XRefSubsection (fst numRange) (rangeSize numRange) entries
+
 -- | Given a collection of encoded objects, generates a cross-reference stream.
 xrefStreamTable :: Int -> EncodedObjects -> PDFObject
 xrefStreamTable = error "todo"

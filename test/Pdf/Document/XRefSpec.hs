@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Pdf.Object.XRefSpec
+module Pdf.Document.XRefSpec
   ( spec
   ) where
 
@@ -20,7 +20,7 @@ import           Test.Hspec                     ( Spec
                                                 , shouldBe
                                                 )
 
-import           Pdf.Object.XRef                ( calcOffsets
+import           Pdf.Document.XRef              ( calcOffsets
                                                 , xrefTable
                                                 )
 import           Pdf.Object.Collection          ( EncodedObject(EncodedObject)

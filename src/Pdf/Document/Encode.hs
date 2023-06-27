@@ -1,6 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
-module Pdf.Object.Encode
+module Pdf.Document.Encode
   ( -- * Encoding
     pdfEncode
     -- * XRef generation
@@ -23,9 +23,6 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , xrefCount
                                                 , getValue
                                                 )
-import           Pdf.Object.XRef                ( calcOffsets
-                                                , xrefTable
-                                                )
 import           Pdf.Object.Partition           ( PDFPartition
                                                   ( ppHeads
                                                   , ppIndirectObjects
@@ -43,11 +40,18 @@ import           Util.Errors                    ( UnifiedError
                                                 )
 import qualified Util.OrderedSet               as OS
 import           Pdf.Object.Optimize            ( optimize )
+import           Pdf.Document.XRef              ( calcOffsets
+                                                , xrefTable
+                                                )
 import           Data.Maybe                     ( isNothing )
 import           Pdf.Object.Collection          ( findLastValue
                                                 , encodeObject
                                                 , eoBinaryData
                                                 )
+import           Util.Step                      ( StepM
+                                                , step
+                                                )
+import           Control.Monad                  ( forM )
 
 updateTrailer :: PDFObject -> Int -> PDFObject -> PDFObject
 updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
@@ -83,38 +87,40 @@ An error is signaled in the following cases:
 - no trailer in the list of PDF objects
 -}
 pdfEncode
-  :: [PDFObject] -- ^ A list of PDF objects (order matters)
-  -> Either UnifiedError BS.ByteString -- ^ A unified error or the bytestring
+  :: StepM m
+  => [PDFObject] -- ^ A list of PDF objects (order matters)
+  -> m (Either UnifiedError BS.ByteString) -- ^ A unified error or a bytestring
 pdfEncode objects
-  | null (ppIndirectObjects partObjects) = Left EncodeNoIndirectObject
-  | null (ppHeads partObjects) = Left EncodeNoVersion
-  | null (ppTrailers partObjects) = Left EncodeNoTrailer
-  | otherwise = Right
-  $ BS.concat [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]
+  | null (ppIndirectObjects partObjects) = return $ Left EncodeNoIndirectObject
+  | null (ppHeads partObjects) = return $ Left EncodeNoVersion
+  | null (ppTrailers partObjects) = return $ Left EncodeNoTrailer
+  | otherwise = do
+    step "Encoding PDF"
+    optimizeds <- forM (ppIndirectObjects partObjects) optimize
+    let
+      encodeds    = OS.fromMostRecents (encodeObject <$> optimizeds)
+      xref        = xrefTable encodeds
+      encodedXRef = fromPDFObject xref
+      trailer     = fromPDFObject $ updateTrailer
+        (case findRoot objects of
+          Nothing   -> PDFNumber 0
+          Just root -> root
+        )
+        (xrefCount xref)
+        pdfTrailer
+      totalLength =
+        BS.length pdfHead
+          + BS.length body
+          + BS.length encodedXRef
+          + BS.length trailer
+      startxref = fromPDFObject (PDFStartXRef totalLength)
+      body      = BS.concat $ eoBinaryData <$> OS.toAscList encodeds
+
+    return $ Right $ BS.concat
+      [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]
  where
   partObjects = mconcat (toPartition <$> removeUnused objects)
   pdfTrailer  = lastTrailer partObjects
 
   pdfHead     = (fromPDFObject . firstVersion) partObjects
   pdfEnd      = fromPDFObject PDFEndOfFile
-
-  encodeds    = OS.fromMostRecents
-    (encodeObject . optimize <$> ppIndirectObjects partObjects)
-  body        = BS.concat $ eoBinaryData <$> OS.toAscList encodeds
-
-  xref        = xrefTable encodeds
-  encodedXRef = fromPDFObject xref
-  trailer     = fromPDFObject $ updateTrailer
-    (case findRoot objects of
-      Nothing   -> PDFNumber 0
-      Just root -> root
-    )
-    (xrefCount xref)
-    pdfTrailer
-
-  totalLength =
-    BS.length pdfHead
-      + BS.length body
-      + BS.length encodedXRef
-      + BS.length trailer
-  startxref = fromPDFObject (PDFStartXRef totalLength)
