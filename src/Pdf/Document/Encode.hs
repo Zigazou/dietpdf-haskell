@@ -49,7 +49,9 @@ import           Pdf.Object.Collection          ( findLastValue
                                                 , eoBinaryData
                                                 )
 import           Util.Step                      ( StepM
-                                                , step
+                                                , StepT
+                                                , stepT
+                                                , throwError
                                                 )
 import           Control.Monad                  ( forM )
 
@@ -89,35 +91,43 @@ An error is signaled in the following cases:
 pdfEncode
   :: StepM m
   => [PDFObject] -- ^ A list of PDF objects (order matters)
-  -> m (Either UnifiedError BS.ByteString) -- ^ A unified error or a bytestring
+  -> StepT m BS.ByteString -- ^ A unified error or a bytestring
 pdfEncode objects
-  | null (ppIndirectObjects partObjects) = return $ Left EncodeNoIndirectObject
-  | null (ppHeads partObjects) = return $ Left EncodeNoVersion
-  | null (ppTrailers partObjects) = return $ Left EncodeNoTrailer
+  | null (ppIndirectObjects partObjects) = do
+    stepT "Indirect objects not found"
+    throwError EncodeNoIndirectObject
+  | null (ppHeads partObjects) = do
+      stepT "Version not found"
+      throwError EncodeNoVersion
+  | null (ppTrailers partObjects) = do
+      stepT "Trailer not found"
+      throwError EncodeNoTrailer
   | otherwise = do
-    step "Encoding PDF"
-    optimizeds <- forM (ppIndirectObjects partObjects) optimize
-    let
-      encodeds    = OS.fromMostRecents (encodeObject <$> optimizeds)
-      xref        = xrefTable encodeds
-      encodedXRef = fromPDFObject xref
-      trailer     = fromPDFObject $ updateTrailer
-        (case findRoot objects of
-          Nothing   -> PDFNumber 0
-          Just root -> root
-        )
-        (xrefCount xref)
-        pdfTrailer
-      totalLength =
-        BS.length pdfHead
-          + BS.length body
-          + BS.length encodedXRef
-          + BS.length trailer
-      startxref = fromPDFObject (PDFStartXRef totalLength)
-      body      = BS.concat $ eoBinaryData <$> OS.toAscList encodeds
+      stepT "Encoding PDF"
+      optimizeds <- forM (ppIndirectObjects partObjects) optimize
 
-    return $ Right $ BS.concat
-      [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]
+      stepT "Building optimized PDF"
+      let
+        encodeds    = OS.fromMostRecents (encodeObject <$> optimizeds)
+        xref        = xrefTable encodeds
+        encodedXRef = fromPDFObject xref
+        trailer     = fromPDFObject $ updateTrailer
+          (case findRoot objects of
+            Nothing   -> PDFNumber 0
+            Just root -> root
+          )
+          (xrefCount xref)
+          pdfTrailer
+        totalLength =
+          BS.length pdfHead
+            + BS.length body
+            + BS.length encodedXRef
+            + BS.length trailer
+        startxref = fromPDFObject (PDFStartXRef totalLength)
+        body      = BS.concat $ eoBinaryData <$> OS.toAscList encodeds
+
+      return $ BS.concat
+        [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]
  where
   partObjects = mconcat (toPartition <$> removeUnused objects)
   pdfTrailer  = lastTrailer partObjects

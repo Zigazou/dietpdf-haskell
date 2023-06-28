@@ -38,6 +38,7 @@ library
       Pdf.Document.XRef
       Pdf.Object.Collection
       Pdf.Object.Container
+      Pdf.Object.Format
       Pdf.Object.Linearization
       Pdf.Object.Object
       Pdf.Object.Optimize
@@ -67,6 +68,7 @@ library
       Util.OrderedSet
       Util.Step
       Util.String
+      Util.Text
   other-modules:
       Paths_dietpdf
   hs-source-dirs:
@@ -86,6 +88,7 @@ library
     , sort
     , split
     , text
+    , transformers
     , unordered-containers
     , utf8-string
     , xml

@@ -52,6 +52,7 @@ library:
   - text
   - formatting
   - xml
+  - transformers
 
 executables:
   dietpdf:

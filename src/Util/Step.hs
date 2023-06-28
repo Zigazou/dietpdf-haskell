@@ -4,6 +4,13 @@
 
 module Util.Step
   ( StepM(step, action)
+  , StepT
+  , except
+  , throwError
+  , stepT
+  , actionT
+  , runExceptT
+  , catchE
   ) where
 
 import qualified Data.Text                     as T
@@ -13,6 +20,15 @@ import           Control.Monad.Writer           ( Writer
                                                 , tell
                                                 )
 import           Control.Monad                  ( void )
+import           Control.Monad.Except           ( ExceptT
+                                                , MonadTrans(lift)
+                                                , throwError
+                                                )
+import           Control.Monad.Trans.Except     ( except
+                                                , runExceptT
+                                                , catchE
+                                                )
+import           Util.Errors                    ( UnifiedError )
 
 class Monad m => StepM m where
   step :: T.Text -> m ()
@@ -31,3 +47,11 @@ instance StepM Identity where
 instance StepM (Writer [T.Text]) where
   step :: T.Text -> Writer [T.Text] ()
   step = void . tell . return
+
+type StepT m = ExceptT UnifiedError m
+
+stepT :: StepM m => T.Text -> StepT m ()
+stepT = lift . step
+
+actionT :: StepM m => T.Text -> a -> StepT m a
+actionT t = lift . action t

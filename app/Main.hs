@@ -33,6 +33,7 @@ import           Pdf.Document.Encode            ( pdfEncode )
 import           Pdf.Object.Linearization       ( getLinearization )
 import           Pdf.Object.Object              ( objectInfo )
 import           Pdf.Parser.Parser              ( pdfParse )
+import           Util.Step                      ( runExceptT )
 
 data DietPDFOptions
   = OptimizeOptions Bool FilePath FilePath
@@ -84,7 +85,7 @@ runDietPDF (OptimizeOptions verbose inputPDF outputPDF) = do
         T.putStrLn $ format ("Found " % int % " objects") (length objects)
         mapM_ (T.putStrLn . objectInfo) objects
 
-      encodingResults <- pdfEncode objects
+      encodingResults <- runExceptT $ pdfEncode objects
       case encodingResults of
         Left  err -> print err
         Right pdf -> BS.writeFile outputPDF pdf
