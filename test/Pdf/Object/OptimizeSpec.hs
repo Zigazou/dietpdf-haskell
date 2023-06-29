@@ -22,6 +22,7 @@ import qualified Codec.Compression.Zlib        as ZL
 import qualified Codec.Compression.RunLength   as RL
 import           Pdf.Object.Optimize            ( optimize )
 import           Data.Either.Extra              ( eitherToMaybe )
+import           Util.Step                      ( runExceptT )
 
 
 objectExamples :: [(PDFObject, PDFObject)]
@@ -50,5 +51,6 @@ objectExamples =
 spec :: Spec
 spec = describe "optimize" $ forM_ objectExamples $ \(example, expected) ->
   it ("should be optimized " ++ show example)
-    $          optimize example
-    `shouldBe` expected
+    $ do
+      optimized <- runExceptT (optimize example)
+      optimized `shouldBe` Right expected

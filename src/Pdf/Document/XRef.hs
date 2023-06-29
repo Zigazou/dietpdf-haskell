@@ -34,7 +34,6 @@ import           Pdf.Object.Collection          ( PDFObjects
                                                 , encodeObject
                                                 )
 
-
 -- | Given a collection of encoded objects, calculates their offsets
 calcOffsets :: EncodedObjects -> ObjectOffsets
 calcOffsets = snd . calcOffset . sort . OS.toAscList

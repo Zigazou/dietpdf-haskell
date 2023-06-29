@@ -318,12 +318,35 @@ fromPDFObject (PDFIndirectObject number revision object stream) =
 fromPDFObject (PDFBool True ) = "true"
 fromPDFObject (PDFBool False) = "false"
 fromPDFObject PDFNull         = "null"
-fromPDFObject (PDFXRef _)     = ""
+fromPDFObject (PDFXRef subsections) =
+  BS.concat ("xref\n" : (fromXRefSubsection <$> subsections))
 fromPDFObject (PDFTrailer (PDFDictionary dictionary)) =
   BS.concat ["trailer\n", fromDictionary dictionary, "\n"]
 fromPDFObject (PDFTrailer _) = error "a trailer can only contain a dictionary"
 fromPDFObject (PDFStartXRef offset) =
   BS.concat ["startxref\n", fromInt offset, "\n"]
+
+pad10 :: Int -> BS.ByteString
+pad10 value = BS.drop (BS.length base) (BS.concat [pads, base])
+ where
+  base = fromInt value
+  pads = "0000000000" :: BS.ByteString
+
+pad5 :: Int -> BS.ByteString
+pad5 value = BS.drop (BS.length base) (BS.concat [pads, base])
+ where
+  base = fromInt value
+  pads = "00000" :: BS.ByteString
+
+fromXRefEntry :: XRefEntry -> BS.ByteString
+fromXRefEntry (XRefEntry offset generation InUseEntry) =
+  BS.concat [pad10 offset, " ", pad5 generation, " n\r\n"]
+fromXRefEntry (XRefEntry offset _ FreeEntry) =
+  BS.concat [pad10 offset, " 65535 f\r\n"]
+
+fromXRefSubsection :: XRefSubsection -> BS.ByteString
+fromXRefSubsection (XRefSubsection start count entries) = BS.concat
+  (fromInt start: " " : fromInt count : "\n" : (fromXRefEntry <$> entries))
 
 {- | Returns a `Text` string describing a PDFObject.
 -}
