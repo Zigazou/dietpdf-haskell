@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-|
 This modules implements optimization techniques targeted at XML strings.
 -}
@@ -14,7 +15,9 @@ import           Text.XML.Light                 ( showContent
                                                 , CData(CData)
                                                 )
 import           Data.Char                      ( isSpace )
-
+import           Data.Text.Encoding             ( decodeUtf8 )
+import           Data.ByteString.Search.DFA     ( replace )
+import           Data.ByteString.Lazy           ( toStrict )
 {- | Optimize XML stream.
 
 It:
@@ -24,8 +27,16 @@ It:
 -}
 optimizeXML :: BS.ByteString -> BS.ByteString
 optimizeXML stream = BS.concat
-  (BSU.fromString . showContent <$> removeSpace (parseXML stream))
+  (   patchByteOrder
+  .   BSU.fromString
+  .   showContent
+  <$> (removeSpace . parseXML . decodeUtf8) stream
+  )
  where
+  patchByteOrder :: BS.ByteString -> BS.ByteString
+  patchByteOrder =
+    toStrict . replace "&#65279;" ("\xEF\xBB\xBF" :: BS.ByteString)
+
   isIndent :: Content -> Bool
   isIndent (Text (CData _ ('\n' : remain) _)) = all isSpace remain
   isIndent _ = False

@@ -36,6 +36,13 @@ xmlExamples =
       \    <a>  </a>\n"
     , "<?xml version=\"1.0\" ?><a>  </a>"
     )
+  , ( "<?xpacket begin=\"\xEF\xBB\xBF\" id=\"W5M0MpCehiHzreSzNTczkc9d\" ?>\
+      \<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">Fr\xC3\xA9\x64\xC3\xA9ric</x:xmpmeta>\n    \n    \n\
+      \<?xpacket end=\"w\"?>"
+    , "<?xpacket begin=\"\xEF\xBB\xBF\" id=\"W5M0MpCehiHzreSzNTczkc9d\" ?>\
+      \<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">Fr\xC3\xA9\x64\xC3\xA9ric</x:xmpmeta>\
+      \<?xpacket end=\"w\" ?>"
+    )
   ]
 
 spec :: Spec
