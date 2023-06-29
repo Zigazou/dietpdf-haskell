@@ -58,10 +58,13 @@ import           Control.Monad                  ( forM )
 updateTrailer :: PDFObject -> Int -> PDFObject -> PDFObject
 updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
   (PDFDictionary
-    (HM.fromList
-      [ ("Size", PDFNumber (fromIntegral entriesCount))
-      , ("Root", HM.lookupDefault root "Root" dict)
-      ]
+    (HM.union
+      (HM.fromList
+        [ ("Size", PDFNumber (fromIntegral entriesCount))
+        , ("Root", HM.lookupDefault root "Root" dict)
+        ]
+      )
+      dict
     )
   )
 updateTrailer _ _ object = object
@@ -110,7 +113,7 @@ pdfEncode objects
     let
       encodeds    = OS.fromMostRecents (encodeObject <$> optimizeds)
       body        = BS.concat $ eoBinaryData <$> OS.toAscList encodeds
-      xref        = xrefTable encodeds
+      xref        = xrefTable (BS.length pdfHead) encodeds
       encodedXRef = fromPDFObject xref
       startxref =
         fromPDFObject (PDFStartXRef (BS.length pdfHead + BS.length body))

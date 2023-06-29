@@ -66,10 +66,10 @@ spec :: Spec
 spec = do
   describe "calcOffsets" $ forM_ calcOffsetsExamples $ \(example, expected) ->
     it ("should give right result for " ++ show example)
-      $          calcOffsets example
+      $          calcOffsets 0 example
       `shouldBe` expected
 
   describe "xrefTable" $ forM_ xrefTableExamples $ \(example, expected) ->
     it ("should give right result for " ++ show example)
-      $          xrefTable example
+      $          xrefTable 0 example
       `shouldBe` expected

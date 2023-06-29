@@ -27,6 +27,7 @@ import           Pdf.Object.Object              ( Dictionary
                                                   , PDFDictionary
                                                   , PDFIndirectObject
                                                   , PDFName
+                                                  , PDFNumber
                                                   , PDFNull
                                                   , PDFTrailer
                                                   )
@@ -55,26 +56,6 @@ data Filter = Filter
 
 hasNoDecodeParms :: Filter -> Bool
 hasNoDecodeParms = (== PDFNull) . fDecodeParms
-{--
-unfilterStream
-  :: StepM m
-  => Either UnifiedError ([Filter], BS.ByteString)
-  -> m (Either UnifiedError ([Filter], BS.ByteString))
-unfilterStream (Right (filters@(pdfFilter : otherFilters), stream))
-  | fFilter pdfFilter == PDFName "FlateDecode" = unfilterStream
-    ((otherFilters, ) <$> FL.decompress stream)
-  | fFilter pdfFilter == PDFName "RunLengthDecode" = unfilterStream
-    ((otherFilters, ) <$> RL.decompress stream)
-  | fFilter pdfFilter == PDFName "LZWDecode" = unfilterStream
-    ((otherFilters, ) <$> LZ.decompress stream)
-  | fFilter pdfFilter == PDFName "ASCII85Decode" = unfilterStream
-    ((otherFilters, ) <$> A8.decode stream)
-  | fFilter pdfFilter == PDFName "ASCIIHexDecode" = unfilterStream
-    ((otherFilters, ) <$> AH.decode stream)
-  | otherwise = pure $ Right (filters, stream)
-unfilterStream (Right (filters, stream)) = pure $ Right (filters, stream)
-unfilterStream unfilterError             = return unfilterError
---}
 
 unfilterStream
   :: StepM m => ([Filter], BS.ByteString) -> StepT m ([Filter], BS.ByteString)
@@ -191,7 +172,16 @@ filterOptimize (PDFIndirectObject num gen (PDFDictionary dict) (Just stream)) =
     return $ PDFIndirectObject
       num
       gen
-      (PDFDictionary $ HM.insert "Filter" (reduceArray bestFilters) dict)
+      (PDFDictionary
+        (HM.union
+          (HM.fromList
+            [ ("Filter", reduceArray bestFilters)
+            , ("Length", PDFNumber . fromIntegral . BS.length $ bestStream)
+            ]
+          )
+          dict
+        )
+      )
       (Just bestStream)
  where
   evaluateZopfli

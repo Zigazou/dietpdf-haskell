@@ -35,22 +35,22 @@ import           Pdf.Object.Collection          ( PDFObjects
                                                 )
 
 -- | Given a collection of encoded objects, calculates their offsets
-calcOffsets :: EncodedObjects -> ObjectOffsets
-calcOffsets = snd . calcOffset . sort . OS.toAscList
+calcOffsets :: Int -> EncodedObjects -> ObjectOffsets
+calcOffsets startOffset = snd . calcOffset . sort . OS.toAscList
  where
   calcOffset :: [EncodedObject] -> (Int, ObjectOffsets)
   calcOffset = foldl'
     (\(offset, offsets) (EncodedObject number objectLength _) ->
       (offset + objectLength, HM.insert number offset offsets)
     )
-    (0, HM.empty)
+    (startOffset, HM.empty)
 
 -- | Given a collection of encoded objects, generates an old format XRef table
-xrefTable :: EncodedObjects -> PDFObject
-xrefTable objects | OS.null objects = PDFXRef []
-                  | otherwise       = PDFXRef [xrefSubsection]
+xrefTable :: Int -> EncodedObjects -> PDFObject
+xrefTable startOffset objects | OS.null objects = PDFXRef []
+                              | otherwise       = PDFXRef [xrefSubsection]
  where
-  offsets  = calcOffsets objects
+  offsets  = calcOffsets startOffset objects
   numRange = if HM.null offsets
     then (0, 0)
     else HM.foldlWithKey'

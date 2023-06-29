@@ -32,8 +32,7 @@ optimizeStringExamples =
     , PDFString "Hello, World!"
     )
   , ( PDFHexString "feff0046007200e9006400e9007200690063"
-    , PDFString
-      "\xfe\xff\x00\x46\x00\x72\x00\xe9\x00\x64\x00\xe9\x00\x72\x00\x69\x00\x63"
+    , PDFHexString "feff0046007200e9006400e9007200690063"
     )
   , (PDFHexString "feff005", PDFString "P")
   ]

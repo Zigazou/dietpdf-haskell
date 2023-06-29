@@ -340,9 +340,9 @@ pad5 value = BS.drop (BS.length base) (BS.concat [pads, base])
 
 fromXRefEntry :: XRefEntry -> BS.ByteString
 fromXRefEntry (XRefEntry offset generation InUseEntry) =
-  BS.concat [pad10 offset, " ", pad5 generation, " n\r\n"]
+  BS.concat [pad10 offset, " ", pad5 generation, " n \n"]
 fromXRefEntry (XRefEntry offset _ FreeEntry) =
-  BS.concat [pad10 offset, " 65535 f\r\n"]
+  BS.concat [pad10 offset, " 65535 f \n"]
 
 fromXRefSubsection :: XRefSubsection -> BS.ByteString
 fromXRefSubsection (XRefSubsection start count entries) = BS.concat

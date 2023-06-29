@@ -32,7 +32,7 @@ objectExamples =
       0
       (PDFDictionary
         (HM.fromList
-          [("Size", PDFNumber 16.0), ("Filter", PDFName "FlateDecode")]
+          [("Length", PDFNumber 16.0), ("Filter", PDFName "FlateDecode")]
         )
       )
       (Just . BL.toStrict . ZL.compress . BL.fromStrict $ "Hello, world!")
@@ -41,7 +41,7 @@ objectExamples =
       0
       (PDFDictionary
         (HM.fromList
-          [("Size", PDFNumber 16.0), ("Filter", PDFName "RunLengthDecode")]
+          [("Length", PDFNumber 15.0), ("Filter", PDFName "RunLengthDecode")]
         )
       )
       (eitherToMaybe $ RL.compress "Hello, world!")

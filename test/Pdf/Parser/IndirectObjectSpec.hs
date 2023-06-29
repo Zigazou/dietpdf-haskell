@@ -16,6 +16,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFDictionary
                                                   , PDFReference
                                                   , PDFName
+                                                  , PDFArray
                                                   )
                                                 )
 
@@ -70,6 +71,46 @@ indirectObjectExamples =
         (fromList [("Type", PDFName "Page"), ("Parent", PDFReference 1 0)])
       )
       Nothing
+    )
+  , ( "9 0 obj <</StemV 80 /Flags 4 /Ascent 0 /FontName \
+       \/BAAAAA+LiberationSerif /Type /FontDescriptor /FontFile2 7 0 R \
+       \/ItalicAngle 0 /CapHeight 981 /Descent 0 \
+       \/FontBBox [-543 -303 1277 981]>>\nendobj"
+    , PDFIndirectObject
+      9
+      0
+      (PDFDictionary
+        (fromList
+          [ ("StemV"      , PDFNumber 80)
+          , ("Flags"      , PDFNumber 4)
+          , ("Ascent"     , PDFNumber 0)
+          , ("FontName"   , PDFName "BAAAAA+LiberationSerif")
+          , ("Type"       , PDFName "FontDescriptor")
+          , ("FontFile2"  , PDFReference 7 0)
+          , ("ItalicAngle", PDFNumber 0)
+          , ("CapHeight"  , PDFNumber 981)
+          , ("Descent"    , PDFNumber 0)
+          , ( "FontBBox"
+            , PDFArray
+              [ PDFNumber (-543)
+              , PDFNumber (-303)
+              , PDFNumber 1277
+              , PDFNumber 981
+              ]
+            )
+          ]
+        )
+      )
+      Nothing
+    )
+  , ( "1 0 obj\n<</Length 10>>\nstream\n1234567890\nendstream\nendobj"
+    , PDFIndirectObject
+      1
+      0
+      (PDFDictionary
+        (fromList [("Length", PDFNumber 10)])
+      )
+      (Just "1234567890")
     )
   ]
 

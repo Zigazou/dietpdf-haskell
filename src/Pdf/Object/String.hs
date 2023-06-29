@@ -5,7 +5,6 @@ module Pdf.Object.String
   ) where
 
 import qualified Data.ByteString               as BS
-import           Data.Maybe                     ( fromMaybe )
 import           Data.Word                      ( Word8 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFHexString
@@ -37,8 +36,8 @@ utf16beToAscii utf16beString =
 
 isUTF16Encoded :: BS.ByteString -> Bool
 isUTF16Encoded string | BS.length string < 2           = False
-                      | BS.take 2 string == utf16beBOM = True
-                      | otherwise                      = False
+                      | BS.take 2 string /= utf16beBOM = False
+                      | otherwise                      = True
 
 isAsciiEncoded :: BS.ByteString -> Bool
 isAsciiEncoded = BS.all (\char -> char > asciiNUL && char < asciiDELETE)
@@ -48,9 +47,13 @@ Optimize `PDFHexString` into `PDFString`.
 -}
 optimizeString :: PDFObject -> PDFObject
 optimizeString object@(PDFHexString values)
-  | isUTF16Encoded encoded = PDFString
-  $ fromMaybe encoded (utf16beToAscii encoded)
+    -- If the hex string contains only ASCII characters, converts it to a
+    -- PDFString which will be twice shorter.
   | isAsciiEncoded encoded = PDFString encoded
+    -- If the PDFHexString is UTF-16 but only contains ASCII characters,
+    -- converts it to a PDFString which will be four times shorter.
+  | isUTF16Encoded encoded = maybe object PDFString (utf16beToAscii encoded)
+    -- Otherwise, do nothing on a PDFHexString
   | otherwise = object
   where encoded = hexStringToString values
 optimizeString object = object
