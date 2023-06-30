@@ -5,18 +5,20 @@ module Pdf.Object.DictionarySpec
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString               as BS
-import           Data.HashMap.Strict            ( fromList )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFBool
-                                                  , PDFDictionary
+                                                  ( PDFBool
+                                                  , PDFIndirectObject
                                                   , PDFName
                                                   , PDFNumber
-                                                  , PDFIndirectObject
                                                   , PDFTrailer
                                                   )
                                                 , fromPDFObject
-                                                , getValue
+                                                , mkEmptyPDFDictionary
+                                                , mkPDFDictionary
+                                                , mkPDFArray
+                                                )
+import           Pdf.Object.State               ( getValue
+                                                , query
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
@@ -26,84 +28,71 @@ import           Test.Hspec                     ( Spec
 
 dictionaryExamples :: [(PDFObject, BS.ByteString)]
 dictionaryExamples =
-  [ (PDFDictionary (fromList []), "<<>>")
-  , ( PDFDictionary
-      (fromList
-        [("AB", PDFNumber 1.0), ("CD", PDFName "AB"), ("EF", PDFBool True)]
-      )
-    , "<</EF true/AB 1/CD/AB>>"
+  [ (mkEmptyPDFDictionary, "<<>>")
+  , ( mkPDFDictionary
+      [("AB", PDFNumber 1.0), ("CD", PDFName "AB"), ("EF", PDFBool True)]
+    , "<</AB 1/CD/AB/EF true>>"
     )
-  , ( PDFDictionary
-      (fromList
-        [ ( "AB"
-          , PDFArray [PDFNumber 1.0, PDFArray [PDFNumber 2.0], PDFNumber 3.0]
-          )
-        , ("CD", PDFName "AB")
-        , ("EF", PDFBool True)
-        ]
-      )
-    , "<</EF true/AB[1[2]3]/CD/AB>>"
+  , ( mkPDFDictionary
+      [ ( "AB"
+        , mkPDFArray [PDFNumber 1.0, mkPDFArray [PDFNumber 2.0], PDFNumber 3.0]
+        )
+      , ("CD", PDFName "AB")
+      , ("EF", PDFBool True)
+      ]
+    , "<</AB[1[2]3]/CD/AB/EF true>>"
     )
   ]
 
 getValueExamples :: [(PDFObject, Maybe PDFObject)]
 getValueExamples =
-  [ (PDFDictionary (fromList []), Nothing)
-  , (PDFNumber 3.0              , Nothing)
-  , ( PDFDictionary
-      (fromList
-        [("AB", PDFNumber 1.0), ("Test", PDFName "AB"), ("EF", PDFBool True)]
-      )
+  [ (mkEmptyPDFDictionary, Nothing)
+  , (PDFNumber 3.0       , Nothing)
+  , ( mkPDFDictionary
+      [("AB", PDFNumber 1.0), ("Test", PDFName "AB"), ("EF", PDFBool True)]
     , Just $ PDFName "AB"
     )
-  , ( PDFDictionary
-      (fromList
-        [("AB", PDFNumber 1.0), ("CD", PDFName "AB"), ("EF", PDFBool True)]
+  , ( mkPDFDictionary
+      [("AB", PDFNumber 1.0), ("CD", PDFName "AB"), ("EF", PDFBool True)]
+    , Nothing
+    )
+  , ( PDFIndirectObject
+      10
+      0
+      (mkPDFDictionary
+        [ ( "AB"
+          , mkPDFArray
+            [PDFNumber 1.0, mkPDFArray [PDFNumber 2.0], PDFNumber 3.0]
+          )
+        , ("CD", PDFName "AB")
+        , ("EF", PDFBool True)
+        ]
       )
     , Nothing
     )
   , ( PDFIndirectObject
       10
       0
-      (PDFDictionary
-        (fromList
-          [ ( "AB"
-            , PDFArray [PDFNumber 1.0, PDFArray [PDFNumber 2.0], PDFNumber 3.0]
-            )
-          , ("CD", PDFName "AB")
-          , ("EF", PDFBool True)
-          ]
-        )
+      (mkPDFDictionary
+        [ ( "AB"
+          , mkPDFArray
+            [PDFNumber 1.0, mkPDFArray [PDFNumber 2.0], PDFNumber 3.0]
+          )
+        , ("Test", PDFNumber 4.0)
+        , ("EF"  , PDFBool True)
+        ]
       )
-      Nothing
-    , Nothing
-    )
-  , ( PDFIndirectObject
-      10
-      0
-      (PDFDictionary
-        (fromList
-          [ ( "AB"
-            , PDFArray [PDFNumber 1.0, PDFArray [PDFNumber 2.0], PDFNumber 3.0]
-            )
-          , ("Test", PDFNumber 4.0)
-          , ("EF"  , PDFBool True)
-          ]
-        )
-      )
-      Nothing
     , Just $ PDFNumber 4.0
     )
   , ( PDFTrailer
-      (PDFDictionary
-        (fromList
-          [ ( "AB"
-            , PDFArray [PDFNumber 1.0, PDFArray [PDFNumber 2.0], PDFNumber 3.0]
-            )
-          , ("Test", PDFNumber 4.0)
-          , ("EF"  , PDFBool True)
-          ]
-        )
+      (mkPDFDictionary
+        [ ( "AB"
+          , mkPDFArray
+            [PDFNumber 1.0, mkPDFArray [PDFNumber 2.0], PDFNumber 3.0]
+          )
+        , ("Test", PDFNumber 4.0)
+        , ("EF"  , PDFBool True)
+        ]
       )
     , Just $ PDFNumber 4.0
     )
@@ -118,5 +107,5 @@ spec = describe "PDFDictionary" $ do
 
   forM_ getValueExamples $ \(example, expected) ->
     it ("should get value from Dictionary " ++ show example)
-      $          getValue "Test" example
+      $          query example (getValue "Test")
       `shouldBe` expected

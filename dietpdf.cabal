@@ -32,54 +32,79 @@ library
       Codec.Compression.XML
       Codec.Filter.Ascii85
       Codec.Filter.AsciiHex
+      Font.TrueType.FontDirectory
+      Font.TrueType.FontTable
+      Font.TrueType.Parser.Font
+      Font.TrueType.Parser.Head
+      Font.TrueType.Parser.ScalerType
+      Font.TrueType.Parser.TableIdentifier
+      Font.TrueType.ScalerType
+      Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
+      Pdf.Document.Collection
+      Pdf.Document.Document
       Pdf.Document.Encode
       Pdf.Document.ObjectStream
+      Pdf.Document.Parser
+      Pdf.Document.Partition
+      Pdf.Document.Uncompress
       Pdf.Document.XRef
-      Pdf.Object.Collection
+      Pdf.Graphics.Object
+      Pdf.Graphics.Parser.Comment
+      Pdf.Graphics.Parser.Container
+      Pdf.Graphics.Parser.EmptyContent
+      Pdf.Graphics.Parser.HexString
+      Pdf.Graphics.Parser.InlineImage
+      Pdf.Graphics.Parser.Keyword
+      Pdf.Graphics.Parser.LooseEndOfLine
+      Pdf.Graphics.Parser.Name
+      Pdf.Graphics.Parser.Number
+      Pdf.Graphics.Parser.Reference
+      Pdf.Graphics.Parser.Stream
+      Pdf.Graphics.Parser.String
       Pdf.Object.Container
-      Pdf.Object.Format
       Pdf.Object.Linearization
       Pdf.Object.Object
       Pdf.Object.Optimize
-      Pdf.Object.Partition
+      Pdf.Object.Parser.Comment
+      Pdf.Object.Parser.Container
+      Pdf.Object.Parser.EmptyContent
+      Pdf.Object.Parser.HexString
+      Pdf.Object.Parser.IndirectObject
+      Pdf.Object.Parser.Keyword
+      Pdf.Object.Parser.LooseEndOfLine
+      Pdf.Object.Parser.Name
+      Pdf.Object.Parser.Number
+      Pdf.Object.Parser.Reference
+      Pdf.Object.Parser.StartXRef
+      Pdf.Object.Parser.String
+      Pdf.Object.Parser.Trailer
+      Pdf.Object.Parser.XRef
+      Pdf.Object.State
       Pdf.Object.String
-      Pdf.Parser.Comment
-      Pdf.Parser.Container
-      Pdf.Parser.EmptyContent
-      Pdf.Parser.HexString
-      Pdf.Parser.IndirectObject
-      Pdf.Parser.Keyword
-      Pdf.Parser.LooseEndOfLine
-      Pdf.Parser.Name
-      Pdf.Parser.Number
-      Pdf.Parser.Parser
-      Pdf.Parser.Reference
-      Pdf.Parser.StartXRef
-      Pdf.Parser.String
-      Pdf.Parser.Trailer
-      Pdf.Parser.XRef
+      Pdf.Object.Unfilter
+      Util.Array
       Util.Ascii
       Util.ByteString
+      Util.Dictionary
       Util.Errors
       Util.Hex
       Util.Name
       Util.Number
-      Util.OrderedSet
-      Util.Step
       Util.String
       Util.Text
   other-modules:
       Paths_dietpdf
   hs-source-dirs:
       src
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -fexcess-precision -optc-O3 -optc-ffast-math
   build-depends:
       base >=4.7 && <5
     , binary
     , binary-parsers
     , bytestring
     , containers
+    , double-conversion
     , formatting
     , hopfli
     , monad-loops
@@ -90,7 +115,6 @@ library
     , stringsearch
     , text
     , transformers
-    , unordered-containers
     , utf8-string
     , xml
     , zlib
@@ -99,10 +123,14 @@ library
 executable dietpdf
   main-is: Main.hs
   other-modules:
+      AppOptions
+      Extract
+      Info
+      Optimize
       Paths_dietpdf
   hs-source-dirs:
       app
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -fexcess-precision -optc-O3 -optc-ffast-math -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -122,9 +150,21 @@ test-suite dietpdf-test
       Codec.Compression.RunLengthSpec
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
+      Font.TrueType.Parser.FontSpec
+      Font.TrueType.Parser.HeadSpec
+      Pdf.Document.CollectionSpec
+      Pdf.Document.DocumentSpec
+      Pdf.Document.ObjectStreamSpec
       Pdf.Document.XRefSpec
+      Pdf.Graphics.Parser.ArraySpec
+      Pdf.Graphics.Parser.CommentSpec
+      Pdf.Graphics.Parser.DictionarySpec
+      Pdf.Graphics.Parser.LooseEndOfLineSpec
+      Pdf.Graphics.Parser.NameSpec
+      Pdf.Graphics.Parser.NumberSpec
+      Pdf.Graphics.Parser.StreamSpec
+      Pdf.Graphics.Parser.StringSpec
       Pdf.Object.ArraySpec
-      Pdf.Object.CollectionSpec
       Pdf.Object.ContainerSpec
       Pdf.Object.DictionarySpec
       Pdf.Object.HexStringSpec
@@ -133,25 +173,24 @@ test-suite dietpdf-test
       Pdf.Object.NameSpec
       Pdf.Object.NumberSpec
       Pdf.Object.OptimizeSpec
+      Pdf.Object.Parser.ArraySpec
+      Pdf.Object.Parser.CommentSpec
+      Pdf.Object.Parser.DictionarySpec
+      Pdf.Object.Parser.IndirectObjectSpec
+      Pdf.Object.Parser.LooseEndOfLineSpec
+      Pdf.Object.Parser.NameSpec
+      Pdf.Object.Parser.NumberSpec
+      Pdf.Object.Parser.StartXRefSpec
+      Pdf.Object.Parser.StringSpec
+      Pdf.Object.Parser.TrailerSpec
+      Pdf.Object.Parser.XRefSpec
       Pdf.Object.PartitionSpec
       Pdf.Object.ReferenceSpec
+      Pdf.Object.StateSpec
       Pdf.Object.StringSpec
-      Pdf.Parser.ArraySpec
-      Pdf.Parser.CommentSpec
-      Pdf.Parser.DictionarySpec
-      Pdf.Parser.IndirectObjectSpec
-      Pdf.Parser.LooseEndOfLineSpec
-      Pdf.Parser.NameSpec
-      Pdf.Parser.NumberSpec
-      Pdf.Parser.ParserSpec
-      Pdf.Parser.StartXRefSpec
-      Pdf.Parser.StringSpec
-      Pdf.Parser.TrailerSpec
-      Pdf.Parser.XRefSpec
       Util.ByteStringSpec
       Util.HexSpec
       Util.NumberSpec
-      Util.OrderedSetSpec
       Util.ParserHelper
       Util.StepSpec
       Util.StringSpec
@@ -164,12 +203,11 @@ test-suite dietpdf-test
     , base >=4.7 && <5
     , binary-parsers
     , bytestring
+    , containers
     , dietpdf
     , extra
     , hspec
     , mtl
     , ordered-containers
-    , text
-    , unordered-containers
     , zlib
   default-language: Haskell2010

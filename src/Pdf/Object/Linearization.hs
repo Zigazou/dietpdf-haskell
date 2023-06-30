@@ -23,7 +23,11 @@ module Pdf.Object.Linearization
   ) where
 
 import           Control.Monad                  ( msum )
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict               as Map
+import qualified Data.Sequence                 as SQ
+import           Pdf.Document.Document          ( PDFDocument
+                                                , lMap
+                                                )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
                                                   , PDFDictionary
@@ -75,9 +79,9 @@ getNumberValue (Just (PDFNumber value)) = Just value
 getNumberValue _                        = Nothing
 
 extractLinearization :: PDFObject -> Maybe Linearization
-extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary) Nothing)
-  = case dictionaryEntries of
-    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray [PDFNumber primaryOffset, PDFNumber primaryLength]), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
+extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
+  case dictionaryEntries of
+    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray (PDFNumber primaryOffset SQ.:<| PDFNumber primaryLength SQ.:<| SQ.Empty)), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
       -> Just Linearization
         { lnVersion               = version
         , lnFileLength            = round fileLength
@@ -91,7 +95,7 @@ extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary) Nothing)
         , lnXRefFirstEntryOffset  = round xrefFirstEntryOffset
         , lnFirstPageNumber       = round <$> getNumberValue firstPageNumber
         }
-    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray [PDFNumber primaryOffset, PDFNumber primaryLength, PDFNumber overflowOffset, PDFNumber overflowLength]), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
+    [Just (PDFNumber version), Just (PDFNumber fileLength), Just (PDFArray (PDFNumber primaryOffset SQ.:<| PDFNumber primaryLength SQ.:<| PDFNumber overflowOffset SQ.:<| PDFNumber overflowLength SQ.:<| SQ.Empty)), Just (PDFNumber firstPageObjectNumber), Just (PDFNumber firstPageEndOffset), Just (PDFNumber numberOfPages), Just (PDFNumber xrefFirstEntryOffset), firstPageNumber]
       -> Just Linearization
         { lnVersion               = version
         , lnFileLength            = round fileLength
@@ -108,15 +112,15 @@ extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary) Nothing)
     _anyOtherValue -> Nothing
  where
   dictionaryEntries =
-    (HM.!?) dictionary <$> ["Linearized", "L", "H", "O", "E", "N", "T", "P"]
+    (Map.!?) dictionary <$> ["Linearized", "L", "H", "O", "E", "N", "T", "P"]
 extractLinearization _ = Nothing
 
 {- |
 Given a list of `PDFObject`, extract the linearization information.
 -}
 getLinearization
-  :: [PDFObject] -- ^ The list of `PDFObject`
+  :: PDFDocument -- ^ The list of `PDFObject`
   -> Maybe Linearization
      -- ^ The `Linearization` object or `Nothing`. `Nothing` may be returned if
      --   there is no linearization entry or  if it is invalid.
-getLinearization = msum . fmap extractLinearization
+getLinearization = msum . lMap extractLinearization

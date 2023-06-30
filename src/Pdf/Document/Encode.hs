@@ -9,21 +9,33 @@ module Pdf.Document.Encode
   ) where
 
 import qualified Data.ByteString               as BS
-import qualified Data.HashMap.Strict           as HM
-import qualified Data.Set.Ordered              as OS
+import qualified Data.Map.Strict               as Map
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFDictionary
                                                   , PDFEndOfFile
                                                   , PDFNumber
                                                   , PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFObjectStream
                                                   , PDFStartXRef
                                                   , PDFTrailer
+                                                  , PDFReference
                                                   )
                                                 , fromPDFObject
                                                 , xrefCount
-                                                , getValue
+                                                , hasKey
                                                 )
+<<<<<<< HEAD:src/Pdf/Document/Encode.hs
 import           Pdf.Object.Partition           ( PDFPartition
+=======
+import           Pdf.Document.Document          ( PDFDocument
+                                                , dFilter
+                                                , findLast
+                                                , cMap
+                                                , deepFind
+                                                )
+import           Pdf.Document.Partition         ( PDFPartition
+>>>>>>> 2cda7c92fcf859f588ef19db6e288dd3ad74727d:src/Pdf/Object/Encode.hs
                                                   ( ppHeads
                                                   , ppIndirectObjects
                                                   , ppTrailers
@@ -38,11 +50,11 @@ import           Util.Errors                    ( UnifiedError
                                                   , EncodeNoTrailer
                                                   )
                                                 )
-import qualified Util.OrderedSet               as OS
 import           Pdf.Object.Optimize            ( optimize )
 import           Pdf.Document.XRef              ( calcOffsets
                                                 , xrefTable
                                                 )
+<<<<<<< HEAD:src/Pdf/Document/Encode.hs
 import           Data.Maybe                     ( isNothing )
 import           Pdf.Object.Collection          ( findLastValue
                                                 , encodeObject
@@ -54,10 +66,17 @@ import           Util.Step                      ( StepM
                                                 , throwError
                                                 )
 import           Control.Monad                  ( forM )
+=======
+import           Pdf.Document.Collection        ( encodeObject
+                                                , eoBinaryData
+                                                )
+import           Pdf.Document.Uncompress        ( uncompress )
+>>>>>>> 2cda7c92fcf859f588ef19db6e288dd3ad74727d:src/Pdf/Object/Encode.hs
 
 updateTrailer :: PDFObject -> Int -> PDFObject -> PDFObject
 updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
   (PDFDictionary
+<<<<<<< HEAD:src/Pdf/Document/Encode.hs
     (HM.union
       (HM.fromList
         [ ("Size", PDFNumber (fromIntegral entriesCount))
@@ -65,20 +84,43 @@ updateTrailer root entriesCount (PDFTrailer (PDFDictionary dict)) = PDFTrailer
         ]
       )
       dict
+=======
+    (Map.fromList
+      [ ("Size", PDFNumber (fromIntegral entriesCount))
+      , ("Root", Map.findWithDefault root "Root" dict)
+      ]
+>>>>>>> 2cda7c92fcf859f588ef19db6e288dd3ad74727d:src/Pdf/Object/Encode.hs
     )
   )
 updateTrailer _ _ object = object
 
-removeUnused :: [PDFObject] -> [PDFObject]
-removeUnused = filter noLinearized
+removeUnused :: PDFDocument -> PDFDocument
+removeUnused doc = dFilter used doc
  where
-  noLinearized :: PDFObject -> Bool
-  noLinearized (PDFIndirectObject _ _ (PDFDictionary dictionary) _) =
-    isNothing $ dictionary HM.!? "Linearized"
-  noLinearized _ = True
+  used :: PDFObject -> Bool
+  used object = isNotLinearized object && isReferenced object
 
-findRoot :: [PDFObject] -> Maybe PDFObject
-findRoot = findLastValue (getValue "Root")
+  isNotLinearized :: PDFObject -> Bool
+  isNotLinearized = not . hasKey "Linearized"
+
+  isReference :: PDFObject -> Bool
+  isReference PDFReference{}  = True
+  isReference _anyOtherObject = False
+
+  references :: PDFDocument
+  references = deepFind isReference (uncompress doc)
+
+  isReferenced :: PDFObject -> Bool
+  isReferenced (PDFIndirectObject num gen _) =
+    PDFReference num gen `elem` references
+  isReferenced (PDFIndirectObjectWithStream num gen _ _) =
+    PDFReference num gen `elem` references
+  isReferenced (PDFObjectStream num gen _ _) =
+    PDFReference num gen `elem` references
+  isReferenced _anyOtherObject = True
+
+findRoot :: PDFDocument -> Maybe PDFObject
+findRoot = findLast (hasKey "Root")
 
 {-|
 Given a list of PDF objects, generate the PDF file content.
@@ -127,7 +169,7 @@ pdfEncode objects
 
     return $ BS.concat [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]
  where
-  partObjects = mconcat (toPartition <$> removeUnused objects)
+  partObjects = foldr ((<>) . toPartition) mempty (removeUnused objects)
   pdfTrailer  = lastTrailer partObjects
 
   pdfHead     = (fromPDFObject . firstVersion) partObjects

@@ -31,7 +31,9 @@ module Codec.Compression.Predictor
     , TIFFPredictor2
     )
   , toPredictor
+  , toRowPredictor
   , toWord8
+  , toRowWord8
   , predict
   , unpredict
   , isPNGGroup
@@ -41,7 +43,10 @@ module Codec.Compression.Predictor
 import qualified Data.ByteString               as BS
 import           Data.Maybe                     ( fromMaybe )
 import           Data.Word                      ( Word8 )
-import           Util.ByteString                ( splitRaw )
+import           Util.ByteString                ( splitRaw
+                                                , separateComponents
+                                                , groupComponents
+                                                )
 import           Util.Errors                    ( UnifiedError
                                                   ( InvalidNumberOfBytes
                                                   , InvalidPredictor
@@ -91,6 +96,18 @@ toPredictor 14    = Right PNGPaeth
 toPredictor 15    = Right PNGOptimum
 toPredictor value = Left $ InvalidPredictor value
 
+{- | Convert a PDF predictor code, returns either a `Predictor` or an
+`InvalidPredictor` error.
+-}
+toRowPredictor :: Word8 -> Either UnifiedError Predictor
+toRowPredictor 0     = Right PNGNone
+toRowPredictor 1     = Right PNGSub
+toRowPredictor 2     = Right PNGUp
+toRowPredictor 3     = Right PNGAverage
+toRowPredictor 4     = Right PNGPaeth
+toRowPredictor 5     = Right PNGOptimum
+toRowPredictor value = Left $ InvalidPredictor value
+
 {- | Convert a `Predictor` to a PDF predictor code.
 -}
 toWord8 :: Predictor -> Word8
@@ -102,6 +119,17 @@ toWord8 PNGUp            = 12
 toWord8 PNGAverage       = 13
 toWord8 PNGPaeth         = 14
 toWord8 PNGOptimum       = 15
+
+{- | Convert a `Predictor` to a PDF row predictor code.
+-}
+toRowWord8 :: Predictor -> Word8
+toRowWord8 PNGNone            = 0
+toRowWord8 PNGSub             = 1
+toRowWord8 PNGUp              = 2
+toRowWord8 PNGAverage         = 3
+toRowWord8 PNGPaeth           = 4
+toRowWord8 PNGOptimum         = 5
+toRowWord8 _anyOtherPredictor = 0
 
 {- |
 Tell if a `Predictor` is from the PNG group.
@@ -135,7 +163,7 @@ the pixels are stored.
 -}
 data Scanline = Scanline
   { slPredictor :: Maybe Predictor
-  , slStream    :: BS.ByteString
+  , slStream    :: [BS.ByteString]
   }
 
 {- |
@@ -144,10 +172,11 @@ An empty `Scanline` is used as a default `Scanline` when using PNG predictors
 
 It’s just a serie of zero bytes.
 -}
-emptyScanline :: Int -> Scanline
-emptyScanline width = Scanline { slPredictor = Just TIFFNoPrediction
-                               , slStream    = BS.pack $ replicate width 0
-                               }
+emptyScanline :: Int -> Int -> Scanline
+emptyScanline width components = Scanline
+  { slPredictor = Just TIFFNoPrediction
+  , slStream    = replicate components (BS.pack $ replicate width 0)
+  }
 
 {-|
 An image stream is a structure holding samples from an image stream while
@@ -155,6 +184,7 @@ allowing easier handling when applying predictors.
 -}
 data ImageStream = ImageStream
   { iWidth            :: Int
+  , iComponents       :: Int
   , iBitsPerComponent :: Int
   , iPredictor        :: Maybe Predictor
   , iLines            :: [Scanline]
@@ -239,7 +269,10 @@ applyPredictor :: Predictor -> (Scanline, Scanline) -> Scanline
 applyPredictor predictor (Scanline _ prior, Scanline _ current) = Scanline
   { slPredictor = Just predictor
   , slStream    = BS.pack
-    (applyPredictor' (predictF predictor) (0, 0) (BS.zip prior current))
+                    <$> (   applyPredictor' (predictF predictor) (0, 0)
+                        .   uncurry BS.zip
+                        <$> zip prior current
+                        )
   }
  where
   applyPredictor'
@@ -256,7 +289,7 @@ predictImageStream :: Predictor -> ImageStream -> ImageStream
 predictImageStream predictor imgStm = imgStm
   { iPredictor = Just predictor
   , iLines     = applyPredictor predictor <$> previousCurrent
-                   (emptyScanline (iWidth imgStm))
+                   (emptyScanline (iWidth imgStm) (iComponents imgStm))
                    (iLines imgStm)
   }
  where
@@ -270,12 +303,14 @@ applyUnpredictor :: Predictor -> (Scanline, Scanline) -> Scanline
 applyUnpredictor predictor (Scanline _ prior, Scanline linePredictor current) =
   Scanline
     { slPredictor = Nothing
-    , slStream    = BS.pack
-                      (applyUnpredictor'
-                        (unpredictF (fromMaybe predictor linePredictor))
-                        (0, 0)
-                        (BS.zip prior current)
-                      )
+    , slStream    =
+      BS.pack
+        <$> (   applyUnpredictor'
+                (unpredictF (fromMaybe predictor linePredictor))
+                (0, 0)
+            .   uncurry BS.zip
+            <$> zip prior current
+            )
     }
  where
   applyUnpredictor'
@@ -291,7 +326,9 @@ Decode an entire image stream using a specified `Predictor`
 unpredictImageStream :: Predictor -> ImageStream -> ImageStream
 unpredictImageStream predictor imgStm = imgStm
   { iPredictor = Nothing
-  , iLines = unpredictScanlines (emptyScanline (iWidth imgStm)) (iLines imgStm)
+  , iLines     = unpredictScanlines
+                   (emptyScanline (iWidth imgStm) (iComponents imgStm))
+                   (iLines imgStm)
   }
  where
   unpredictScanlines :: Scanline -> [Scanline] -> [Scanline]
@@ -303,25 +340,29 @@ unpredictImageStream predictor imgStm = imgStm
 {- |
 Convert a `ByteString` to a `Scanline` according to a `Predictor`.
 -}
-fromPredictedLine :: Predictor -> BS.ByteString -> Either UnifiedError Scanline
-fromPredictedLine predictor raw
+fromPredictedLine
+  :: Predictor -> Int -> BS.ByteString -> Either UnifiedError Scanline
+fromPredictedLine predictor width raw
   | isPNGGroup predictor = do
     let (predictCode, bytes) = BS.splitAt 1 raw
-    linePredictor <- toPredictor (BS.head predictCode)
-    return $ Scanline { slPredictor = Just linePredictor, slStream = bytes }
+    linePredictor <- toRowPredictor (BS.head predictCode)
+    return $ Scanline { slPredictor = Just linePredictor
+                      , slStream    = splitRaw width bytes
+                      }
   | otherwise = return
-  $ Scanline { slPredictor = Just predictor, slStream = raw }
+  $ Scanline { slPredictor = Just predictor, slStream = splitRaw width raw }
 
 {- |
 Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
 line width.
 -}
 fromPredictedStream
-  :: Predictor -> Int -> BS.ByteString -> Either UnifiedError ImageStream
-fromPredictedStream predictor width raw = do
-  let rawWidth = width + if isPNGGroup predictor then 1 else 0
-  scanlines <- mapM (fromPredictedLine predictor) (splitRaw rawWidth raw)
+  :: Predictor -> Int -> Int -> BS.ByteString -> Either UnifiedError ImageStream
+fromPredictedStream predictor width components raw = do
+  let rawWidth = components * width + if isPNGGroup predictor then 1 else 0
+  scanlines <- mapM (fromPredictedLine predictor width) (splitRaw rawWidth raw)
   return ImageStream { iWidth            = width
+                     , iComponents       = components
                      , iBitsPerComponent = 8
                      , iPredictor        = Just TIFFNoPrediction
                      , iLines            = scanlines
@@ -334,32 +375,40 @@ packStream :: ImageStream -> BS.ByteString
 packStream = BS.concat . fmap packScanline . iLines
  where
   packScanline :: Scanline -> BS.ByteString
-  packScanline (Scanline Nothing stream) = stream
+  packScanline (Scanline Nothing stream) = groupComponents stream
   packScanline (Scanline (Just predictor) stream)
-    | isPNGGroup predictor = BS.cons (toWord8 predictor) stream
-    | otherwise            = stream
+    | isPNGGroup predictor = BS.cons (toRowWord8 predictor)
+                                     (groupComponents stream)
+    | otherwise = groupComponents stream
 
 {- |
 Convert an unpredicted `Bytestring` to an `ImageStream` given its line width.
 -}
 fromUnpredictedStream
-  :: Int -> BS.ByteString -> Either UnifiedError ImageStream
-fromUnpredictedStream width raw = return ImageStream
+  :: Int -> Int -> BS.ByteString -> Either UnifiedError ImageStream
+fromUnpredictedStream width components raw = return ImageStream
   { iWidth            = width
+  , iComponents       = components
   , iBitsPerComponent = 8
   , iPredictor        = Nothing
-  , iLines            = Scanline Nothing <$> splitRaw width raw
+  , iLines            = Scanline Nothing
+                        .   separateComponents components
+                        <$> splitRaw (width * components) raw
   }
 
 {- |
 Apply a `Predictor` to a `ByteString`, considering its line width.
 -}
 predict
-  :: Predictor -> Int -> BS.ByteString -> Either UnifiedError BS.ByteString
-predict predictor width stream
+  :: Predictor -- ^ Predictor to be used to encode
+  -> Int -- ^ Width of the stream
+  -> Int -- ^ Number of color components
+  -> BS.ByteString -- ^ Stream to encode
+  -> Either UnifiedError BS.ByteString -- ^ Encoded stream or an error
+predict predictor width components stream
   | width < 1 = Left $ InvalidNumberOfBytes 0 0
   | otherwise = do
-    imgStm <- fromUnpredictedStream width stream
+    imgStm <- fromUnpredictedStream width components stream
     let predicted = predictImageStream predictor imgStm
     return $ packStream predicted
 
@@ -368,10 +417,14 @@ Invert the application of a `Predictor` to a `ByteString`, considering its
 line width.
 -}
 unpredict
-  :: Predictor -> Int -> BS.ByteString -> Either UnifiedError BS.ByteString
-unpredict predictor width stream
+  :: Predictor -- ^ Predictor (hint in case of a PNG predictor)
+  -> Int -- ^ Width of the image
+  -> Int -- ^ Number of color components
+  -> BS.ByteString -- ^ Stream to decode
+  -> Either UnifiedError BS.ByteString -- ^ Decoded stream or an error
+unpredict predictor width components stream
   | width < 1 = Left $ InvalidNumberOfBytes 0 0
   | otherwise = do
-    imgStm <- fromPredictedStream predictor width stream
+    imgStm <- fromPredictedStream predictor width components stream
     let unpredicted = unpredictImageStream predictor imgStm
     return $ packStream unpredicted

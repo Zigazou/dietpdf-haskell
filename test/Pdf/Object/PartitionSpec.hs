@@ -4,17 +4,24 @@ module Pdf.Object.PartitionSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
+import qualified Data.Map.Strict           as Map
+import           Pdf.Document.Document          ( fromList )
+import           Pdf.Document.Partition         ( PDFPartition(PDFPartition)
+                                                , toPartition
+                                                )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFVersion
+                                                  ( PDFComment
+                                                  , PDFDictionary
                                                   , PDFEndOfFile
-                                                  , PDFXRef
+                                                  , PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFName
                                                   , PDFNumber
+                                                  , PDFObjectStream
                                                   , PDFStartXRef
                                                   , PDFTrailer
-                                                  , PDFComment
-                                                  , PDFDictionary
-                                                  , PDFIndirectObject
-                                                  , PDFName
+                                                  , PDFVersion
+                                                  , PDFXRef
                                                   )
                                                 )
 import           Test.Hspec                     ( Spec
@@ -22,53 +29,52 @@ import           Test.Hspec                     ( Spec
                                                 , it
                                                 , shouldBe
                                                 )
-import qualified Data.HashMap.Strict           as HM
-import           Pdf.Object.Partition           ( toPartition
-                                                , PDFPartition(PDFPartition)
-                                                )
 
 toPartitionExamples :: [([PDFObject], PDFPartition)]
 toPartitionExamples =
   [ ( [ PDFVersion "1.7"
       , PDFComment "foo"
-      , PDFIndirectObject 1 0 (PDFName "bar") Nothing
-      , PDFIndirectObject
-        4
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "foo")]))
-        (Just "abc")
-      , PDFIndirectObject
-        3
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "bar")]))
-        (Just "def")
+      , PDFIndirectObject 1 0 (PDFName "bar")
+      , PDFIndirectObjectWithStream 3
+                                    0
+                                    (Map.fromList [("Name", PDFName "bar")])
+                                    "def"
+      , PDFIndirectObjectWithStream 4
+                                    0
+                                    (Map.fromList [("Name", PDFName "foo")])
+                                    "abc"
+      , PDFObjectStream 5 0 (Map.fromList [("Name", PDFName "baz")]) "xyz"
       , PDFXRef []
       , PDFTrailer
         (PDFDictionary
-          (HM.fromList [("Size", PDFNumber 2000.0), ("Root", PDFNumber 1.0)])
+          (Map.fromList [("Size", PDFNumber 2000.0), ("Root", PDFNumber 1.0)])
         )
       , PDFStartXRef 1500
       , PDFEndOfFile
       ]
     , PDFPartition
-      [ PDFIndirectObject 1 0 (PDFName "bar") Nothing
-      , PDFIndirectObject
-        4
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "foo")]))
-        (Just "abc")
-      , PDFIndirectObject
-        3
-        0
-        (PDFDictionary (HM.fromList [("Name", PDFName "bar")]))
-        (Just "def")
-      ]
-      [PDFVersion "1.7"]
-      [ PDFTrailer
-          (PDFDictionary
-            (HM.fromList [("Size", PDFNumber 2000.0), ("Root", PDFNumber 1.0)])
-          )
-      ]
+      (fromList
+        [ PDFIndirectObject 1 0 (PDFName "bar")
+        , PDFIndirectObjectWithStream 3
+                                      0
+                                      (Map.fromList [("Name", PDFName "bar")])
+                                      "def"
+        , PDFIndirectObjectWithStream 4
+                                      0
+                                      (Map.fromList [("Name", PDFName "foo")])
+                                      "abc"
+        , PDFObjectStream 5 0 (Map.fromList [("Name", PDFName "baz")]) "xyz"
+        ]
+      )
+      (fromList [PDFVersion "1.7"])
+      (fromList
+        [ PDFTrailer
+            (PDFDictionary
+              (Map.fromList [("Size", PDFNumber 2000.0), ("Root", PDFNumber 1.0)]
+              )
+            )
+        ]
+      )
     )
   ]
 

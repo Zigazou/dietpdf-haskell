@@ -6,6 +6,7 @@ module Util.String
   , fromHexString
   , normalizeHexString
   , hexStringToString
+  , startsWith
   ) where
 
 import qualified Data.ByteString               as BS
@@ -101,3 +102,9 @@ hexStringToString hexString = BS.concat
     | BS.length hs == 1 = BS.singleton (convertHexByte (BS.index hs 0) 0)
     | otherwise = BS.cons (convertHexByte (BS.index hs 0) (BS.index hs 1))
                           (convert (BS.drop 2 hs))
+
+{- |
+Tells if a `ByteString` starts with another `ByteString`.
+-}
+startsWith :: BS.ByteString -> BS.ByteString -> Bool
+startsWith start str = BS.take (BS.length start) str == start

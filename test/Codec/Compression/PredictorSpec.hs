@@ -21,36 +21,55 @@ import           Codec.Compression.Predictor    ( predict
                                                   )
                                                 )
 
-predictorExamples :: [(Predictor, Int, BS.ByteString, BS.ByteString)]
+predictorExamples :: [(Predictor, Int, Int, BS.ByteString, BS.ByteString)]
 predictorExamples =
-  [ (PNGNone, 1, "\xAA"            , "\x0A\xAA")
-  , (PNGNone, 1, "\xAA\xAA\xAA"    , "\x0A\xAA\x0A\xAA\x0A\xAA")
-  , (PNGSub , 4, "\x10\x20\x30\x40", "\x0B\x10\x10\x10\x10")
-  , (PNGSub , 2, "\x10\x20\x30\x40", "\x0B\x10\x10\x0B\x30\x10")
-  , (PNGUp  , 4, "\x01\x02\x03\x04", "\x0C\x01\x02\x03\x04")
-  , (PNGUp  , 1, "\x01\x02\x03\x04", "\x0C\x01\x0C\x01\x0C\x01\x0C\x01")
-  , (PNGUp  , 2, "\x01\x02\x02\x03", "\x0C\x01\x02\x0C\x01\x01")
+  [ (PNGNone, 1, 1, "\xAA"            , "\x00\xAA")
+  , (PNGNone, 1, 1, "\xAA\xAA\xAA"    , "\x00\xAA\x00\xAA\x00\xAA")
+  , (PNGNone, 1, 3, "\xAA\xAA\xAA"    , "\x00\xAA\xAA\xAA")
+  , (PNGSub , 4, 1, "\x10\x20\x30\x40", "\x01\x10\x10\x10\x10")
+  , (PNGSub , 2, 1, "\x10\x20\x30\x40", "\x01\x10\x10\x01\x30\x10")
+  , (PNGSub , 1, 2, "\x10\x20\x30\x40", "\x01\x10\x20\x01\x30\x40")
+  , (PNGSub , 2, 2, "\x10\x20\x30\x40", "\x01\x10\x20\x20\x20")
+  , (PNGUp  , 4, 1, "\x01\x02\x03\x04", "\x02\x01\x02\x03\x04")
+  , (PNGUp  , 1, 2, "\x01\x02\x03\x04", "\x02\x01\x02\x02\x02\x02")
+  , (PNGUp  , 1, 1, "\x01\x02\x03\x04", "\x02\x01\x02\x01\x02\x01\x02\x01")
+  , (PNGUp  , 2, 1, "\x01\x02\x02\x03", "\x02\x01\x02\x02\x01\x01")
   , ( PNGAverage
     , 3
+    , 1
     , "\x01\x02\x03\x04\x05\x06"
-    , "\x0D\x01\x02\x02\x0D\x04\x02\x02"
+    , "\x03\x01\x02\x02\x03\x04\x02\x02"
     )
-  , (TIFFNoPrediction, 1, "\xAA"            , "\xAA")
-  , (TIFFNoPrediction, 2, "\x10\x20\x30\x40", "\x10\x20\x30\x40")
+  , (TIFFNoPrediction, 1, 1, "\xAA"            , "\xAA")
+  , (TIFFNoPrediction, 2, 1, "\x10\x20\x30\x40", "\x10\x20\x30\x40")
   ]
 
 spec :: Spec
 spec = do
   describe "predict"
     $ forM_ predictorExamples
-    $ \(predictor, width, example, expected) ->
-        it ("should work with " ++ show predictor ++ " " ++ show example)
-          $          predict predictor width example
+    $ \(predictor, width, components, example, expected) ->
+        it
+            (  "should work with "
+            ++ show predictor
+            ++ " "
+            ++ show components
+            ++ " "
+            ++ show example
+            )
+          $          predict predictor width components example
           `shouldBe` Right expected
 
   describe "unpredict"
     $ forM_ predictorExamples
-    $ \(predictor, width, expected, example) ->
-        it ("should work with " ++ show predictor ++ " " ++ show example)
-          $          unpredict predictor width example
+    $ \(predictor, width, components, expected, example) ->
+        it
+            (  "should work with "
+            ++ show predictor
+            ++ " "
+            ++ show components
+            ++ " "
+            ++ show example
+            )
+          $          unpredict predictor width components example
           `shouldBe` Right expected

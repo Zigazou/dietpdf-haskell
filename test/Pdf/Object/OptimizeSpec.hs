@@ -5,10 +5,9 @@ module Pdf.Object.OptimizeSpec
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString.Lazy          as BL
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.Map.Strict           as Map
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFDictionary
+                                                  ( PDFIndirectObjectWithStream
                                                   , PDFNumber
                                                   , PDFName
                                                   )
@@ -27,24 +26,19 @@ import           Util.Step                      ( runExceptT )
 
 objectExamples :: [(PDFObject, PDFObject)]
 objectExamples =
-  [ ( PDFIndirectObject
+  [ ( PDFIndirectObjectWithStream
       1
       0
-      (PDFDictionary
-        (HM.fromList
-          [("Length", PDFNumber 16.0), ("Filter", PDFName "FlateDecode")]
-        )
+      (Map.fromList [("Size", PDFNumber 16.0), ("Filter", PDFName "FlateDecode")]
       )
-      (Just . BL.toStrict . ZL.compress . BL.fromStrict $ "Hello, world!")
-    , PDFIndirectObject
+      (BL.toStrict . ZL.compress . BL.fromStrict $ "Hello, world!")
+    , PDFIndirectObjectWithStream
       1
       0
-      (PDFDictionary
-        (HM.fromList
-          [("Length", PDFNumber 15.0), ("Filter", PDFName "RunLengthDecode")]
-        )
+      (Map.fromList
+        [("Size", PDFNumber 16.0), ("Filter", PDFName "RunLengthDecode")]
       )
-      (eitherToMaybe $ RL.compress "Hello, world!")
+      (fromRight "" $ RL.compress "Hello, world!")
     )
   ]
 

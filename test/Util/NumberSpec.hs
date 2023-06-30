@@ -28,7 +28,13 @@ toNumberExamples =
 
 fromNumberExamples :: [(Double, BS.ByteString)]
 fromNumberExamples =
-  [(1.0, "1"), (0.0, "0"), (-0.0, "0"), (0.1, ".1"), (-0.1, "-.1")]
+  [ (1.0    , "1")
+  , (0.0    , "0")
+  , (-0.0   , "0")
+  , (0.1    , ".1")
+  , (-0.1   , "-.1")
+  , (0.00028, ".00028")
+  ]
 
 spec :: Spec
 spec = describe "toNumber" $ do

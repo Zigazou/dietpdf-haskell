@@ -35,11 +35,16 @@ ghc-options:
 
 library:
   source-dirs: src
+  ghc-options:
+  - -O2
+  - -funfolding-use-threshold=16
+  - -fexcess-precision
+  - -optc-O3
+  - -optc-ffast-math
   dependencies:
   - bytestring
   - binary
   - binary-parsers
-  - unordered-containers
   - ordered-containers
   - containers
   - mtl
@@ -54,12 +59,18 @@ library:
   - xml
   - transformers
   - stringsearch
+  - double-conversion
 
 executables:
   dietpdf:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
+    - -O2
+    - -funfolding-use-threshold=16
+    - -fexcess-precision
+    - -optc-O3
+    - -optc-ffast-math
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
@@ -84,7 +95,7 @@ tests:
     - QuickCheck
     - zlib
     - bytestring
-    - unordered-containers
+    - containers
     - ordered-containers
     - extra
     - binary-parsers

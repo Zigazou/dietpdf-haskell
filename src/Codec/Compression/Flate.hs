@@ -11,6 +11,7 @@ module Codec.Compression.Flate
   ( decompress
   , compress
   , fastCompress
+  , noCompress
   ) where
 
 import qualified Codec.Compression.Hopfli      as HL
@@ -48,6 +49,10 @@ zlibCompressParams :: ZL.CompressParams
 zlibCompressParams =
   ZL.defaultCompressParams { ZL.compressLevel = ZL.bestCompression }
 
+zlibNoCompressParams :: ZL.CompressParams
+zlibNoCompressParams =
+  ZL.defaultCompressParams { ZL.compressLevel = ZL.noCompression }
+
 {-|
 Compress a strict bytestring.
 
@@ -62,6 +67,18 @@ fastCompress
   -- ^ Either an error or the compressed bytestring
 fastCompress =
   Right . BL.toStrict . ZL.compressWith zlibCompressParams . BL.fromStrict
+
+{-|
+Stores a `ByteString` as a Zlib compressed string but with no compression
+
+The output is standardized but will always return a Right value.
+-}
+noCompress
+  :: BS.ByteString -- ^ A strict bytestring to encode
+  -> Either UnifiedError BS.ByteString
+  -- ^ Either an error or the compressed bytestring
+noCompress =
+  Right . BL.toStrict . ZL.compressWith zlibNoCompressParams . BL.fromStrict
 
 {-|
 Decompress a strict bytestring compressed using the Zlib format of the deflate

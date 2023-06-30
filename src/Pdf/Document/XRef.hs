@@ -13,18 +13,17 @@ module Pdf.Document.XRef
   ) where
 
 import           Data.Foldable                  ( foldl' )
-import qualified Data.HashMap.Strict           as HM
+import qualified Data.IntMap.Strict            as IM
 import           Data.Ix                        ( range
                                                 , rangeSize
                                                 )
-import qualified Data.Set.Ordered              as OS
 import           Data.Sort                      ( sort )
 import           Pdf.Object.Object              ( PDFObject(PDFXRef)
                                                 , XRefSubsection(XRefSubsection)
                                                 , freeEntry
                                                 , inUseEntry
                                                 )
-import           Pdf.Object.Collection          ( PDFObjects
+import           Pdf.Document.Collection        ( PDFObjects
                                                 , EncodedObjects
                                                 , ObjectOffsets
                                                 , EncodedObject
@@ -33,17 +32,18 @@ import           Pdf.Object.Collection          ( PDFObjects
                                                   )
                                                 , encodeObject
                                                 )
+import           Pdf.Document.Document          ( toList )
 
 -- | Given a collection of encoded objects, calculates their offsets
 calcOffsets :: Int -> EncodedObjects -> ObjectOffsets
-calcOffsets startOffset = snd . calcOffset . sort . OS.toAscList
+calcOffsets startOffset = snd . calcOffset . sort . toList
  where
   calcOffset :: [EncodedObject] -> (Int, ObjectOffsets)
   calcOffset = foldl'
     (\(offset, offsets) (EncodedObject number objectLength _) ->
-      (offset + objectLength, HM.insert number offset offsets)
+      (offset + objectLength, IM.insert number offset offsets)
     )
-    (startOffset, HM.empty)
+    (startOffset, IM.empty)
 
 -- | Given a collection of encoded objects, generates an old format XRef table
 xrefTable :: Int -> EncodedObjects -> PDFObject
@@ -51,14 +51,14 @@ xrefTable startOffset objects | OS.null objects = PDFXRef []
                               | otherwise       = PDFXRef [xrefSubsection]
  where
   offsets  = calcOffsets startOffset objects
-  numRange = if HM.null offsets
+  numRange = if IM.null offsets
     then (0, 0)
-    else HM.foldlWithKey'
+    else IM.foldlWithKey'
       (\(mini, maxi) objNum _ -> (min objNum mini, max objNum maxi))
       (maxBound, minBound)
       offsets
   entries =
-    [ maybe freeEntry (`inUseEntry` 0) (HM.lookup index offsets)
+    [ maybe freeEntry (`inUseEntry` 0) (IM.lookup index offsets)
     | index <- range numRange
     ]
   xrefSubsection = XRefSubsection (fst numRange) (rangeSize numRange) entries

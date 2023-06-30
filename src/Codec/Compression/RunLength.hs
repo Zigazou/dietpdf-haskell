@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StrictData #-}
 {-|
 This modules implements the RLE alfgorithm as used in PDF file (and also TIFF)
 
@@ -43,8 +44,8 @@ import           Util.Errors                    ( UnifiedError
                                                 )
 
 data RLEAction
-  = RLERepeat !Int !Word8
-  | RLECopy !BS.ByteString
+  = RLERepeat Int Word8
+  | RLECopy BS.ByteString
   | RLEEndOfData
 
 rleEndOfData :: Word8
