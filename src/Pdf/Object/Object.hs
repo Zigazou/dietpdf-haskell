@@ -38,6 +38,7 @@ module Pdf.Object.Object
   , isDelimiter
   , isPlusMinus
   , isWhiteSpace
+  , isSpace
   , isKeywordCharacter
   , isOctal
   , isStringEscapeSequence
@@ -114,6 +115,18 @@ The following characters are considered white spaces:
 -}
 isWhiteSpace :: Word8 -> Bool
 isWhiteSpace = isJust . flip BS.elemIndex "\0\t\n\f\r "
+
+{-|
+Test if a byte is a space.
+
+The following characters are considered white spaces:
+
+- `asciiNUL`
+- `asciiTAB`
+- `asciiSPACE`
+-}
+isSpace :: Word8 -> Bool
+isSpace = isJust . flip BS.elemIndex "\0\t "
 
 {-|
 Test if a byte is a keyword character.

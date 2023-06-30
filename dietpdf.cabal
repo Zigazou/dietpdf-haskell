@@ -87,6 +87,7 @@ library
     , ordered-containers
     , sort
     , split
+    , stringsearch
     , text
     , transformers
     , unordered-containers
@@ -142,6 +143,7 @@ test-suite dietpdf-test
       Pdf.Parser.LooseEndOfLineSpec
       Pdf.Parser.NameSpec
       Pdf.Parser.NumberSpec
+      Pdf.Parser.ParserSpec
       Pdf.Parser.StartXRefSpec
       Pdf.Parser.StringSpec
       Pdf.Parser.TrailerSpec

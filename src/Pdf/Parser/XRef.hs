@@ -63,6 +63,7 @@ import           Data.Binary.Parser             ( Get
                                                 , some'
                                                 , string
                                                 , word8
+                                                , skipWhile
                                                 )
 import           Pdf.Parser.LooseEndOfLine      ( looseEndOfLineP )
 import           Data.Word                      ( Word8 )
@@ -75,6 +76,7 @@ import           Pdf.Object.Object              ( PDFObject(PDFXRef)
                                                   , InUseEntry
                                                   )
                                                 , XRefSubsection(XRefSubsection)
+                                                , isSpace
                                                 )
 import           Util.Ascii                     ( asciiCR
                                                 , asciiDIGITNINE
@@ -141,9 +143,11 @@ xrefEntryP = do
 
 xrefSubsectionP :: Get XRefSubsection
 xrefSubsectionP = do
+  skipWhile isSpace
   offset <- integerP
   word8 asciiSPACE
   count <- integerP
+  skipWhile isSpace
   looseEndOfLineP
   entries <- takeN count xrefEntryP
   return $ XRefSubsection offset count entries
