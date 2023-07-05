@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 {- |
 This module contains functions facilitating container manipulation (`PDFArray`,
@@ -9,7 +9,6 @@ This module contains functions facilitating container manipulation (`PDFArray`,
 -}
 module Pdf.Object.Container
   ( deepMap
-  , deepMapM
   , Filter(Filter, fDecodeParms, fFilter)
   , FilterList
   , mkFilterList
@@ -21,10 +20,6 @@ module Pdf.Object.Container
   , getFilters
   ) where
 
-import           Control.Monad.State            ( get
-                                                , lift
-                                                , put
-                                                )
 import qualified Data.ByteString               as BS
 import qualified Data.Map.Strict               as Map
 import qualified Data.Sequence                 as SQ
@@ -37,59 +32,43 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFNull
                                                   , PDFObjectStream
                                                   )
+                                                , hasDictionary
                                                 )
-import           Pdf.Object.State               ( (?=)
-                                                , FallibleComputation
-                                                , ObjectComputation
-                                                , embedObject
+import           Pdf.Object.State               ( embedObject
                                                 , getValue
-                                                , hasDictionaryS
-                                                , ifObject
-                                                , modifyObject
-                                                , updateE
+                                                , setMaybe
                                                 )
 import           Util.Dictionary                ( Dictionary )
-import           Util.Errors                    ( UnifiedError
+import           Util.UnifiedError              ( UnifiedError
                                                   ( InvalidFilterParm
                                                   )
-                                                , unifiedError
+                                                , FallibleT
                                                 )
+import           Util.Logging                   ( Logging )
+import           Data.Functor                   ( (<&>) )
+import           Control.Monad.Trans.Except     ( throwE )
 
 {- |
 Apply a function to any object contained by an object at any level.
 -}
 deepMap
-  :: (PDFObject -> Either UnifiedError PDFObject) -> FallibleComputation ()
-deepMap fn = get >>= \case
-  PDFIndirectObject{}           -> modifyObject (`updateE` deepMap fn)
-  PDFIndirectObjectWithStream{} -> modifyObject (`updateE` deepMap fn)
-  PDFObjectStream{}             -> modifyObject (`updateE` deepMap fn)
-  PDFDictionary dict ->
-    lift (sequence (Map.map (`updateE` deepMap fn) dict))
-      >>= embedObject
-      .   PDFDictionary
-  PDFArray items ->
-    lift (sequence (flip updateE (deepMap fn) <$> items)) >>= put . PDFArray
-  object -> lift (fn object) >>= put
-
-{- |
-Apply a function to any object contained by an object at any level.
--}
-deepMapM :: FallibleComputation () -> FallibleComputation ()
-deepMapM fn = get >>= \case
+  :: Logging m
+  => (PDFObject -> FallibleT m PDFObject)
+  -> PDFObject
+  -> FallibleT m PDFObject
+deepMap fn container = case container of
   PDFIndirectObject _ _ object ->
-    lift (updateE object (deepMapM fn)) >>= embedObject
-  PDFIndirectObjectWithStream _ _ dict _ -> do
-    lift (updateE (PDFDictionary dict) (deepMapM fn)) >>= embedObject
+    deepMap fn object >>= flip embedObject container
+  PDFIndirectObjectWithStream _ _ dict _ ->
+    deepMap fn (PDFDictionary dict) >>= flip embedObject container
   PDFObjectStream _ _ dict _ ->
-    lift (updateE (PDFDictionary dict) (deepMapM fn)) >>= embedObject
+    deepMap fn (PDFDictionary dict) >>= flip embedObject container
   PDFDictionary dict ->
-    lift (sequence (Map.map (`updateE` deepMapM fn) dict))
-      >>= embedObject
+    sequence (Map.map (deepMap fn) dict)
+      >>= flip embedObject container
       .   PDFDictionary
-  PDFArray items ->
-    lift (sequence (flip updateE (deepMapM fn) <$> items)) >>= put . PDFArray
-  object -> lift (updateE object fn) >>= put
+  PDFArray items -> sequence (deepMap fn <$> items) <&> PDFArray
+  object         -> fn object
 
 {- |
 A filter with its parameters.
@@ -113,10 +92,10 @@ mkFilterList = SQ.fromList
 {- |
 Return a list of filters contained in a `PDFDictionary`.
 -}
-getFilters :: FallibleComputation FilterList
-getFilters = do
-  filters <- getValue "Filter"
-  parms   <- getValue "DecodeParms"
+getFilters :: Logging m => PDFObject -> FallibleT m FilterList
+getFilters container = do
+  filters <- getValue "Filter" container
+  parms   <- getValue "DecodeParms" container
 
   case (filters, parms) of
     (Just (PDFArray fs), Just PDFNull      ) -> return $ group fs SQ.empty
@@ -134,7 +113,7 @@ getFilters = do
       return $ group (SQ.singleton f) (SQ.singleton p)
 
     (Nothing, _) -> return SQ.empty
-    (_      , _) -> unifiedError InvalidFilterParm
+    (_      , _) -> throwE InvalidFilterParm
  where
   group :: SQ.Seq PDFObject -> SQ.Seq PDFObject -> FilterList
   group fs ps = SQ.zipWith
@@ -182,10 +161,11 @@ that the object has a stream.
 
 It does nothing on any other object.
 -}
-setFilters :: Monad m => FilterList -> ObjectComputation m ()
-setFilters filters = ifObject hasDictionaryS $ do
-  "Filter" ?= filtersFilter filters
-  "DecodeParms" ?= filtersParms filters
+setFilters :: Logging m => FilterList -> PDFObject -> FallibleT m PDFObject
+setFilters filters object = if hasDictionary object
+  then setMaybe "Filter" (filtersFilter filters) object
+    >>= setMaybe "DecodeParms" (filtersParms filters)
+  else return object
 
 {- |
 Insert a key-value pair inside a `Dictionary`.

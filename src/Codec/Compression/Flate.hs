@@ -18,7 +18,7 @@ import qualified Codec.Compression.Hopfli      as HL
 import qualified Codec.Compression.Zlib        as ZL
 import qualified Codec.Compression.Zlib.Internal
                                                as ZLI
-import           Util.Errors                    ( UnifiedError(FlateDecodeError)
+import           Util.UnifiedError                    ( UnifiedError(FlateDecodeError)
                                                 )
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy          as BL

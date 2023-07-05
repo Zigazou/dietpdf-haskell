@@ -3,12 +3,14 @@ module Pdf.Document.Uncompress
   ) where
 
 import           Pdf.Document.Document          ( PDFDocument
-                                                , cMap
+                                                , toList
+                                                , fromList
                                                 )
 import           Pdf.Document.ObjectStream      ( explode )
-import           Pdf.Object.Object              ( PDFObject )
-import           Pdf.Object.State               ( updateE )
 import           Pdf.Object.Unfilter            ( unfilter )
+import           Util.Logging                   ( Logging )
+import           Data.Functor                   ( (<&>) )
+import           Util.UnifiedError              ( FallibleT )
 
 {- |
 Uncompress all `PDFObject` contained in a `PDFDocument`.
@@ -20,10 +22,7 @@ If a `PDFObject` cannot be uncompressed (meaning its processing generated an
 error), the object is left as is. Thus this function may leave object
 uncompressed.
 -}
-uncompress :: PDFDocument -> PDFDocument
-uncompress = cMap unfilter' . explode
- where
-  unfilter' :: PDFObject -> PDFObject
-  unfilter' object = case updateE object unfilter of
-    Left  _          -> object
-    Right unfiltered -> unfiltered
+uncompress :: Logging m => PDFDocument -> FallibleT m PDFDocument
+uncompress pdf = do
+  objects <- explode pdf <&> toList
+  fromList <$> sequence (unfilter <$> objects)

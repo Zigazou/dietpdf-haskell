@@ -28,7 +28,7 @@ import           Test.Hspec                     ( Spec
                                                 , it
                                                 , shouldBe
                                                 )
-import           Util.Errors                    ( UnifiedError(NoObjectToEncode)
+import           Util.UnifiedError                    ( UnifiedError(NoObjectToEncode)
                                                 )
 
 fromObjectStreamExamples :: [(PDFObject, Either UnifiedError PDFDocument)]

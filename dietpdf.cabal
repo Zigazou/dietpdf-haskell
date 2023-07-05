@@ -63,6 +63,8 @@ library
       Pdf.Graphics.Parser.Stream
       Pdf.Graphics.Parser.String
       Pdf.Object.Container
+      Pdf.Object.Filter
+      Pdf.Object.Format
       Pdf.Object.Linearization
       Pdf.Object.Object
       Pdf.Object.Optimize
@@ -87,12 +89,13 @@ library
       Util.Ascii
       Util.ByteString
       Util.Dictionary
-      Util.Errors
       Util.Hex
+      Util.Logging
       Util.Name
       Util.Number
       Util.String
       Util.Text
+      Util.UnifiedError
   other-modules:
       Paths_dietpdf
   hs-source-dirs:
@@ -136,8 +139,10 @@ executable dietpdf
     , bytestring
     , dietpdf
     , formatting
+    , mtl
     , optparse-applicative
     , text
+    , transformers
   default-language: Haskell2010
 
 test-suite dietpdf-test
@@ -188,6 +193,8 @@ test-suite dietpdf-test
       Pdf.Object.ReferenceSpec
       Pdf.Object.StateSpec
       Pdf.Object.StringSpec
+      Pdf.Parser.IndirectObjectSpec
+      Pdf.Parser.ParserSpec
       Util.ByteStringSpec
       Util.HexSpec
       Util.NumberSpec
@@ -209,5 +216,6 @@ test-suite dietpdf-test
     , hspec
     , mtl
     , ordered-containers
+    , text
     , zlib
   default-language: Haskell2010

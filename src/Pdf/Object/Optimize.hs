@@ -9,396 +9,62 @@ module Pdf.Object.Optimize
   ( optimize
   ) where
 
-import qualified Codec.Compression.Flate       as FL
-import           Codec.Compression.Predictor    ( Predictor(PNGSub, PNGUp)
-                                                , predict
-                                                , toWord8
-                                                )
-import qualified Codec.Compression.RunLength   as RL
 import           Codec.Compression.XML          ( optimizeXML )
-import qualified Codec.Filter.Ascii85          as A8
-import qualified Codec.Filter.AsciiHex         as AH
-import qualified Data.ByteString               as BS
-import           Data.Foldable                  ( minimumBy )
-import qualified Data.HashMap.Strict           as HM
-import qualified Data.Sequence                 as SQ
-import           Pdf.Object.Container           ( deepMap )
-import           Pdf.Object.Object              ( Dictionary
-                                                , PDFObject
-                                                  ( PDFArray
-                                                  , PDFDictionary
-import           Control.Monad.State            ( get
-                                                , lift
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Foldable                  ( minimumBy )
 import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Container           ( Filter(Filter)
-                                                , deepMap
-                                                , setFilters
-                                                , FilterList
-                                                )
+import           Pdf.Object.Container           ( deepMap )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFIndirectObject
+                                                  ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFName
-                                                  , PDFNumber
-                                                  , PDFNull
-                                                  , PDFNull
-                                                  , PDFNumber
                                                   , PDFObjectStream
                                                   , PDFTrailer
                                                   )
+                                                , hasStream
                                                 )
-import           Pdf.Object.State               ( FallibleComputation
-                                                , getStream
-                                                , hasStreamS
-                                                , getValue
+import           Pdf.Object.State               ( getStream
                                                 , setStream
-                                                , updateE
-                                                , ifObject
                                                 )
 import           Pdf.Object.String              ( optimizeString )
 import           Pdf.Object.Format              ( txtObjectNumberVersion )
 import           Pdf.Object.Unfilter            ( unfilter )
-import           Util.Errors                    ( UnifiedError
-                                                  ( InvalidFilterParm
-                                                  )
-                                                )
-import           Util.Step                      ( StepM
-                                                , stepT
-                                                , actionT
-                                                , StepT
-                                                , except
-                                                , catchE
-                                                )
-import qualified Data.Text                     as T
-import           Text.Printf                    ( printf )
-
-data Filter = Filter
-  { fFilter      :: PDFObject
-  , fDecodeParms :: PDFObject
-  }
-
-hasNoDecodeParms :: Filter -> Bool
-hasNoDecodeParms = (== PDFNull) . fDecodeParms
-
-unfilterStream
-  :: StepM m => ([Filter], BS.ByteString) -> StepT m ([Filter], BS.ByteString)
-unfilterStream (filters@(pdfFilter : otherFilters), stream)
-  | fFilter pdfFilter == PDFName "FlateDecode"
-  = except (FL.decompress stream) >>= (unfilterStream . (otherFilters, ))
-  | fFilter pdfFilter == PDFName "RunLengthDecode"
-  = except (RL.decompress stream) >>= (unfilterStream . (otherFilters, ))
-  | fFilter pdfFilter == PDFName "LZWDecode"
-  = except (LZ.decompress stream) >>= (unfilterStream . (otherFilters, ))
-  | fFilter pdfFilter == PDFName "ASCII85Decode"
-  = except (A8.decode stream) >>= (unfilterStream . (otherFilters, ))
-  | fFilter pdfFilter == PDFName "ASCIIHexDecode"
-  = except (AH.decode stream) >>= (unfilterStream . (otherFilters, ))
-  | otherwise
-  = return (filters, stream)
-unfilterStream (filters, stream) = return (filters, stream)
-
-getFilters :: Dictionary -> Either UnifiedError [Filter]
-getFilters dict =
-  case (HM.lookup "Filter" dict, HM.lookup "DecodeParms" dict) of
-    (Just (  PDFArray fs), Just PDFNull      ) -> group fs []
-    (Just (  PDFArray fs), Nothing           ) -> group fs []
-    (Just (  PDFArray fs), Just (PDFArray ps)) -> group fs ps
-    (Just (  PDFArray fs), Just object       ) -> group fs [object]
-
-    (Just f@(PDFName  _ ), Just PDFNull      ) -> group [f] []
-    (Just f@(PDFName  _ ), Nothing           ) -> group [f] []
-    (Just f@(PDFName  _ ), Just (PDFArray ps)) -> group [f] ps
-    (Just f@(PDFName  _ ), Just p            ) -> group [f] [p]
-
-    (Nothing             , _                 ) -> return []
-    (_                   , _                 ) -> Left InvalidFilterParm
- where
-  group :: [PDFObject] -> [PDFObject] -> Either UnifiedError [Filter]
-  group fs ps = return $ zipWith Filter fs (ps ++ repeat PDFNull)
-
-setFilters :: [Filter] -> Maybe PDFObject
-setFilters []                           = Nothing
-setFilters [Filter aName@(PDFName _) _] = Just aName
-setFilters filters                      = Just (PDFArray $ fFilter <$> filters)
-
-setDecodeParms :: [Filter] -> Maybe PDFObject
-setDecodeParms []                      = Nothing
-setDecodeParms [Filter _ PDFNull     ] = Nothing
-setDecodeParms [Filter _ aDecodeParms] = Just aDecodeParms
-setDecodeParms filters | all hasNoDecodeParms filters = Nothing
-                       | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
-
-insertMaybe :: Dictionary -> BS.ByteString -> Maybe PDFObject -> Dictionary
-insertMaybe dict name (Just object) = HM.insert name object dict
-insertMaybe dict _    Nothing       = dict
-
-insertMaybes :: Dictionary -> [(BS.ByteString, Maybe PDFObject)] -> Dictionary
-insertMaybes dict [] = dict
-insertMaybes dict ((name, value) : remains) =
-  insertMaybes (insertMaybe dict name value) remains
-
-unfilter :: StepM m => PDFObject -> StepT m PDFObject
-unfilter (PDFIndirectObject num gen (PDFDictionary dict) (Just stream)) = do
-  (remainingFilters, unfilteredStream) <- unfiltered
-  return $ PDFIndirectObject
-    num
-    gen
-    (PDFDictionary $ insertMaybes
-      dict
-      [ ("DecodeParms", setDecodeParms remainingFilters)
-      , ("Filter"     , setFilters remainingFilters)
-      ]
-    )
-    (Just unfilteredStream)
- where
-  unfiltered :: StepM m => StepT m ([Filter], BS.ByteString)
-  unfiltered = except (getFilters dict) >>= unfilterStream . (, stream)
-unfilter anyOtherObject = return anyOtherObject
-import           Util.Array                     ( mkArray
-                                                , mkEmptyArray
+import           Pdf.Object.Filter              ( filterOptimize )
+import           Util.Logging                   ( sayF
+                                                , Logging
                                                 )
 import           Pdf.Graphics.Parser.Stream     ( gfxParse )
 import           Pdf.Graphics.Object            ( separateGfx )
-
-eMinOrder :: (a, BS.ByteString) -> (a, BS.ByteString) -> Ordering
-eMinOrder (_, x) (_, y) = compare (BS.length x) (BS.length y)
-
-reduceArray :: [PDFObject] -> PDFObject
-reduceArray [item] = item
-reduceArray items  = PDFArray items
-
-sizeComparison :: BS.ByteString -> ([PDFObject], BS.ByteString) -> T.Text
-sizeComparison before (_, after) = T.pack
-  $ printf "%d/%d (%+.2f%%)" sizeBefore sizeAfter ratio
- where
-  sizeBefore = BS.length before
-  sizeAfter  = BS.length after
-  ratio :: Float
-  ratio =
-    100
-      * (fromIntegral sizeAfter - fromIntegral sizeBefore)
-      / fromIntegral sizeBefore
-
-shouldTryCombining :: BS.ByteString -> BS.ByteString -> Bool
-shouldTryCombining raw rle = BS.length raw > BS.length rle
-
-filterOptimize :: StepM m => PDFObject -> StepT m PDFObject
-filterOptimize (PDFIndirectObject num gen (PDFDictionary dict) (Just stream)) =
-  do
-    zopfli     <- evaluateZopfli stream
-    rle        <- evaluateRle stream
-
-    evaluateds <- if shouldTryCombining stream (snd rle)
-      then do
-        rleZopfli <- evaluateRleZopfli stream (snd rle)
-        return [zopfli, rle, rleZopfli]
-      else return [zopfli, rle]
-
-    let (bestFilters, bestStream) =
-          minimumBy eMinOrder (SQ.fromList evaluateds)
-
-    return $ PDFIndirectObject
-      num
-      gen
-      (PDFDictionary
-        (HM.union
-          (HM.fromList
-            [ ("Filter", reduceArray bestFilters)
-            , ("Length", PDFNumber . fromIntegral . BS.length $ bestStream)
-            ]
-          )
-          dict
-        )
-      )
-      (Just bestStream)
- where
-  evaluateZopfli
-    :: StepM m => BS.ByteString -> StepT m ([PDFObject], BS.ByteString)
-  evaluateZopfli before = do
-    compressedStream <- except (FL.compress before)
-    let result     = ([PDFName "FlateDecode"], compressedStream)
-        comparison = sizeComparison before result
-    stepT ("  - Evaluating Zopfli    : " <> comparison)
-    return result
-
-  evaluateRle
-    :: StepM m => BS.ByteString -> StepT m ([PDFObject], BS.ByteString)
-  evaluateRle before = do
-    do
-      compressedStream <- except (RL.compress before)
-      let result     = ([PDFName "RunLengthDecode"], compressedStream)
-          comparison = sizeComparison before result
-      stepT ("  - Evaluating RLE       : " <> comparison)
-      return result
-
-  evaluateRleZopfli
-    :: StepM m
-    => BS.ByteString
-    -> BS.ByteString
-    -> StepT m ([PDFObject], BS.ByteString)
-  evaluateRleZopfli before rle = do
-    compressedStream <- except (FL.compress rle)
-    let
-      result =
-        ([PDFName "FlateDecode", PDFName "RunLengthDecode"], compressedStream)
-      comparison = sizeComparison before result
-    stepT ("  - Evaluating RLE+Zopfli: " <> comparison)
-    return result
-
-filterOptimize object = return object
-zopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> (FilterList, Either UnifiedError BS.ByteString)
-zopfli _ stream =
-  (mkArray [Filter (PDFName "FlateDecode") PDFNull], FL.compress stream)
-
-rle
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> (FilterList, Either UnifiedError BS.ByteString)
-rle _ stream =
-  (mkArray [Filter (PDFName "RunLengthDecode") PDFNull], RL.compress stream)
-
-rleZopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> (FilterList, Either UnifiedError BS.ByteString)
-rleZopfli _ stream =
-  ( mkArray
-    [ Filter (PDFName "FlateDecode")     PDFNull
-    , Filter (PDFName "RunLengthDecode") PDFNull
-    ]
-  , snd (rle Nothing stream) >>= FL.compress
-  )
-
-predZopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> (FilterList, Either UnifiedError BS.ByteString)
-predZopfli (Just (width, components)) stream =
-  ( mkArray
-    [ Filter
-        (PDFName "FlateDecode")
-        (PDFDictionary
-          (Map.fromList
-            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
-            , ("Columns"  , PDFNumber (fromIntegral width))
-            , ("Colors"   , PDFNumber (fromIntegral components))
-            ]
-          )
-        )
-    ]
-  , predict PNGUp width components stream >>= FL.compress
-  )
-predZopfli _noWidth _stream = (mkEmptyArray, Left InvalidFilterParm)
-
-predRleZopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> (FilterList, Either UnifiedError BS.ByteString)
-predRleZopfli (Just (width, components)) stream =
-  ( mkArray
-    [ Filter
-        (PDFName "FlateDecode")
-        (PDFDictionary
-          (Map.fromList
-            [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
-            , ("Columns"  , PDFNumber (fromIntegral width))
-            , ("Colors"   , PDFNumber (fromIntegral components))
-            ]
-          )
-        )
-    ]
-  , predict PNGSub width components stream >>= FL.compress
-  )
-predRleZopfli _noWidth _stream = (mkEmptyArray, Left InvalidFilterParm)
-
-applyEveryFilter
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> [(FilterList, Either UnifiedError BS.ByteString)]
-applyEveryFilter widthComponents stream =
-  [zopfli, rle, predRleZopfli, rleZopfli, predZopfli]
-    <*> pure widthComponents
-    <*> pure stream
-
-getWidthComponents :: FallibleComputation (Maybe (Int, Int))
-getWidthComponents = do
-  width      <- getValue "Width"
-  colorSpace <- getValue "ColorSpace"
-
-  let components :: Int
-      components = case colorSpace of
-        Just (PDFName "DeviceRGB" ) -> 3
-        Just (PDFName "DeviceCMYK") -> 4
-        _anyOtherValue              -> 1
-
-  case width of
-    Just (PDFNumber width') -> return $ Just (round width', components)
-    _anyOtherValue          -> return Nothing
-
-filterOptimize :: FallibleComputation ()
-filterOptimize = ifObject hasStreamS $ do
-  stream          <- getStream
-  widthComponents <- getWidthComponents
-  let (bestFilters, bestStream) = minimumBy
-        eMinOrder
-        (mkArray (applyEveryFilter widthComponents stream))
-  setStream =<< lift bestStream
-  setFilters bestFilters
+import qualified Data.Text                     as T
+import           Util.UnifiedError              ( FallibleT
+                                                , ifFail
+                                                )
 
 streamIsXML :: PDFObject -> Bool
 streamIsXML (PDFIndirectObjectWithStream _ _ dictionary _) =
   dictionary Map.!? "Subtype" == Just (PDFName "XML")
 streamIsXML _ = False
 
-streamOptimize :: StepM m => PDFObject -> StepT m PDFObject
-streamOptimize object@(PDFIndirectObject _ _ (PDFDictionary _) (Just stream))
-  | streamIsXML object = do
-    stepT "  - Packing XML stream"
-    return $ updateStream object (optimizeXML stream)
-  | otherwise = return object
-streamOptimize object = return object
-streamOptimize :: FallibleComputation ()
-streamOptimize = do
-  object <- get
-  stream <- getStream
+streamOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
+streamOptimize object = do
+  stream <- getStream object
   if streamIsXML object
-    then setStream (optimizeXML stream)
+    then setStream (optimizeXML stream) object
     else case gfxParse stream of
-      Right objects -> setStream (separateGfx objects)
-      _error        -> return ()
+      Right objects -> setStream (separateGfx objects) object
+      _error        -> return object
 
 {- |
 Completely refilter a stream by finding the best filter combination.
 
 It also optimized nested strings and XML streams.
 -}
-refilter :: StepM m => PDFObject -> StepT m PDFObject
-refilter object@(PDFIndirectObject _ _ (PDFDictionary _) (Just _)) = do
-  stepT "  - Packing strings"
-  {--let oStream = unfilter (deepMap optimizeString object) >>= streamOptimize
-  case oStream of
-    Right oObject -> filterOptimize oObject
-    Left  _       -> return oStream--}
-  unfilter (deepMap optimizeString object) >>= streamOptimize >>= filterOptimize
-
+refilter :: Logging m => PDFObject -> FallibleT m PDFObject
 refilter object = do
-  stepT "  - Packing strings"
-  return (deepMap optimizeString object)
-refilter :: FallibleComputation ()
-refilter = do
-  deepMap optimizeString
-  ifObject hasStreamS $ do
-    deepMap optimizeString
-    unfilter
-    streamOptimize
-    filterOptimize
+  sayF "  - Packing strings"
+  stringOptimized <- deepMap optimizeString object
+
+  if hasStream object
+    then unfilter stringOptimized >>= streamOptimize >>= filterOptimize
+    else return stringOptimized
 
 {- |
 Determine if a `PDFObject` is optimizable, whether because its filters are
@@ -437,22 +103,14 @@ Optimization of spaces is done at the `PDFObject` level, not by this function.
 If the PDF object is not elligible to optimization or if optimization is
 ineffective, it is returned as is.
 -}
-optimize :: (StepM m) => PDFObject -> StepT m PDFObject
-optimize object
-  | optimizable object = do
-    stepT (txtObjectNumberVersion object)
-    catchE
-      (refilter object)
-      (\unifiedError -> do
-        stepT
-          ("  - Unable to optimize (" <> (T.pack . show) unifiedError <> ")")
-        return object
-      )
-  | otherwise = do
-    actionT (txtObjectNumberVersion object <> ": ignored") object
-optimize :: PDFObject -> PDFObject
+optimize :: Logging m => PDFObject -> FallibleT m PDFObject
 optimize object = if optimizable object
-  then case updateE object refilter of
-    Right optimizedObject -> optimizedObject
-    Left  _               -> object
-  else object
+  then do
+    sayF (txtObjectNumberVersion object)
+    refilter object
+      `ifFail` (\anError -> do
+                 sayF
+                   ("  - Cannot optimize (" <> (T.pack . show) anError <> ")")
+                 return object
+               )
+  else sayF (txtObjectNumberVersion object <> ": ignored") >> return object

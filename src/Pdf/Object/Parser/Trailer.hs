@@ -28,7 +28,9 @@ import           Data.Binary.Parser             ( Get
                                                 , string
                                                 , skipWhile
                                                 )
-import           Pdf.Object.Object              ( PDFObject(PDFTrailer) )
+import           Pdf.Object.Object              ( PDFObject(PDFTrailer)
+                                                , isWhiteSpace
+                                                )
 import           Pdf.Object.Parser.LooseEndOfLine
                                                 ( looseEndOfLineP )
 import           Pdf.Object.Parser.Container    ( dictionaryP )

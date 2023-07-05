@@ -15,7 +15,8 @@ import           Util.String                    ( hexStringToString )
 import           Util.Ascii                     ( asciiNUL
                                                 , asciiDELETE
                                                 )
-import           Util.Errors                    ( UnifiedError )
+import           Util.UnifiedError              ( FallibleT )
+import           Util.Logging                   ( Logging )
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"
@@ -46,15 +47,18 @@ isAsciiEncoded = BS.all (\char -> char > asciiNUL && char < asciiDELETE)
 {- |
 Optimize `PDFHexString` into `PDFString`.
 -}
-optimizeString :: PDFObject -> Either UnifiedError PDFObject
-optimizeString object@(PDFHexString values)
-    -- If the hex string contains only ASCII characters, converts it to a
-    -- PDFString which will be twice shorter.
-  | isAsciiEncoded encoded = PDFString encoded
-    -- If the PDFHexString is UTF-16 but only contains ASCII characters,
-    -- converts it to a PDFString which will be four times shorter.
-  | isUTF16Encoded encoded = maybe object PDFString (utf16beToAscii encoded)
-    -- Otherwise, do nothing on a PDFHexString
-  | otherwise = object
-  where encoded = hexStringToString values
-optimizeString object = return object
+optimizeString :: Logging m => PDFObject -> FallibleT m PDFObject
+optimizeString object = case object of
+  (PDFHexString values)
+    |
+      -- If the hex string contains only ASCII characters, converts it to a
+      -- PDFString which will be twice shorter.
+      isAsciiEncoded encoded -> return $ PDFString encoded
+    |
+      -- If the PDFHexString is UTF-16 but only contains ASCII characters,
+      -- converts it to a PDFString which will be four times shorter.
+      isUTF16Encoded encoded -> return
+    $  maybe object PDFString (utf16beToAscii encoded)
+    | otherwise -> return object
+    where encoded = hexStringToString values
+  _anyOtherObject -> return object

@@ -17,7 +17,7 @@ import           Data.Bits                      ( (.&.)
                                                 , shiftR
                                                 )
 import qualified Data.Sequence                 as SQ
-import           Util.Errors                    ( UnifiedError
+import           Util.UnifiedError                    ( UnifiedError
                                                   ( ParseError
                                                   , InternalError
                                                   , NotEnoughBytes

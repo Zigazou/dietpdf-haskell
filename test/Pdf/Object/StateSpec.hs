@@ -29,7 +29,7 @@ import           Pdf.Object.State               ( FallibleComputation
                                                 , setMaybe
                                                 , setStream
                                                 , update
-                                                , updateE
+                                                , updateF
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
@@ -37,7 +37,7 @@ import           Test.Hspec                     ( Spec
                                                 , shouldBe
                                                 )
 
-setMaybeExamples :: Monad m => [(PDFObject, ObjectComputation m (), PDFObject)]
+setMaybeExamples :: Logging m => [(PDFObject, ObjectComputation m (), PDFObject)]
 setMaybeExamples =
   [ (mkEmptyPDFArray, setMaybe "Num" (Just $ PDFNumber 1.0), mkEmptyPDFArray)
   , (mkEmptyPDFArray, setMaybe "Num" Nothing               , mkEmptyPDFArray)
@@ -58,7 +58,7 @@ setMaybeExamples =
   ]
 
 setStreamExamples
-  :: Monad m => [(PDFObject, ObjectComputation m (), PDFObject)]
+  :: Logging m => [(PDFObject, ObjectComputation m (), PDFObject)]
 setStreamExamples =
   [ (mkEmptyPDFArray     , setStream "abc", mkEmptyPDFArray)
   , (PDFEndOfFile        , setStream "abc", PDFEndOfFile)
@@ -108,5 +108,5 @@ spec = do
     $ forM_ embedObjectExamples
     $ \(example, fn, expected) ->
         it ("should work on " ++ show example)
-          $          updateE example fn
+          $          updateF example fn
           `shouldBe` Right expected

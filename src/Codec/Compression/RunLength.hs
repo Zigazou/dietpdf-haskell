@@ -37,7 +37,7 @@ import           Data.Binary.Parser             ( Get
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
-import           Util.Errors                    ( UnifiedError
+import           Util.UnifiedError                    ( UnifiedError
                                                   ( RLEEncodeError
                                                   , RLEDecodeError
                                                   )

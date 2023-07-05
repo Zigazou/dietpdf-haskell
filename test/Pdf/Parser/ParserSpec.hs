@@ -27,7 +27,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , XRefEntry(XRefEntry)
                                                 , XRefState(InUseEntry)
                                                 )
-import           Util.Errors                    ( UnifiedError )
+import           Util.UnifiedError                    ( UnifiedError )
 import qualified Data.HashMap.Strict           as HM
 
 pdfParseExamples :: [(BS.ByteString, Either UnifiedError [PDFObject])]

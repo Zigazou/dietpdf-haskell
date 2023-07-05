@@ -47,7 +47,7 @@ import           Util.ByteString                ( splitRaw
                                                 , separateComponents
                                                 , groupComponents
                                                 )
-import           Util.Errors                    ( UnifiedError
+import           Util.UnifiedError                    ( UnifiedError
                                                   ( InvalidNumberOfBytes
                                                   , InvalidPredictor
                                                   )

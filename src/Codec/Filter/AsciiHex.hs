@@ -27,7 +27,7 @@ module Codec.Filter.AsciiHex
 
 import qualified Data.ByteString               as BS
 import           Util.Ascii                     ( asciiGREATERTHANSIGN )
-import           Util.Errors                    ( UnifiedError )
+import           Util.UnifiedError                    ( UnifiedError )
 import           Util.Hex                       ( fromHexDigits
                                                 , toHexDigits
                                                 )

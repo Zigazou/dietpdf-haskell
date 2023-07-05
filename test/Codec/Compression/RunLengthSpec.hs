@@ -11,7 +11,7 @@ import           Data.Word                      ( Word8 )
 import           Codec.Compression.RunLength    ( compress
                                                 , decompress
                                                 )
-import           Util.Errors                    ( UnifiedError )
+import           Util.UnifiedError                    ( UnifiedError )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it

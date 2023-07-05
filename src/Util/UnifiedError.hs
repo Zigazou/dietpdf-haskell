@@ -2,6 +2,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 
 {-|
 This module groups all the errors that DietPDF may generate.
@@ -9,26 +10,25 @@ This module groups all the errors that DietPDF may generate.
 Having one type for all errors means the Either monad can be used to avoid
 long if then else if then else.
 -}
-module Util.Errors
+module Util.UnifiedError
   ( UnifiedError(..)
+  , FallibleT
+  , Fallible
   , putError
   , putErrorLn
-  , unifiedError
+  , tryF
+  , ifFail
   ) where
-<<<<<<< HEAD
-import           Data.Binary.Get                ( ByteOffset )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-=======
 
-import           Control.Monad.State            ( lift )
-import           Control.Monad.Trans.Class      ( MonadTrans )
+import           Control.Monad.Except           ( ExceptT
+                                                , runExceptT
+                                                , MonadTrans(lift)
+                                                )
 import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
 import           System.IO                      ( stderr )
 import           Util.Ascii                     ( asciiLF )
->>>>>>> 2cda7c92fcf859f588ef19db6e288dd3ad74727d
 
 data ErrorType = ReadingError
                | ParsingError
@@ -85,19 +85,17 @@ data UnifiedError
   -- | No object to encode
   | NoObjectToEncode
   | UnknownScalerType String
+  | ObjectStreamNotFound
+  | ObjectNotFound
   deriving stock (Eq)
 
-{- |
-In a monad transformer having `Either` `UnifiedError` as type, the
-`unifiedError` allows to directly generate the error without lifting the
-error.
--}
-unifiedError :: MonadTrans t => UnifiedError -> t (Either UnifiedError) a
-unifiedError = lift . Left
+type FallibleT = ExceptT UnifiedError
+type Fallible = Either UnifiedError
 
 errorType :: UnifiedError -> ErrorType
 errorType (ParseError _)             = ParsingError
 errorType UnableToOpenFile           = ReadingError
+errorType ObjectNotFound             = ReadingError
 errorType EncodeNoIndirectObject     = EncodingError
 errorType EncodeNoVersion            = EncodingError
 errorType EncodeNoTrailer            = EncodingError
@@ -116,7 +114,8 @@ errorType (NoStream             _)   = StructureError
 errorType (NoDictionary         _)   = StructureError
 errorType (InvalidObjectToEmbed _)   = StructureError
 errorType NoObjectToEncode           = EncodingError
-errorType (UnknownScalerType _) = ParsingError
+errorType (UnknownScalerType _)      = ParsingError
+errorType ObjectStreamNotFound       = ParsingError
 
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
@@ -125,6 +124,7 @@ instance Show UnifiedError where
   show :: UnifiedError -> String
   show err@(ParseError (_, _, msg))         = show' err msg
   show err@UnableToOpenFile                 = show' err "Unable to open file"
+  show err@ObjectNotFound                   = show' err "Object not found"
   show err@EncodeNoIndirectObject = show' err "No indirect object to encode"
   show err@EncodeNoVersion                  = show' err "No version to encode"
   show err@EncodeNoTrailer                  = show' err "No trailer to encode"
@@ -164,9 +164,9 @@ instance Show UnifiedError where
   show err@(NoDictionary msg) = show' err ("No dictionary: " ++ msg)
   show err@(InvalidObjectToEmbed msg) =
     show' err ("Invalid object to embed: " ++ msg)
-  show err@NoObjectToEncode = show' err "No object to encode"
-  show err@(UnknownScalerType msg) =
-    show' err ("Unknown scaler type: " ++ msg)
+  show err@NoObjectToEncode        = show' err "No object to encode"
+  show err@(UnknownScalerType msg) = show' err ("Unknown scaler type: " ++ msg)
+  show err@ObjectStreamNotFound    = show' err "Object stream not found"
 
 {- |
 Output a `ByteString` on the standard error output.
@@ -184,3 +184,12 @@ This function appends a line return (`asciiLF`) to the output.
 putErrorLn :: BS.ByteString -> IO ()
 putErrorLn msg =
   BS.hPutStr stderr msg >> BS.hPutStr stderr (BS.singleton asciiLF)
+
+tryF :: Monad m => FallibleT m a -> FallibleT m (Either UnifiedError a)
+tryF = lift . runExceptT
+
+ifFail :: Monad m => FallibleT m a -> (UnifiedError -> FallibleT m a) ->  FallibleT m a
+ifFail computation inCaseOfFail = do
+  tryF computation >>= \case
+    Right result -> return result
+    Left anError -> inCaseOfFail anError

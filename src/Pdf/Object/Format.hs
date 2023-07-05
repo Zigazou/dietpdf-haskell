@@ -7,9 +7,18 @@ module Pdf.Object.Format
 
 import qualified Data.Text                     as T
 import           Util.Text                      ( txtNumberVersion )
-import           Pdf.Object.Object              ( PDFObject(PDFIndirectObject) )
+import           Pdf.Object.Object              ( PDFObject
+                                                  ( PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFIndirectObjectWithGraphics
+                                                  )
+                                                )
 
 txtObjectNumberVersion :: PDFObject -> T.Text
-txtObjectNumberVersion (PDFIndirectObject number version _ _) =
+txtObjectNumberVersion (PDFIndirectObject number version _) =
+  txtNumberVersion number version
+txtObjectNumberVersion (PDFIndirectObjectWithStream number version _ _) =
+  txtNumberVersion number version
+txtObjectNumberVersion (PDFIndirectObjectWithGraphics number version _ _) =
   txtNumberVersion number version
 txtObjectNumberVersion _ = "anonymous"

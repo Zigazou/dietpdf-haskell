@@ -38,6 +38,8 @@ module Pdf.Object.Object
 
     -- * Conversion
   , fromPDFObject
+  , pdfNumber
+  , ToPDFNumber
 
     -- * Getting info about a `PDFObject`
   , objectInfo
@@ -271,8 +273,6 @@ data XRefStmFieldType =
   | XRSFUncompressedObject
   | XRSFCompressedObject
   deriving stock (Eq, Show)
-
-type Dictionary = HM.HashMap BS.ByteString PDFObject
 
 {-|
 A PDF is a collection of objects, here named PDF objects.
@@ -510,39 +510,12 @@ fromPDFObject (PDFObjectStream number revision dict stream) =
 fromPDFObject (PDFBool True ) = "true"
 fromPDFObject (PDFBool False) = "false"
 fromPDFObject PDFNull         = "null"
-<<<<<<< HEAD
-fromPDFObject (PDFXRef subsections) =
-  BS.concat ("xref\n" : (fromXRefSubsection <$> subsections))
-=======
 fromPDFObject (PDFXRef xrss)  = fromXRef xrss
->>>>>>> 2cda7c92fcf859f588ef19db6e288dd3ad74727d
 fromPDFObject (PDFTrailer (PDFDictionary dictionary)) =
   BS.concat ["trailer\n", fromDictionary dictionary, "\n"]
 fromPDFObject (PDFTrailer _) = error "a trailer can only contain a dictionary"
 fromPDFObject (PDFStartXRef offset) =
   BS.concat ["startxref\n", fromInt offset, "\n"]
-
-pad10 :: Int -> BS.ByteString
-pad10 value = BS.drop (BS.length base) (BS.concat [pads, base])
- where
-  base = fromInt value
-  pads = "0000000000" :: BS.ByteString
-
-pad5 :: Int -> BS.ByteString
-pad5 value = BS.drop (BS.length base) (BS.concat [pads, base])
- where
-  base = fromInt value
-  pads = "00000" :: BS.ByteString
-
-fromXRefEntry :: XRefEntry -> BS.ByteString
-fromXRefEntry (XRefEntry offset generation InUseEntry) =
-  BS.concat [pad10 offset, " ", pad5 generation, " n \n"]
-fromXRefEntry (XRefEntry offset _ FreeEntry) =
-  BS.concat [pad10 offset, " 65535 f \n"]
-
-fromXRefSubsection :: XRefSubsection -> BS.ByteString
-fromXRefSubsection (XRefSubsection start count entries) = BS.concat
-  (fromInt start: " " : fromInt count : "\n" : (fromXRefEntry <$> entries))
 
 {- | Returns a `Text` string describing a PDFObject.
 -}
@@ -771,3 +744,21 @@ hasStream :: PDFObject -> Bool
 hasStream PDFIndirectObjectWithStream{} = True
 hasStream PDFObjectStream{}             = True
 hasStream _anyOtherObject               = False
+
+{- |
+Allow easy creation of `PDFNumber` objects with auto conversion.
+-}
+class ToPDFNumber t where
+  pdfNumber :: t -> PDFObject
+
+instance ToPDFNumber Double where
+  pdfNumber :: Double -> PDFObject
+  pdfNumber = PDFNumber
+
+instance ToPDFNumber Int where
+  pdfNumber :: Int -> PDFObject
+  pdfNumber = PDFNumber . fromIntegral
+
+instance ToPDFNumber Integer where
+  pdfNumber :: Integer -> PDFObject
+  pdfNumber = PDFNumber . fromIntegral

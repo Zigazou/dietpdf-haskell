@@ -24,7 +24,7 @@ import           Pdf.Object.Parser.IndirectObject
 import           Pdf.Object.Parser.StartXRef    ( startXRefP )
 import           Pdf.Object.Parser.Trailer      ( trailerP )
 import           Pdf.Object.Parser.XRef         ( xrefP )
-import           Util.Errors                    ( UnifiedError(ParseError) )
+import           Util.UnifiedError                    ( UnifiedError(ParseError) )
 
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)

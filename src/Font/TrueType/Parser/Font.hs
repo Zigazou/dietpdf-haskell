@@ -9,7 +9,7 @@ import           Data.Binary.Parser             ( Get
                                                 , parseOnly
                                                 )
 import qualified Data.ByteString               as BS
-import           Util.Errors                    ( UnifiedError
+import           Util.UnifiedError                    ( UnifiedError
                                                   ( UnknownScalerType
                                                   )
                                                 )

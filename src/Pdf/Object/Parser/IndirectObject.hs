@@ -54,7 +54,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , updateStream
                                                 )
 import           Pdf.Object.State               ( getValue
-                                                , query
+                                                , maybeQuery
                                                 )
 import           Pdf.Object.Parser.Container    ( arrayP
                                                 , dictionaryP
@@ -116,14 +116,14 @@ indirectObjectP = label "indirectObject" $ do
   object <- itemP
   emptyContentP
 
-  stream <- case query object (getValue "Length") of
+  stream <- case maybeQuery (getValue "Length") object of
     Just _  -> Just <$> streamWithoutCountP
     Nothing -> return Nothing
 
   emptyContentP
   string "endobj"
 
-  return $ case (query object (getValue "Type"), object, stream) of
+  return $ case (maybeQuery (getValue "Type") object, object, stream) of
     (Just (PDFName "ObjStm"), PDFDictionary dict, Just s) ->
       updateStream (PDFObjectStream objectNumber revisionNumber dict "") s
     (_, PDFDictionary dict, Just s) -> updateStream

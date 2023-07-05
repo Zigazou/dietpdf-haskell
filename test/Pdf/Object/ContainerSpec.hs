@@ -21,7 +21,7 @@ import           Util.Dictionary                ( Dictionary
                                                 , mkDictionary
                                                 , mkEmptyDictionary
                                                 )
-import           Pdf.Object.State               ( updateE )
+import           Pdf.Object.State               ( updateF )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
@@ -35,7 +35,7 @@ import           Pdf.Object.Container           ( Filter(Filter)
                                                 , insertMaybes
                                                 , setFilters
                                                 )
-import           Util.Errors                    ( UnifiedError )
+import           Util.UnifiedError                    ( UnifiedError )
 
 deepMapExamples
   :: [(PDFObject, PDFObject -> Either UnifiedError PDFObject, PDFObject)]
@@ -118,7 +118,7 @@ spec :: Spec
 spec = do
   describe "deepMap" $ forM_ deepMapExamples $ \(example, fn, expected) ->
     it ("should give right result for " ++ show example)
-      $          updateE example (deepMap fn)
+      $          updateF example (deepMap fn)
       `shouldBe` Right expected
 
   describe "insertMaybes"
@@ -132,5 +132,5 @@ spec = do
     $ forM_ updateFiltersExamples
     $ \(filters, example, expected) ->
         it ("should give right result for " ++ show filters)
-          $          updateE example (setFilters filters)
+          $          updateF example (setFilters filters)
           `shouldBe` Right expected

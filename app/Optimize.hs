@@ -14,12 +14,13 @@ import           Formatting                     ( (%)
 import           Pdf.Document.Document          ( PDFDocument )
 import           Pdf.Document.Encode            ( pdfEncode )
 import           Pdf.Object.Object              ( objectInfo )
+import           Util.UnifiedError              ( FallibleT )
+import           Control.Monad.Except           ( MonadTrans(lift) )
 
-optimize :: Bool -> PDFDocument -> FilePath -> IO ()
-optimize verbose objects outputPDF = do
+optimize :: Bool -> FilePath -> PDFDocument -> FallibleT IO ()
+optimize verbose outputPDF objects = do
   when verbose $ do
-    T.putStrLn $ format ("Found " % int % " objects") (length objects)
-    mapM_ (T.putStrLn . objectInfo) objects
-  case pdfEncode objects of
-    Left  err -> print err
-    Right pdf -> BS.writeFile outputPDF pdf
+    lift . T.putStrLn $ format ("Found " % int % " objects") (length objects)
+    mapM_ (lift . T.putStrLn . objectInfo) objects
+
+  pdfEncode objects >>= lift . BS.writeFile outputPDF

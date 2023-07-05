@@ -47,8 +47,8 @@ calcOffsets startOffset = snd . calcOffset . sort . toList
 
 -- | Given a collection of encoded objects, generates an old format XRef table
 xrefTable :: Int -> EncodedObjects -> PDFObject
-xrefTable startOffset objects | OS.null objects = PDFXRef []
-                              | otherwise       = PDFXRef [xrefSubsection]
+xrefTable startOffset objects | objects == mempty = PDFXRef []
+                              | otherwise         = PDFXRef [xrefSubsection]
  where
   offsets  = calcOffsets startOffset objects
   numRange = if IM.null offsets

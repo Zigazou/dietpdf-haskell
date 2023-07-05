@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
-{-# LANGUAGE LambdaCase #-}
 
 {- |
 This module handles object streams.
@@ -52,7 +51,6 @@ import           Pdf.Object.Object              ( PDFObject
                                                 )
 import           Pdf.Object.State               ( getStream
                                                 , getValue
-                                                , queryE
                                                 )
 import           Control.Monad                  ( forM )
 import           Data.Functor                   ( (<&>) )
@@ -67,15 +65,21 @@ import           Pdf.Object.Parser.Number       ( numberP )
 import           Pdf.Object.Parser.Reference    ( referenceP )
 import           Pdf.Object.Parser.String       ( stringP )
 import           Util.Ascii                     ( asciiDIGITZERO )
-import           Util.Errors                    ( UnifiedError
+import           Util.UnifiedError              ( UnifiedError
                                                   ( NoObjectToEncode
                                                   , ParseError
+                                                  , ObjectStreamNotFound
                                                   )
+                                                , FallibleT
                                                 )
-import           Data.Foldable                  ( foldl' )
+import           Data.Foldable                  ( foldl'
+                                                , foldrM
+                                                )
 import           Util.Dictionary                ( Dictionary
                                                 , mkDictionary
                                                 )
+import           Util.Logging                   ( Logging )
+import           Control.Monad.Trans.Except     ( throwE )
 
 data ObjectStream = ObjectStream
   { osCount   :: Int
@@ -117,38 +121,37 @@ objectNumberOffsetP = do
   skipWhile isWhiteSpace
   return (objectNumber, offset)
 
-parseObjectNumberOffsets :: BS.ByteString -> Either UnifiedError [(Int, Int)]
+parseObjectNumberOffsets
+  :: Logging m => BS.ByteString -> FallibleT m [(Int, Int)]
 parseObjectNumberOffsets indices =
   case parseOnly (many' objectNumberOffsetP) indices of
-    Left  err    -> Left (ParseError ("", 0, err))
-    Right result -> Right result
+    Left  err    -> throwE (ParseError ("", 0, err))
+    Right result -> return result
 
-extractObjects :: ObjectStream -> Either UnifiedError PDFDocument
+extractObjects :: Logging m => ObjectStream -> FallibleT m PDFDocument
 extractObjects (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
   exploded   <- forM numOffsets $ \(objectNumber, offset) -> do
     case parseOnly itemP (BS.drop offset objects) of
-      Left  msg    -> Left $ ParseError ("", fromIntegral offset, msg)
+      Left  msg    -> throwE $ ParseError ("", fromIntegral offset, msg)
       Right object -> return $ PDFIndirectObject objectNumber 0 object
   return $ fromList exploded
 
-getObjectStream :: PDFObject -> Either UnifiedError (Maybe ObjectStream)
-getObjectStream object@PDFObjectStream{} = queryE object $ do
-  objectN      <- getValue "N"
-  objectOffset <- getValue "First"
+getObjectStream :: Logging m => PDFObject -> FallibleT m ObjectStream
+getObjectStream object = do
+  objectN      <- getValue "N" object
+  objectOffset <- getValue "First" object
 
   case (objectN, objectOffset) of
     (Just (PDFNumber n), Just (PDFNumber offset)) -> do
-      unfilteredStream <- unfilter >> getStream
+      unfilteredStream <- unfilter object >>= getStream
       let (indices, objects) = BS.splitAt (floor offset) unfilteredStream
-      return $ Just ObjectStream { osCount   = floor n
-                                 , osOffset  = floor offset
-                                 , osIndices = indices
-                                 , osObjects = objects
-                                 }
-
-    _anyOtherValue -> return Nothing
-getObjectStream _ = return Nothing
+      return $ ObjectStream { osCount   = floor n
+                            , osOffset  = floor offset
+                            , osIndices = indices
+                            , osObjects = objects
+                            }
+    _anyOtherValue -> throwE ObjectStreamNotFound
 
 {- |
 Extract objects contained in an object stream from a `PDFObject`.
@@ -159,20 +162,22 @@ empty list.
 If the `PDFObject` contains no object stream, an empty list is returned.
 -}
 extract
-  :: PDFObject -- ^ A `PDFIndirectObject` of type /ObjStm with a stream
-  -> Either UnifiedError PDFDocument
-extract object = getObjectStream object >>= \case
-  Nothing     -> return mempty
-  Just objStm -> extractObjects objStm
+  :: Logging m
+  => PDFObject -- ^ A `PDFIndirectObject` of type /ObjStm with a stream
+  -> FallibleT m PDFDocument
+extract object = getObjectStream object >>= extractObjects
 
-explode :: PDFDocument -> PDFDocument
-explode = foldr explode' mempty
+{- |
+Look for every object stream and extract the objects from these object streams.
+
+Any other object is kept as is.
+-}
+explode :: Logging m => PDFDocument -> FallibleT m PDFDocument
+explode = foldrM explode' mempty
  where
-  explode' :: PDFObject -> PDFDocument -> PDFDocument
-  explode' objstm@PDFObjectStream{} result = case extract objstm of
-    Left  _       -> result <> singleton objstm
-    Right objects -> result <> objects
-  explode' object result = result <> singleton object
+  explode' :: Logging m => PDFObject -> PDFDocument -> FallibleT m PDFDocument
+  explode' objstm@PDFObjectStream{} result = (result <>) <$> extract objstm
+  explode' object                   result = return $ result <> singleton object
 
 {- |
 Tells if a `PDFObject` may be embedded in an object stream.
@@ -213,11 +218,12 @@ Object which are not streamable are simply ignored.
 The object stream is uncompressed. It can be compressed later.
 -}
 insert
-  :: PDFDocument -- ^ A `CollectionOf` `PDFObject` to embed in the object stream
+  :: Logging m
+  => PDFDocument -- ^ A `CollectionOf` `PDFObject` to embed in the object stream
   -> Int -- ^ The number of the resulting `PDFObjectStream`
-  -> Either UnifiedError PDFObject
-insert objects num | objects == mempty = Left NoObjectToEncode
-                   | osCount objStm == 0 = Left NoObjectToEncode
+  -> FallibleT m PDFObject
+insert objects num | objects == mempty = throwE NoObjectToEncode
+                   | osCount objStm == 0 = throwE NoObjectToEncode
                    | otherwise = return $ PDFObjectStream num 0 dict stream
  where
   objStm = insertObjects (dFilter isObjectStreamable objects)

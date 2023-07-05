@@ -13,7 +13,7 @@ import           Data.Word                      ( Word8 )
 import           Codec.Compression.Flate        ( compress
                                                 , decompress
                                                 )
-import           Util.Errors                    ( UnifiedError(FlateDecodeError)
+import           Util.UnifiedError                    ( UnifiedError(FlateDecodeError)
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe

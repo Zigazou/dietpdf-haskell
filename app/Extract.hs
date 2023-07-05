@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE LambdaCase #-}
 module Extract
   ( extract
   ) where
@@ -13,24 +14,30 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFObjectStream
                                                   )
                                                 )
-import           Pdf.Object.State               ( updateE )
 import           Pdf.Object.Unfilter            ( unfilter )
-import           Util.Errors                    ( putErrorLn )
+import           Util.UnifiedError              ( FallibleT
+                                                , UnifiedError
+                                                  ( ObjectNotFound
+                                                  , ObjectStreamNotFound
+                                                  )
+                                                )
+import           Control.Monad.Trans.Except     ( throwE )
+import           Control.Monad.Trans.Class      ( lift )
 
-extract :: Int -> PDFDocument -> IO ()
+extract :: Int -> PDFDocument -> FallibleT IO ()
 extract objectNumber objects = do
   case find (objectWithNumber objectNumber) objects of
-    Just object@PDFIndirectObjectWithStream{} ->
-      case updateE object unfilter of
-        Right (PDFIndirectObjectWithStream _ _ _ unfilteredStream) ->
-          BS.putStr unfilteredStream
-        _anyotherValue -> putErrorLn "Unable to unfilter stream"
-    Just object@PDFObjectStream{} -> case updateE object unfilter of
-      Right (PDFObjectStream _ _ _ unfilteredStream) ->
-        BS.putStr unfilteredStream
-      _anyotherValue -> putErrorLn "Unable to unfilter stream"
-    Just _  -> putErrorLn "Object found but with no stream"
-    Nothing -> putErrorLn "Object not found"
+    Just object@PDFIndirectObjectWithStream{} -> unfilter object >>= \case
+      (PDFIndirectObjectWithStream _ _ _ unfilteredStream) ->
+        lift $ BS.putStr unfilteredStream
+      _anyotherValue -> lift $ BS.putStr ""
+    Just object@PDFObjectStream{} -> unfilter object >>= \case
+      (PDFObjectStream _ _ _ unfilteredStream) ->
+        lift $ BS.putStr unfilteredStream
+      _anyotherValue -> lift $ BS.putStr ""
+    Just _  -> throwE ObjectStreamNotFound
+    Nothing -> throwE ObjectNotFound
+
  where
   objectWithNumber :: Int -> PDFObject -> Bool
   objectWithNumber n (PDFIndirectObjectWithStream num _ _ _) = n == num

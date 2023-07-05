@@ -14,7 +14,6 @@ import qualified Codec.Compression.LZW         as LZ
 import qualified Codec.Compression.RunLength   as RL
 import qualified Codec.Filter.Ascii85          as A8
 import qualified Codec.Filter.AsciiHex         as AH
-import           Control.Monad.State            ( lift )
 import qualified Data.ByteString               as BS
 import           Data.Sequence                 as SQ
                                                 ( Seq((:<|)) )
@@ -23,14 +22,17 @@ import           Pdf.Object.Container           ( Filter(fFilter)
                                                 , setFilters
                                                 , FilterList
                                                 )
-import           Pdf.Object.Object              ( PDFObject(PDFName) )
+import           Pdf.Object.Object              ( PDFObject(PDFName)
+                                                , hasStream
+                                                )
 import           Pdf.Object.State               ( getStream
                                                 , setStream
-                                                , FallibleComputation
-                                                , ifObject
-                                                , hasStreamS
                                                 )
-import           Util.Errors                    ( UnifiedError )
+import           Util.UnifiedError              ( UnifiedError
+                                                , FallibleT
+                                                )
+import           Util.Logging                   ( Logging )
+import           Control.Monad.Trans.Except     ( throwE )
 
 {- |
 List of all filters that the `unfilter` function supports.
@@ -62,19 +64,22 @@ unfilterStream (filters@(pdfFilter :<| otherFilters), stream)
   = Right (filters, stream)
 unfilterStream (filters, stream) = Right (filters, stream)
 
-unfiltered :: FallibleComputation (FilterList, BS.ByteString)
-unfiltered = do
-  stream  <- getStream
-  filters <- getFilters
-  lift (unfilterStream (filters, stream))
+unfiltered :: Logging m => PDFObject -> FallibleT m (FilterList, BS.ByteString)
+unfiltered object = do
+  stream  <- getStream object
+  filters <- getFilters object
+  case unfilterStream (filters, stream) of
+    Right unfilteredData  -> return unfilteredData
+    Left  unfilteredError -> throwE unfilteredError
 
 {- |
 Tries to decode every filter of an object with a stream.
 
 It usually decompresses the stream.
 -}
-unfilter :: FallibleComputation ()
-unfilter = ifObject hasStreamS $ do
-  (remainingFilters, unfilteredStream) <- unfiltered
-  setStream unfilteredStream
-  setFilters remainingFilters
+unfilter :: Logging m => PDFObject -> FallibleT m PDFObject
+unfilter object = if hasStream object
+  then do
+    unfiltered object >>= \(remainingFilters, unfilteredStream) ->
+      setStream unfilteredStream object >>= setFilters remainingFilters
+  else return object

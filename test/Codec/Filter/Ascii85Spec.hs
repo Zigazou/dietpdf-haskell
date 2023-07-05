@@ -20,7 +20,7 @@ import           Test.QuickCheck                ( Gen
                                                 , arbitrary
                                                 , forAll
                                                 )
-import           Util.Errors                    ( UnifiedError )
+import           Util.UnifiedError                    ( UnifiedError )
 
 decodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
 decodeExamples =

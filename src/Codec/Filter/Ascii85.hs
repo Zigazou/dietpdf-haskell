@@ -68,7 +68,7 @@ import           Util.Ascii                     ( asciiEXCLAMATIONMARK
                                                 , asciiLOWERZ
                                                 , asciiTILDE
                                                 )
-import           Util.Errors                    ( UnifiedError
+import           Util.UnifiedError                    ( UnifiedError
                                                   ( InvalidAscii85Stream
                                                   )
                                                 )

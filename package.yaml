@@ -80,6 +80,8 @@ executables:
     - dietpdf
     - text
     - formatting
+    - transformers
+    - mtl
 
 tests:
   dietpdf-test:

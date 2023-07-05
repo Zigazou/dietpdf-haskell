@@ -20,7 +20,7 @@ import           Pdf.Graphics.Parser.Comment    ( commentP )
 import           Pdf.Graphics.Parser.Container  ( dictionaryP
                                                 , arrayP
                                                 )
-import           Util.Errors                    ( UnifiedError(ParseError) )
+import           Util.UnifiedError                    ( UnifiedError(ParseError) )
 import           Pdf.Graphics.Parser.HexString  ( hexStringP )
 import           Pdf.Graphics.Parser.Keyword    ( keywordP )
 import           Pdf.Graphics.Parser.Name       ( nameP )
