@@ -47,9 +47,13 @@ streamOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
 streamOptimize object = do
   stream <- getStream object
   if streamIsXML object
-    then setStream (optimizeXML stream) object
+    then do
+      sayF "  - Optimizing XML stream"
+      setStream (optimizeXML stream) object
     else case gfxParse stream of
-      Right objects -> setStream (separateGfx objects) object
+      Right objects -> do
+        sayF "  - Optimizing GFX object"
+        setStream (separateGfx objects) object
       _error        -> return object
 
 {- |
@@ -59,7 +63,7 @@ It also optimized nested strings and XML streams.
 -}
 refilter :: Logging m => PDFObject -> FallibleT m PDFObject
 refilter object = do
-  sayF "  - Packing strings"
+  sayF "  - Optimizing strings"
   stringOptimized <- deepMap optimizeString object
 
   if hasStream object

@@ -138,6 +138,15 @@ sizeComparison before after = T.pack
       * (fromIntegral sizeAfter - fromIntegral sizeBefore)
       / fromIntegral sizeBefore
 
+filterInfo
+  :: Logging m => T.Text -> BS.ByteString -> BS.ByteString -> FallibleT m ()
+filterInfo filterName streamBefore streamAfter = sayF
+  (  "  - Filter "
+  <> T.take 20 (filterName <> "                    ")
+  <> " "
+  <> sizeComparison streamBefore streamAfter
+  )
+
 applyEveryFilter
   :: Logging m
   => Maybe (Int, Int)
@@ -145,67 +154,43 @@ applyEveryFilter
   -> FallibleT m [(FilterList, BS.ByteString)]
 applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
   rRle <- except $ rle widthComponents stream
-  sayF ("  - Filter RLE                  " <> sizeComparison stream (snd rRle))
+  filterInfo "RLE" stream (snd rRle)
 
   rZopfli <- except $ zopfli widthComponents stream
-  sayF
-    ("  - Filter Zopfli               " <> sizeComparison stream (snd rZopfli))
+  filterInfo "Zopfli" stream (snd rZopfli)
 
-  if len rRle < BS.length stream
+  if (BS.length . snd $ rRle) < BS.length stream
     then do
       rPredRleZopfli <- except $ predRleZopfli widthComponents stream
-      sayF
-        (  "  - Filter Predictor+RLE+Zopfli "
-        <> sizeComparison stream (snd rPredRleZopfli)
-        )
+      filterInfo "Predictor+RLE+Zopfli" stream (snd rPredRleZopfli)
 
       rRleZopfli <- except $ rleZopfli widthComponents stream
-      sayF
-        (  "  - Filter RLE+Zopfli           "
-        <> sizeComparison stream (snd rRleZopfli)
-        )
+      filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
       rPredZopfli <- except $ predZopfli widthComponents stream
-      sayF
-        (  "  - Filter Predictor+Zopfli     "
-        <> sizeComparison stream (snd rPredZopfli)
-        )
+      filterInfo "Predictor+Zopfli" stream (snd rPredZopfli)
 
       return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
     else do
       rPredZopfli <- except $ predZopfli widthComponents stream
-      sayF
-        (  "  - Filter Predictor+Zopfli     "
-        <> sizeComparison stream (snd rPredZopfli)
-        )
+      filterInfo "Predictor+Zopfli" stream (snd rPredZopfli)
 
       return [rZopfli, rPredZopfli]
- where
-  len :: (FilterList, BS.ByteString) -> Int
-  len = BS.length . snd
 
 applyEveryFilter Nothing stream = do
   rRle <- except $ rle Nothing stream
-  sayF ("  - Filter RLE                  " <> sizeComparison stream (snd rRle))
+  filterInfo "RLE" stream (snd rRle)
 
   rZopfli <- except $ zopfli Nothing stream
-  sayF
-    ("  - Filter Zopfli               " <> sizeComparison stream (snd rZopfli))
+  filterInfo "Zopfli" stream (snd rZopfli)
 
-  if len rRle < BS.length stream
+  if (BS.length . snd $ rRle) < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
-      sayF
-        (  "  - Filter RLE+Zopfli           "
-        <> sizeComparison stream (snd rRleZopfli)
-        )
+      filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
       return [rRle, rZopfli, rRleZopfli]
-    else
-      return [rZopfli]
- where
-  len :: (FilterList, BS.ByteString) -> Int
-  len = BS.length . snd
+    else return [rZopfli]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object = do

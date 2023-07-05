@@ -117,10 +117,10 @@ pdfEncode
 pdfEncode document = do
   objects <- tryF (removeUnused document) >>= \case
     Right unusedRemoved -> do
-      sayF "Unable to remove unused objects"
+      sayF "Unused objects removed"
       return unusedRemoved
     Left _anyError -> do
-      sayF "Unused objects removed"
+      sayF "Unable to remove unused objects"
       return document
 
   let partObjects = foldr ((<>) . toPartition) mempty objects
