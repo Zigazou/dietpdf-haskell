@@ -52,7 +52,7 @@ import           Control.Monad.Trans.Except     ( throwE
                                                 , runExceptT
                                                 )
 import           Control.Monad.Identity         ( Identity(runIdentity) )
-import Util.Logging (Logging)
+import           Util.Logging                   ( Logging )
 
 {- |
 Returns the stream embedded in a `PDFObject`.
@@ -250,10 +250,9 @@ embedObject toEmbed@PDFIndirectObjectWithStream{} object =
 embedObject toEmbed@PDFObjectStream{} object = cannotEmbed toEmbed object
 embedObject toEmbed@PDFXRef{}         object = cannotEmbed toEmbed object
 embedObject toEmbed@PDFStartXRef{}    object = cannotEmbed toEmbed object
-embedObject toEmbed                   object = case object of
-  (PDFIndirectObject num gen (PDFDictionary _)) ->
-    return $ PDFIndirectObject num gen toEmbed
-  _anyOtherObject -> cannotEmbed toEmbed object
+embedObject toEmbed (PDFIndirectObject num gen _) =
+  return $ PDFIndirectObject num gen toEmbed
+embedObject toEmbed object = cannotEmbed toEmbed object
 
 cannotEmbed :: Logging m => PDFObject -> PDFObject -> FallibleT m PDFObject
 cannotEmbed source destination = throwE
