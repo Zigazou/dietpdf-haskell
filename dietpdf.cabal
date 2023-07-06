@@ -141,6 +141,7 @@ executable dietpdf
     , formatting
     , mtl
     , optparse-applicative
+    , pretty-hex
     , text
     , transformers
   default-language: Haskell2010

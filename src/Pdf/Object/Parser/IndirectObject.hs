@@ -39,7 +39,7 @@ import           Data.Binary.Parser             ( Get
                                                 , satisfy
                                                 , some'
                                                 , string
-                                                , word8
+                                                , word8, option
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
@@ -117,7 +117,7 @@ indirectObjectP = label "indirectObject" $ do
   emptyContentP
 
   stream <- case maybeQuery (getValue "Length") object of
-    Just _  -> Just <$> streamWithoutCountP
+    Just _  -> option Nothing (Just <$> streamWithoutCountP)
     Nothing -> return Nothing
 
   emptyContentP

@@ -30,13 +30,22 @@ import           Options.Applicative            ( (<**>)
 import           Pdf.Document.Document          ( PDFDocument )
 import           Pdf.Document.Parser            ( pdfParse )
 import           System.IO.Error                ( isDoesNotExistError )
-import           Util.UnifiedError              ( UnifiedError(UnableToOpenFile)
+import           Util.UnifiedError              ( UnifiedError
+                                                  ( UnableToOpenFile
+                                                  , ParseError
+                                                  )
                                                 , FallibleT
+                                                , tryF
                                                 )
 import           Control.Monad.Trans.Except     ( throwE
                                                 , runExceptT
                                                 )
 import           Control.Monad.Trans.Class      ( lift )
+import           Hexdump                        ( Cfg
+                                                , startByte
+                                                , defaultCfg
+                                                , prettyHexCfg
+                                                )
 
 readPDF :: FilePath -> FallibleT IO PDFDocument
 readPDF filename = do
@@ -44,12 +53,26 @@ readPDF filename = do
     Right bytes -> pdfParse bytes
     Left  _     -> throwE UnableToOpenFile
 
+hexCfg :: Int -> Cfg
+hexCfg offset = defaultCfg { startByte = offset }
+
+hexDump :: Int -> BS.ByteString -> IO ()
+hexDump offset bytes = do
+  let bytes'  = BS.take 256 (BS.drop offset bytes)
+
+  putStrLn $ prettyHexCfg (hexCfg offset) bytes'
+
 runApp :: AppOptions -> FallibleT IO ()
 runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
-runApp (OptimizeOptions verbose inputPDF outputPDF) =
-  readPDF inputPDF >>= optimize verbose outputPDF
+runApp (OptimizeOptions verbose inputPDF outputPDF) = do
+  tryF (readPDF inputPDF) >>= \case
+    Right document -> optimize verbose outputPDF document
+    Left anError@(ParseError (_, offset, _)) -> do
+      lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
+      throwE anError
+    Left anError -> throwE anError
 
 options :: ParserInfo AppOptions
 options = info

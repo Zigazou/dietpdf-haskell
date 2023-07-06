@@ -18,6 +18,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFReference
                                                   , PDFName
                                                   , PDFArray
+                                                  , PDFString
                                                   )
                                                 )
 import           Util.Dictionary                ( mkDictionary )
@@ -107,6 +108,35 @@ indirectObjectExamples =
                                   0
                                   (mkDictionary [("Length", PDFNumber 10)])
                                   "1234567890"
+    )
+  , ( "186 0 obj<</Length 40/Filter/Standard/O(\xf6\x2e\x95\x40\x01\x93\x12\
+      \\xf9\xc8\xae\x5c\x29\xca\xeb\x05\x48\x81\xc1\x39\x68\xe4\x48\x2c\xc4\
+      \\x9d\x91\x71\xac\xe9\xb0\x59\x5c\x72\x52)/P -60/R 2/U(\
+      \\x51\xc7\xde\xe8\xcf\x3d\xb6\x38\xea\x38\xca\x5e\x63\x35\x1d\x31\
+      \\xe6\xc5\x73\x08\x81\x02\xbe\xba\x06\xeb\xd9\xc9\xe2\x6e\xc4\xa9)/V 1\
+      \>>\rendobj"
+    , PDFIndirectObject
+      186
+      0
+      (PDFDictionary $ mkDictionary
+        [ ("Length", PDFNumber 40)
+        , ("Filter", PDFName "Standard")
+        , ( "O"
+          , PDFString
+            "\xf6\x2e\x95\x40\x01\x93\x12\xf9\xc8\xae\x29\xca\xeb\x05\x48\
+            \\x81\xc1\x39\x68\xe4\x48\x2c\xc4\x9d\x91\x71\xac\xe9\xb0\x59\
+            \\x0d\x52"
+          )
+        , ("P", PDFNumber (-60))
+        , ("R", PDFNumber 2)
+        , ( "U"
+          , PDFString
+            "\x51\xc7\xde\xe8\xcf\x3d\xb6\x38\xea\x38\xca\x5e\x63\x35\x1d\x31\
+            \\xe6\xc5\x73\x08\x81\x02\xbe\xba\x06\xeb\xd9\xc9\xe2\x6e\xc4\xa9"
+          )
+        , ("V", PDFNumber 1)
+        ]
+      )
     )
   ]
 

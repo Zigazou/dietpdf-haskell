@@ -82,6 +82,7 @@ executables:
     - formatting
     - transformers
     - mtl
+    - pretty-hex
 
 tests:
   dietpdf-test:
