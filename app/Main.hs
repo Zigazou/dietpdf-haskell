@@ -35,14 +35,13 @@ import           Util.UnifiedError              ( UnifiedError(UnableToOpenFile)
                                                 )
 import           Control.Monad.Trans.Except     ( throwE
                                                 , runExceptT
-                                                , except
                                                 )
 import           Control.Monad.Trans.Class      ( lift )
 
 readPDF :: FilePath -> FallibleT IO PDFDocument
 readPDF filename = do
   lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
-    Right bytes -> except $ pdfParse bytes
+    Right bytes -> pdfParse bytes
     Left  _     -> throwE UnableToOpenFile
 
 runApp :: AppOptions -> FallibleT IO ()
@@ -60,6 +59,6 @@ options = info
   )
 
 main :: IO ()
-main = do
-  _ <- runExceptT $ runApp =<< lift (execParser options)
-  return ()
+main = runExceptT (runApp =<< lift (execParser options)) >>= \case
+  Right _       -> return ()
+  Left  anError -> print anError

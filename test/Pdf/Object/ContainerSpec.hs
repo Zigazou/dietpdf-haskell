@@ -21,7 +21,6 @@ import           Util.Dictionary                ( Dictionary
                                                 , mkDictionary
                                                 , mkEmptyDictionary
                                                 )
-import           Pdf.Object.State               ( updateF )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
@@ -35,10 +34,12 @@ import           Pdf.Object.Container           ( Filter(Filter)
                                                 , insertMaybes
                                                 , setFilters
                                                 )
-import           Util.UnifiedError                    ( UnifiedError )
+import           Util.UnifiedError              ( FallibleT
+                                                )
+import           Control.Monad.Trans.Except     ( runExceptT )
 
 deepMapExamples
-  :: [(PDFObject, PDFObject -> Either UnifiedError PDFObject, PDFObject)]
+  :: [(PDFObject, PDFObject -> FallibleT IO PDFObject, PDFObject)]
 deepMapExamples =
   [ ( mkPDFArray [mkEmptyPDFDictionary, PDFNumber 3.0, PDFName "ABCD"]
     , addOneToAnyNumber
@@ -66,7 +67,7 @@ deepMapExamples =
     )
   ]
  where
-  addOneToAnyNumber :: PDFObject -> Either UnifiedError PDFObject
+  addOneToAnyNumber :: PDFObject -> FallibleT IO PDFObject
   addOneToAnyNumber (PDFNumber x) = return (PDFNumber (x + 1.0))
   addOneToAnyNumber object        = return object
 
@@ -81,8 +82,8 @@ insertMaybesExamples =
     )
   ]
 
-updateFiltersExamples :: [(FilterList, PDFObject, PDFObject)]
-updateFiltersExamples =
+filtersExamples :: [(FilterList, PDFObject, PDFObject)]
+filtersExamples =
   [ ( mkFilterList [Filter (PDFName "FlateDecode") PDFNull]
     , PDFIndirectObject 1 0 mkEmptyPDFDictionary
     , PDFIndirectObject 1
@@ -117,9 +118,9 @@ updateFiltersExamples =
 spec :: Spec
 spec = do
   describe "deepMap" $ forM_ deepMapExamples $ \(example, fn, expected) ->
-    it ("should give right result for " ++ show example)
-      $          updateF example (deepMap fn)
-      `shouldBe` Right expected
+    it ("should give right result for " ++ show example) $ do
+      result <- runExceptT $ deepMap fn example
+      result `shouldBe` Right expected
 
   describe "insertMaybes"
     $ forM_ insertMaybesExamples
@@ -128,9 +129,10 @@ spec = do
           $          insertMaybes mkEmptyDictionary example
           `shouldBe` expected
 
-  describe "update+setFilters"
-    $ forM_ updateFiltersExamples
+  describe "setFilters"
+    $ forM_ filtersExamples
     $ \(filters, example, expected) ->
         it ("should give right result for " ++ show filters)
-          $          updateF example (setFilters filters)
-          `shouldBe` Right expected
+          $ do
+            result <- runExceptT $ setFilters filters example
+            result `shouldBe` Right expected

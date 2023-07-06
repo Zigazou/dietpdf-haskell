@@ -37,7 +37,11 @@ import qualified Data.Text                     as T
 import           Util.UnifiedError              ( FallibleT
                                                 , ifFail
                                                 )
-
+{- |
+Tells (True/False) if the stream contained in a `PDFObject` is XML.
+To be `True`, the dictionary of an indirect object with a stream must contain
+a `SubType` key with the value `XML`.
+-}
 streamIsXML :: PDFObject -> Bool
 streamIsXML (PDFIndirectObjectWithStream _ _ dictionary _) =
   dictionary Map.!? "Subtype" == Just (PDFName "XML")

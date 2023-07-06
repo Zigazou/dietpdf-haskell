@@ -28,10 +28,12 @@ import           Test.Hspec                     ( Spec
                                                 , it
                                                 , shouldBe
                                                 )
-import           Util.UnifiedError                    ( UnifiedError(NoObjectToEncode)
+import           Util.UnifiedError              ( UnifiedError(NoObjectToEncode, ObjectStreamNotFound)
+                                                , Fallible
                                                 )
+import           Control.Monad.Trans.Except     ( runExceptT )
 
-fromObjectStreamExamples :: [(PDFObject, Either UnifiedError PDFDocument)]
+fromObjectStreamExamples :: [(PDFObject, Fallible PDFDocument)]
 fromObjectStreamExamples =
   [ ( PDFObjectStream
       1
@@ -48,10 +50,10 @@ fromObjectStreamExamples =
       , PDFIndirectObject 18 0 (PDFString "Hello")
       ]
     )
-  , (PDFNull, Right mempty)
+  , (PDFNull, Left ObjectStreamNotFound)
   ]
 
-toObjectStreamExamples :: [(PDFDocument, Either UnifiedError PDFObject)]
+toObjectStreamExamples :: [(PDFDocument, Fallible PDFObject)]
 toObjectStreamExamples =
   [ ( fromList
       [ PDFIndirectObject 24 0 (PDFNumber 10.0)
@@ -81,11 +83,11 @@ spec = do
   describe "extract" $ do
     forM_ fromObjectStreamExamples $ \(example, expected) ->
       it ("should decode " ++ show example)
-        $          extract example
-        `shouldBe` expected
+        $   runExceptT (extract example)
+        >>= (`shouldBe` expected)
 
   describe "insert" $ do
     forM_ toObjectStreamExamples $ \(example, expected) ->
       it ("should encode " ++ show example)
-        $          insert example 1
-        `shouldBe` expected
+        $   runExceptT (insert example 1)
+        >>= (`shouldBe` expected)

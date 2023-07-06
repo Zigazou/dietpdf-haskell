@@ -5,7 +5,7 @@ module Pdf.Object.OptimizeSpec
 
 import           Control.Monad                  ( forM_ )
 import qualified Data.ByteString.Lazy          as BL
-import qualified Data.Map.Strict           as Map
+import qualified Data.Map.Strict               as Map
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObjectWithStream
                                                   , PDFNumber
@@ -20,8 +20,8 @@ import           Test.Hspec                     ( Spec
 import qualified Codec.Compression.Zlib        as ZL
 import qualified Codec.Compression.RunLength   as RL
 import           Pdf.Object.Optimize            ( optimize )
-import           Data.Either.Extra              ( eitherToMaybe )
-import           Util.Step                      ( runExceptT )
+import           Data.Either.Extra              ( fromRight )
+import           Control.Monad.Trans.Except     ( runExceptT )
 
 
 objectExamples :: [(PDFObject, PDFObject)]
@@ -29,7 +29,8 @@ objectExamples =
   [ ( PDFIndirectObjectWithStream
       1
       0
-      (Map.fromList [("Size", PDFNumber 16.0), ("Filter", PDFName "FlateDecode")]
+      (Map.fromList
+        [("Size", PDFNumber 16.0), ("Filter", PDFName "FlateDecode")]
       )
       (BL.toStrict . ZL.compress . BL.fromStrict $ "Hello, world!")
     , PDFIndirectObjectWithStream
@@ -44,7 +45,6 @@ objectExamples =
 
 spec :: Spec
 spec = describe "optimize" $ forM_ objectExamples $ \(example, expected) ->
-  it ("should be optimized " ++ show example)
-    $ do
-      optimized <- runExceptT (optimize example)
-      optimized `shouldBe` Right expected
+  it ("should be optimized " ++ show example) $ do
+    optimized <- runExceptT (optimize example)
+    optimized `shouldBe` Right expected

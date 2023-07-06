@@ -17,14 +17,13 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , mkPDFDictionary
                                                 , mkPDFArray
                                                 )
-import           Pdf.Object.State               ( getValue
-                                                , query
-                                                )
+import           Pdf.Object.State               ( getValue )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
                                                 , shouldBe
                                                 )
+import           Control.Monad.Trans.Except     ( runExceptT )
 
 dictionaryExamples :: [(PDFObject, BS.ByteString)]
 dictionaryExamples =
@@ -106,6 +105,6 @@ spec = describe "PDFDictionary" $ do
       `shouldBe` expected
 
   forM_ getValueExamples $ \(example, expected) ->
-    it ("should get value from Dictionary " ++ show example)
-      $          query example (getValue "Test")
-      `shouldBe` expected
+    it ("should get value from Dictionary " ++ show example) $ do
+      result <- runExceptT $ getValue "Test" example
+      result `shouldBe` Right expected

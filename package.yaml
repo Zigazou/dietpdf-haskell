@@ -95,11 +95,12 @@ tests:
     - dietpdf
     - hspec
     - QuickCheck
-    - zlib
     - bytestring
     - containers
-    - ordered-containers
-    - extra
     - binary-parsers
     - text
+    - transformers
+    - zlib
+    - extra
+    - unordered-containers
     - mtl

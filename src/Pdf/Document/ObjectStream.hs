@@ -156,10 +156,8 @@ getObjectStream object = do
 {- |
 Extract objects contained in an object stream from a `PDFObject`.
 
-If the `PDFObject` is not an object stream (Type = /ObjStm) it returns an
-empty list.
-
-If the `PDFObject` contains no object stream, an empty list is returned.
+If the `PDFObject` is not an object stream (Type = /ObjStm), it throws a
+parser error.
 -}
 extract
   :: Logging m

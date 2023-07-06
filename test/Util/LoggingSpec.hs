@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Util.StepSpec
+module Util.LoggingSpec
   ( spec
   ) where
 
-import           Util.Step                      ( StepM(step) )
+import           Util.Logging                   ( say )
 import qualified Data.Text                     as T
 import           Control.Monad.Writer           ( Writer
                                                 , runWriter
@@ -17,21 +17,21 @@ import           Test.Hspec                     ( Spec
 
 calc2 :: Int -> Writer [T.Text] Int
 calc2 n = do
-  step "start calc2"
+  say "start calc2"
   let n' = n - 1
-  step "end calc2"
+  say "end calc2"
   return n'
 
 calc :: Int -> Writer [T.Text] Int
 calc n = do
-  step "start calc"
+  say "start calc"
   n' <- calc2 (n + 1)
-  step "end calc"
+  say "end calc"
   return n'
 
 spec :: Spec
 spec =
-  describe "step"
+  describe "logging"
     $          it "should give right messages"
     $          runWriter (calc 1)
     `shouldBe` (1, ["start calc", "start calc2", "end calc2", "end calc"])

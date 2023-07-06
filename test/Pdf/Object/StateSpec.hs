@@ -23,21 +23,21 @@ import           Pdf.Object.Object              ( PDFObject
 import           Util.Dictionary                ( mkDictionary
                                                 , mkEmptyDictionary
                                                 )
-import           Pdf.Object.State               ( FallibleComputation
-                                                , ObjectComputation
-                                                , embedObject
+import           Pdf.Object.State               ( embedObject
                                                 , setMaybe
                                                 , setStream
-                                                , update
-                                                , updateF
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
                                                 , shouldBe
                                                 )
+import           Util.UnifiedError              ( FallibleT )
+import           Util.Logging                   ( Logging )
+import           Control.Monad.Trans.Except     ( runExceptT )
 
-setMaybeExamples :: Logging m => [(PDFObject, ObjectComputation m (), PDFObject)]
+setMaybeExamples
+  :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]
 setMaybeExamples =
   [ (mkEmptyPDFArray, setMaybe "Num" (Just $ PDFNumber 1.0), mkEmptyPDFArray)
   , (mkEmptyPDFArray, setMaybe "Num" Nothing               , mkEmptyPDFArray)
@@ -58,7 +58,7 @@ setMaybeExamples =
   ]
 
 setStreamExamples
-  :: Logging m => [(PDFObject, ObjectComputation m (), PDFObject)]
+  :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]
 setStreamExamples =
   [ (mkEmptyPDFArray     , setStream "abc", mkEmptyPDFArray)
   , (PDFEndOfFile        , setStream "abc", PDFEndOfFile)
@@ -76,7 +76,8 @@ setStreamExamples =
     )
   ]
 
-embedObjectExamples :: [(PDFObject, FallibleComputation (), PDFObject)]
+embedObjectExamples
+  :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]
 embedObjectExamples =
   [ ( mkEmptyPDFArray
     , embedObject (mkPDFArray [PDFName "a"])
@@ -95,18 +96,17 @@ embedObjectExamples =
 spec :: Spec
 spec = do
   describe "setMaybe" $ forM_ setMaybeExamples $ \(example, fn, expected) ->
-    it ("should work on " ++ show example)
-      $          update example fn
-      `shouldBe` expected
+    it ("should work on " ++ show example) $ do
+      result <- runExceptT (fn example)
+      result `shouldBe` Right expected
 
   describe "setStream" $ forM_ setStreamExamples $ \(example, fn, expected) ->
-    it ("should work on " ++ show example)
-      $          update example fn
-      `shouldBe` expected
+    it ("should work on " ++ show example) $ do
+      result <- runExceptT (fn example)
+      result `shouldBe` Right expected
 
   describe "embedObject"
     $ forM_ embedObjectExamples
-    $ \(example, fn, expected) ->
-        it ("should work on " ++ show example)
-          $          updateF example fn
-          `shouldBe` Right expected
+    $ \(example, fn, expected) -> it ("should work on " ++ show example) $ do
+        result <- runExceptT (fn example)
+        result `shouldBe` Right expected

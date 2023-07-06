@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
+
 module Pdf.Object.LinearizationSpec
   ( spec
   ) where
@@ -28,6 +30,8 @@ import           Test.Hspec                     ( Spec
                                                 , it
                                                 , shouldBe
                                                 )
+import           Control.Monad.Trans.Except     ( runExceptT )
+import           Util.Logging                   ( Logging )
 
 linearizationExamples :: [(BS.ByteString, Maybe Linearization)]
 linearizationExamples =
@@ -107,19 +111,19 @@ linearizationBadExamples =
     )
   ]
 
-toObjects :: BS.ByteString -> PDFDocument
-toObjects stream = case pdfParse stream of
-  Left  _       -> mempty
-  Right objects -> objects
+toObjects :: Logging m => BS.ByteString -> m PDFDocument
+toObjects stream = runExceptT (pdfParse stream) >>= \case
+  Left  _       -> return mempty
+  Right objects -> return objects
 
 spec :: Spec
 spec = describe "getLinearization" $ do
   forM_ linearizationExamples $ \(example, expected) -> do
-    it ("should work with " ++ show example)
-      $          (getLinearization . toObjects) example
-      `shouldBe` expected
+    it ("should work with " ++ show example) $ do
+      result <- getLinearization <$> toObjects example
+      result `shouldBe` expected
 
   forM_ linearizationBadExamples $ \(example, expected) -> do
-    it ("should not work with " ++ show example)
-      $          (getLinearization . toObjects) example
-      `shouldBe` expected
+    it ("should not work with " ++ show example) $ do
+      result <- getLinearization <$> toObjects example
+      result `shouldBe` expected

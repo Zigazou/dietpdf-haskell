@@ -17,6 +17,7 @@ import           Test.Hspec                     ( Spec
                                                 , it
                                                 , shouldBe
                                                 )
+import           Control.Monad.Trans.Except     ( runExceptT )
 
 stringExamples :: [(PDFObject, BS.ByteString)]
 stringExamples =
@@ -45,6 +46,6 @@ spec = describe "PDFString" $ do
       `shouldBe` expected
 
   forM_ optimizeStringExamples $ \(example, expected) ->
-    it ("should convert to PDFString " ++ show example)
-      $          optimizeString example
-      `shouldBe` Right expected
+    it ("should convert to PDFString " ++ show example) $ do
+      result <- runExceptT (optimizeString example)
+      result `shouldBe` Right expected

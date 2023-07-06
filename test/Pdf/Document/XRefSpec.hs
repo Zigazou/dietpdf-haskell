@@ -4,7 +4,7 @@ module Pdf.Document.XRefSpec
   ) where
 
 import           Control.Monad                  ( forM_ )
-import qualified Data.IntMap.Strict               as IM
+import qualified Data.IntMap.Strict            as IM
 import           Pdf.Document.Collection        ( EncodedObject(EncodedObject)
                                                 , EncodedObjects
                                                 , ObjectOffsets
@@ -26,10 +26,6 @@ import           Test.Hspec                     ( Spec
 
 import           Pdf.Document.XRef              ( calcOffsets
                                                 , xrefTable
-                                                )
-import           Pdf.Object.Collection          ( EncodedObject(EncodedObject)
-                                                , EncodedObjects
-                                                , ObjectOffsets
                                                 )
 
 calcOffsetsExamples :: [(EncodedObjects, ObjectOffsets)]
