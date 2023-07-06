@@ -15,9 +15,17 @@ import           Text.XML.Light                 ( showContent
                                                 , CData(CData)
                                                 )
 import           Data.Char                      ( isSpace )
-import           Data.Text.Encoding             ( decodeUtf8 )
+import           Data.Text.Encoding             ( decodeUtf8'
+                                                , decodeLatin1
+                                                )
 import           Data.ByteString.Search.DFA     ( replace )
 import           Data.ByteString.Lazy           ( toStrict )
+import qualified Data.Text                     as T
+
+toText :: BS.ByteString -> T.Text
+toText bytes = case decodeUtf8' bytes of
+  Right text -> text
+  Left  _    -> decodeLatin1 bytes
 {- | Optimize XML stream.
 
 It:
@@ -30,7 +38,7 @@ optimizeXML stream = BS.concat
   (   patchByteOrder
   .   BSU.fromString
   .   showContent
-  <$> (removeSpace . parseXML . decodeUtf8) stream
+  <$> (removeSpace . parseXML . toText) stream
   )
  where
   patchByteOrder :: BS.ByteString -> BS.ByteString
