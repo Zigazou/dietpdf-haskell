@@ -4,9 +4,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 
 module Util.Logging
-  ( Logging(say, action)
+  ( Logging(say)
   , sayF
-  , actionF
   , sayComparisonF
   ) where
 
@@ -31,9 +30,6 @@ import           Fmt                            ( padLeftF
 class Monad m => Logging m where
   say :: T.Text -> m ()
 
-  action :: T.Text -> a -> m a
-  action t a = say t >> return a
-
 instance Logging IO where
   say :: T.Text -> IO ()
   say = TIO.putStrLn
@@ -48,9 +44,6 @@ instance Logging (Writer [T.Text]) where
 
 sayF :: (Logging m, MonadTrans t) => T.Text -> t m ()
 sayF = lift . say
-
-actionF :: (Logging m, MonadTrans t, Monad (t m)) => T.Text -> a -> t m a
-actionF t a = sayF t >> return a
 
 sayComparisonF :: (Logging m, MonadTrans t) => T.Text -> Int -> Int -> t m ()
 sayComparisonF label sizeBefore sizeAfter = sayF

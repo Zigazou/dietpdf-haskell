@@ -9,7 +9,6 @@ module Pdf.Document.Document
   , toList
   , cSize
   , cCons
-  , cMap
   , cfMap
   , cFilter
   , lMap
@@ -17,7 +16,6 @@ module Pdf.Document.Document
   , dSepBy
   , deepFind
   , findLast
-  , clean
   ) where
 
 import           Control.Applicative            ( (<|>)
@@ -28,17 +26,11 @@ import           Data.Foldable                  ( foldl' )
 import qualified Data.Set.Ordered              as OS
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFArray
-                                                  , PDFComment
                                                   , PDFDictionary
-                                                  , PDFEndOfFile
                                                   , PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFObjectStream
-                                                  , PDFStartXRef
                                                   , PDFTrailer
-                                                  , PDFVersion
-                                                  , PDFXRef
-                                                  , PDFIndirectObjectWithGraphics
                                                   )
                                                 )
 import           Util.UnifiedError              ( FallibleT )
@@ -72,14 +64,6 @@ instance Ord a => Monoid (CollectionOf a) where
 
 cSize :: CollectionOf a -> Int
 cSize (CollectionOf os) = OS.size os
-
-{- |
-A `map` function for objects of type `CollectionOf`.
-
-The destination type must be an instance of `Ord`.
--}
-cMap :: Ord b => (a -> b) -> CollectionOf a -> CollectionOf b
-cMap f = foldr (cCons . f) mempty
 
 cfMap
   :: (Ord b, Monad m)
@@ -182,41 +166,3 @@ deepFind p = foldr walk mempty
       (PDFArray      lObjects    ) -> collection <> foldr walk mempty lObjects
       (PDFDictionary dict        ) -> collection <> foldr walk mempty dict
       _anyOtherValue               -> collection
-
-{- |
-Remove objects that are not top-level from the PDFDocument.
-
-Any object other than the following is filtered out:
-
-- `PDFEndOfFile`
-- `PDFIndirectObject`
-- `PDFIndirectObjectWithStream`
-- `PDFObjectStream`
-- `PDFTrailer`
-- `PDFVersion`
-- `PDFXRef`
-
->>> clean (fromList [PDFName "a"])
-fromList []
-
->>> clean (fromList [PDFVersion "1.2", PDFVersion "1.5"])
-fromList [PDFVersion "1.5"]
-
->>> clean (fromList [PDFIndirectObject 1 0 PDFNull, PDFIndirectObject 1 0 (PDFName "a")])
-fromList [PDFIndirectObject 1 0 (PDFName "a")]
--}
-clean :: PDFDocument -> PDFDocument
-clean = cFilter topLevel
- where
-  topLevel :: PDFObject -> Bool
-  topLevel (PDFComment _)                  = True
-  topLevel PDFEndOfFile                    = True
-  topLevel PDFIndirectObject{}             = True
-  topLevel PDFIndirectObjectWithStream{}   = True
-  topLevel PDFIndirectObjectWithGraphics{} = True
-  topLevel PDFObjectStream{}               = True
-  topLevel PDFTrailer{}                    = True
-  topLevel PDFVersion{}                    = True
-  topLevel PDFXRef{}                       = True
-  topLevel PDFStartXRef{}                  = True
-  topLevel _anyOtherObject                 = False

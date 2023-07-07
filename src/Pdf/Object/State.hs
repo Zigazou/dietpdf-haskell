@@ -11,16 +11,13 @@ module Pdf.Object.State
     getValue
   , getStream
   , getDictionary
-  , query
   , maybeQuery
 
     -- * Modify
   , setValue
   , setMaybe
   , setStream
-  , setDictionary
   , embedObject
-  , modifyObject
   ) where
 
 import qualified Data.ByteString               as BS
@@ -169,31 +166,6 @@ setStream newStream object = case object of
   newLength = pdfNumber . BS.length $ newStream
 
 {- |
-Replace the `Dictionary` embedded in a `PDFObject`.
-
-This function works on:
-
-- `PDFIndirectObjectWithStream`
-- `PDFObjectStream`
-- `PDFIndirectObject` (only if it already has a `Dictionary`)
-- `PDFDictionary`
-
-Any other object will yield a `UnifiedError` `InvalidObjectToEmbed`, stopping
-the evaluation of the monad.
--}
-setDictionary
-  :: Logging m => Dictionary PDFObject -> PDFObject -> FallibleT m PDFObject
-setDictionary dict object = case object of
-  (PDFIndirectObjectWithStream num gen _ stream) ->
-    return $ PDFIndirectObjectWithStream num gen dict stream
-  (PDFObjectStream num gen _ stream) ->
-    return $ PDFObjectStream num gen dict stream
-  (PDFIndirectObject num gen (PDFDictionary _)) ->
-    return $ PDFIndirectObject num gen (PDFDictionary dict)
-  (PDFDictionary _) -> return $ PDFDictionary dict
-  _anyOtherObject   -> throwE (InvalidObjectToEmbed "")
-
-{- |
 Embed an object into a `PDFObject`.
 
 If the object is a `PDFDictionary`, its will be embedded in:
@@ -260,37 +232,10 @@ cannotEmbed source destination = throwE
     (show source ++ " cannot be embedded in " ++ show destination)
   )
 
-{- |
-Apply a function to modify an embedded object.
-
-If the function returns a `UnifiedError`, the evaluation of the monad is
-stopped.
-
-To ignore an object, the function just has to return it unchanged.
--}
-modifyObject
-  :: Logging m => (PDFObject -> PDFObject) -> PDFObject -> FallibleT m PDFObject
-modifyObject fn object = case object of
-  (PDFIndirectObjectWithStream _ _ dict _) ->
-    embedObject (fn (PDFDictionary dict)) object
-  (PDFObjectStream _ _ dict _) -> embedObject (fn (PDFDictionary dict)) object
-  (PDFIndirectObject _ _ object'@PDFDictionary{}) ->
-    embedObject (fn object') object
-  PDFDictionary{} -> embedObject (fn object) object
-  _anyOtherObject -> throwE
-    (InvalidObjectToEmbed ("No embedded object to modify " ++ show object))
-
 maybeQuery
   :: (PDFObject -> FallibleT Identity (Maybe PDFObject))
   -> PDFObject
   -> Maybe PDFObject
 maybeQuery fn object = case runIdentity . runExceptT $ fn object of
   Right value     -> value
-  Left  _anyError -> Nothing
-
-
-query
-  :: (PDFObject -> FallibleT Identity PDFObject) -> PDFObject -> Maybe PDFObject
-query fn object = case runIdentity . runExceptT $ fn object of
-  Right value     -> Just value
   Left  _anyError -> Nothing

@@ -15,12 +15,9 @@ module Pdf.Object.Container
   , setFilters
   , filtersFilter
   , filtersParms
-  , insertMaybe
-  , insertMaybes
   , getFilters
   ) where
 
-import qualified Data.ByteString               as BS
 import qualified Data.Map.Strict               as Map
 import qualified Data.Sequence                 as SQ
 import           Pdf.Object.Object              ( PDFObject
@@ -38,7 +35,6 @@ import           Pdf.Object.State               ( embedObject
                                                 , getValue
                                                 , setMaybe
                                                 )
-import           Util.Dictionary                ( Dictionary )
 import           Util.UnifiedError              ( UnifiedError
                                                   ( InvalidFilterParm
                                                   )
@@ -166,31 +162,3 @@ setFilters filters object = if hasDictionary object
   then setMaybe "Filter" (filtersFilter filters) object
     >>= setMaybe "DecodeParms" (filtersParms filters)
   else return object
-
-{- |
-Insert a key-value pair inside a `Dictionary`.
-
-If the value is `Nothing`, the dictionary is returned without modification.
-
-It the value is `Just` something, the something is inserted into the dictionary.
--}
-insertMaybe
-  :: Dictionary PDFObject -- ^ The dictionary to update
-  -> BS.ByteString -- ^ The key name
-  -> Maybe PDFObject -- ^ The `Maybe` value to associate to the key name
-  -> Dictionary PDFObject -- ^ The resulting dictionary
-insertMaybe dict name (Just object) = Map.insert name object dict
-insertMaybe dict _    Nothing       = dict
-
-{- |
-Insert a list of key-value pair inside a `Dictionary`.
-
-Any `Nothing` value is ignored.
--}
-insertMaybes
-  :: Dictionary PDFObject -- ^ The original `Dictionary`
-  -> [(BS.ByteString, Maybe PDFObject)] -- ^ Key-values to insert
-  -> Dictionary PDFObject -- ^ The updated `Dictionary`
-insertMaybes dict [] = dict
-insertMaybes dict ((name, value) : remains) =
-  insertMaybes (insertMaybe dict name value) remains

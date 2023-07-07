@@ -3,7 +3,6 @@ This module contains a parser for loose end of line (either CR, CR+LF or LF).
 -}
 module Pdf.Object.Parser.LooseEndOfLine
   ( looseEndOfLineP
-  , looseEndOfLineTwoBytesP
   , isLooseEndOfLine
   ) where
 
@@ -31,10 +30,3 @@ looseEndOfLineP =
     <|> (word8 asciiSPACE >> word8 asciiLF)
     <|> word8 asciiCR
     <|> word8 asciiLF
-
--- | Parser for a loose end of line (CR, CR+LF or LF)
-looseEndOfLineTwoBytesP :: Get ()
-looseEndOfLineTwoBytesP =
-  (word8 asciiCR >> word8 asciiLF)
-    <|> (word8 asciiSPACE >> word8 asciiCR)
-    <|> (word8 asciiSPACE >> word8 asciiLF)

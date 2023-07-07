@@ -19,7 +19,7 @@ import           Util.Ascii                     ( asciiDIGITNINE
                                                 , asciiUPPERA
                                                 , asciiUPPERF
                                                 )
-
+infixl 9 ><
 (><) :: Word8 -> (Word8, Word8) -> Bool
 (><) byte (lower, upper) = byte >= lower && byte <= upper
 

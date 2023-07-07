@@ -14,8 +14,6 @@ module Util.UnifiedError
   ( UnifiedError(..)
   , FallibleT
   , Fallible
-  , putError
-  , putErrorLn
   , tryF
   , ifFail
   ) where
@@ -27,8 +25,6 @@ import           Control.Monad.Except           ( ExceptT
 import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
-import           System.IO                      ( stderr )
-import           Util.Ascii                     ( asciiLF )
 
 data ErrorType = ReadingError
                | ParsingError
@@ -167,23 +163,6 @@ instance Show UnifiedError where
   show err@NoObjectToEncode        = show' err "No object to encode"
   show err@(UnknownScalerType msg) = show' err ("Unknown scaler type: " ++ msg)
   show err@ObjectStreamNotFound    = show' err "Object stream not found"
-
-{- |
-Output a `ByteString` on the standard error output.
-
-This function outputs the bytes as is without appending a line return.
--}
-putError :: BS.ByteString -> IO ()
-putError = BS.hPutStr stderr
-
-{- |
-Output a `ByteString` on the standard error output.
-
-This function appends a line return (`asciiLF`) to the output.
--}
-putErrorLn :: BS.ByteString -> IO ()
-putErrorLn msg =
-  BS.hPutStr stderr msg >> BS.hPutStr stderr (BS.singleton asciiLF)
 
 tryF :: Monad m => FallibleT m a -> FallibleT m (Either UnifiedError a)
 tryF = lift . runExceptT

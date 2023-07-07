@@ -104,5 +104,4 @@ tests:
     - transformers
     - zlib
     - extra
-    - unordered-containers
     - mtl

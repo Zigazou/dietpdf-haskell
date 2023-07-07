@@ -15,10 +15,6 @@ module Pdf.Document.Collection
   , EncodedObject(EncodedObject, eoObjectNumber, eoObjectLength, eoBinaryData)
   , EncodedObjects
   , ObjectOffsets
-
-    -- * Find `PDFObject`
-  , findLastValue
-  , findLastObject
   ) where
 
 import qualified Data.ByteString               as BS
@@ -31,8 +27,6 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , fromPDFObject
                                                 )
 import           Pdf.Document.Document          ( CollectionOf )
-import           Data.Maybe                     ( isJust )
-import           Control.Monad                  ( (<=<) )
 
 -- | A collection of objects indexed by the object number
 type PDFObjects = IM.IntMap PDFObject
@@ -75,28 +69,3 @@ encodeObject object@(PDFObjectStream number _ _ _) = EncodedObject
   where bytes = fromPDFObject object
 encodeObject object = EncodedObject 0 (BS.length bytes) bytes
   where bytes = fromPDFObject object
-
--- | Given a predicate, find the last `PDFOBject` validating this predicate
-findLastObject
-  :: (PDFObject -> Bool)
-     -- ^ Returns `True` if the `PDFObject` satisfies a condition
-  -> [PDFObject] -- ^ List of `PDFObject` to search
-  -> Maybe PDFObject
-     -- ^ The last `PDFObject` satisfying the predicate or Nothing
-findLastObject predicate = findLastObject' Nothing
- where
-  findLastObject' :: Maybe PDFObject -> [PDFObject] -> Maybe PDFObject
-  findLastObject' found []                      = found
-  findLastObject' found (object : otherObjects) = if predicate object
-    then findLastObject' (Just object) otherObjects
-    else findLastObject' found otherObjects
-
--- | Given a predicate, find the value of the last `PDFOBject` validating this
---   predicate
-findLastValue
-  :: (PDFObject -> Maybe a)
-   -- ^ Returns an arbitray value from a `PDFObject` it the `PDFObject`
-   --   satisfies a condition or Nothing
-  -> [PDFObject] -- ^ List of `PDFObject` to search
-  -> Maybe a -- ^ The last `PDFObject` satisfying the predicate or Nothing
-findLastValue getValue = getValue <=< findLastObject (isJust . getValue)
