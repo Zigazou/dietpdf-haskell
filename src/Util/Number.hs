@@ -18,6 +18,12 @@ import           Data.Double.Conversion.ByteString
                                                 ( toShortest )
 import           Util.String                    ( startsWith )
 
+round' :: Int -> Double -> Double
+round' limit x = fromIntegral (floor (x * t) :: Int) / t
+ where
+  t :: Double
+  t = 10 ^ limit
+
 {-|
 Given a list of `Word8`, returns a number.
 
@@ -44,7 +50,7 @@ fromNumber number
   | startsWith "0." str  = BS.drop 1 str
   | startsWith "-0." str = BS.cons asciiHYPHENMINUS (BS.drop 2 str)
   | otherwise            = str
-  where str = toShortest number
+  where str = toShortest (round' 6 number)
 
 -- | Output an int
 fromInt :: Int -> BS.ByteString
