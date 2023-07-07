@@ -60,6 +60,7 @@ library:
   - transformers
   - stringsearch
   - double-conversion
+  - fmt
 
 executables:
   dietpdf:

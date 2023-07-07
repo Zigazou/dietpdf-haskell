@@ -12,22 +12,32 @@ module Pdf.Document.Partition
   , toPartition
   , firstVersion
   , lastTrailer
+  , removeUnused
   ) where
 
 import           Data.Foldable                  ( find )
 import           Data.Maybe                     ( fromMaybe )
 import           Pdf.Document.Document          ( PDFDocument
-                                                , singleton
+                                                , cFilter
+                                                , deepFind
                                                 )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFNull
-                                                  , PDFObjectStream
+                                                  ( PDFNull
                                                   , PDFTrailer
                                                   , PDFVersion
+                                                  , PDFIndirectObject
+                                                  , PDFIndirectObjectWithStream
+                                                  , PDFObjectStream
+                                                  , PDFReference
                                                   )
+                                                , isIndirect
+                                                , isHeader
+                                                , isTrailer
+                                                , hasKey
                                                 )
+import           Util.Logging                   ( Logging )
+import           Util.UnifiedError              ( FallibleT )
+import           Pdf.Document.Uncompress        ( uncompress )
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 data PDFPartition = PDFPartition
@@ -52,19 +62,14 @@ instance Monoid PDFPartition where
   mempty = PDFPartition mempty mempty mempty
 
 {-|
-Partition a single PDF object.
-
-Partition of a list of PDF objects is done using monoid.
+Partition a `CollectionOf` of `PDFObject`.
 -}
-toPartition :: PDFObject -> PDFPartition
-toPartition pno@PDFIndirectObject{} =
-  PDFPartition (singleton pno) mempty mempty
-toPartition pno@PDFIndirectObjectWithStream{} =
-  PDFPartition (singleton pno) mempty mempty
-toPartition pno@PDFObjectStream{} = PDFPartition (singleton pno) mempty mempty
-toPartition ph@(PDFVersion _)     = PDFPartition mempty (singleton ph) mempty
-toPartition pt@(PDFTrailer _)     = PDFPartition mempty mempty (singleton pt)
-toPartition _                     = mempty
+toPartition :: PDFDocument -> PDFPartition
+toPartition objects = PDFPartition
+  { ppIndirectObjects = cFilter isIndirect objects
+  , ppHeads           = cFilter isHeader objects
+  , ppTrailers        = cFilter isTrailer objects
+  }
 
 {-|
 Return the first PDF version if any.
@@ -90,3 +95,37 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
   trailer :: PDFObject -> Bool
   trailer (PDFTrailer _) = True
   trailer _              = False
+
+removeUnused :: Logging m => PDFPartition -> FallibleT m PDFPartition
+removeUnused (PDFPartition indirectObjects heads trailers) = do
+  uIndirectObjects <- uncompress indirectObjects
+  uHeads           <- uncompress heads
+  uTrailers        <- uncompress trailers
+
+  let references =
+        deepFind isReference (uHeads <> uTrailers <> uIndirectObjects)
+
+  return $ PDFPartition
+    { ppIndirectObjects = cFilter (used references) indirectObjects
+    , ppHeads           = heads
+    , ppTrailers        = trailers
+    }
+ where
+  isNotLinearized :: PDFObject -> Bool
+  isNotLinearized = not . hasKey "Linearized"
+
+  isReferenced :: PDFDocument -> PDFObject -> Bool
+  isReferenced refs (PDFIndirectObject num gen _) =
+    PDFReference num gen `elem` refs
+  isReferenced refs (PDFIndirectObjectWithStream num gen _ _) =
+    PDFReference num gen `elem` refs
+  isReferenced refs (PDFObjectStream num gen _ _) =
+    PDFReference num gen `elem` refs
+  isReferenced _anyRefs _anyOtherObject = True
+
+  used :: PDFDocument -> PDFObject -> Bool
+  used refs object = isNotLinearized object && isReferenced refs object
+
+  isReference :: PDFObject -> Bool
+  isReference PDFReference{}  = True
+  isReference _anyOtherObject = False

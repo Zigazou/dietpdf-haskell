@@ -42,11 +42,10 @@ import           Util.UnifiedError              ( UnifiedError
                                                 , FallibleT
                                                 )
 import           Util.Logging                   ( Logging
-                                                , sayF
+                                                , sayComparisonF
                                                 )
 import           Util.Array                     ( mkArray )
 import qualified Data.Text                     as T
-import           Text.Printf                    ( printf )
 import           Control.Monad.Trans.Except     ( except )
 import           Data.Functor                   ( (<&>) )
 
@@ -126,26 +125,12 @@ predRleZopfli (Just (width, components)) stream = do
     )
 predRleZopfli _noWidth _stream = Left InvalidFilterParm
 
-sizeComparison :: BS.ByteString -> BS.ByteString -> T.Text
-sizeComparison before after = T.pack
-  $ printf "%d/%d (%+.2f%%)" sizeBefore sizeAfter ratio
- where
-  sizeBefore = BS.length before
-  sizeAfter  = BS.length after
-  ratio :: Float
-  ratio =
-    100
-      * (fromIntegral sizeAfter - fromIntegral sizeBefore)
-      / fromIntegral sizeBefore
-
 filterInfo
   :: Logging m => T.Text -> BS.ByteString -> BS.ByteString -> FallibleT m ()
-filterInfo filterName streamBefore streamAfter = sayF
-  (  "  - Filter "
-  <> T.take 20 (filterName <> "                    ")
-  <> " "
-  <> sizeComparison streamBefore streamAfter
-  )
+filterInfo filterName streamBefore streamAfter = sayComparisonF
+  ("Filter " <> filterName)
+  (BS.length streamBefore)
+  (BS.length streamAfter)
 
 applyEveryFilter
   :: Logging m

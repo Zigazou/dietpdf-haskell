@@ -82,5 +82,5 @@ spec :: Spec
 spec =
   describe "toPartition" $ forM_ toPartitionExamples $ \(example, expected) ->
     it ("should give right result for " ++ show example)
-      $          mconcat (toPartition <$> example)
+      $          (toPartition . fromList $ example)
       `shouldBe` expected

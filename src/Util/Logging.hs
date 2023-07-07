@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -6,6 +7,7 @@ module Util.Logging
   ( Logging(say, action)
   , sayF
   , actionF
+  , sayComparisonF
   ) where
 
 import qualified Data.Text                     as T
@@ -15,7 +17,16 @@ import           Control.Monad.Writer           ( Writer
                                                 , tell
                                                 )
 import           Control.Monad                  ( void )
-import           Control.Monad.Trans.Class      ( lift, MonadTrans )
+import           Control.Monad.Trans.Class      ( lift
+                                                , MonadTrans
+                                                )
+import           Fmt                            ( padLeftF
+                                                , (+|)
+                                                , (|+)
+                                                , commaizeF
+                                                , padRightF
+                                                , fixedF
+                                                )
 
 class Monad m => Logging m where
   say :: T.Text -> m ()
@@ -40,3 +51,22 @@ sayF = lift . say
 
 actionF :: (Logging m, MonadTrans t, Monad (t m)) => T.Text -> a -> t m a
 actionF t a = sayF t >> return a
+
+sayComparisonF :: (Logging m, MonadTrans t) => T.Text -> Int -> Int -> t m ()
+sayComparisonF label sizeBefore sizeAfter = sayF
+  (  "  - "
+  +| padRightF 32 ' ' label
+  |+ " "
+  +| padLeftF 12 ' ' (commaizeF sizeBefore)
+  |+ "/"
+  +| padLeftF 12 ' ' (commaizeF sizeAfter)
+  |+ " ("
+  +| padLeftF 8 ' ' (fixedF 2 ratio)
+  |+ "%)"
+  )
+ where
+  ratio :: Float
+  ratio =
+    100
+      * (fromIntegral sizeAfter - fromIntegral sizeBefore)
+      / fromIntegral sizeBefore

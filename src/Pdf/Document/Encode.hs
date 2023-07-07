@@ -14,11 +14,7 @@ import qualified Data.Map.Strict               as Map
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFEndOfFile
                                                   , PDFNumber
-                                                  , PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
                                                   , PDFStartXRef
-                                                  , PDFReference
                                                   )
                                                 , fromPDFObject
                                                 , xrefCount
@@ -30,10 +26,10 @@ import           Pdf.Object.Object              ( PDFObject
 import           Pdf.Document.Document          ( PDFDocument
                                                 , cFilter
                                                 , findLast
-                                                , deepFind
-                                                , lMap
                                                 , fromList
-                                                , cFilter
+                                                , toList
+                                                , cfMap
+                                                , cSize
                                                 )
 import           Pdf.Document.Partition         ( PDFPartition
                                                   ( ppHeads
@@ -43,6 +39,7 @@ import           Pdf.Document.Partition         ( PDFPartition
                                                   )
                                                 , firstVersion
                                                 , lastTrailer
+                                                , removeUnused
                                                 )
 import           Util.UnifiedError              ( UnifiedError
                                                   ( EncodeNoIndirectObject
@@ -58,11 +55,11 @@ import           Pdf.Document.XRef              ( calcOffsets
                                                 )
 import           Util.Logging                   ( Logging
                                                 , sayF
+                                                , sayComparisonF
                                                 )
 import           Pdf.Document.Collection        ( encodeObject
                                                 , eoBinaryData
                                                 )
-import           Pdf.Document.Uncompress        ( uncompress )
 import           Pdf.Object.State               ( setValue
                                                 , getDictionary
                                                 )
@@ -75,30 +72,6 @@ updateTrailer root entriesCount object = do
   dict <- getDictionary object
   setValue "Size" (PDFNumber $ fromIntegral entriesCount) object
     >>= setValue "Root" (Map.findWithDefault root "Root" dict)
-
-removeUnused :: Logging m => PDFDocument -> FallibleT m PDFDocument
-removeUnused doc = do
-  references <- deepFind isReference <$> uncompress doc
-  return $ cFilter (used references) doc
- where
-  isNotLinearized :: PDFObject -> Bool
-  isNotLinearized = not . hasKey "Linearized"
-
-  isReferenced :: PDFDocument -> PDFObject -> Bool
-  isReferenced refs (PDFIndirectObject num gen _) =
-    PDFReference num gen `elem` refs
-  isReferenced refs (PDFIndirectObjectWithStream num gen _ _) =
-    PDFReference num gen `elem` refs
-  isReferenced refs (PDFObjectStream num gen _ _) =
-    PDFReference num gen `elem` refs
-  isReferenced _anyRefs _anyOtherObject = True
-
-  used :: PDFDocument -> PDFObject -> Bool
-  used refs object = isNotLinearized object && isReferenced refs object
-
-  isReference :: PDFObject -> Bool
-  isReference PDFReference{}  = True
-  isReference _anyOtherObject = False
 
 findRoot :: PDFDocument -> Maybe PDFObject
 findRoot = findLast (hasKey "Root")
@@ -118,40 +91,31 @@ pdfEncode
   :: Logging m
   => PDFDocument -- ^ A collection of PDF objects (order matters)
   -> FallibleT m BS.ByteString -- ^ A unified error or a bytestring
-pdfEncode document = do
-  objects <- tryF (removeUnused document) >>= \case
-    Right unusedRemoved -> do
-      sayF "Unused objects removed"
-      return unusedRemoved
-    Left _anyError -> do
-      sayF "Unable to remove unused objects"
-      return document
+pdfEncode objects = do
+  let partition = PDFPartition { ppIndirectObjects = cFilter isIndirect objects
+                               , ppHeads           = cFilter isHeader objects
+                               , ppTrailers        = cFilter isTrailer objects
+                               }
+      pdfTrailer = lastTrailer partition
 
-  let partObjects = PDFPartition
-        { ppIndirectObjects = cFilter isIndirect objects
-        , ppHeads           = cFilter isHeader objects
-        , ppTrailers        = cFilter isTrailer objects
-        }
-      pdfTrailer = lastTrailer partObjects
-
-      pdfHead    = (fromPDFObject . firstVersion) partObjects
+      pdfHead    = (fromPDFObject . firstVersion) partition
       pdfEnd     = fromPDFObject PDFEndOfFile
 
   sayF "Starting discovery"
 
-  when (null $ ppIndirectObjects partObjects) $ do
+  when (null $ ppIndirectObjects partition) $ do
     sayF "Indirect objects not found"
     throwE EncodeNoIndirectObject
 
   sayF "Indirect objects found"
 
-  when (null $ ppHeads partObjects) $ do
+  when (null $ ppHeads partition) $ do
     sayF "Version not found"
     throwE EncodeNoVersion
 
   sayF "Version found"
 
-  when (null $ ppTrailers partObjects) $ do
+  when (null $ ppTrailers partition) $ do
     sayF "Trailer not found"
     throwE EncodeNoTrailer
 
@@ -159,11 +123,23 @@ pdfEncode document = do
 
   sayF "Optimizing PDF"
 
-  optimizeds <- sequence (lMap optimize (ppIndirectObjects partObjects))
+  oIndirectObjects <- cfMap optimize (ppIndirectObjects partition)
+  let oPartition = partition { ppIndirectObjects = oIndirectObjects }
+
+  sayF "Last cleaning"
+  cleaned <- tryF (removeUnused oPartition) >>= \case
+    Right unusedRemoved -> do
+      sayComparisonF "Unused objects removal"
+                     (cSize (ppIndirectObjects partition))
+                     (cSize (ppIndirectObjects unusedRemoved))
+      return unusedRemoved
+    Left _anyError -> do
+      sayF "  - Unable to remove unused objects"
+      return oPartition
 
   sayF "Encoding PDF"
   let
-    encodeds    = encodeObject <$> optimizeds
+    encodeds    = encodeObject <$> toList (ppIndirectObjects cleaned)
     body        = BS.concat $ eoBinaryData <$> encodeds
     xref        = xrefTable (BS.length pdfHead) (fromList encodeds)
     encodedXRef = fromPDFObject xref

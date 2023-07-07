@@ -1,0 +1,26 @@
+[stream]: Length, Filter, DecodeParms, F, FFilter, FDecodeParms
+/Filter: ASCIIHexDecode, ASCII85Decode, LZWDecode, FlateDecode, RunLengthDecode, CCITTFaxDecode, JBIG2Decode, DCTDecode
+/Filter=LZWDecode|FlateDecode: Predictor, Colors, BitsPerComponent, Columns, EarlyChange
+/Filter=CCITTFaxDecode: K, EndOfLine, EncodedByteAlign, Columns, Rows, EndOfBlock, BlackIs1, DamagedRowsBeforeError
+/Filter=JBIG2Decode: JBIG2Globals
+/Filter=DCTDecode: ColorTransform
+[trailer]: Size, Prev, Root, Encrypt, Info, ID
+/Filter=Standard: V, Length, R, O, U, P
+/Type=Catalog: Version, Pages, PageLabels, Names, Dests, ViewerPreferences, PageLayout, PageMode, Outlines, Threads, OpenAction, AA, URI, AcroForm, Metadata, StructTreeRoot, MarkInfo, Lang, SpiderInfo, OutputIntents
+/Types=Pages: Type, Parent, Kids, Count
+/Type=Page: Parent, LastModified, Resources, MediaBox, CropBox, BleedBox, TrimBox, ArtBox, BoxColorInfo, Contents, Rotate, Group, Thumb, B, Dur, Trans, Annots, AA, Metadatan, PieceInfo, StructParents, ID, PZ, SeparationInfo
+[name dictionary]: Dests, AP, JavaScript, Pages, Templates, IDS, URLS, EmbeddedFiles
+[resource dictionary]: ExtGState, ColorSpace, Pattern, Shading, XObject, Font, ProcSet, Properties
+[name tree node dictionary]: Kids, Names, Limits
+[number tree node dictionary]: Kids, Nums, Limits
+[function dictionary]: FunctionType, Domain, Range
+[type 0 function dictionary]: Size, BitsPerSample, Order, Encode, Decode…
+[type 2 function dictionary]: C0, C1, N
+[type 3 function dictionary]: Functions, Bounds, Encode
+[type 4 function dictionary]: 
+/Type=Filespec: FS, F, DOS, Mac, Unix, ID, V, EF, RF
+/Type=EmbeddedFile: SubType, Params
+[embedded file parameter dictionary]: Size, CreationDate, ModDate, Mac, Checksum
+[Mac OS file information dictionary]: SubType, Creator, ResFork
+/Type=ExtGState: LW, LC, LJ, ML, D, RI, OP, op, OPM, Font, BG, BG2, UCR, UCR2, TR, TR2, HT, FL, SM, SA, BM, SMask, CA, ca, AIS, TK
+

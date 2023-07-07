@@ -30,6 +30,7 @@ import           Pdf.Object.Unfilter            ( unfilter )
 import           Pdf.Object.Filter              ( filterOptimize )
 import           Util.Logging                   ( sayF
                                                 , Logging
+                                                , sayComparisonF
                                                 )
 import           Pdf.Graphics.Parser.Stream     ( gfxParse )
 import           Pdf.Graphics.Object            ( separateGfx )
@@ -37,6 +38,8 @@ import qualified Data.Text                     as T
 import           Util.UnifiedError              ( FallibleT
                                                 , ifFail
                                                 )
+import qualified Data.ByteString               as BS
+
 {- |
 Tells (True/False) if the stream contained in a `PDFObject` is XML.
 To be `True`, the dictionary of an indirect object with a stream must contain
@@ -52,13 +55,19 @@ streamOptimize object = do
   stream <- getStream object
   if streamIsXML object
     then do
-      sayF "  - Optimizing XML stream"
-      setStream (optimizeXML stream) object
+      let optimizedStream = optimizeXML stream
+      sayComparisonF "XML stream optimization"
+                     (BS.length stream)
+                     (BS.length optimizedStream)
+      setStream optimizedStream object
     else case gfxParse stream of
       Right objects -> do
-        sayF "  - Optimizing GFX object"
-        setStream (separateGfx objects) object
-      _error        -> return object
+        let optimizedStream = separateGfx objects
+        sayComparisonF "GFX objects optimization"
+                      (BS.length stream)
+                      (BS.length optimizedStream)
+        setStream optimizedStream object
+      _error -> return object
 
 {- |
 Completely refilter a stream by finding the best filter combination.

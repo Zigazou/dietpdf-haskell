@@ -7,8 +7,10 @@ module Pdf.Document.Document
   , singleton
   , fromList
   , toList
+  , cSize
   , cCons
   , cMap
+  , cfMap
   , cFilter
   , lMap
   , dSepBy1
@@ -39,6 +41,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFIndirectObjectWithGraphics
                                                   )
                                                 )
+import           Util.UnifiedError              ( FallibleT )
 
 {- |
 This is a simple trick to allow `PDFDocument` to be foldable because it is not
@@ -67,6 +70,9 @@ instance Ord a => Monoid (CollectionOf a) where
   mempty :: CollectionOf a
   mempty = CollectionOf OS.empty
 
+cSize :: CollectionOf a -> Int
+cSize (CollectionOf os) = OS.size os
+
 {- |
 A `map` function for objects of type `CollectionOf`.
 
@@ -74,6 +80,24 @@ The destination type must be an instance of `Ord`.
 -}
 cMap :: Ord b => (a -> b) -> CollectionOf a -> CollectionOf b
 cMap f = foldr (cCons . f) mempty
+
+cfMap
+  :: (Ord b, Monad m)
+  => (a -> FallibleT m b)
+  -> CollectionOf a
+  -> FallibleT m (CollectionOf b)
+cfMap f = foldr (accumulate f) (pure mempty)
+ where
+  accumulate
+    :: (Monad m, Ord b)
+    => (a -> FallibleT m b)
+    -> a
+    -> FallibleT m (CollectionOf b)
+    -> FallibleT m (CollectionOf b)
+  accumulate transform a fc = do
+    collection <- fc
+    result     <- transform a
+    return (cCons result collection)
 
 {- |
 Equivalent to the `filter` function which works on `List` except this one
