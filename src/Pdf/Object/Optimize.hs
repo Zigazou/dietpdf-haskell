@@ -31,10 +31,10 @@ import           Pdf.Object.Filter              ( filterOptimize )
 import           Util.Logging                   ( sayF
                                                 , Logging
                                                 , sayComparisonF
+                                                , sayErrorF
                                                 )
 import           Pdf.Graphics.Parser.Stream     ( gfxParse )
 import           Pdf.Graphics.Object            ( separateGfx )
-import qualified Data.Text                     as T
 import           Util.UnifiedError              ( FallibleT
                                                 , ifFail
                                                 )
@@ -64,8 +64,8 @@ streamOptimize object = do
       Right objects -> do
         let optimizedStream = separateGfx objects
         sayComparisonF "GFX objects optimization"
-                      (BS.length stream)
-                      (BS.length optimizedStream)
+                       (BS.length stream)
+                       (BS.length optimizedStream)
         setStream optimizedStream object
       _error -> return object
 
@@ -124,9 +124,8 @@ optimize object = if optimizable object
   then do
     sayF (txtObjectNumberVersion object)
     refilter object
-      `ifFail` (\anError -> do
-                 sayF
-                   ("  - Cannot optimize (" <> (T.pack . show) anError <> ")")
+      `ifFail` (\theError -> do
+                 sayErrorF "Cannot optimize" theError
                  return object
                )
   else sayF (txtObjectNumberVersion object <> ": ignored") >> return object

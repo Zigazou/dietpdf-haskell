@@ -7,6 +7,7 @@ module Util.Logging
   ( Logging(say)
   , sayF
   , sayComparisonF
+  , sayErrorF
   ) where
 
 import qualified Data.Text                     as T
@@ -26,6 +27,7 @@ import           Fmt                            ( padLeftF
                                                 , padRightF
                                                 , fixedF
                                                 )
+import Util.UnifiedError (UnifiedError)
 
 class Monad m => Logging m where
   say :: T.Text -> m ()
@@ -63,3 +65,12 @@ sayComparisonF label sizeBefore sizeAfter = sayF
     100
       * (fromIntegral sizeAfter - fromIntegral sizeBefore)
       / fromIntegral sizeBefore
+
+sayErrorF :: (Logging m, MonadTrans t) => T.Text -> UnifiedError -> t m ()
+sayErrorF label theError = sayF
+  (  "  - "
+  +| padRightF 32 ' ' label
+  |+ " "
+  +| T.pack (show theError)
+  |+ ""
+  )
