@@ -9,10 +9,10 @@ module Pdf.Document.Document
   , toList
   , cCons
   , cMap
+  , cFilter
   , lMap
   , dSepBy1
   , dSepBy
-  , dFilter
   , deepFind
   , findLast
   , clean
@@ -76,6 +76,13 @@ cMap :: Ord b => (a -> b) -> CollectionOf a -> CollectionOf b
 cMap f = foldr (cCons . f) mempty
 
 {- |
+Equivalent to the `filter` function which works on `List` except this one
+works on `CollectionOf`.
+-}
+cFilter :: Ord a => (a -> Bool) -> CollectionOf a -> CollectionOf a
+cFilter f (CollectionOf set) = CollectionOf $ OS.filter f set
+
+{- |
 A `map` function for objects of type `CollectionOf` which converts to a `List`.
 
 This allows to get rid of the `Ord` constraint of cMap.
@@ -133,19 +140,6 @@ findLast p =
   foldr (\object found -> if p object then Just object else found) Nothing
 
 {- |
-Equivalent to the `filter` function which works on `List` except this one
-works on `PDFDocument`.
--}
-dFilter
-  :: (PDFObject -> Bool)
-  -- ^ Predicate, returns `True` to keep the item, `False` to discard it
-  -> PDFDocument -- ^ The `PDFDocument` to filter
-  -> PDFDocument -- ^ The `PDFDocument` filtered out
-dFilter p = foldr
-  (\x (CollectionOf dict) -> CollectionOf (if p x then x OS.|< dict else dict))
-  mempty
-
-{- |
 Find every `PDFObject` satisfiying a predicate, even when deeply nested in
 containers.
 -}
@@ -188,7 +182,7 @@ fromList [PDFVersion "1.5"]
 fromList [PDFIndirectObject 1 0 (PDFName "a")]
 -}
 clean :: PDFDocument -> PDFDocument
-clean = dFilter topLevel
+clean = cFilter topLevel
  where
   topLevel :: PDFObject -> Bool
   topLevel (PDFComment _)                  = True

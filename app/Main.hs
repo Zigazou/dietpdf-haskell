@@ -66,9 +66,9 @@ runApp :: AppOptions -> FallibleT IO ()
 runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
-runApp (OptimizeOptions verbose inputPDF outputPDF) = do
+runApp (OptimizeOptions inputPDF outputPDF) = do
   tryF (readPDF inputPDF) >>= \case
-    Right document -> optimize verbose outputPDF document
+    Right document -> optimize outputPDF document
     Left anError@(ParseError (_, offset, _)) -> do
       lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
       throwE anError

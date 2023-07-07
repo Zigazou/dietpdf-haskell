@@ -69,6 +69,11 @@ module Pdf.Object.Object
   , XRefState(InUseEntry, FreeEntry)
   , XRefEntry(XRefEntry, xreOffset, xreGeneration, xreState)
   , XRefSubsection(XRefSubsection, xrssStart, xrssCount, xrssEntries)
+
+    -- * Partitioning
+  , isIndirect
+  , isHeader
+  , isTrailer
   ) where
 
 import qualified Data.ByteString               as BS
@@ -762,3 +767,17 @@ instance ToPDFNumber Int where
 instance ToPDFNumber Integer where
   pdfNumber :: Integer -> PDFObject
   pdfNumber = PDFNumber . fromIntegral
+
+isIndirect :: PDFObject -> Bool
+isIndirect PDFIndirectObject{} = True
+isIndirect PDFIndirectObjectWithStream{} = True
+isIndirect PDFObjectStream{} = True
+isIndirect _anyOtherObject = False
+
+isHeader :: PDFObject -> Bool
+isHeader PDFVersion{} = True
+isHeader _anyOtherObject = False
+
+isTrailer :: PDFObject -> Bool
+isTrailer PDFTrailer{} = True
+isTrailer _anyOtherObject = False

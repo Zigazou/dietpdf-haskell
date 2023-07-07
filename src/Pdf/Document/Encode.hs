@@ -23,22 +23,26 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , fromPDFObject
                                                 , xrefCount
                                                 , hasKey
+                                                , isIndirect
+                                                , isHeader
+                                                , isTrailer
                                                 )
 import           Pdf.Document.Document          ( PDFDocument
-                                                , dFilter
+                                                , cFilter
                                                 , findLast
                                                 , deepFind
                                                 , lMap
                                                 , fromList
+                                                , cFilter
                                                 )
 import           Pdf.Document.Partition         ( PDFPartition
                                                   ( ppHeads
                                                   , ppIndirectObjects
                                                   , ppTrailers
+                                                  , PDFPartition
                                                   )
                                                 , firstVersion
                                                 , lastTrailer
-                                                , toPartition
                                                 )
 import           Util.UnifiedError              ( UnifiedError
                                                   ( EncodeNoIndirectObject
@@ -75,7 +79,7 @@ updateTrailer root entriesCount object = do
 removeUnused :: Logging m => PDFDocument -> FallibleT m PDFDocument
 removeUnused doc = do
   references <- deepFind isReference <$> uncompress doc
-  return $ dFilter (used references) doc
+  return $ cFilter (used references) doc
  where
   isNotLinearized :: PDFObject -> Bool
   isNotLinearized = not . hasKey "Linearized"
@@ -123,23 +127,35 @@ pdfEncode document = do
       sayF "Unable to remove unused objects"
       return document
 
-  let partObjects = foldr ((<>) . toPartition) mempty objects
-      pdfTrailer  = lastTrailer partObjects
+  let partObjects = PDFPartition
+        { ppIndirectObjects = cFilter isIndirect objects
+        , ppHeads           = cFilter isHeader objects
+        , ppTrailers        = cFilter isTrailer objects
+        }
+      pdfTrailer = lastTrailer partObjects
 
-      pdfHead     = (fromPDFObject . firstVersion) partObjects
-      pdfEnd      = fromPDFObject PDFEndOfFile
+      pdfHead    = (fromPDFObject . firstVersion) partObjects
+      pdfEnd     = fromPDFObject PDFEndOfFile
+
+  sayF "Starting discovery"
 
   when (null $ ppIndirectObjects partObjects) $ do
     sayF "Indirect objects not found"
     throwE EncodeNoIndirectObject
 
+  sayF "Indirect objects found"
+
   when (null $ ppHeads partObjects) $ do
     sayF "Version not found"
     throwE EncodeNoVersion
 
+  sayF "Version found"
+
   when (null $ ppTrailers partObjects) $ do
     sayF "Trailer not found"
     throwE EncodeNoTrailer
+
+  sayF "Trailer found"
 
   sayF "Optimizing PDF"
 

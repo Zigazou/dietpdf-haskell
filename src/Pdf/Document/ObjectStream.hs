@@ -36,7 +36,7 @@ import qualified Data.ByteString               as BS
 import           Util.Number                    ( fromInt )
 
 import           Pdf.Document.Document          ( PDFDocument
-                                                , dFilter
+                                                , cFilter
                                                 , fromList
                                                 , singleton
                                                 )
@@ -224,7 +224,7 @@ insert objects num | objects == mempty = throwE NoObjectToEncode
                    | osCount objStm == 0 = throwE NoObjectToEncode
                    | otherwise = return $ PDFObjectStream num 0 dict stream
  where
-  objStm = insertObjects (dFilter isObjectStreamable objects)
+  objStm = insertObjects (cFilter isObjectStreamable objects)
   dict :: Dictionary PDFObject
   dict = mkDictionary
     [ ("Type" , PDFName "ObjStm")

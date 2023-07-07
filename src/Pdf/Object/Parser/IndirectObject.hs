@@ -39,7 +39,8 @@ import           Data.Binary.Parser             ( Get
                                                 , satisfy
                                                 , some'
                                                 , string
-                                                , word8, option
+                                                , word8
+                                                , option
                                                 )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
@@ -96,10 +97,10 @@ whiteSpaceP = do
 streamWithoutCountP :: Get BS.ByteString
 streamWithoutCountP = do
   string "stream"
-  whiteSpaceP
+  whiteSpaceP -- looseEndOfLineP
   stream <- manyTill
     (satisfy (const True))
-    (string "endstream" <|> whiteSpaceP *> string "endstream")
+    (string "endstream")
   return (BS.pack stream)
 
 {- |

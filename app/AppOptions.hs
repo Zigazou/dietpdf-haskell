@@ -9,18 +9,15 @@ import           Options.Applicative            ( Parser
                                                 , command
                                                 , help
                                                 , info
-                                                , long
                                                 , metavar
                                                 , progDesc
-                                                , short
                                                 , str
                                                 , auto
                                                 , subparser
-                                                , switch
                                                 )
 
 data AppOptions
-  = OptimizeOptions Bool FilePath FilePath
+  = OptimizeOptions FilePath FilePath
   | InfoOptions FilePath
   | ExtractOptions Int FilePath
 
@@ -50,8 +47,7 @@ appOptions = subparser
        "optimize"
        (info
          (   OptimizeOptions
-         <$> switch (short 'v' <> long "verbose" <> help "Verbose output")
-         <*> argument str (metavar "IN" <> help "PDF file to process")
+         <$> argument str (metavar "IN" <> help "PDF file to process")
          <*> argument str (metavar "OUT" <> help "PDF file to create")
          )
          (progDesc "Optimize a PDF file")
