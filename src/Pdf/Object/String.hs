@@ -12,17 +12,17 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 )
 import           Util.String                    ( hexStringToString )
-import           Util.Ascii                     ( asciiNUL
-                                                , asciiDELETE
-                                                )
+import           Util.Ascii                     ( asciiNUL )
 import           Util.UnifiedError              ( FallibleT )
-import           Util.Logging                   ( Logging )
+import           Util.Logging                   ( Logging
+                                                , sayComparisonF
+                                                )
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"
 
-utf16beToAscii :: BS.ByteString -> Maybe BS.ByteString
-utf16beToAscii utf16beString =
+utf16beToLatin1 :: BS.ByteString -> Maybe BS.ByteString
+utf16beToLatin1 utf16beString =
   snd <$> BS.foldl' convert (Just (0, "")) utf16beString
  where
   convert :: Maybe (Int, BS.ByteString) -> Word8 -> Maybe (Int, BS.ByteString)
@@ -32,17 +32,17 @@ utf16beToAscii utf16beString =
   convert (Just (1, _)) 0xFF = Just (2, "")
   convert (Just (1, _)) _    = Nothing
   convert (Just (offset, current)) byte
-    | even offset && byte == 0x00      = Just (offset + 1, current)
-    | odd offset && byte < asciiDELETE = Just (offset + 1, BS.snoc current byte)
-    | otherwise                        = Nothing
+    | even offset && byte == asciiNUL = Just (offset + 1, current)
+    | odd offset && byte > asciiNUL   = Just (offset + 1, BS.snoc current byte)
+    | otherwise                       = Nothing
 
 isUTF16Encoded :: BS.ByteString -> Bool
 isUTF16Encoded string | BS.length string < 2           = False
                       | BS.take 2 string /= utf16beBOM = False
                       | otherwise                      = True
 
-isAsciiEncoded :: BS.ByteString -> Bool
-isAsciiEncoded = BS.all (\char -> char > asciiNUL && char < asciiDELETE)
+isLatin1Encoded :: BS.ByteString -> Bool
+isLatin1Encoded = BS.all (> asciiNUL)
 
 {- |
 Optimize `PDFHexString` into `PDFString`.
@@ -53,12 +53,21 @@ optimizeString object = case object of
     |
       -- If the hex string contains only ASCII characters, converts it to a
       -- PDFString which will be twice shorter.
-      isAsciiEncoded encoded -> return $ PDFString encoded
+      isLatin1Encoded encoded -> do
+      sayComparisonF "Hex string optimization"
+                     (BS.length values)
+                     (BS.length encoded)
+      return $ PDFString encoded
     |
       -- If the PDFHexString is UTF-16 but only contains ASCII characters,
       -- converts it to a PDFString which will be four times shorter.
-      isUTF16Encoded encoded -> return
-    $  maybe object PDFString (utf16beToAscii encoded)
+      isUTF16Encoded encoded -> case utf16beToLatin1 encoded of
+      Just asciiEncoded -> do
+        sayComparisonF "Hex string optimization"
+                       (BS.length values)
+                       (BS.length asciiEncoded)
+        return $ PDFString asciiEncoded
+      Nothing -> return object
     | otherwise -> return object
     where encoded = hexStringToString values
   _anyOtherObject -> return object

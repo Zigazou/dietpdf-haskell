@@ -76,7 +76,6 @@ It also optimized nested strings and XML streams.
 -}
 refilter :: Logging m => PDFObject -> FallibleT m PDFObject
 refilter object = do
-  sayF "  - Optimizing strings"
   stringOptimized <- deepMap optimizeString object
 
   if hasStream object
