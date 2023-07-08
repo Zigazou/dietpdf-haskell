@@ -98,9 +98,7 @@ streamWithoutCountP :: Get BS.ByteString
 streamWithoutCountP = do
   string "stream"
   whiteSpaceP -- looseEndOfLineP
-  stream <- manyTill
-    (satisfy (const True))
-    (string "endstream")
+  stream <- manyTill (satisfy (const True)) (string "endstream")
   return (BS.pack stream)
 
 {- |

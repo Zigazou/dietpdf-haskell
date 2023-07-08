@@ -11,6 +11,23 @@ import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFIndirectObjectWithGraphics
+                                                  , PDFXRef
+                                                  , PDFStartXRef
+                                                  , PDFTrailer
+                                                  , PDFNull
+                                                  , PDFBool
+                                                  , PDFObjectStream
+                                                  , PDFDictionary
+                                                  , PDFArray
+                                                  , PDFReference
+                                                  , PDFHexString
+                                                  , PDFString
+                                                  , PDFName
+                                                  , PDFKeyword
+                                                  , PDFNumber
+                                                  , PDFEndOfFile
+                                                  , PDFVersion
+                                                  , PDFComment
                                                   )
                                                 )
 
@@ -21,4 +38,21 @@ txtObjectNumberVersion (PDFIndirectObjectWithStream number version _ _) =
   txtNumberVersion number version
 txtObjectNumberVersion (PDFIndirectObjectWithGraphics number version _ _) =
   txtNumberVersion number version
-txtObjectNumberVersion _ = "anonymous"
+txtObjectNumberVersion (PDFObjectStream number version _ _) =
+  txtNumberVersion number version
+txtObjectNumberVersion PDFComment{}    = "anonymous (PDFComment)"
+txtObjectNumberVersion PDFVersion{}    = "anonymous (PDFVersion)"
+txtObjectNumberVersion PDFEndOfFile{}  = "anonymous (PDFEndOfFile)"
+txtObjectNumberVersion PDFNumber{}     = "anonymous (PDFNumber)"
+txtObjectNumberVersion PDFKeyword{}    = "anonymous (PDFKeyword)"
+txtObjectNumberVersion PDFName{}       = "anonymous (PDFName)"
+txtObjectNumberVersion PDFString{}     = "anonymous (PDFString)"
+txtObjectNumberVersion PDFHexString{}  = "anonymous (PDFHexString)"
+txtObjectNumberVersion PDFReference{}  = "anonymous (PDFReference)"
+txtObjectNumberVersion PDFArray{}      = "anonymous (PDFArray)"
+txtObjectNumberVersion PDFDictionary{} = "anonymous (PDFDictionary)"
+txtObjectNumberVersion PDFBool{}       = "anonymous (PDFBool)"
+txtObjectNumberVersion PDFNull{}       = "anonymous (PDFNull)"
+txtObjectNumberVersion PDFXRef{}       = "anonymous (PDFXRef)"
+txtObjectNumberVersion PDFTrailer{}    = "anonymous (PDFTrailer)"
+txtObjectNumberVersion PDFStartXRef{}  = "anonymous (PDFStartXRef)"

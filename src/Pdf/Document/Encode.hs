@@ -56,6 +56,7 @@ import           Pdf.Document.XRef              ( calcOffsets
 import           Util.Logging                   ( Logging
                                                 , sayF
                                                 , sayComparisonF
+                                                , sayErrorF
                                                 )
 import           Pdf.Document.Collection        ( encodeObject
                                                 , eoBinaryData
@@ -133,8 +134,8 @@ pdfEncode objects = do
                      (cSize (ppIndirectObjects partition))
                      (cSize (ppIndirectObjects unusedRemoved))
       return unusedRemoved
-    Left _anyError -> do
-      sayF "  - Unable to remove unused objects"
+    Left theError -> do
+      sayErrorF "Unable to remove unused objects" theError
       return oPartition
 
   sayF "Encoding PDF"

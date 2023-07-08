@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DerivingStrategies #-}
 
 {-|
 This modules implements several optimization techniques targeted at PDF objects.
@@ -23,6 +25,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                 )
 import           Pdf.Object.State               ( getStream
                                                 , setStream
+                                                , getValue
                                                 )
 import           Pdf.Object.String              ( optimizeString )
 import           Pdf.Object.Format              ( txtObjectNumberVersion )
@@ -37,37 +40,56 @@ import           Pdf.Graphics.Parser.Stream     ( gfxParse )
 import           Pdf.Graphics.Object            ( separateGfx )
 import           Util.UnifiedError              ( FallibleT
                                                 , ifFail
+                                                , tryF
                                                 )
 import qualified Data.ByteString               as BS
 
-{- |
-Tells (True/False) if the stream contained in a `PDFObject` is XML.
-To be `True`, the dictionary of an indirect object with a stream must contain
-a `SubType` key with the value `XML`.
--}
-streamIsXML :: PDFObject -> Bool
-streamIsXML (PDFIndirectObjectWithStream _ _ dictionary _) =
-  dictionary Map.!? "Subtype" == Just (PDFName "XML")
-streamIsXML _ = False
+data OptimizationType = XMLOptimization
+                      | GfxOptimization
+                      | ObjectStreamOptimization
+                      | NoOptimization
+                      deriving stock (Eq)
+
+whatOptimizationFor :: Logging m => PDFObject -> FallibleT m OptimizationType
+whatOptimizationFor object = do
+  getValue "SubType" object >>= \case
+    Just (PDFName "XML") -> return XMLOptimization
+    _notXML              -> getValue "Type" object >>= \case
+      Just (PDFName "ObjStm") -> return ObjectStreamOptimization
+      _notObjectStream        -> do
+        tryF (getStream object) >>= \case
+          Right stream -> case gfxParse stream of
+            Right _ -> return GfxOptimization
+            _notGfx -> return NoOptimization
+          _noStream -> return NoOptimization
 
 streamOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
-streamOptimize object = do
-  stream <- getStream object
-  if streamIsXML object
-    then do
-      let optimizedStream = optimizeXML stream
-      sayComparisonF "XML stream optimization"
-                     (BS.length stream)
-                     (BS.length optimizedStream)
-      setStream optimizedStream object
-    else case gfxParse stream of
+streamOptimize object = whatOptimizationFor object >>= \case
+  XMLOptimization -> do
+    stream <- getStream object
+    let optimizedStream = optimizeXML stream
+    sayComparisonF "XML stream optimization"
+                   (BS.length stream)
+                   (BS.length optimizedStream)
+    setStream optimizedStream object
+  ObjectStreamOptimization -> do
+    sayF "  - No optimization for object stream"
+    return object
+  GfxOptimization          -> do
+    stream <- getStream object
+    case gfxParse stream of
       Right objects -> do
         let optimizedStream = separateGfx objects
         sayComparisonF "GFX objects optimization"
                        (BS.length stream)
                        (BS.length optimizedStream)
         setStream optimizedStream object
-      _error -> return object
+      _error -> do
+        sayF "  - No stream content to optimize"
+        return object
+  NoOptimization -> do
+    sayF "  - No stream content to optimize"
+    return object
 
 {- |
 Completely refilter a stream by finding the best filter combination.
