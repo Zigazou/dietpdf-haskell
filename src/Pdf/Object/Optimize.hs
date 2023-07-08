@@ -12,8 +12,10 @@ module Pdf.Object.Optimize
   ) where
 
 import           Codec.Compression.XML          ( optimizeXML )
-import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Container           ( deepMap )
+import           Pdf.Object.Container           ( deepMap
+                                                , Filter(fFilter)
+                                                , getFilters
+                                                )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
@@ -21,7 +23,8 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFObjectStream
                                                   , PDFTrailer
                                                   )
-                                                , hasStream, hasKey
+                                                , hasStream
+                                                , hasKey
                                                 )
 import           Pdf.Object.State               ( getStream
                                                 , setStream
@@ -43,6 +46,7 @@ import           Util.UnifiedError              ( FallibleT
                                                 , tryF
                                                 )
 import qualified Data.ByteString               as BS
+import qualified Data.Sequence                 as SQ
 
 data OptimizationType = XMLOptimization
                       | GfxOptimization
@@ -56,15 +60,14 @@ whatOptimizationFor object = do
     Just (PDFName "XML") -> return XMLOptimization
     _notXML              -> getValue "Type" object >>= \case
       Just (PDFName "ObjStm") -> return ObjectStreamOptimization
-      _notObjectStream        ->
-        if hasKey "Type" object
-          then return NoOptimization
-          else do
-            tryF (getStream object) >>= \case
-              Right stream -> case gfxParse stream of
-                Right _ -> return GfxOptimization
-                _notGfx -> return NoOptimization
-              _noStream -> return NoOptimization
+      _notObjectStream        -> if hasKey "Type" object
+        then return NoOptimization
+        else do
+          tryF (getStream object) >>= \case
+            Right stream -> case gfxParse stream of
+              Right _ -> return GfxOptimization
+              _notGfx -> return NoOptimization
+            _noStream -> return NoOptimization
 
 streamOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
 streamOptimize object = whatOptimizationFor object >>= \case
@@ -78,7 +81,7 @@ streamOptimize object = whatOptimizationFor object >>= \case
   ObjectStreamOptimization -> do
     sayF "  - No optimization for object stream"
     return object
-  GfxOptimization          -> do
+  GfxOptimization -> do
     stream <- getStream object
     case gfxParse stream of
       Right objects -> do
@@ -107,28 +110,31 @@ refilter object = do
     then unfilter stringOptimized >>= streamOptimize >>= filterOptimize
     else return stringOptimized
 
+isFilterOK :: Filter -> Bool
+isFilterOK f = case fFilter f of
+  (PDFName "FlateDecode"   ) -> True
+  (PDFName "RLEDecode"     ) -> True
+  (PDFName "LZWDecode"     ) -> True
+  (PDFName "ASCII85Decode" ) -> True
+  (PDFName "ASCIIHexDecode") -> True
+  _anyOtherCase              -> False
+
 {- |
 Determine if a `PDFObject` is optimizable, whether because its filters are
 known by DietPDF or because its structure is optimizable.
 -}
-optimizable :: PDFObject -> Bool
-optimizable (PDFIndirectObjectWithStream _ _ dictionary _) =
-  case Map.lookup "Filter" dictionary of
-    Just (PDFName "FlateDecode") -> True
-    Just (PDFName "RLEDecode"  ) -> True
-    Just (PDFName "LZWDecode"  ) -> True
-    Nothing                      -> True
-    _anyOtherFilter              -> False
-optimizable (PDFObjectStream _ _ dictionary _) =
-  case Map.lookup "Filter" dictionary of
-    Just (PDFName "FlateDecode") -> True
-    Just (PDFName "RLEDecode"  ) -> True
-    Just (PDFName "LZWDecode"  ) -> True
-    Nothing                      -> True
-    _anyOtherFilter              -> False
-optimizable PDFIndirectObject{} = True
-optimizable PDFTrailer{}        = True
-optimizable _                   = False
+optimizable :: Logging m => PDFObject -> FallibleT m Bool
+optimizable PDFIndirectObject{}                  = return True
+optimizable PDFTrailer{}                         = return True
+optimizable object@PDFIndirectObjectWithStream{} = do
+  filters <- getFilters object
+  let unsupportedFilters = SQ.filter (not . isFilterOK) filters
+  return $ SQ.null unsupportedFilters
+optimizable object@PDFObjectStream{} = do
+  filters <- getFilters object
+  let unsupportedFilters = SQ.filter (not . isFilterOK) filters
+  return $ SQ.null unsupportedFilters
+optimizable _anyOtherObject = return False
 
 {- |
 Optimize a PDF object.
@@ -145,12 +151,14 @@ If the PDF object is not elligible to optimization or if optimization is
 ineffective, it is returned as is.
 -}
 optimize :: Logging m => PDFObject -> FallibleT m PDFObject
-optimize object = if optimizable object
-  then do
+optimize object = optimizable object >>= \case
+  True -> do
     sayF (txtObjectNumberVersion object)
     refilter object
       `ifFail` (\theError -> do
                  sayErrorF "Cannot optimize" theError
                  return object
                )
-  else sayF (txtObjectNumberVersion object <> ": ignored") >> return object
+  False -> do
+    sayF (txtObjectNumberVersion object <> ": ignored")
+    return object
