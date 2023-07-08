@@ -1,4 +1,3 @@
-{-# LANGUAGE StrictData #-}
 module AppOptions
   ( AppOptions(OptimizeOptions, InfoOptions, ExtractOptions)
   , appOptions
@@ -17,9 +16,9 @@ import           Options.Applicative            ( Parser
                                                 )
 
 data AppOptions
-  = OptimizeOptions FilePath FilePath
-  | InfoOptions FilePath
-  | ExtractOptions Int FilePath
+  = OptimizeOptions !FilePath !FilePath
+  | InfoOptions !FilePath
+  | ExtractOptions !Int !FilePath
 
 appOptions :: Parser AppOptions
 appOptions = subparser

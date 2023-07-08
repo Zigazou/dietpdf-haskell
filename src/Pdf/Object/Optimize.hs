@@ -21,7 +21,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFObjectStream
                                                   , PDFTrailer
                                                   )
-                                                , hasStream
+                                                , hasStream, hasKey
                                                 )
 import           Pdf.Object.State               ( getStream
                                                 , setStream
@@ -56,12 +56,15 @@ whatOptimizationFor object = do
     Just (PDFName "XML") -> return XMLOptimization
     _notXML              -> getValue "Type" object >>= \case
       Just (PDFName "ObjStm") -> return ObjectStreamOptimization
-      _notObjectStream        -> do
-        tryF (getStream object) >>= \case
-          Right stream -> case gfxParse stream of
-            Right _ -> return GfxOptimization
-            _notGfx -> return NoOptimization
-          _noStream -> return NoOptimization
+      _notObjectStream        ->
+        if hasKey "Type" object
+          then return NoOptimization
+          else do
+            tryF (getStream object) >>= \case
+              Right stream -> case gfxParse stream of
+                Right _ -> return GfxOptimization
+                _notGfx -> return NoOptimization
+              _noStream -> return NoOptimization
 
 streamOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
 streamOptimize object = whatOptimizationFor object >>= \case
