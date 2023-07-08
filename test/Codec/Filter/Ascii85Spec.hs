@@ -33,6 +33,7 @@ decodeExamples =
   , ("5sdq,77Kd<8H~>"         , Right "ABCDEFGHI")
   , ("5sdq,77Kd<8P/~>"        , Right "ABCDEFGHIJ")
   , ("5sdq,77Kd<8P2V~>"       , Right "ABCDEFGHIJK")
+  , ("5sdq,\r77Kd<\n8P2V~>"   , Right "ABCDEFGHIJK")
   ]
 
 encodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
