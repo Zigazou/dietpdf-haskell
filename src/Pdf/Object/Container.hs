@@ -70,8 +70,8 @@ deepMap fn container = case container of
 A filter with its parameters.
 -}
 data Filter = Filter
-  { fFilter      :: PDFObject
-  , fDecodeParms :: PDFObject
+  { fFilter      :: !PDFObject
+  , fDecodeParms :: !PDFObject
   }
   deriving stock Show
 

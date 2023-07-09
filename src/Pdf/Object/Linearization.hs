@@ -37,31 +37,31 @@ import           Pdf.Object.Object              ( PDFObject
                                                 )
 
 data Linearization = Linearization
-  { lnVersion               :: Double
+  { lnVersion               :: !Double
     -- ^ A version identification for the linearized format.
-  , lnFileLength            :: Int
+  , lnFileLength            :: !Int
     -- ^ The length of the entire file in bytes. It shall be exactly
     --   equal to the actual length of the PDF file.
-  , lnPrimaryHintOffset     :: Int
+  , lnPrimaryHintOffset     :: !Int
     -- ^ offset of the primary hint stream from the beginning of the file.
     --   (This is the beginning of the stream object, not the beginning of
     --   the stream data.)
-  , lnPrimaryHintLength     :: Int
+  , lnPrimaryHintLength     :: !Int
     -- ^ length of the primary hint stream, including stream object overhead.
-  , lnOverflowHintOffset    :: Maybe Int
+  , lnOverflowHintOffset    :: !(Maybe Int)
     -- ^ offset of the overflow hint stream from the beginning of the file.
     --   (This is the beginning of the stream object, not the beginning of
     --   the stream data.)
-  , lnOverflowHintLength    :: Maybe Int
+  , lnOverflowHintLength    :: !(Maybe Int)
     -- ^ length of the overflow hint stream, including stream object overhead.
-  , lnFirstPageObjectNumber :: Int
+  , lnFirstPageObjectNumber :: !Int
     -- ^ The object number of the first page’s page object.
-  , lnFirstPageEndOffset    :: Int
+  , lnFirstPageEndOffset    :: !Int
     -- ^ The offset of the end of the first page, relative to the beginning
     --   of the file.
-  , lnNumberOfPages         :: Int
+  , lnNumberOfPages         :: !Int
     -- ^ The number of pages in the document.
-  , lnXRefFirstEntryOffset  :: Int
+  , lnXRefFirstEntryOffset  :: !Int
     -- ^ offset of the white-space character preceding the first entry of the
     --   main cross-reference table (the entry for object number 0), relative
     --   to the beginning of the file. Note that this differs from the Prev
@@ -69,7 +69,7 @@ data Linearization = Linearization
     --   line that precedes the table. Documents that use cross-reference
     --   streams exclusively, this entry shall represent the offset of the main
     --   cross-reference stream object.
-  , lnFirstPageNumber       :: Maybe Int
+  , lnFirstPageNumber       :: !(Maybe Int)
     -- ^ The page number of the first page. Default value: 0.
   }
   deriving stock (Eq, Show)

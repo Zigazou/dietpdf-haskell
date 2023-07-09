@@ -31,8 +31,12 @@ import           Pdf.Object.State               ( getStream
 import           Util.UnifiedError              ( UnifiedError
                                                 , FallibleT
                                                 )
-import           Util.Logging                   ( Logging )
+import           Util.Logging                   ( Logging
+                                                , sayF
+                                                )
 import           Control.Monad.Trans.Except     ( throwE )
+import           Pdf.Object.Format              ( txtObjectNumberVersion )
+import qualified Data.Text                     as T
 
 {- |
 List of all filters that the `unfilter` function supports.
@@ -80,6 +84,7 @@ It usually decompresses the stream.
 unfilter :: Logging m => PDFObject -> FallibleT m PDFObject
 unfilter object = if hasStream object
   then do
+    sayF (T.concat ["  - Unfiltering ", txtObjectNumberVersion object])
     unfiltered object >>= \(remainingFilters, unfilteredStream) ->
       setStream unfilteredStream object >>= setFilters remainingFilters
   else return object

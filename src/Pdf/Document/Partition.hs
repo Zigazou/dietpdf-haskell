@@ -35,20 +35,20 @@ import           Pdf.Object.Object              ( PDFObject
                                                 , isTrailer
                                                 , hasKey
                                                 )
-import           Util.Logging                   ( Logging )
+import           Util.Logging                   ( Logging, sayF )
 import           Util.UnifiedError              ( FallibleT )
 import           Pdf.Document.Uncompress        ( uncompress )
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 data PDFPartition = PDFPartition
   { -- | Numbered objects in order of appearance
-    ppIndirectObjects :: PDFDocument
+    ppIndirectObjects :: !PDFDocument
   ,
     -- | PDF versions in order of appearance
-    ppHeads           :: PDFDocument
+    ppHeads           :: !PDFDocument
   ,
     -- | Trailers in reverse order of appearance
-    ppTrailers        :: PDFDocument
+    ppTrailers        :: !PDFDocument
   }
   deriving stock (Eq, Show)
 
@@ -98,12 +98,19 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
 
 removeUnused :: Logging m => PDFPartition -> FallibleT m PDFPartition
 removeUnused (PDFPartition indirectObjects heads trailers) = do
+  sayF "  - Uncompressing indirect objects"
   uIndirectObjects <- uncompress indirectObjects
+  sayF "  - Uncompressing head objects"
   uHeads           <- uncompress heads
+  sayF "  - Uncompressing trailer objects"
   uTrailers        <- uncompress trailers
 
-  let references =
-        deepFind isReference (uHeads <> uTrailers <> uIndirectObjects)
+  sayF "  - Locating all references"
+  let references = deepFind isReference uHeads
+                <> deepFind isReference uTrailers
+                <> deepFind isReference uIndirectObjects
+
+  sayF "  - Removing unused objects"
 
   return $ PDFPartition
     { ppIndirectObjects = cFilter (used references) indirectObjects

@@ -379,7 +379,7 @@ data GSOperator
   | -- | Modify current clipping path using the even-odd rule (W*)
     GSIntersectClippingPathEOR
   | -- | Unknown operator
-    GSUnknown BS.ByteString
+    GSUnknown !BS.ByteString
   deriving stock (Eq, Show)
 
 {- |

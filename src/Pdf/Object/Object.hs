@@ -286,45 +286,45 @@ Values contained are decoded, meaning they no longer contain escape sequences.
 -}
 data PDFObject
   = -- | A comment (without the starting %)
-    PDFComment BS.ByteString
+    PDFComment !BS.ByteString
   | -- | Version of the PDF (a special comment)
-    PDFVersion BS.ByteString
+    PDFVersion !BS.ByteString
   | -- | End of file (a special comment)
     PDFEndOfFile
   | -- | A number (always stored as a double)
-    PDFNumber Double
+    PDFNumber !Double
   | -- | A keyword
-    PDFKeyword BS.ByteString
+    PDFKeyword !BS.ByteString
   | -- | A name (starting with /)
-    PDFName BS.ByteString
+    PDFName !BS.ByteString
   | -- | A string (unescaped and without parenthesis)
-    PDFString BS.ByteString
+    PDFString !BS.ByteString
   | -- | An hexadeicmal string (without less-than/greater-than signs)
-    PDFHexString BS.ByteString
+    PDFHexString !BS.ByteString
   | -- | A reference, number and generation (two integers followed by an `R`)
-    PDFReference Int Int
+    PDFReference !Int !Int
   | -- | An array containing a list of objects
-    PDFArray (Array PDFObject)
+    PDFArray !(Array PDFObject)
   | -- | A dictionary containing key-value pairs
-    PDFDictionary (Dictionary PDFObject)
+    PDFDictionary !(Dictionary PDFObject)
   | -- | An indirect object, object number, generation, object itself
-    PDFIndirectObject Int Int PDFObject
+    PDFIndirectObject !Int !Int !PDFObject
   | -- | An indirect object with a `ByteString` stream
-    PDFIndirectObjectWithStream Int Int (Dictionary PDFObject) BS.ByteString
+    PDFIndirectObjectWithStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
   | -- | An indirect object with an `Array` of `GFXObject`
-    PDFIndirectObjectWithGraphics Int Int (Dictionary PDFObject) (Array GFXObject)
+    PDFIndirectObjectWithGraphics !Int !Int !(Dictionary PDFObject) !(Array GFXObject)
   | -- | An object stream, object number, generation, dictionary and stream
-    PDFObjectStream Int Int (Dictionary PDFObject) BS.ByteString
+    PDFObjectStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
   | -- | A boolean (true or false)
-    PDFBool Bool
+    PDFBool !Bool
   | -- | A null value
     PDFNull
   | -- | An XRef table
-    PDFXRef [XRefSubsection]
+    PDFXRef ![XRefSubsection]
   | -- | A trailer
-    PDFTrailer PDFObject
+    PDFTrailer !PDFObject
   | -- | A reference to an XRef table (offset from beginning of a PDF)
-    PDFStartXRef Int
+    PDFStartXRef !Int
   deriving stock (Show)
 
 {- |

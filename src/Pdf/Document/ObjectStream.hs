@@ -37,8 +37,8 @@ import           Util.Number                    ( fromInt )
 
 import           Pdf.Document.Document          ( PDFDocument
                                                 , cFilter
+                                                , cCons
                                                 , fromList
-                                                , singleton
                                                 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
@@ -82,10 +82,10 @@ import           Util.Logging                   ( Logging )
 import           Control.Monad.Trans.Except     ( throwE )
 
 data ObjectStream = ObjectStream
-  { osCount   :: Int
-  , osOffset  :: Int
-  , osIndices :: BS.ByteString
-  , osObjects :: BS.ByteString
+  { osCount   :: !Int
+  , osOffset  :: !Int
+  , osIndices :: !BS.ByteString
+  , osObjects :: !BS.ByteString
   }
 
 emptyObjectStream :: ObjectStream
@@ -175,7 +175,7 @@ explode = foldrM explode' mempty
  where
   explode' :: Logging m => PDFObject -> PDFDocument -> FallibleT m PDFDocument
   explode' objstm@PDFObjectStream{} result = (result <>) <$> extract objstm
-  explode' object                   result = return $ result <> singleton object
+  explode' object                   result = return $! cCons object result
 
 {- |
 Tells if a `PDFObject` may be embedded in an object stream.

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Document.Uncompress
   ( uncompress
   ) where
@@ -8,7 +9,7 @@ import           Pdf.Document.Document          ( PDFDocument
                                                 )
 import           Pdf.Document.ObjectStream      ( explode )
 import           Pdf.Object.Unfilter            ( unfilter )
-import           Util.Logging                   ( Logging )
+import           Util.Logging                   ( Logging, sayF )
 import           Data.Functor                   ( (<&>) )
 import           Util.UnifiedError              ( FallibleT )
 
@@ -24,5 +25,8 @@ uncompressed.
 -}
 uncompress :: Logging m => PDFDocument -> FallibleT m PDFDocument
 uncompress pdf = do
+  sayF "  - Extracting objects from object streams"
   objects <- explode pdf <&> toList
-  fromList <$> sequence (unfilter <$> objects)
+
+  sayF "  - Unfiltering all objects"
+  fromList <$> mapM unfilter objects

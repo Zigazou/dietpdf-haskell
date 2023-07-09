@@ -163,6 +163,6 @@ deepFind p = foldr walk mempty
       (PDFIndirectObjectWithStream _ _ dict _) ->
         walk (PDFDictionary dict) collection
       (PDFObjectStream _ _ dict _) -> walk (PDFDictionary dict) collection
-      (PDFArray      lObjects    ) -> collection <> foldr walk mempty lObjects
-      (PDFDictionary dict        ) -> collection <> foldr walk mempty dict
+      (PDFArray      lObjects    ) -> foldr walk collection lObjects
+      (PDFDictionary dict        ) -> foldr walk collection dict
       _anyOtherValue               -> collection

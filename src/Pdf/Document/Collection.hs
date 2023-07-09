@@ -36,9 +36,9 @@ type ObjectOffsets = IM.IntMap Int
 
 -- | An object that has been encoded
 data EncodedObject = EncodedObject
-  { eoObjectNumber :: Int           -- ^ Object number
-  , eoObjectLength :: Int           -- ^ Object length (in bytes)
-  , eoBinaryData   :: BS.ByteString -- ^ Encoded object
+  { eoObjectNumber :: !Int           -- ^ Object number
+  , eoObjectLength :: !Int           -- ^ Object length (in bytes)
+  , eoBinaryData   :: !BS.ByteString -- ^ Encoded object
   }
   deriving stock (Eq, Show)
 
