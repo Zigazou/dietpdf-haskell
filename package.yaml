@@ -61,6 +61,7 @@ library:
   - stringsearch
   - double-conversion
   - fmt
+  - cryptonite
 
 executables:
   dietpdf:
@@ -84,6 +85,7 @@ executables:
     - transformers
     - mtl
     - pretty-hex
+    - containers
 
 tests:
   dietpdf-test:

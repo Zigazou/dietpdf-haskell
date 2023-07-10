@@ -1,5 +1,5 @@
 module AppOptions
-  ( AppOptions(OptimizeOptions, InfoOptions, ExtractOptions)
+  ( AppOptions(OptimizeOptions, InfoOptions, ExtractOptions, HashOptions)
   , appOptions
   ) where
 
@@ -19,6 +19,7 @@ data AppOptions
   = OptimizeOptions !FilePath !FilePath
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
+  | HashOptions !FilePath
 
 appOptions :: Parser AppOptions
 appOptions = subparser
@@ -50,5 +51,13 @@ appOptions = subparser
          <*> argument str (metavar "OUT" <> help "PDF file to create")
          )
          (progDesc "Optimize a PDF file")
+       )
+  <> command
+       "hash"
+       (info
+         (   HashOptions
+         <$> argument str (metavar "IN" <> help "PDF file to process")
+         )
+         (progDesc "Hash of each stream in a PDF file")
        )
   )

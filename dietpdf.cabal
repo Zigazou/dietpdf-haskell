@@ -82,6 +82,7 @@ library
       Pdf.Object.Parser.String
       Pdf.Object.Parser.Trailer
       Pdf.Object.Parser.XRef
+      Pdf.Object.Signature
       Pdf.Object.State
       Pdf.Object.String
       Pdf.Object.Unfilter
@@ -107,6 +108,7 @@ library
     , binary-parsers
     , bytestring
     , containers
+    , cryptonite
     , double-conversion
     , fmt
     , formatting
@@ -129,6 +131,7 @@ executable dietpdf
   other-modules:
       AppOptions
       Extract
+      Hash
       Info
       Optimize
       Paths_dietpdf
@@ -138,6 +141,7 @@ executable dietpdf
   build-depends:
       base >=4.7 && <5
     , bytestring
+    , containers
     , dietpdf
     , formatting
     , mtl

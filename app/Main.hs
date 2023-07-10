@@ -9,6 +9,7 @@ import           AppOptions                     ( AppOptions
                                                   ( ExtractOptions
                                                   , InfoOptions
                                                   , OptimizeOptions
+                                                  , HashOptions
                                                   )
                                                 , appOptions
                                                 )
@@ -18,6 +19,7 @@ import qualified Data.ByteString               as BS
 import           Extract                        ( extract )
 import           Info                           ( showInfo )
 import           Optimize                       ( optimize )
+import           Hash                           ( objectHashes )
 import           Options.Applicative            ( (<**>)
                                                 , execParser
                                                 , fullDesc
@@ -58,7 +60,7 @@ hexCfg offset = defaultCfg { startByte = offset }
 
 hexDump :: Int -> BS.ByteString -> IO ()
 hexDump offset bytes = do
-  let bytes'  = BS.take 256 (BS.drop offset bytes)
+  let bytes' = BS.take 256 (BS.drop offset bytes)
 
   putStrLn $ prettyHexCfg (hexCfg offset) bytes'
 
@@ -68,11 +70,12 @@ runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 runApp (OptimizeOptions inputPDF outputPDF) = do
   tryF (readPDF inputPDF) >>= \case
-    Right document -> optimize outputPDF document
-    Left anError@(ParseError (_, offset, _)) -> do
+    Right document                            -> optimize outputPDF document
+    Left  anError@(ParseError (_, offset, _)) -> do
       lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
       throwE anError
     Left anError -> throwE anError
+runApp (HashOptions inputPDF) = readPDF inputPDF >>= objectHashes
 
 options :: ParserInfo AppOptions
 options = info
