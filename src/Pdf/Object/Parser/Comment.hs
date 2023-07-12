@@ -10,7 +10,7 @@ module Pdf.Object.Parser.Comment
 import           Data.Binary.Parser             ( Get
                                                 , label
                                                 , takeTill
-                                                , word8
+                                                , word8, endOfInput
                                                 )
 import qualified Data.ByteString               as BS
 import           Pdf.Object.Object              ( PDFObject
@@ -24,6 +24,7 @@ import           Pdf.Object.Parser.LooseEndOfLine
                                                 ( looseEndOfLineP
                                                 , isLooseEndOfLine
                                                 )
+import Control.Applicative ((<|>))
 
 {-|
 A binary parser for a PDF comment.
@@ -40,7 +41,7 @@ commentP :: Get PDFObject
 commentP = label "comment" $ do
   word8 asciiPERCENTSIGN
   comment <- takeTill isLooseEndOfLine
-  looseEndOfLineP
+  endOfInput <|> looseEndOfLineP
   return $ case BS.splitAt 4 comment of
     ("%EOF", ""     ) -> PDFEndOfFile
     ("PDF-", version) -> PDFVersion version
