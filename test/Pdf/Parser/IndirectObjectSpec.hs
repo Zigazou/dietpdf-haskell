@@ -19,6 +19,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFName
                                                   , PDFArray
                                                   , PDFString
+                                                  , PDFXRefStream
                                                   )
                                                 )
 import           Util.Dictionary                ( mkDictionary )
@@ -137,6 +138,14 @@ indirectObjectExamples =
         , ("V", PDFNumber 1)
         ]
       )
+    )
+  , ( "12 0 obj <</Type /XRef /Length 10 >>\
+      \stream\n0123456789\nendstream\nendobj"
+    , PDFXRefStream
+      12
+      0
+      (mkDictionary [("Length", PDFNumber 10), ("Type", PDFName "XRef")])
+      "0123456789"
     )
   ]
 

@@ -10,6 +10,7 @@ import           Util.Text                      ( txtNumberVersion )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
+                                                  , PDFXRefStream
                                                   , PDFIndirectObjectWithGraphics
                                                   , PDFXRef
                                                   , PDFStartXRef
@@ -39,6 +40,8 @@ txtObjectNumberVersion (PDFIndirectObjectWithStream number version _ _) =
 txtObjectNumberVersion (PDFIndirectObjectWithGraphics number version _ _) =
   txtNumberVersion number version
 txtObjectNumberVersion (PDFObjectStream number version _ _) =
+  txtNumberVersion number version
+txtObjectNumberVersion (PDFXRefStream number version _ _) =
   txtNumberVersion number version
 txtObjectNumberVersion PDFComment{}    = "anonymous (PDFComment)"
 txtObjectNumberVersion PDFVersion{}    = "anonymous (PDFVersion)"

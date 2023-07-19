@@ -25,6 +25,7 @@ module Pdf.Object.Object
     , PDFIndirectObjectWithStream
     , PDFIndirectObjectWithGraphics
     , PDFObjectStream
+    , PDFXRefStream
     , PDFBool
     , PDFNull
     , PDFXRef
@@ -315,6 +316,8 @@ data PDFObject
     PDFIndirectObjectWithGraphics !Int !Int !(Dictionary PDFObject) !(Array GFXObject)
   | -- | An object stream, object number, generation, dictionary and stream
     PDFObjectStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
+  | -- | An XRef stream, object number, generation, dictionary and stream
+    PDFXRefStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
   | -- | A boolean (true or false)
     PDFBool !Bool
   | -- | A null value
@@ -370,12 +373,13 @@ instance Eq PDFObject where
     = xn == yn && xr == yr
   (PDFObjectStream xn xr _ _) == (PDFObjectStream yn yr _ _) =
     xn == yn && xr == yr
-  (PDFBool x)      == (PDFBool y)      = x == y
-  PDFNull          == PDFNull          = True
-  (PDFXRef      x) == (PDFXRef      y) = x == y
-  (PDFTrailer   x) == (PDFTrailer   y) = x == y
-  (PDFStartXRef x) == (PDFStartXRef y) = x == y
-  _anyObjectA      == _anyObjectB      = False
+  (PDFXRefStream xn xr _ _) == (PDFXRefStream yn yr _ _) = xn == yn && xr == yr
+  (PDFBool x              ) == (PDFBool y              ) = x == y
+  PDFNull                   == PDFNull                   = True
+  (PDFXRef      x)          == (PDFXRef      y)          = x == y
+  (PDFTrailer   x)          == (PDFTrailer   y)          = x == y
+  (PDFStartXRef x)          == (PDFStartXRef y)          = x == y
+  _anyObjectA               == _anyObjectB               = False
 
 objectRank :: PDFObject -> Int
 objectRank (PDFVersion _)                  = 0
@@ -394,10 +398,11 @@ objectRank PDFIndirectObject{}             = 12
 objectRank PDFIndirectObjectWithStream{}   = 13
 objectRank PDFIndirectObjectWithGraphics{} = 14
 objectRank PDFObjectStream{}               = 15
-objectRank (PDFXRef      _)                = 16
-objectRank (PDFTrailer   _)                = 17
-objectRank (PDFStartXRef _)                = 18
-objectRank PDFEndOfFile                    = 19
+objectRank PDFXRefStream{}                 = 16
+objectRank (PDFXRef      _)                = 17
+objectRank (PDFTrailer   _)                = 18
+objectRank (PDFStartXRef _)                = 19
+objectRank PDFEndOfFile                    = 20
 
 instance Ord PDFObject where
   compare :: PDFObject -> PDFObject -> Ordering
@@ -418,6 +423,8 @@ instance Ord PDFObject where
   compare (PDFIndirectObjectWithStream xn xr _ _) (PDFIndirectObjectWithStream yn yr _ _)
     = compare xn yn <> compare xr yr
   compare (PDFObjectStream xn xr _ _) (PDFObjectStream yn yr _ _) =
+    compare xn yn <> compare xr yr
+  compare (PDFXRefStream xn xr _ _) (PDFXRefStream yn yr _ _) =
     compare xn yn <> compare xr yr
   compare (PDFBool x)      (PDFBool y)      = compare x y
   compare PDFNull          PDFNull          = EQ
@@ -446,6 +453,7 @@ endsWithDelimiter PDFIndirectObject{}             = True
 endsWithDelimiter PDFIndirectObjectWithStream{}   = True
 endsWithDelimiter PDFIndirectObjectWithGraphics{} = True
 endsWithDelimiter PDFObjectStream{}               = True
+endsWithDelimiter PDFXRefStream{}                 = True
 endsWithDelimiter PDFBool{}                       = False
 endsWithDelimiter PDFNull                         = False
 endsWithDelimiter PDFXRef{}                       = False
@@ -472,6 +480,7 @@ startsWithDelimiter PDFIndirectObject{}             = False
 startsWithDelimiter PDFIndirectObjectWithStream{}   = False
 startsWithDelimiter PDFIndirectObjectWithGraphics{} = False
 startsWithDelimiter PDFObjectStream{}               = False
+startsWithDelimiter PDFXRefStream{}                 = False
 startsWithDelimiter PDFBool{}                       = False
 startsWithDelimiter PDFNull                         = False
 startsWithDelimiter PDFXRef{}                       = False
@@ -511,6 +520,8 @@ fromPDFObject (PDFIndirectObjectWithStream number revision dict stream) =
 fromPDFObject (PDFIndirectObjectWithGraphics number revision dict gfx) =
   fromIndirectObjectWithGraphics number revision dict gfx
 fromPDFObject (PDFObjectStream number revision dict stream) =
+  fromIndirectObjectWithStream number revision dict stream
+fromPDFObject (PDFXRefStream number revision dict stream) =
   fromIndirectObjectWithStream number revision dict stream
 fromPDFObject (PDFBool True ) = "true"
 fromPDFObject (PDFBool False) = "false"
@@ -562,6 +573,21 @@ objectInfo (PDFIndirectObjectWithGraphics number revision dict _) = format
   (objectInfo . PDFDictionary $ dict)
 objectInfo (PDFObjectStream number revision object stream) = format
   ( "objectstream("
+  % int
+  % ","
+  % int
+  % ")="
+  % text
+  % "+[stream:length="
+  % int
+  % "]"
+  )
+  number
+  revision
+  (objectInfo . PDFDictionary $ object)
+  (BS.length stream)
+objectInfo (PDFXRefStream number revision object stream) = format
+  ( "xrefstream("
   % int
   % ","
   % int
@@ -684,6 +710,8 @@ updateStream object newStream = case object of
     PDFIndirectObjectWithStream number revision (newDict dict) newStream
   (PDFObjectStream number revision dict _) ->
     PDFObjectStream number revision (newDict dict) newStream
+  (PDFXRefStream number revision dict _) ->
+    PDFXRefStream number revision (newDict dict) newStream
   _anyOtherObject -> object
  where
   newLength :: PDFObject
@@ -727,6 +755,7 @@ hasKey
 hasKey key (PDFDictionary dict                        ) = dictHasKey key dict
 hasKey key (PDFIndirectObjectWithStream _ _ dict _    ) = dictHasKey key dict
 hasKey key (PDFObjectStream             _ _ dict _    ) = dictHasKey key dict
+hasKey key (PDFXRefStream               _ _ dict _    ) = dictHasKey key dict
 hasKey key (PDFIndirectObject _ _ (PDFDictionary dict)) = dictHasKey key dict
 hasKey key (PDFTrailer (PDFDictionary dict)           ) = dictHasKey key dict
 hasKey _   _anyOtherObject                              = False
@@ -738,6 +767,7 @@ hasDictionary :: PDFObject -> Bool
 hasDictionary (PDFIndirectObject _ _ (PDFDictionary _)) = True
 hasDictionary PDFIndirectObjectWithStream{}             = True
 hasDictionary PDFObjectStream{}                         = True
+hasDictionary PDFXRefStream{}                           = True
 hasDictionary PDFDictionary{}                           = True
 hasDictionary (PDFTrailer (PDFDictionary _))            = True
 hasDictionary _anyOtherObject                           = False
@@ -748,6 +778,7 @@ Determine if a `PDFObject` has a stream.
 hasStream :: PDFObject -> Bool
 hasStream PDFIndirectObjectWithStream{} = True
 hasStream PDFObjectStream{}             = True
+hasStream PDFXRefStream{}               = True
 hasStream _anyOtherObject               = False
 
 {- |
@@ -769,15 +800,16 @@ instance ToPDFNumber Integer where
   pdfNumber = PDFNumber . fromIntegral
 
 isIndirect :: PDFObject -> Bool
-isIndirect PDFIndirectObject{} = True
+isIndirect PDFIndirectObject{}           = True
 isIndirect PDFIndirectObjectWithStream{} = True
-isIndirect PDFObjectStream{} = True
-isIndirect _anyOtherObject = False
+isIndirect PDFObjectStream{}             = True
+isIndirect _anyOtherObject               = False
 
 isHeader :: PDFObject -> Bool
-isHeader PDFVersion{} = True
+isHeader PDFVersion{}    = True
 isHeader _anyOtherObject = False
 
 isTrailer :: PDFObject -> Bool
-isTrailer PDFTrailer{} = True
+isTrailer PDFTrailer{}    = True
+isTrailer PDFXRefStream{} = True
 isTrailer _anyOtherObject = False

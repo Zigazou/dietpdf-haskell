@@ -15,6 +15,13 @@ import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFEndOfFile
                                                   , PDFNumber
                                                   , PDFStartXRef
+                                                  , PDFTrailer
+                                                  , PDFNull
+                                                  , PDFIndirectObject
+                                                  , PDFDictionary
+                                                  , PDFReference
+                                                  , PDFName
+                                                  , PDFXRefStream
                                                   )
                                                 , fromPDFObject
                                                 , xrefCount
@@ -30,6 +37,7 @@ import           Pdf.Document.Document          ( PDFDocument
                                                 , toList
                                                 , cfMap
                                                 , cSize
+                                                , singleton
                                                 )
 import           Pdf.Document.Partition         ( PDFPartition
                                                   ( ppHeads
@@ -62,20 +70,58 @@ import           Pdf.Document.Collection        ( encodeObject
                                                 , eoBinaryData
                                                 )
 import           Pdf.Object.State               ( setValue
-                                                , getDictionary
+                                                , getValue
                                                 )
-import           Control.Monad.Trans.Except     ( throwE )
+import           Control.Monad.Trans.Except     ( throwE
+                                                , runExcept
+                                                )
 import           Control.Monad                  ( when )
+import           Pdf.Document.ObjectStream      ( explode )
+import           Util.Dictionary                ( mkDictionary )
 
-updateTrailer
-  :: Logging m => PDFObject -> Int -> PDFObject -> FallibleT m PDFObject
-updateTrailer root entriesCount object = do
-  dict <- getDictionary object
-  setValue "Size" (PDFNumber $ fromIntegral entriesCount) object
-    >>= setValue "Root" (Map.findWithDefault root "Root" dict)
+updateTrailer :: Logging m => Int -> PDFObject -> FallibleT m PDFObject
+updateTrailer entriesCount =
+  setValue "Size" (PDFNumber $ fromIntegral entriesCount)
 
-findRoot :: PDFDocument -> Maybe PDFObject
-findRoot = findLast (hasKey "Root")
+isCatalog :: PDFObject -> Bool
+isCatalog object@PDFIndirectObject{} =
+  case runExcept (getValue "Type" object) of
+    Left  _     -> False
+    Right value -> value == Just (PDFName "Catalog")
+isCatalog _anyOtherObject = False
+
+isInfo :: PDFObject -> Bool
+isInfo object@PDFIndirectObject{} = hasKey "Author" object
+isInfo _anyOtherObject            = False
+
+getTrailer :: PDFPartition -> PDFObject
+getTrailer partition = case lastTrailer partition of
+  (PDFTrailer PDFNull) ->
+    let
+      catalog = findLast isCatalog (ppIndirectObjects partition)
+      info    = findLast isInfo (ppIndirectObjects partition)
+    in
+      case (catalog, info) of
+        (Just (PDFIndirectObject cNumber cRevision _), Just (PDFIndirectObject iNumber iRevision _))
+          -> PDFTrailer
+            (PDFDictionary $ mkDictionary
+              [ ("Root", PDFReference cNumber cRevision)
+              , ("Info", PDFReference iNumber iRevision)
+              ]
+            )
+        _anyOtherCase -> PDFTrailer PDFNull
+  (PDFXRefStream _ _ dict _) ->
+    let catalog = Map.lookup "Root" dict
+        info    = Map.lookup "Info" dict
+    in  case (catalog, info) of
+          (Just rCatalog, Just rInfo) ->
+            PDFTrailer
+              ( PDFDictionary
+              $ mkDictionary [("Root", rCatalog), ("Info", rInfo)]
+              )
+          _anyOtherCase -> PDFTrailer PDFNull
+  validTrailer -> validTrailer
+
 
 {-|
 Given a list of PDF objects, generate the PDF file content.
@@ -93,14 +139,17 @@ pdfEncode
   => PDFDocument -- ^ A collection of PDF objects (order matters)
   -> FallibleT m BS.ByteString -- ^ A unified error or a bytestring
 pdfEncode objects = do
-  let partition = PDFPartition { ppIndirectObjects = cFilter isIndirect objects
-                               , ppHeads           = cFilter isHeader objects
-                               , ppTrailers        = cFilter isTrailer objects
-                               }
-      pdfTrailer = lastTrailer partition
+  -- Extract objects embedded in object streams
+  exploded <- explode objects
 
-      pdfHead    = (fromPDFObject . firstVersion) partition
-      pdfEnd     = fromPDFObject PDFEndOfFile
+  let partition = PDFPartition
+        { ppIndirectObjects = cFilter isIndirect exploded
+        , ppHeads           = cFilter isHeader exploded
+        , ppTrailers        = cFilter isTrailer exploded
+        }
+
+      pdfHead = (fromPDFObject . firstVersion) partition
+      pdfEnd  = fromPDFObject PDFEndOfFile
 
   sayF "Starting discovery"
 
@@ -116,7 +165,9 @@ pdfEncode objects = do
 
   sayF "Version found"
 
-  when (null $ ppTrailers partition) $ do
+  let pdfTrailer = getTrailer partition
+
+  when (pdfTrailer == PDFTrailer PDFNull) $ do
     sayF "Trailer not found"
     throwE EncodeNoTrailer
 
@@ -125,7 +176,9 @@ pdfEncode objects = do
   sayF "Optimizing PDF"
 
   oIndirectObjects <- cfMap optimize (ppIndirectObjects partition)
-  let oPartition = partition { ppIndirectObjects = oIndirectObjects }
+  let oPartition = partition { ppIndirectObjects = oIndirectObjects
+                             , ppTrailers        = singleton pdfTrailer
+                             }
 
   sayF "Last cleaning"
   cleaned <- tryF (removeUnused oPartition) >>= \case
@@ -147,14 +200,6 @@ pdfEncode objects = do
     startxref =
       fromPDFObject (PDFStartXRef (BS.length pdfHead + BS.length body))
 
-  trailer <-
-    fromPDFObject
-      <$> updateTrailer
-            (case findRoot objects of
-              Nothing   -> PDFNumber 0
-              Just root -> root
-            )
-            (xrefCount xref)
-            pdfTrailer
+  trailer <- fromPDFObject <$> updateTrailer (xrefCount xref) pdfTrailer
 
   return $ BS.concat [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]

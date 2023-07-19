@@ -50,6 +50,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFName
                                                   , PDFObjectStream
+                                                  , PDFXRefStream
                                                   )
                                                 , isWhiteSpace
                                                 , updateStream
@@ -98,7 +99,9 @@ streamWithoutCountP :: Get BS.ByteString
 streamWithoutCountP = do
   string "stream"
   whiteSpaceP -- looseEndOfLineP
-  stream <- manyTill (satisfy (const True)) (string "endstream")
+  stream <- manyTill
+    (satisfy (const True))
+    ((whiteSpaceP >> string "endstream") <|> string "endstream")
   return (BS.pack stream)
 
 {- |
@@ -123,6 +126,8 @@ indirectObjectP = label "indirectObject" $ do
   string "endobj"
 
   return $ case (maybeQuery (getValue "Type") object, object, stream) of
+    (Just (PDFName "XRef"), PDFDictionary dict, Just s) ->
+      updateStream (PDFXRefStream objectNumber revisionNumber dict "") s
     (Just (PDFName "ObjStm"), PDFDictionary dict, Just s) ->
       updateStream (PDFObjectStream objectNumber revisionNumber dict "") s
     (_, PDFDictionary dict, Just s) -> updateStream
