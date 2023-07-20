@@ -13,6 +13,8 @@ import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFNumber
                                                   , PDFReference
                                                   , PDFName
+                                                  , PDFHexString
+                                                  , PDFString
                                                   )
                                                 , mkPDFArray
                                                 , mkPDFDictionary
@@ -58,6 +60,45 @@ dictionaryExamples =
       , ("CapHeight"  , PDFNumber 981.0)
       , ("StemV"      , PDFNumber 80.0)
       , ("FontFile2"  , PDFReference 7 0)
+      ]
+    )
+  , ( "<<\n\
+      \/Type /Annot\n\
+      \/F 4\n\
+      \/Subtype /Link\n\
+      \/Border [0 0 0]\n\
+      \/Rect [264.976 234.538 516.905 254.607]\n\
+      \/Contents <FEFF00680074007400700073003A002F002F006700690074006800750062002E0063006F006D002F007A006900670061007A006F0075>\n\
+      \/A <<\n\
+      \/Type /Action\n\
+      \/S /URI\n\
+      \/URI (https://github.com/zigazou)\n\
+      \>>\n\
+      \>>"
+    , mkPDFDictionary
+      [ ("Type"   , PDFName "Annot")
+      , ("F"      , PDFNumber 4)
+      , ("Subtype", PDFName "Link")
+      , ("Border", mkPDFArray [PDFNumber 0, PDFNumber 0, PDFNumber 0])
+      , ( "Rect"
+        , mkPDFArray
+          [ PDFNumber 264.976
+          , PDFNumber 234.538
+          , PDFNumber 516.905
+          , PDFNumber 254.607
+          ]
+        )
+      , ( "Contents"
+        , PDFHexString
+          "feff00680074007400700073003a002f002f006700690074006800750062002e0063006f006d002f007a006900670061007a006f0075"
+        )
+      , ( "A"
+        , mkPDFDictionary
+          [ ("Type", PDFName "Action")
+          , ("S"   , PDFName "URI")
+          , ("URI" , PDFString "https://github.com/zigazou")
+          ]
+        )
       ]
     )
   ]

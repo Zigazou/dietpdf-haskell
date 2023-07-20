@@ -103,6 +103,13 @@ itemP =
     <|> arrayP
     <|> dictionaryP
 
+oneObjectP :: Get PDFObject
+oneObjectP = do
+  skipWhile isWhiteSpace
+  item <- itemP
+  skipWhile isWhiteSpace
+  return item
+
 integerP :: Get Int
 integerP = takeWhile1 isDigit <&> toInt
  where
@@ -132,7 +139,7 @@ extractObjects :: Logging m => ObjectStream -> FallibleT m PDFDocument
 extractObjects (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
   exploded   <- forM numOffsets $ \(objectNumber, offset) -> do
-    case parseOnly itemP (BS.drop offset objects) of
+    case parseOnly oneObjectP (BS.drop offset objects) of
       Left  msg    -> throwE $ ParseError ("", fromIntegral offset, msg)
       Right object -> return $ PDFIndirectObject objectNumber 0 object
   return $ fromList exploded
