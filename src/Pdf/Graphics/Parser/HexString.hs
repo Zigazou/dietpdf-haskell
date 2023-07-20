@@ -46,7 +46,7 @@ A GFX hexstring is a structure signaled by angle brackets.
 It returns a `GFXHexString`.
 -}
 hexStringP :: Get GFXObject
-hexStringP = label "hexstring" $ do
+hexStringP = label "hexstringG" $ do
   word8 asciiLESSTHANSIGN
   content <- takeWhile1 (\byte -> isHexDigit byte || isWhiteSpace byte)
   word8 asciiGREATERTHANSIGN

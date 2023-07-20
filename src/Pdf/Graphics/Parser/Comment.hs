@@ -27,7 +27,7 @@ A graphics comment is a line starting with `asciiPERCENTSIGN`.
 It returns a `GFXComment` for any other string
  -}
 commentP :: Get GFXObject
-commentP = label "comment" $ do
+commentP = label "commentG" $ do
   word8 asciiPERCENTSIGN
   comment <- takeTill isLooseEndOfLine
   looseEndOfLineP

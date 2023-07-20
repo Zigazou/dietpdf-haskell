@@ -25,5 +25,5 @@ Empty content is either:
 - comments (starting with a percent sign "%" and ending with a line return)
 -}
 emptyContentP :: Get ()
-emptyContentP = label "emptycontent"
+emptyContentP = label "emptycontentG"
   $ skipMany (void (satisfy isWhiteSpace) <|> void commentP)

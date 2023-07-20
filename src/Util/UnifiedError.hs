@@ -41,7 +41,7 @@ instance Show ErrorType where
 
 data UnifiedError
   -- | Parsing error (Remaining bytes, offset of the error and error message)
-  = ParseError (BS.ByteString, ByteOffset, String)
+  = ParseError !(BS.ByteString, ByteOffset, String)
   -- | The PDF file cannot be opened
   | UnableToOpenFile
   -- | The PDF file contains no indirect object
@@ -53,34 +53,34 @@ data UnifiedError
   -- | The PDF file contains no root entry
   | EncodeNoRootEntry
   -- | The decoding of an RLE bytestring generated an error
-  | RLEDecodeError String
+  | RLEDecodeError !String
   -- | The encoding to an RLE bytestring generated an error
-  | RLEEncodeError String
+  | RLEEncodeError !String
   -- | The decoding of Zlib bytestring generated an error
-  | FlateDecodeError String
+  | FlateDecodeError !String
   -- | The decoding of LZW bytestring generated an error
   | LZWStopCodeNotFound
   -- | Not enough bytes in the stream to decode (expected, actual)
-  | NotEnoughBytes Int Int
+  | NotEnoughBytes !Int !Int
   -- | Error that should not be generated
   | InternalError
   -- | Invalid predictor
-  | InvalidPredictor Word8
+  | InvalidPredictor !Word8
   -- | Number of bytes is invalid according to the predictor (expected, actual)
-  | InvalidNumberOfBytes Int Int
+  | InvalidNumberOfBytes !Int !Int
   -- | Invalid combination of Filter and DecodeParms
   | InvalidFilterParm
   -- | Invalid Ascii85 stream
-  | InvalidAscii85Stream String
+  | InvalidAscii85Stream !String
   -- | No stream in the object
-  | NoStream String
+  | NoStream !String
   -- | No dictionary in the object
-  | NoDictionary String
+  | NoDictionary !String
   -- | Invalid object to embed
-  | InvalidObjectToEmbed String
+  | InvalidObjectToEmbed !String
   -- | No object to encode
   | NoObjectToEncode
-  | UnknownScalerType String
+  | UnknownScalerType !String
   | ObjectStreamNotFound
   | ObjectNotFound
   deriving stock (Eq)

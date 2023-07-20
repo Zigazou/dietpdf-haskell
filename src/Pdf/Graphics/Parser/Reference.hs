@@ -36,7 +36,7 @@ integerP = some' digit
 Parse a `GFXReference`.
 -}
 referenceP :: Get GFXObject
-referenceP = label "reference" $ do
+referenceP = label "referenceG" $ do
   objectNumber <- toNumber <$> integerP
   emptyContentP
   revisionNumber <- toNumber <$> integerP

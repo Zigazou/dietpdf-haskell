@@ -31,7 +31,7 @@ A binary parser for a GFX keyword.
 It returns a `GFXBool`, a `GFXNull` or a `GFXKeyword`.
 -}
 keywordP :: Get GFXObject
-keywordP = label "keyword" $ do
+keywordP = label "keywordG" $ do
   keyword <- takeWhile1 isKeywordCharacter
   return $ case keyword of
     "true"  -> GFXBool True

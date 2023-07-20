@@ -35,7 +35,7 @@ whiteSpaceP = do
 A binary parser for a GFX inline image.
 -}
 inlineImageP :: Get GFXObject
-inlineImageP = label "inline-image" $ do
+inlineImageP = label "inlineimageG" $ do
   string "BI"
   emptyContentP
 

@@ -131,7 +131,7 @@ Right (GFXNumber (-0.002))
 Right (GFXNumber 0.0)
 -}
 numberP :: Get GFXObject
-numberP = label "number" $ do
+numberP = label "numberG" $ do
   sign                  <- option id plusMinus
   (leftPart, rightPart) <- integerDecimalP <|> integerP <|> decimalP
   let number = toNumber leftPart rightPart

@@ -57,7 +57,7 @@ hexadecimalCodeP = do
   first  <- hexDigitToNumber <$> satisfy isHexDigit
   second <- hexDigitToNumber <$> satisfy isHexDigit
   let code = first * 16 + second
-  if code == 0 then fail "hexadecimalCode" else return code
+  if code == 0 then fail "hexadecimalCodeG" else return code
  where
   hexDigitToNumber x
     | x >= asciiDIGITZERO && x <= asciiDIGITNINE = x - asciiDIGITZERO
@@ -107,7 +107,7 @@ Right (GFXName "The_Key_of_F#_Minor")
 Right (GFXName "AB")
 -}
 nameP :: Get GFXObject
-nameP = label "name" $ do
+nameP = label "nameG" $ do
   word8 asciiSOLIDUS
   name <- BS.pack <$> some' charP
   return $ GFXName name

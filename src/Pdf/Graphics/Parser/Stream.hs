@@ -50,7 +50,7 @@ gfxObjectP =
     <|> keywordP
 
 gfxRawP :: Get [GFXObject]
-gfxRawP = label "gfx" $ do
+gfxRawP = label "gfxG" $ do
   emptyContentP
   objects <- gfxObjectP `sepBy` whiteSpaces
   emptyContentP

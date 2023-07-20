@@ -63,7 +63,7 @@ An array may contain any number of the following items:
 - dictionary
 -}
 arrayP :: Get GFXObject
-arrayP = label "array" $ do
+arrayP = label "arrayG" $ do
   word8 asciiLEFTSQUAREBRACKET
   emptyContentP
   items <- itemP `sepBy` emptyContentP
@@ -77,7 +77,7 @@ A binary parser for a key (`GFXName`) value (`GFXObject`) pair.
 A `List` of these key-value pairs makes a `GFXDictionary`.
 -}
 dictionaryKeyValueP :: Get (BS.ByteString, GFXObject)
-dictionaryKeyValueP = do
+dictionaryKeyValueP = label "keyvalueG" $ do
   GFXName key <- nameP
   emptyContentP
   value <- itemP
@@ -102,7 +102,7 @@ A dictionary may contain any number of key-value pairs of the following items:
 - dictionary
 -}
 dictionaryP :: Get GFXObject
-dictionaryP = label "dictionary" $ do
+dictionaryP = label "dictionaryG" $ do
   word8 asciiLESSTHANSIGN >> word8 asciiLESSTHANSIGN
   emptyContentP
   dictionary <- fromList <$> sepBy dictionaryKeyValueP emptyContentP

@@ -73,7 +73,7 @@ escapedCharP = do
     | byte == asciiLEFTPARENTHESIS  = return (Just asciiLEFTPARENTHESIS)
     | byte == asciiRIGHTPARENTHESIS = return (Just asciiRIGHTPARENTHESIS)
     | byte == asciiREVERSESOLIDUS   = return (Just asciiREVERSESOLIDUS)
-    | otherwise                     = fail "escapedChar"
+    | otherwise                     = fail "escapedCharG"
 
 escapedOctalP :: Get (Maybe Word8)
 escapedOctalP =
@@ -109,7 +109,7 @@ charsP :: Get BS.ByteString
 charsP = BS.pack . catMaybes <$> some' charP
 
 rawStringP :: Get BS.ByteString
-rawStringP = do
+rawStringP = label "rawStringG" $ do
   word8 asciiLEFTPARENTHESIS
   content <- many' (rawStringP <|> charsP)
   word8 asciiRIGHTPARENTHESIS
@@ -119,4 +119,4 @@ rawStringP = do
 Parse a `GFXString`
 -}
 stringP :: Get GFXObject
-stringP = label "string" $ GFXString . BS.drop 1 . dropEnd 1 <$> rawStringP
+stringP = label "stringG" $ GFXString . BS.drop 1 . dropEnd 1 <$> rawStringP
