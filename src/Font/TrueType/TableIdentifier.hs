@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StrictData #-}
 
 {- |
 This module has all the standard table identifier for True Type and Open Type

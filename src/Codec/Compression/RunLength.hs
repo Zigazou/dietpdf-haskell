@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StrictData #-}
 {-|
 This modules implements the RLE alfgorithm as used in PDF file (and also TIFF)
 

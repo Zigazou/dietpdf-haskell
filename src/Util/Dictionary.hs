@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StrictData #-}
 
 {-|
 This module handles dictionary at the lowest level.

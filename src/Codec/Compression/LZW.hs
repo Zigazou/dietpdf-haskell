@@ -2,7 +2,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE StrictData #-}
 {-|
 This module implements the LZW uncompress alfgorithm as used in PDF file
 (and also TIFF)

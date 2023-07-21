@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 {-|
@@ -35,7 +34,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFVersion
                                                   , PDFXRef
                                                   )
-                                                , ToPDFNumber(pdfNumber)
+                                                , ToPDFNumber(mkPDFNumber)
                                                 )
 import           Util.UnifiedError              ( UnifiedError
                                                   ( InvalidObjectToEmbed
@@ -163,7 +162,7 @@ setStream newStream object = case object of
   _anyOtherObject -> return object
  where
   newLength :: PDFObject
-  newLength = pdfNumber . BS.length $ newStream
+  newLength = mkPDFNumber . BS.length $ newStream
 
 {- |
 Embed an object into a `PDFObject`.

@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE InstanceSigs #-}
 
 {-|
@@ -39,7 +38,7 @@ module Pdf.Object.Object
 
     -- * Conversion
   , fromPDFObject
-  , pdfNumber
+  , mkPDFNumber
   , ToPDFNumber
 
     -- * Getting info about a `PDFObject`
@@ -785,19 +784,19 @@ hasStream _anyOtherObject               = False
 Allow easy creation of `PDFNumber` objects with auto conversion.
 -}
 class ToPDFNumber t where
-  pdfNumber :: t -> PDFObject
+  mkPDFNumber :: t -> PDFObject
 
 instance ToPDFNumber Double where
-  pdfNumber :: Double -> PDFObject
-  pdfNumber = PDFNumber
+  mkPDFNumber :: Double -> PDFObject
+  mkPDFNumber = PDFNumber
 
 instance ToPDFNumber Int where
-  pdfNumber :: Int -> PDFObject
-  pdfNumber = PDFNumber . fromIntegral
+  mkPDFNumber :: Int -> PDFObject
+  mkPDFNumber = PDFNumber . fromIntegral
 
 instance ToPDFNumber Integer where
-  pdfNumber :: Integer -> PDFObject
-  pdfNumber = PDFNumber . fromIntegral
+  mkPDFNumber :: Integer -> PDFObject
+  mkPDFNumber = PDFNumber . fromIntegral
 
 isIndirect :: PDFObject -> Bool
 isIndirect PDFIndirectObject{}           = True

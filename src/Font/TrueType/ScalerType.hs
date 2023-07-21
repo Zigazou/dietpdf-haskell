@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StrictData #-}
 
 module Font.TrueType.ScalerType
   ( ScalerType

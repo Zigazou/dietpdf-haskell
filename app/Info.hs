@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StrictData #-}
 module Info
   ( showInfo
   ) where

@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE InstanceSigs #-}
 
 {- |

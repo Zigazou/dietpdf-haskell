@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE StrictData #-}
 
 {- |
 This module handles object streams.
@@ -182,7 +181,7 @@ explode = foldrM explode' mempty
  where
   explode' :: Logging m => PDFObject -> PDFDocument -> FallibleT m PDFDocument
   explode' objstm@PDFObjectStream{} result = (result <>) <$> extract objstm
-  explode' object                   result = return $! cCons object result
+  explode' object                   result = return $ cCons object result
 
 {- |
 Tells if a `PDFObject` may be embedded in an object stream.

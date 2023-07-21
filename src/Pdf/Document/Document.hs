@@ -1,4 +1,3 @@
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE DerivingStrategies #-}
 module Pdf.Document.Document

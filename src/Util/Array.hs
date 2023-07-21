@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StrictData #-}
 
 {-|
 This module defines what is an array at the lowest level.

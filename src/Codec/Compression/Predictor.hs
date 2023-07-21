@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StrictData #-}
 {-|
 This module implements the predictors as specified by the PDF reference.
 

@@ -35,6 +35,7 @@ ghc-options:
 
 library:
   source-dirs: src
+  default-extensions: StrictData
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16
@@ -67,6 +68,7 @@ executables:
   dietpdf:
     main:                Main.hs
     source-dirs:         app
+    default-extensions: StrictData
     ghc-options:
     - -O2
     - -funfolding-use-threshold=16
