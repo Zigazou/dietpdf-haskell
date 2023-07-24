@@ -87,6 +87,8 @@ data ObjectStream = ObjectStream
   , osObjects :: !BS.ByteString
   }
 
+data NumberOffset = NumberOffset !Int !Int
+
 emptyObjectStream :: ObjectStream
 emptyObjectStream =
   ObjectStream { osCount = 0, osOffset = 0, osIndices = "", osObjects = "" }
@@ -107,7 +109,7 @@ oneObjectP = do
   skipWhile isWhiteSpace
   item <- itemP
   skipWhile isWhiteSpace
-  return item
+  return $! item
 
 integerP :: Get Int
 integerP = takeWhile1 isDigit <&> toInt
@@ -118,30 +120,30 @@ integerP = takeWhile1 isDigit <&> toInt
     0
     bs
 
-objectNumberOffsetP :: Get (Int, Int)
+objectNumberOffsetP :: Get NumberOffset
 objectNumberOffsetP = do
   skipWhile isWhiteSpace
   objectNumber <- integerP
   skipWhile isWhiteSpace
   offset <- integerP
   skipWhile isWhiteSpace
-  return (objectNumber, offset)
+  return $! NumberOffset objectNumber offset
 
 parseObjectNumberOffsets
-  :: Logging m => BS.ByteString -> FallibleT m [(Int, Int)]
+  :: Logging m => BS.ByteString -> FallibleT m [NumberOffset]
 parseObjectNumberOffsets indices =
   case parseOnly (many' objectNumberOffsetP) indices of
     Left  err    -> throwE (ParseError ("", 0, err))
-    Right result -> return result
+    Right result -> return $! result
 
 extractObjects :: Logging m => ObjectStream -> FallibleT m PDFDocument
 extractObjects (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
-  exploded   <- forM numOffsets $ \(objectNumber, offset) -> do
+  exploded   <- forM numOffsets $ \(NumberOffset objectNumber offset) -> do
     case parseOnly oneObjectP (BS.drop offset objects) of
       Left  msg    -> throwE $ ParseError ("", fromIntegral offset, msg)
-      Right object -> return $ PDFIndirectObject objectNumber 0 object
-  return $ fromList exploded
+      Right object -> return $! PDFIndirectObject objectNumber 0 object
+  return $! fromList $! exploded
 
 getObjectStream :: Logging m => PDFObject -> FallibleT m ObjectStream
 getObjectStream object = do
@@ -180,8 +182,10 @@ explode :: Logging m => PDFDocument -> FallibleT m PDFDocument
 explode = foldrM explode' mempty
  where
   explode' :: Logging m => PDFObject -> PDFDocument -> FallibleT m PDFDocument
-  explode' objstm@PDFObjectStream{} result = (result <>) <$> extract objstm
-  explode' object                   result = return $ cCons object result
+  explode' objstm@PDFObjectStream{} !result = do
+    extracted <- extract objstm
+    return $! result <> extracted
+  explode' object                   !result = return $! cCons object result
 
 {- |
 Tells if a `PDFObject` may be embedded in an object stream.

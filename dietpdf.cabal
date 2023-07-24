@@ -103,11 +103,14 @@ library
       src
   default-extensions:
       StrictData
+      BangPatterns
+      Strict
   ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -fexcess-precision -optc-O3 -optc-ffast-math
   build-depends:
       base >=4.7 && <5
     , binary
     , binary-parsers
+    , binary-strict
     , bytestring
     , containers
     , cryptonite
@@ -141,6 +144,8 @@ executable dietpdf
       app
   default-extensions:
       StrictData
+      Strict
+      BangPatterns
   ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -fexcess-precision -optc-O3 -optc-ffast-math -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
