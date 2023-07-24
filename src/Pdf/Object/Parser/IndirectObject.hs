@@ -102,7 +102,7 @@ streamWithoutCountP = do
   stream <- manyTill
     (satisfy (const True))
     ((whiteSpaceP >> string "endstream") <|> string "endstream")
-  return (BS.pack stream)
+  return $! BS.pack stream
 
 {- |
 Parse a `PDFIndirectObject`.
