@@ -1,6 +1,8 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Pdf.Document.Document
+
   ( PDFDocument
   , CollectionOf(CollectionOf)
   , singleton
@@ -55,7 +57,7 @@ instance Foldable CollectionOf where
 -- | The `<>` operator does a concatenation when used with `CollectionOf`.
 instance Ord a => Semigroup (CollectionOf a) where
   (<>) :: CollectionOf a -> CollectionOf a -> CollectionOf a
-  (<>) (CollectionOf x) (CollectionOf y) = CollectionOf (y `seq` x OS.<>| y)
+  (<>) (CollectionOf x) (CollectionOf y) = CollectionOf (x OS.<>| y)
 
 instance Ord a => Monoid (CollectionOf a) where
   mempty :: CollectionOf a

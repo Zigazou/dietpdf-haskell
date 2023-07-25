@@ -100,8 +100,10 @@ rleEncodeP = do
     Just nextByte -> if nextByte == currentByte
       then do
         bytes <- upToN (127, currentByte) (==)
-        return $ RLERepeat (1 + BS.length bytes) currentByte
-      else RLECopy . BS.cons currentByte <$> upToN (127, currentByte) (/=)
+        return $! RLERepeat (1 + BS.length bytes) currentByte
+      else do
+        bytes <- upToN (127, currentByte) (/=)
+        return $! RLECopy (BS.cons currentByte bytes)
 
 {-|
 Encode a bytestring into an RLE bytestring.

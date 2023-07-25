@@ -17,8 +17,7 @@ The term “compressed object” is used regardless of whether the stream is
 actually encoded with a compression filter.
 -}
 module Pdf.Document.ObjectStream
-  ( extract
-  , explode
+  ( explode
   , insert
   , isObjectStreamable
   ) where
@@ -38,6 +37,8 @@ import           Pdf.Document.Document          ( PDFDocument
                                                 , cFilter
                                                 , cCons
                                                 , fromList
+                                                , toList
+                                                , singleton
                                                 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
@@ -77,7 +78,7 @@ import           Data.Foldable                  ( foldl'
 import           Util.Dictionary                ( Dictionary
                                                 , mkDictionary
                                                 )
-import           Util.Logging                   ( Logging )
+import           Util.Logging                   ( Logging, sayF )
 import           Control.Monad.Trans.Except     ( throwE )
 
 data ObjectStream = ObjectStream
@@ -136,14 +137,14 @@ parseObjectNumberOffsets indices =
     Left  err    -> throwE (ParseError ("", 0, err))
     Right result -> return $! result
 
-extractObjects :: Logging m => ObjectStream -> FallibleT m PDFDocument
+extractObjects :: Logging m => ObjectStream -> FallibleT m [PDFObject]
 extractObjects (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
   exploded   <- forM numOffsets $ \(NumberOffset objectNumber offset) -> do
     case parseOnly oneObjectP (BS.drop offset objects) of
-      Left  msg    -> throwE $ ParseError ("", fromIntegral offset, msg)
+      Left  msg    -> throwE $! ParseError ("", fromIntegral offset, msg)
       Right object -> return $! PDFIndirectObject objectNumber 0 object
-  return $! fromList $! exploded
+  return $! exploded
 
 getObjectStream :: Logging m => PDFObject -> FallibleT m ObjectStream
 getObjectStream object = do
@@ -161,17 +162,15 @@ getObjectStream object = do
                             }
     _anyOtherValue -> throwE ObjectStreamNotFound
 
-{- |
-Extract objects contained in an object stream from a `PDFObject`.
-
-If the `PDFObject` is not an object stream (Type = /ObjStm), it throws a
-parser error.
--}
-extract
-  :: Logging m
-  => PDFObject -- ^ A `PDFIndirectObject` of type /ObjStm with a stream
-  -> FallibleT m PDFDocument
-extract object = getObjectStream object >>= extractObjects
+explodeList :: Logging m => [PDFObject] -> FallibleT m [PDFObject]
+explodeList (objstm@PDFObjectStream{}:xs) = do
+  extracted <- getObjectStream objstm >>= extractObjects
+  remains <- explodeList xs
+  return (extracted ++ remains)
+explodeList (object:xs) = do
+  remains <- explodeList xs
+  return (object:remains)
+explodeList [] = return []
 
 {- |
 Look for every object stream and extract the objects from these object streams.
@@ -179,13 +178,7 @@ Look for every object stream and extract the objects from these object streams.
 Any other object is kept as is.
 -}
 explode :: Logging m => PDFDocument -> FallibleT m PDFDocument
-explode = foldrM explode' mempty
- where
-  explode' :: Logging m => PDFObject -> PDFDocument -> FallibleT m PDFDocument
-  explode' objstm@PDFObjectStream{} !result = do
-    extracted <- extract objstm
-    return $! result <> extracted
-  explode' object                   !result = return $! cCons object result
+explode = (<&> fromList) . explodeList . toList
 
 {- |
 Tells if a `PDFObject` may be embedded in an object stream.

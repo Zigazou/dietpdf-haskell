@@ -49,7 +49,6 @@ library:
   - bytestring
   - binary
   - binary-parsers
-  - binary-strict
   - ordered-containers
   - containers
   - mtl
