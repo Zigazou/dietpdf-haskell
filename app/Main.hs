@@ -62,9 +62,13 @@ readPDF filename = do
     Right bytes -> pdfParse bytes
     Left  _     -> throwE UnableToOpenFile
 
-readByteString :: FilePath -> FallibleT IO BS.ByteString
-readByteString filename = do
+readByteString :: Maybe FilePath -> FallibleT IO BS.ByteString
+readByteString (Just filename) = do
   lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
+    Right bytes -> return bytes
+    Left  _     -> throwE UnableToOpenFile
+readByteString Nothing =
+  lift (tryJust (guard . isDoesNotExistError) BS.getContents) >>= \case
     Right bytes -> return bytes
     Left  _     -> throwE UnableToOpenFile
 

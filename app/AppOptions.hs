@@ -24,6 +24,7 @@ import           Options.Applicative            ( Parser
                                                 , str
                                                 , auto
                                                 , subparser
+                                                , optional
                                                 )
 import           Codec.Compression.Predictor    ( Predictor )
 
@@ -41,10 +42,10 @@ data AppOptions
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
-  | EncodeOptions !Codec !FilePath
-  | DecodeOptions !Codec !FilePath
-  | PredictOptions !Predictor !Int !Int !FilePath
-  | UnpredictOptions !Predictor !Int !Int !FilePath
+  | EncodeOptions !Codec !(Maybe FilePath)
+  | DecodeOptions !Codec !(Maybe FilePath)
+  | PredictOptions !Predictor !Int !Int !(Maybe FilePath)
+  | UnpredictOptions !Predictor !Int !Int !(Maybe FilePath)
 
 appOptions :: Parser AppOptions
 appOptions = subparser
@@ -90,7 +91,7 @@ appOptions = subparser
        (info
          (   EncodeOptions
          <$> argument auto (metavar "CODEC" <> help "Codec to use")
-         <*> argument str  (metavar "IN" <> help "File to encode")
+         <*> optional (argument str  (metavar "IN" <> help "File to encode"))
          )
          (progDesc "Encode a file as it would be in a stream")
        )
@@ -99,7 +100,7 @@ appOptions = subparser
        (info
          (   DecodeOptions
          <$> argument auto (metavar "CODEC" <> help "Codec to use")
-         <*> argument str  (metavar "OUT" <> help "File to decode")
+         <*> optional (argument str  (metavar "OUT" <> help "File to decode"))
          )
          (progDesc "Decode a file as it would be in a stream")
        )
@@ -110,7 +111,7 @@ appOptions = subparser
          <$> argument auto (metavar "PREDICTOR" <> help "Predictor to use")
          <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
          <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
-         <*> argument str  (metavar "IN" <> help "File to predict")
+         <*> optional (argument str  (metavar "IN" <> help "File to predict"))
          )
          (progDesc "Predict a file as it would be in a stream")
        )
@@ -121,7 +122,7 @@ appOptions = subparser
          <$> argument auto (metavar "PREDICTOR" <> help "Predictor to use")
          <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
          <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
-         <*> argument str  (metavar "IN" <> help "File to unpredict")
+         <*> optional (argument str  (metavar "IN" <> help "File to unpredict"))
          )
          (progDesc "Unpredict a file as it would be in a stream")
        )
