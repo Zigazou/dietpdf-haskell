@@ -35,10 +35,8 @@ import           Util.Number                    ( fromInt )
 
 import           Pdf.Document.Document          ( PDFDocument
                                                 , cFilter
-                                                , cCons
                                                 , fromList
                                                 , toList
-                                                , singleton
                                                 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
@@ -72,13 +70,11 @@ import           Util.UnifiedError              ( UnifiedError
                                                   )
                                                 , FallibleT
                                                 )
-import           Data.Foldable                  ( foldl'
-                                                , foldrM
-                                                )
+import           Data.Foldable                  ( foldl' )
 import           Util.Dictionary                ( Dictionary
                                                 , mkDictionary
                                                 )
-import           Util.Logging                   ( Logging, sayF )
+import           Util.Logging                   ( Logging )
 import           Control.Monad.Trans.Except     ( throwE )
 
 data ObjectStream = ObjectStream
@@ -163,13 +159,13 @@ getObjectStream object = do
     _anyOtherValue -> throwE ObjectStreamNotFound
 
 explodeList :: Logging m => [PDFObject] -> FallibleT m [PDFObject]
-explodeList (objstm@PDFObjectStream{}:xs) = do
+explodeList (objstm@PDFObjectStream{} : xs) = do
   extracted <- getObjectStream objstm >>= extractObjects
-  remains <- explodeList xs
+  remains   <- explodeList xs
   return (extracted ++ remains)
-explodeList (object:xs) = do
+explodeList (object : xs) = do
   remains <- explodeList xs
-  return (object:remains)
+  return (object : remains)
 explodeList [] = return []
 
 {- |
