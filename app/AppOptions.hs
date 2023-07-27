@@ -37,6 +37,15 @@ data Codec = LZW
            | Hex
            deriving stock (Eq, Read, Show)
 
+codecsHelp :: String
+codecsHelp =
+  "Codec to use (LZW, Deflate, NoCompress, RLE, Zopfli, Ascii85, Hex)"
+
+predictorsHelp :: String
+predictorsHelp =
+  "Predictor to use (TIFFNoPrediction, TIFFPredictor2, PNGNone, PNGSub, PNGUp, \
+  \PNGAverage, PNGPaeth, PNGOptimum)"
+
 data AppOptions
   = OptimizeOptions !FilePath !FilePath
   | InfoOptions !FilePath
@@ -90,8 +99,8 @@ appOptions = subparser
        "encode"
        (info
          (   EncodeOptions
-         <$> argument auto (metavar "CODEC" <> help "Codec to use")
-         <*> optional (argument str  (metavar "IN" <> help "File to encode"))
+         <$> argument auto (metavar "CODEC" <> help codecsHelp)
+         <*> optional (argument str (metavar "IN" <> help "File to encode"))
          )
          (progDesc "Encode a file as it would be in a stream")
        )
@@ -99,8 +108,9 @@ appOptions = subparser
        "decode"
        (info
          (   DecodeOptions
-         <$> argument auto (metavar "CODEC" <> help "Codec to use")
-         <*> optional (argument str  (metavar "OUT" <> help "File to decode"))
+         <$> argument auto (metavar "CODEC" <> help codecsHelp)
+         <*> optional
+               (argument str (metavar "OUT" <> help "File to decode"))
          )
          (progDesc "Decode a file as it would be in a stream")
        )
@@ -108,10 +118,13 @@ appOptions = subparser
        "predict"
        (info
          (   PredictOptions
-         <$> argument auto (metavar "PREDICTOR" <> help "Predictor to use")
+         <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
          <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
-         <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
-         <*> optional (argument str  (metavar "IN" <> help "File to predict"))
+         <*> argument
+               auto
+               (metavar "COMPONENTS" <> help "Number of components")
+         <*> optional
+               (argument str (metavar "IN" <> help "File to predict"))
          )
          (progDesc "Predict a file as it would be in a stream")
        )
@@ -119,10 +132,13 @@ appOptions = subparser
        "unpredict"
        (info
          (   UnpredictOptions
-         <$> argument auto (metavar "PREDICTOR" <> help "Predictor to use")
+         <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
          <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
-         <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
-         <*> optional (argument str  (metavar "IN" <> help "File to unpredict"))
+         <*> argument
+               auto
+               (metavar "COMPONENTS" <> help "Number of components")
+         <*> optional
+               (argument str (metavar "IN" <> help "File to unpredict"))
          )
          (progDesc "Unpredict a file as it would be in a stream")
        )
