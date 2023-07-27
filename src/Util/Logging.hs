@@ -27,14 +27,15 @@ import           Fmt                            ( padLeftF
                                                 , padRightF
                                                 , fixedF
                                                 )
-import Util.UnifiedError (UnifiedError)
+import           Util.UnifiedError              ( UnifiedError )
+import           System.IO                      ( stderr )
 
 class Monad m => Logging m where
   say :: T.Text -> m ()
 
 instance Logging IO where
   say :: T.Text -> IO ()
-  say = TIO.putStrLn
+  say = TIO.hPutStrLn stderr
 
 instance Logging Identity where
   say :: T.Text -> Identity ()
@@ -67,10 +68,5 @@ sayComparisonF label sizeBefore sizeAfter = sayF
       / fromIntegral sizeBefore
 
 sayErrorF :: (Logging m, MonadTrans t) => T.Text -> UnifiedError -> t m ()
-sayErrorF label theError = sayF
-  (  "  - "
-  +| padRightF 32 ' ' label
-  |+ " "
-  +| T.pack (show theError)
-  |+ ""
-  )
+sayErrorF label theError =
+  sayF ("  - " +| padRightF 32 ' ' label |+ " " +| T.pack (show theError) |+ "")
