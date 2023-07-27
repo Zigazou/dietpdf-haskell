@@ -6,7 +6,6 @@ This module facilitates unfiltering of `PDFObject`.
 -}
 module Pdf.Object.Unfilter
   ( unfilter
-  , supportedFilters
   ) where
 
 import qualified Codec.Compression.Flate       as FL
@@ -37,18 +36,6 @@ import           Util.Logging                   ( Logging
 import           Control.Monad.Trans.Except     ( throwE )
 import           Pdf.Object.Format              ( txtObjectNumberVersion )
 import qualified Data.Text                     as T
-
-{- |
-List of all filters that the `unfilter` function supports.
--}
-supportedFilters :: [BS.ByteString]
-supportedFilters =
-  [ "FlateDecode"
-  , "RunLengthDecode"
-  , "LZWDecode"
-  , "ASCII85Decode"
-  , "ASCIIHexDecode"
-  ]
 
 unfilterStream
   :: (FilterList, BS.ByteString)

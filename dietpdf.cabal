@@ -134,10 +134,14 @@ executable dietpdf
   main-is: Main.hs
   other-modules:
       AppOptions
+      Decode
+      Encode
       Extract
       Hash
       Info
       Optimize
+      Predict
+      Unpredict
       Paths_dietpdf
   hs-source-dirs:
       app
@@ -202,7 +206,6 @@ test-suite dietpdf-test
       Pdf.Object.Parser.StringSpec
       Pdf.Object.Parser.TrailerSpec
       Pdf.Object.Parser.XRefSpec
-      Pdf.Object.PartitionSpec
       Pdf.Object.ReferenceSpec
       Pdf.Object.StateSpec
       Pdf.Object.StringSpec

@@ -79,7 +79,7 @@ data Predictor
     --   This technique is due to Alan W. Paeth.
   | PNGOptimum
     -- ^ The optimum predictor is determined for each scanline.
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Read, Show)
 
 {- | Convert a PDF predictor code, returns either a `Predictor` or an
 `InvalidPredictor` error.

@@ -8,7 +8,6 @@
 -- Partitioning is used when encoded a whole PDF file from PDF objects.
 module Pdf.Document.Partition
   ( PDFPartition(PDFPartition, ppHeads, ppIndirectObjects, ppTrailers)
-  , toPartition
   , firstVersion
   , lastTrailer
   , removeUnused
@@ -29,12 +28,11 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFObjectStream
                                                   , PDFReference
                                                   )
-                                                , isIndirect
-                                                , isHeader
-                                                , isTrailer
                                                 , hasKey
                                                 )
-import           Util.Logging                   ( Logging, sayF )
+import           Util.Logging                   ( Logging
+                                                , sayF
+                                                )
 import           Util.UnifiedError              ( FallibleT )
 import           Pdf.Document.Uncompress        ( uncompress )
 
@@ -59,16 +57,6 @@ instance Semigroup PDFPartition where
 instance Monoid PDFPartition where
   mempty :: PDFPartition
   mempty = PDFPartition mempty mempty mempty
-
-{-|
-Partition a `CollectionOf` of `PDFObject`.
--}
-toPartition :: PDFDocument -> PDFPartition
-toPartition objects = PDFPartition
-  { ppIndirectObjects = cFilter isIndirect objects
-  , ppHeads           = cFilter isHeader objects
-  , ppTrailers        = cFilter isTrailer objects
-  }
 
 {-|
 Return the first PDF version if any.
@@ -100,14 +88,15 @@ removeUnused (PDFPartition indirectObjects heads trailers) = do
   sayF "  - Uncompressing indirect objects"
   uIndirectObjects <- uncompress indirectObjects
   sayF "  - Uncompressing head objects"
-  uHeads           <- uncompress heads
+  uHeads <- uncompress heads
   sayF "  - Uncompressing trailer objects"
-  uTrailers        <- uncompress trailers
+  uTrailers <- uncompress trailers
 
   sayF "  - Locating all references"
-  let references = deepFind isReference uHeads
-                <> deepFind isReference uTrailers
-                <> deepFind isReference uIndirectObjects
+  let references =
+        deepFind isReference uHeads
+          <> deepFind isReference uTrailers
+          <> deepFind isReference uIndirectObjects
 
   sayF "  - Removing unused objects"
 

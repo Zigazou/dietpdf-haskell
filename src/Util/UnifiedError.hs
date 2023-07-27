@@ -29,14 +29,16 @@ data ErrorType = ReadingError
                | ParsingError
                | EncodingError
                | StructureError
+               | UnsupportedError
                deriving stock Eq
 
 instance Show ErrorType where
   show :: ErrorType -> String
-  show ReadingError   = "reading"
-  show ParsingError   = "parsing"
-  show EncodingError  = "encoding"
-  show StructureError = "structure"
+  show ReadingError     = "reading"
+  show ParsingError     = "parsing"
+  show EncodingError    = "encoding"
+  show StructureError   = "structure"
+  show UnsupportedError = "unsupported"
 
 data UnifiedError
   -- | Parsing error (Remaining bytes, offset of the error and error message)
@@ -82,6 +84,7 @@ data UnifiedError
   | UnknownScalerType !String
   | ObjectStreamNotFound
   | ObjectNotFound
+  | UnsupportedFeature !String
   deriving stock (Eq)
 
 type FallibleT = ExceptT UnifiedError
@@ -111,6 +114,7 @@ errorType (InvalidObjectToEmbed _)   = StructureError
 errorType NoObjectToEncode           = EncodingError
 errorType (UnknownScalerType _)      = ParsingError
 errorType ObjectStreamNotFound       = ParsingError
+errorType (UnsupportedFeature _)     = UnsupportedError
 
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
@@ -162,12 +166,18 @@ instance Show UnifiedError where
   show err@NoObjectToEncode        = show' err "No object to encode"
   show err@(UnknownScalerType msg) = show' err ("Unknown scaler type: " ++ msg)
   show err@ObjectStreamNotFound    = show' err "Object stream not found"
+  show err@(UnsupportedFeature msg) =
+    show' err ("Unsupported feature: " ++ msg)
 
 tryF :: Monad m => FallibleT m a -> FallibleT m (Either UnifiedError a)
 tryF = lift . runExceptT
 
-ifFail :: Monad m => FallibleT m a -> (UnifiedError -> FallibleT m a) ->  FallibleT m a
+ifFail
+  :: Monad m
+  => FallibleT m a
+  -> (UnifiedError -> FallibleT m a)
+  -> FallibleT m a
 ifFail computation inCaseOfFail = do
   tryF computation >>= \case
-    Right result -> return result
-    Left anError -> inCaseOfFail anError
+    Right result  -> return result
+    Left  anError -> inCaseOfFail anError

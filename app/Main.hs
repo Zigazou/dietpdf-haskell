@@ -9,6 +9,10 @@ import           AppOptions                     ( AppOptions
                                                   , InfoOptions
                                                   , OptimizeOptions
                                                   , HashOptions
+                                                  , DecodeOptions
+                                                  , EncodeOptions
+                                                  , PredictOptions
+                                                  , UnpredictOptions
                                                   )
                                                 , appOptions
                                                 )
@@ -19,6 +23,10 @@ import           Extract                        ( extract )
 import           Info                           ( showInfo )
 import           Optimize                       ( optimize )
 import           Hash                           ( objectHashes )
+import           Encode                         ( encodeByteString )
+import           Decode                         ( decodeByteString )
+import           Predict                        ( predictByteString )
+import           Unpredict                      ( unpredictByteString )
 import           Options.Applicative            ( (<**>)
                                                 , execParser
                                                 , fullDesc
@@ -54,6 +62,12 @@ readPDF filename = do
     Right bytes -> pdfParse bytes
     Left  _     -> throwE UnableToOpenFile
 
+readByteString :: FilePath -> FallibleT IO BS.ByteString
+readByteString filename = do
+  lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
+    Right bytes -> return bytes
+    Left  _     -> throwE UnableToOpenFile
+
 hexCfg :: Int -> Cfg
 hexCfg offset = defaultCfg { startByte = offset }
 
@@ -75,6 +89,14 @@ runApp (OptimizeOptions inputPDF outputPDF) = do
       throwE anError
     Left anError -> throwE anError
 runApp (HashOptions inputPDF) = readPDF inputPDF >>= objectHashes
+runApp (EncodeOptions codec inputFile) =
+  readByteString inputFile >>= encodeByteString codec
+runApp (DecodeOptions codec inputFile) =
+  readByteString inputFile >>= decodeByteString codec
+runApp (PredictOptions predictor width components inputFile) =
+  readByteString inputFile >>= predictByteString predictor width components
+runApp (UnpredictOptions predictor width components inputFile) =
+  readByteString inputFile >>= unpredictByteString predictor width components
 
 options :: ParserInfo AppOptions
 options = info
