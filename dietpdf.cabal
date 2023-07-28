@@ -105,7 +105,7 @@ library
       StrictData
       BangPatterns
       Strict
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -fexcess-precision -optc-O3 -optc-ffast-math
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
     , binary
@@ -134,14 +134,14 @@ executable dietpdf
   main-is: Main.hs
   other-modules:
       AppOptions
-      Decode
-      Encode
-      Extract
-      Hash
-      Info
-      Optimize
-      Predict
-      Unpredict
+      Command.Decode
+      Command.Encode
+      Command.Extract
+      Command.Hash
+      Command.Info
+      Command.Optimize
+      Command.Predict
+      Command.Unpredict
       Paths_dietpdf
   hs-source-dirs:
       app
@@ -149,7 +149,7 @@ executable dietpdf
       StrictData
       Strict
       BangPatterns
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -fexcess-precision -optc-O3 -optc-ffast-math -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -220,7 +220,7 @@ test-suite dietpdf-test
       Paths_dietpdf
   hs-source-dirs:
       test
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe
   build-depends:
       QuickCheck
     , base >=4.7 && <5

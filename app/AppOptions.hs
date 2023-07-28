@@ -25,6 +25,8 @@ import           Options.Applicative            ( Parser
                                                 , auto
                                                 , subparser
                                                 , optional
+                                                , Mod
+                                                , CommandFields
                                                 )
 import           Codec.Compression.Predictor    ( Predictor )
 
@@ -56,90 +58,102 @@ data AppOptions
   | PredictOptions !Predictor !Int !Int !(Maybe FilePath)
   | UnpredictOptions !Predictor !Int !Int !(Maybe FilePath)
 
-appOptions :: Parser AppOptions
-appOptions = subparser
-  (  command
-      "info"
-      (info
-        (   InfoOptions
-        <$> argument str (metavar "IN" <> help "PDF file to analyze")
-        )
-        (progDesc "Print information about a PDF file")
-      )
-  <> command
-       "extract"
-       (info
-         (   ExtractOptions
-         <$> argument auto (metavar "NUM" <> help "Object number")
-         <*> argument str  (metavar "IN" <> help "PDF file to analyze")
-         )
-         (progDesc
-           "Extract the stream of a specific object from a PDF file \
-           \(the stream is unfiltered)"
-         )
-       )
-  <> command
-       "optimize"
-       (info
-         (   OptimizeOptions
-         <$> argument str (metavar "IN" <> help "PDF file to process")
-         <*> argument str (metavar "OUT" <> help "PDF file to create")
-         )
-         (progDesc "Optimize a PDF file")
-       )
-  <> command
-       "hash"
-       (info
-         (   HashOptions
-         <$> argument str (metavar "IN" <> help "PDF file to process")
-         )
-         (progDesc "Hash of each stream in a PDF file")
-       )
-  <> command
-       "encode"
-       (info
-         (   EncodeOptions
-         <$> argument auto (metavar "CODEC" <> help codecsHelp)
-         <*> optional (argument str (metavar "IN" <> help "File to encode"))
-         )
-         (progDesc "Encode a file as it would be in a stream")
-       )
-  <> command
-       "decode"
-       (info
-         (   DecodeOptions
-         <$> argument auto (metavar "CODEC" <> help codecsHelp)
-         <*> optional
-               (argument str (metavar "OUT" <> help "File to decode"))
-         )
-         (progDesc "Decode a file as it would be in a stream")
-       )
-  <> command
-       "predict"
-       (info
-         (   PredictOptions
-         <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
-         <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
-         <*> argument
-               auto
-               (metavar "COMPONENTS" <> help "Number of components")
-         <*> optional
-               (argument str (metavar "IN" <> help "File to predict"))
-         )
-         (progDesc "Predict a file as it would be in a stream")
-       )
-  <> command
-       "unpredict"
-       (info
-         (   UnpredictOptions
-         <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
-         <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
-         <*> argument
-               auto
-               (metavar "COMPONENTS" <> help "Number of components")
-         <*> optional
-               (argument str (metavar "IN" <> help "File to unpredict"))
-         )
-         (progDesc "Unpredict a file as it would be in a stream")
-       )
+commandInfo :: Mod CommandFields AppOptions
+commandInfo = command
+  "info"
+  (info
+    (InfoOptions <$> argument str (metavar "IN" <> help "PDF file to analyze"))
+    (progDesc "Print information about a PDF file")
   )
+
+commandExtract :: Mod CommandFields AppOptions
+commandExtract = command
+  "extract"
+  (info
+    (   ExtractOptions
+    <$> argument auto (metavar "NUM" <> help "Object number")
+    <*> argument str  (metavar "IN" <> help "PDF file to analyze")
+    )
+    (progDesc
+      "Extract the stream of a specific object from a PDF file \
+           \(the stream is unfiltered)"
+    )
+  )
+
+commandOptimize :: Mod CommandFields AppOptions
+commandOptimize = command
+  "optimize"
+  (info
+    (   OptimizeOptions
+    <$> argument str (metavar "IN" <> help "PDF file to process")
+    <*> argument str (metavar "OUT" <> help "PDF file to create")
+    )
+    (progDesc "Optimize a PDF file")
+  )
+commandHash :: Mod CommandFields AppOptions
+commandHash = command
+  "hash"
+  (info
+    (HashOptions <$> argument str (metavar "IN" <> help "PDF file to process"))
+    (progDesc "Hash of each stream in a PDF file")
+  )
+
+commandEncode :: Mod CommandFields AppOptions
+commandEncode = command
+  "encode"
+  (info
+    (   EncodeOptions
+    <$> argument auto (metavar "CODEC" <> help codecsHelp)
+    <*> optional (argument str (metavar "IN" <> help "File to encode"))
+    )
+    (progDesc "Encode a file as it would be in a stream")
+  )
+
+commandDecode :: Mod CommandFields AppOptions
+commandDecode = command
+  "decode"
+  (info
+    (   DecodeOptions
+    <$> argument auto (metavar "CODEC" <> help codecsHelp)
+    <*> optional (argument str (metavar "OUT" <> help "File to decode"))
+    )
+    (progDesc "Decode a file as it would be in a stream")
+  )
+
+commandPredict :: Mod CommandFields AppOptions
+commandPredict = command
+  "predict"
+  (info
+    (   PredictOptions
+    <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
+    <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
+    <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
+    <*> optional (argument str (metavar "IN" <> help "File to predict"))
+    )
+    (progDesc "Predict a file as it would be in a stream")
+  )
+
+commandUnpredict :: Mod CommandFields AppOptions
+commandUnpredict = command
+  "unpredict"
+  (info
+    (   UnpredictOptions
+    <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
+    <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
+    <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
+    <*> optional (argument str (metavar "IN" <> help "File to unpredict"))
+    )
+    (progDesc "Unpredict a file as it would be in a stream")
+  )
+
+appOptions :: Parser AppOptions
+appOptions =
+  subparser
+    $  commandInfo
+    <> commandExtract
+    <> commandOptimize
+    <> commandHash
+    <> commandEncode
+    <> commandDecode
+    <> commandPredict
+    <> commandUnpredict

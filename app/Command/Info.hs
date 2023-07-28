@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Info
+module Command.Info
   ( showInfo
   ) where
 

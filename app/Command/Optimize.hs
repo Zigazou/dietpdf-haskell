@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Optimize
+module Command.Optimize
   ( optimize
   ) where
 

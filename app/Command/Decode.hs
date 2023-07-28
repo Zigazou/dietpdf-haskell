@@ -1,4 +1,4 @@
-module Decode
+module Command.Decode
   ( decodeByteString
   ) where
 

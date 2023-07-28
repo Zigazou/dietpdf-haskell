@@ -1,4 +1,4 @@
-module Encode
+module Command.Encode
   ( encodeByteString
   ) where
 

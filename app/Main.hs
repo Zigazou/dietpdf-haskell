@@ -19,14 +19,14 @@ import           AppOptions                     ( AppOptions
 import           Control.Exception              ( tryJust )
 import           Control.Monad                  ( guard )
 import qualified Data.ByteString               as BS
-import           Extract                        ( extract )
-import           Info                           ( showInfo )
-import           Optimize                       ( optimize )
-import           Hash                           ( objectHashes )
-import           Encode                         ( encodeByteString )
-import           Decode                         ( decodeByteString )
-import           Predict                        ( predictByteString )
-import           Unpredict                      ( unpredictByteString )
+import           Command.Extract                ( extract )
+import           Command.Info                   ( showInfo )
+import           Command.Optimize               ( optimize )
+import           Command.Hash                   ( objectHashes )
+import           Command.Encode                 ( encodeByteString )
+import           Command.Decode                 ( decodeByteString )
+import           Command.Predict                ( predictByteString )
+import           Command.Unpredict              ( unpredictByteString )
 import           Options.Applicative            ( (<**>)
                                                 , execParser
                                                 , fullDesc

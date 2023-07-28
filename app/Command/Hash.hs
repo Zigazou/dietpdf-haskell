@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE InstanceSigs #-}
-module Hash
+module Command.Hash
   ( objectHashes
   ) where
 
