@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Util.ByteStringSpec
   ( spec
   ) where

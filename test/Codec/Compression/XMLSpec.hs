@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Codec.Compression.XMLSpec
   ( spec
   ) where

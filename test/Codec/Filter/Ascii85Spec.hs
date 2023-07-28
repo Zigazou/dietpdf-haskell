@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Codec.Filter.Ascii85Spec
   ( spec
   ) where

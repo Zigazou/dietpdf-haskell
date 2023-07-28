@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Font.TrueType.Parser.Font
   ( ttfParse
   , fontDirectoryP

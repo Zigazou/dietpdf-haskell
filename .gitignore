@@ -3,4 +3,6 @@
 *.hie
 stack.yaml.lock
 *.pdf
+test/real
+stan.html
 tmp/

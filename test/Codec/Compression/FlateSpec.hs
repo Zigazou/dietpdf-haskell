@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Codec.Compression.FlateSpec
   ( spec
   ) where

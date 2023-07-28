@@ -40,6 +40,8 @@ library:
   - StrictData
   - BangPatterns
   - Strict
+  - DerivingStrategies
+  - OverloadedStrings
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16
@@ -79,6 +81,8 @@ executables:
     - StrictData
     - Strict
     - BangPatterns
+    - DerivingStrategies
+    - OverloadedStrings
     ghc-options:
     - -O2
     - -funfolding-use-threshold=16

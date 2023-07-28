@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Object.Parser.LooseEndOfLineSpec
   ( spec
   ) where

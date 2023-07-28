@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Document.ObjectStreamSpec
   ( spec
   ) where

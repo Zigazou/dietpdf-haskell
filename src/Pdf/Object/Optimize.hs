@@ -1,7 +1,5 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE DerivingStrategies #-}
 
 {-|
 This modules implements several optimization techniques targeted at PDF objects.

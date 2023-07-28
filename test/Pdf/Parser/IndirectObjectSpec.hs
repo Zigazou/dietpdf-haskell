@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Parser.IndirectObjectSpec
   ( spec
   ) where

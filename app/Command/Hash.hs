@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE InstanceSigs #-}
 module Command.Hash
   ( objectHashes

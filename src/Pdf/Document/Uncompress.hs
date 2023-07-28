@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Document.Uncompress
   ( uncompress
   ) where

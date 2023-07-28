@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Parser.ParserSpec
   ( spec
   ) where

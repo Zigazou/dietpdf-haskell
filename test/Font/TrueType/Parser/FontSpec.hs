@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Font.TrueType.Parser.FontSpec
   ( spec
   ) where

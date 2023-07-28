@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Pdf.Graphics.Parser.ArraySpec
   ( spec
   ) where

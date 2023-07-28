@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Codec.Compression.LZWSpec
   ( spec
   ) where

@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 module Command.Info
   ( showInfo
   ) where
