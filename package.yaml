@@ -107,6 +107,12 @@ tests:
   dietpdf-test:
     main:                Spec.hs
     source-dirs:         test
+    default-extensions:
+    - StrictData
+    - Strict
+    - BangPatterns
+    - DerivingStrategies
+    - OverloadedStrings
     dependencies:
     - dietpdf
     - hspec

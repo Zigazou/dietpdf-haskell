@@ -18,6 +18,7 @@ actually encoded with a compression filter.
 -}
 module Pdf.Document.ObjectStream
   ( explode
+  , explodeList
   , insert
   , isObjectStreamable
   ) where

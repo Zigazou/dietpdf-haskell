@@ -5,8 +5,6 @@ module Codec.Compression.FlateSpec
 import           Control.Monad                  ( forM_
                                                 , forM
                                                 )
---import qualified Codec.Compression.Zlib.Internal
---                                               as ZLI
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
 import           Codec.Compression.Flate        ( compress

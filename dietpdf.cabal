@@ -224,6 +224,12 @@ test-suite dietpdf-test
       Paths_dietpdf
   hs-source-dirs:
       test
+  default-extensions:
+      StrictData
+      Strict
+      BangPatterns
+      DerivingStrategies
+      OverloadedStrings
   ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe
   build-depends:
       QuickCheck

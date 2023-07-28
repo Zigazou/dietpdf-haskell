@@ -6,8 +6,8 @@ import           Control.Monad                  ( forM_ )
 import           Pdf.Document.Document          ( PDFDocument
                                                 , fromList
                                                 )
-import           Pdf.Document.ObjectStream      ( extract
-                                                , insert
+import           Pdf.Document.ObjectStream      ( insert
+                                                , explodeList
                                                 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
@@ -41,7 +41,7 @@ import           Util.UnifiedError              ( UnifiedError
 import           Control.Monad.Trans.Except     ( runExceptT )
 import           Util.Array                     ( mkArray )
 
-fromObjectStreamExamples :: [(PDFObject, Fallible PDFDocument)]
+fromObjectStreamExamples :: [(PDFObject, Fallible [PDFObject])]
 fromObjectStreamExamples =
   [ ( PDFObjectStream
       1
@@ -53,12 +53,12 @@ fromObjectStreamExamples =
         ]
       )
       "24 0 18 3 10 (Hello)"
-    , Right $ fromList
+    , Right
       [ PDFIndirectObject 24 0 (PDFNumber 10.0)
       , PDFIndirectObject 18 0 (PDFString "Hello")
       ]
     )
-  , (PDFNull, Left ObjectStreamNotFound)
+  , (PDFNull, Right [PDFNull])
   , ( PDFObjectStream
       1
       0
@@ -69,7 +69,7 @@ fromObjectStreamExamples =
         ]
       )
       "24 0 18 3 10  (Hello)"
-    , Right $ fromList
+    , Right
       [ PDFIndirectObject 24 0 (PDFNumber 10.0)
       , PDFIndirectObject 18 0 (PDFString "Hello")
       ]
@@ -84,7 +84,7 @@ fromObjectStreamExamples =
         ]
       )
       "24 0 18 3 10 (Hello) "
-    , Right $ fromList
+    , Right
       [ PDFIndirectObject 24 0 (PDFNumber 10.0)
       , PDFIndirectObject 18 0 (PDFString "Hello")
       ]
@@ -143,7 +143,7 @@ fromObjectStreamExamples =
       \/URI (mailto:zigazou@protonmail.com)\n\
       \>>\n\
       \>>\n"
-    , Right $ fromList
+    , Right
       [ PDFIndirectObject 92 0 $ mkPDFDictionary
         [ ("Type"   , PDFName "Annot")
         , ("F"      , PDFNumber 4)
@@ -250,7 +250,7 @@ spec = do
   describe "extract" $ do
     forM_ fromObjectStreamExamples $ \(example, expected) ->
       it ("should decode " ++ show example)
-        $   runExceptT (extract example)
+        $   runExceptT (explodeList [example])
         >>= (`shouldBe` expected)
 
   describe "insert" $ do
