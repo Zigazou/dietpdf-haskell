@@ -11,6 +11,7 @@ import           Test.Hspec                     ( Spec
                                                 )
 import           Codec.Compression.Predictor    ( predict
                                                 , unpredict
+                                                , entropy
                                                 , Predictor
                                                   ( TIFFNoPrediction
                                                   , PNGNone
@@ -69,3 +70,8 @@ spec = do
             )
           $          unpredict predictor width components example
           `shouldBe` Right expected
+
+  describe "entropy"
+    $          it "should find 1.8464... for \"1223334444\""
+    $          entropy "1223334444"
+    `shouldBe` 1.8464393446710154

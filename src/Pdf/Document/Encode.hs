@@ -109,6 +109,10 @@ getTrailer partition = case lastTrailer partition of
               , ("Info", PDFReference iNumber iRevision)
               ]
             )
+        (Just (PDFIndirectObject cNumber cRevision _), Nothing) -> PDFTrailer
+          ( PDFDictionary
+          $ mkDictionary [("Root", PDFReference cNumber cRevision)]
+          )
         _anyOtherCase -> PDFTrailer PDFNull
   (PDFXRefStream _ _ dict _) ->
     let catalog = Map.lookup "Root" dict
@@ -121,7 +125,6 @@ getTrailer partition = case lastTrailer partition of
               )
           _anyOtherCase -> PDFTrailer PDFNull
   validTrailer -> validTrailer
-
 
 {-|
 Given a list of PDF objects, generate the PDF file content.

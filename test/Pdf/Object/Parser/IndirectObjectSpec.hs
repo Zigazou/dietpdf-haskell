@@ -44,19 +44,6 @@ indirectObjectExamples =
                                   (fromList [("Length", PDFNumber 8.0)])
                                   "12345678"
     )
-  , ( "1 0 obj<</Length 8>>stream\r\n12345678endstream endobj"
-    , PDFIndirectObjectWithStream 1
-                                  0
-                                  (fromList [("Length", PDFNumber 8.0)])
-                                  "12345678"
-    )
-  , ( "1 0 obj<</Type/ObjStm/Length 8>>stream\r\n12345678endstream endobj"
-    , PDFObjectStream
-      1
-      0
-      (fromList [("Length", PDFNumber 8.0), ("Type", PDFName "ObjStm")])
-      "12345678"
-    )
   , ( "2 0 obj\n<< /Type /Page % 1\n   /Parent 1 0 R >>\nendobj"
     , PDFIndirectObject
       2

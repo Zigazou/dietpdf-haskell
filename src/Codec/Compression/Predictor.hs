@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-|
 This module implements the predictors as specified by the PDF reference.
 
@@ -37,6 +35,8 @@ module Codec.Compression.Predictor
   , unpredict
   , isPNGGroup
   , isTIFFGroup
+  , entropyShannon
+  , EntropyType(EntropyDeflate, EntropyShannon)
   ) where
 
 import qualified Data.ByteString               as BS
@@ -46,11 +46,17 @@ import           Util.ByteString                ( splitRaw
                                                 , separateComponents
                                                 , groupComponents
                                                 )
-import           Util.UnifiedError                    ( UnifiedError
+import           Util.UnifiedError              ( UnifiedError
                                                   ( InvalidNumberOfBytes
                                                   , InvalidPredictor
                                                   )
                                                 )
+import           Data.List                      ( genericLength
+                                                , group
+                                                , sort
+                                                , minimumBy
+                                                )
+import qualified Codec.Compression.Flate       as FL
 
 data Predictor
   = TIFFNoPrediction
@@ -239,7 +245,6 @@ Returns the predictor function for a specified `Predictor`.
 The function works on uncoded samples.
 -}
 predictF :: Predictor -> PredictorFunc
-predictF PNGNone    = sCurrent
 predictF PNGSub     = \s -> sCurrent s - sLeft s
 predictF PNGUp      = \s -> sCurrent s - sAbove s
 predictF PNGAverage = \s -> sCurrent s - average (sLeft s) (sAbove s)
@@ -253,7 +258,6 @@ Returns the un-predictor function for a specified `Predictor`.
 The function works on encoded samples.
 -}
 unpredictF :: Predictor -> PredictorFunc
-unpredictF PNGNone    = sCurrent
 unpredictF PNGSub     = \s -> sCurrent s + sLeft s
 unpredictF PNGUp      = \s -> sCurrent s + sAbove s
 unpredictF PNGAverage = \s -> sCurrent s + average (sLeft s) (sAbove s)
@@ -261,11 +265,27 @@ unpredictF PNGPaeth =
   \s -> sCurrent s + paethBest (sLeft s) (sAbove s) (sUpperLeft s)
 unpredictF _anyOtherPredictor = sCurrent
 
+data EntropyType = EntropyShannon | EntropyDeflate deriving stock Eq
+
+scanlineEntropy :: EntropyType -> Scanline -> Double
+scanlineEntropy EntropyShannon = entropyShannon . groupComponents . slStream
+scanlineEntropy EntropyDeflate =
+  FL.entropyCompress . groupComponents . slStream
+
 {- |
 Given a `Predictor` and 2 consecutive `Scanline`, encode the last `Scanline`.
 -}
-applyPredictor :: Predictor -> (Scanline, Scanline) -> Scanline
-applyPredictor predictor (Scanline _ prior, Scanline _ current) = Scanline
+applyPredictor :: EntropyType -> Predictor -> (Scanline, Scanline) -> Scanline
+applyPredictor entropy PNGOptimum scanlines =
+  let allPredicted =
+        applyPredictor
+          <$> [entropy]
+          <*> [PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth]
+          <*> [scanlines]
+      entropies = ((,) =<< scanlineEntropy entropy) <$> allPredicted
+  in  snd $ minimumBy ((. fst) . compare . fst) entropies
+
+applyPredictor _ predictor (Scanline _ prior, Scanline _ current) = Scanline
   { slPredictor = Just predictor
   , slStream    = BS.pack
                     <$> (   applyPredictor' (predictF predictor) (0, 0)
@@ -284,10 +304,10 @@ applyPredictor predictor (Scanline _ prior, Scanline _ current) = Scanline
 {- |
 Encode an entire image stream using a specified `Predictor`
 -}
-predictImageStream :: Predictor -> ImageStream -> ImageStream
-predictImageStream predictor imgStm = imgStm
+predictImageStream :: EntropyType -> Predictor -> ImageStream -> ImageStream
+predictImageStream entropy predictor imgStm = imgStm
   { iPredictor = Just predictor
-  , iLines     = applyPredictor predictor <$> previousCurrent
+  , iLines     = applyPredictor entropy predictor <$> previousCurrent
                    (emptyScanline (iWidth imgStm) (iComponents imgStm))
                    (iLines imgStm)
   }
@@ -399,17 +419,17 @@ fromUnpredictedStream width components raw = return ImageStream
 Apply a `Predictor` to a `ByteString`, considering its line width.
 -}
 predict
-  :: Predictor -- ^ Predictor to be used to encode
+  :: EntropyType -- ^ Entropy type to use
+  -> Predictor -- ^ Predictor to be used to encode
   -> Int -- ^ Width of the stream
   -> Int -- ^ Number of color components
   -> BS.ByteString -- ^ Stream to encode
   -> Either UnifiedError BS.ByteString -- ^ Encoded stream or an error
-predict predictor width components stream
+predict entropy predictor width components stream
   | width < 1 = Left $ InvalidNumberOfBytes 0 0
   | otherwise = do
     imgStm <- fromUnpredictedStream width components stream
-    let predicted = predictImageStream predictor imgStm
-    return $ packStream predicted
+    return $ packStream (predictImageStream entropy predictor imgStm)
 
 {- |
 Invert the application of a `Predictor` to a `ByteString`, considering its
@@ -427,3 +447,18 @@ unpredict predictor width components stream
     imgStm <- fromPredictedStream predictor width components stream
     let unpredicted = unpredictImageStream predictor imgStm
     return $ packStream unpredicted
+
+
+{- |
+Calculate the Shannon entropy of a `ByteString`.
+Adapted from https://rosettacode.org/wiki/Entropy
+-}
+entropyShannon :: BS.ByteString -> Double
+entropyShannon =
+  sum . map ponderate . frequency . map genericLength . group . sort . BS.unpack
+ where
+  ponderate :: Double -> Double
+  ponderate value = -value * logBase 2 value
+
+  frequency :: [Double] -> [Double]
+  frequency values = let valuesSum = sum values in map (/ valuesSum) values

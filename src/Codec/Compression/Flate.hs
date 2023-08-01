@@ -12,13 +12,14 @@ module Codec.Compression.Flate
   , compress
   , fastCompress
   , noCompress
+  , entropyCompress
   ) where
 
 import qualified Codec.Compression.Hopfli      as HL
 import qualified Codec.Compression.Zlib        as ZL
 import qualified Codec.Compression.Zlib.Internal
                                                as ZLI
-import           Util.UnifiedError                    ( UnifiedError(FlateDecodeError)
+import           Util.UnifiedError              ( UnifiedError(FlateDecodeError)
                                                 )
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy          as BL
@@ -49,6 +50,10 @@ zlibCompressParams :: ZL.CompressParams
 zlibCompressParams =
   ZL.defaultCompressParams { ZL.compressLevel = ZL.bestCompression }
 
+zlibEntropyCompressParams :: ZL.CompressParams
+zlibEntropyCompressParams =
+  ZL.defaultCompressParams { ZL.compressLevel = ZL.defaultCompression }
+
 zlibNoCompressParams :: ZL.CompressParams
 zlibNoCompressParams =
   ZL.defaultCompressParams { ZL.compressLevel = ZL.noCompression }
@@ -67,6 +72,19 @@ fastCompress
   -- ^ Either an error or the compressed bytestring
 fastCompress =
   Right . BL.toStrict . ZL.compressWith zlibCompressParams . BL.fromStrict
+{-|
+Gives a number showing the "entropy" of a `ByteString`.
+
+The lower the number, the more compressible the `ByteString`.
+-}
+entropyCompress
+  :: BS.ByteString -- ^ A strict bytestring to encode
+  -> Double
+entropyCompress =
+  fromIntegral
+    . BL.length
+    . ZL.compressWith zlibEntropyCompressParams
+    . BL.fromStrict
 
 {-|
 Stores a `ByteString` as a Zlib compressed string but with no compression

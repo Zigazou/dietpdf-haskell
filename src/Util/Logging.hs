@@ -51,7 +51,7 @@ sayF = lift . say
 sayComparisonF :: (Logging m, MonadTrans t) => T.Text -> Int -> Int -> t m ()
 sayComparisonF label sizeBefore sizeAfter = sayF
   (  "  - "
-  +| padRightF 32 ' ' label
+  +| padRightF 36 ' ' label
   |+ " "
   +| padLeftF 12 ' ' (commaizeF sizeBefore)
   |+ "/"

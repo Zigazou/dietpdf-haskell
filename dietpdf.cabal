@@ -64,6 +64,13 @@ library
       Pdf.Graphics.Parser.String
       Pdf.Object.Container
       Pdf.Object.Filter
+      Pdf.Object.FilterCombine.Deflate
+      Pdf.Object.FilterCombine.PredDeflate
+      Pdf.Object.FilterCombine.PredRleZopfli
+      Pdf.Object.FilterCombine.PredZopfli
+      Pdf.Object.FilterCombine.Rle
+      Pdf.Object.FilterCombine.RleZopfli
+      Pdf.Object.FilterCombine.Zopfli
       Pdf.Object.Format
       Pdf.Object.Linearization
       Pdf.Object.Object

@@ -18,7 +18,7 @@ import           Data.Double.Conversion.ByteString
 import           Util.String                    ( startsWith )
 
 round' :: Int -> Double -> Double
-round' limit x = fromIntegral (floor (x * t) :: Int) / t
+round' limit x = fromIntegral (round (x * t) :: Int) / t
  where
   t :: Double
   t = 10 ^ limit

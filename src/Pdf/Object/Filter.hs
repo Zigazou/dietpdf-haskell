@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 {-|
@@ -8,25 +7,14 @@ module Pdf.Object.Filter
   ( filterOptimize
   ) where
 
-import qualified Codec.Compression.Flate       as FL
-import           Codec.Compression.Predictor    ( Predictor(PNGSub, PNGUp)
-                                                , predict
-                                                , toWord8
-                                                )
-import qualified Codec.Compression.RunLength   as RL
 import qualified Data.ByteString               as BS
 import           Data.Foldable                  ( minimumBy )
-import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Container           ( Filter(Filter)
-                                                , setFilters
+import           Pdf.Object.Container           ( setFilters
                                                 , FilterList
                                                 )
 import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFName
+                                                  ( PDFName
                                                   , PDFNumber
-                                                  , PDFNull
-                                                  , PDFNull
                                                   , PDFNumber
                                                   )
                                                 , hasStream
@@ -35,11 +23,7 @@ import           Pdf.Object.State               ( getStream
                                                 , getValue
                                                 , setStream
                                                 )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( InvalidFilterParm
-                                                  )
-                                                , FallibleT
-                                                )
+import           Util.UnifiedError              ( FallibleT )
 import           Util.Logging                   ( Logging
                                                 , sayComparisonF
                                                 )
@@ -48,81 +32,19 @@ import qualified Data.Text                     as T
 import           Control.Monad.Trans.Except     ( except )
 import           Data.Functor                   ( (<&>) )
 
-zopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
-zopfli _ stream = do
-  compressed <- FL.compress stream
-  return (mkArray [Filter (PDFName "FlateDecode") PDFNull], compressed)
-
-rle
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
-rle _ stream = do
-  compressed <- RL.compress stream
-  return (mkArray [Filter (PDFName "RunLengthDecode") PDFNull], compressed)
-
-rleZopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
-rleZopfli _ stream = do
-  compressed <- rle Nothing stream >>= FL.compress . snd
-  return
-    ( mkArray
-      [ Filter (PDFName "FlateDecode")     PDFNull
-      , Filter (PDFName "RunLengthDecode") PDFNull
-      ]
-    , compressed
-    )
-
-predZopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
-predZopfli (Just (width, components)) stream = do
-  compressed <- predict PNGUp width components stream >>= FL.compress
-  return
-    ( mkArray
-      [ Filter
-          (PDFName "FlateDecode")
-          (PDFDictionary
-            (Map.fromList
-              [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGUp))
-              , ("Columns"  , PDFNumber (fromIntegral width))
-              , ("Colors"   , PDFNumber (fromIntegral components))
-              ]
-            )
-          )
-      ]
-    , compressed
-    )
-predZopfli _noWidth _stream = Left InvalidFilterParm
-
-predRleZopfli
-  :: Maybe (Int, Int)
-  -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
-predRleZopfli (Just (width, components)) stream = do
-  predicted <- predict PNGSub width components stream >>= FL.compress
-  return
-    ( mkArray
-      [ Filter
-          (PDFName "FlateDecode")
-          (PDFDictionary
-            (Map.fromList
-              [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGSub))
-              , ("Columns"  , PDFNumber (fromIntegral width))
-              , ("Colors"   , PDFNumber (fromIntegral components))
-              ]
-            )
-          )
-      ]
-    , predicted
-    )
-predRleZopfli _noWidth _stream = Left InvalidFilterParm
+import           Pdf.Object.FilterCombine.Zopfli
+                                                ( zopfli )
+import           Pdf.Object.FilterCombine.Deflate
+                                                ( deflate )
+import           Pdf.Object.FilterCombine.Rle   ( rle )
+import           Pdf.Object.FilterCombine.RleZopfli
+                                                ( rleZopfli )
+import           Pdf.Object.FilterCombine.PredZopfli
+                                                ( predZopfli )
+import           Pdf.Object.FilterCombine.PredDeflate
+                                                ( predDeflate )
+import           Pdf.Object.FilterCombine.PredRleZopfli
+                                                ( predRleZopfli )
 
 filterInfo
   :: Logging m => T.Text -> BS.ByteString -> BS.ByteString -> FallibleT m ()
@@ -143,23 +65,40 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
   rZopfli <- except $ zopfli widthComponents stream
   filterInfo "Zopfli" stream (snd rZopfli)
 
+  rDeflate <- except $ deflate widthComponents stream
+  filterInfo "Deflate" stream (snd rDeflate)
+
+  rPredDeflate <- except $ predDeflate widthComponents stream
+  filterInfo "Predictor/Deflate" stream (snd rPredDeflate)
+
   if (BS.length . snd $ rRle) < BS.length stream
     then do
       rPredRleZopfli <- except $ predRleZopfli widthComponents stream
-      filterInfo "Predictor+RLE+Zopfli" stream (snd rPredRleZopfli)
+      filterInfo "Predictor/Store+RLE+Zopfli" stream (snd rPredRleZopfli)
 
       rRleZopfli <- except $ rleZopfli widthComponents stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
       rPredZopfli <- except $ predZopfli widthComponents stream
-      filterInfo "Predictor+Zopfli" stream (snd rPredZopfli)
+      filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
 
-      return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
+      return
+        [ rRle
+        , rZopfli
+        , rPredRleZopfli
+        , rRleZopfli
+        , rPredZopfli
+        , rDeflate
+        , rPredDeflate
+        ]
     else do
       rPredZopfli <- except $ predZopfli widthComponents stream
-      filterInfo "Predictor+Zopfli" stream (snd rPredZopfli)
+      filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
 
-      return [rZopfli, rPredZopfli]
+      rPredRleZopfli <- except $ predRleZopfli widthComponents stream
+      filterInfo "Predictor/Store+RLE+Zopfli" stream (snd rPredRleZopfli)
+
+      return [rZopfli, rPredZopfli, rPredRleZopfli, rDeflate, rPredDeflate]
 
 applyEveryFilter Nothing stream = do
   rRle <- except $ rle Nothing stream
@@ -168,13 +107,16 @@ applyEveryFilter Nothing stream = do
   rZopfli <- except $ zopfli Nothing stream
   filterInfo "Zopfli" stream (snd rZopfli)
 
+  rDeflate <- except $ deflate Nothing stream
+  filterInfo "Deflate" stream (snd rDeflate)
+
   if (BS.length . snd $ rRle) < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
-      return [rRle, rZopfli, rRleZopfli]
-    else return [rZopfli]
+      return [rRle, rZopfli, rRleZopfli, rDeflate]
+    else return [rZopfli, rDeflate]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object = do
