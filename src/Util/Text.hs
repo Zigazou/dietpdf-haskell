@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
-
 -- | This modules contains functions to help dealing with Text strings.
 module Util.Text
   ( txtNumberVersion

@@ -1,7 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE FlexibleInstances #-}
-
 {-|
 This module defines functions working on `StateT` monad with `PDFObject`.
 -}

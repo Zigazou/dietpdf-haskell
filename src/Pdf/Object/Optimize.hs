@@ -1,6 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
-
 {-|
 This modules implements several optimization techniques targeted at PDF objects.
 -}

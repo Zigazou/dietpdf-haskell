@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Pdf.Object.String
   ( optimizeString
   ) where

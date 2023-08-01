@@ -1,5 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
-
 {-|
 This module defines what is a GFX object and functions in relation with the
 PDF specification.

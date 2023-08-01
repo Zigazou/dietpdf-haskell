@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-|
 This modules implements optimization techniques targeted at XML strings.
 -}

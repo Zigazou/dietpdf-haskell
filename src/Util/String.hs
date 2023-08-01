@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
-
 -- | This modules contains functions to help encoding of PDF strings.
 module Util.String
   ( fromString

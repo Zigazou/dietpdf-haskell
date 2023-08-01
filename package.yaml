@@ -42,6 +42,13 @@ library:
   - Strict
   - DerivingStrategies
   - OverloadedStrings
+  - InstanceSigs
+  - GADTs
+  - FlexibleInstances
+  - LambdaCase
+  - FlexibleContexts
+  - MultiWayIf
+  - TupleSections
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16
@@ -83,6 +90,13 @@ executables:
     - BangPatterns
     - DerivingStrategies
     - OverloadedStrings
+    - InstanceSigs
+    - GADTs
+    - FlexibleInstances
+    - LambdaCase
+    - FlexibleContexts
+    - MultiWayIf
+    - TupleSections
     ghc-options:
     - -O2
     - -funfolding-use-threshold=16
@@ -113,6 +127,13 @@ tests:
     - BangPatterns
     - DerivingStrategies
     - OverloadedStrings
+    - InstanceSigs
+    - GADTs
+    - FlexibleInstances
+    - LambdaCase
+    - FlexibleContexts
+    - MultiWayIf
+    - TupleSections
     dependencies:
     - dietpdf
     - hspec

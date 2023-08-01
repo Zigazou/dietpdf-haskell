@@ -1,5 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
-
 {-|
 This modules implements several optimization techniques targeted at PDF objects.
 -}

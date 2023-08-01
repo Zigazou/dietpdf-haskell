@@ -1,6 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE LambdaCase #-}
 module Pdf.Document.Encode
   ( -- * Encoding
     pdfEncode

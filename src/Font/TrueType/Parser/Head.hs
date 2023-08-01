@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Font.TrueType.Parser.Head
   ( headP
   ) where

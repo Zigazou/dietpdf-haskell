@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 {-|
 This module handles dictionary at the lowest level.
 -}

@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 module Font.TrueType.FontTable
   ( FontTable(FTRaw, FTHead)
   , Head

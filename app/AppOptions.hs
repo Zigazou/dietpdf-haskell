@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
 module AppOptions
   ( AppOptions
     ( OptimizeOptions

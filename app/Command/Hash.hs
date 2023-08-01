@@ -1,4 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
 module Command.Hash
   ( objectHashes
   ) where

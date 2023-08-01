@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 -- | This module contains parsers for GFX inline images.
 module Pdf.Graphics.Parser.InlineImage
   ( inlineImageP

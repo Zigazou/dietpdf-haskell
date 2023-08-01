@@ -5,22 +5,18 @@ module Pdf.Object.FilterCombine.PredDeflate
 import qualified Codec.Compression.Flate       as FL
 import           Codec.Compression.Predictor    ( Predictor(PNGOptimum)
                                                 , predict
-                                                , toWord8
                                                 , EntropyType
                                                   ( EntropyShannon
                                                   , EntropyDeflate
                                                   )
                                                 )
 import qualified Data.ByteString               as BS
-import qualified Data.Map.Strict               as Map
 import           Pdf.Object.Container           ( Filter(Filter)
                                                 , FilterList
                                                 )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFName
-                                                  , PDFNumber
-                                                  )
+import           Pdf.Object.Object              ( PDFObject(PDFName)
+                                                , mkPDFDictionary
+                                                , mkPDFNumber
                                                 )
 import           Util.UnifiedError              ( UnifiedError
                                                   ( InvalidFilterParm
@@ -51,15 +47,14 @@ predDeflate (Just (width, components)) stream = do
     ( mkArray
       [ Filter
           (PDFName "FlateDecode")
-          (PDFDictionary
-            (Map.fromList
-              [ ("Predictor", PDFNumber (fromIntegral . toWord8 $ PNGOptimum))
-              , ("Columns"  , PDFNumber (fromIntegral width))
-              , ("Colors"   , PDFNumber (fromIntegral components))
-              ]
-            )
+          (mkPDFDictionary
+            [ ("Predictor", mkPDFNumber PNGOptimum)
+            , ("Columns"  , mkPDFNumber width)
+            , ("Colors"   , mkPDFNumber components)
+            ]
           )
       ]
     , compressed
     )
+
 predDeflate _noWidth _stream = Left InvalidFilterParm

@@ -1,7 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE InstanceSigs #-}
-
 {-|
 This module defines what is a PDF object and functions in relation with the
 PDF specification.
@@ -714,7 +710,7 @@ updateStream object newStream = case object of
   _anyOtherObject -> object
  where
   newLength :: PDFObject
-  newLength = PDFNumber . fromIntegral . BS.length $ newStream
+  newLength = mkPDFNumber (BS.length newStream)
 
   newDict :: Dictionary PDFObject -> Dictionary PDFObject
   newDict = Map.adjust (const newLength) "Length"

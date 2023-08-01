@@ -1,6 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings #-}
-
 -- |
 -- This module allows to encode a PDF name.
 module Util.Name

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
-
 -- | This modules contains functions to help dealing with Text strings.
 module Pdf.Object.Format
   ( txtObjectNumberVersion

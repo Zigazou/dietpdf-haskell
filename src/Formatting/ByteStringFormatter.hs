@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-
 {-|
 This module adds bytestring formatting abilities to the Formatting module.
 -}

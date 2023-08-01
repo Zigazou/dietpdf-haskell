@@ -1,7 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts #-}
-
 {- |
 This module contains functions facilitating container manipulation (`PDFArray`,
 `PDFDictionary` and `PDFIndirectObject`).

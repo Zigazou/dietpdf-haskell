@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 {- |
 This module handles object streams.
 
@@ -47,6 +45,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 , fromPDFObject
                                                 , isWhiteSpace
+                                                , mkPDFNumber
                                                 )
 import           Pdf.Object.State               ( getStream
                                                 , getValue
@@ -228,7 +227,7 @@ insert objects num | objects == mempty = throwE NoObjectToEncode
   dict :: Dictionary PDFObject
   dict = mkDictionary
     [ ("Type" , PDFName "ObjStm")
-    , ("N"    , PDFNumber . fromIntegral . osCount $ objStm)
-    , ("First", PDFNumber . fromIntegral . osOffset $ objStm)
+    , ("N"    , mkPDFNumber (osCount objStm))
+    , ("First", mkPDFNumber (osOffset objStm))
     ]
   stream = dropLastByte . BS.concat $ [osIndices objStm, osObjects objStm]

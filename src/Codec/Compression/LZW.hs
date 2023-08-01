@@ -1,5 +1,3 @@
-{-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE LambdaCase #-}
 {-|
 This module implements the LZW uncompress alfgorithm as used in PDF file
 (and also TIFF)

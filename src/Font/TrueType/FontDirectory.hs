@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DerivingStrategies #-}
-
 module Font.TrueType.FontDirectory
   ( TableDirectory
   , FontDirectory(FontDirectory, fdOffsetSubtable, fdTableDirectory)

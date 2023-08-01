@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 {- |
 This module provides a parser for PDF cross-reference tables.
 

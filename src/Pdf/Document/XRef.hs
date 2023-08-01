@@ -1,5 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings  #-}
 module Pdf.Document.XRef
   ( -- * XRef generation
     calcOffsets

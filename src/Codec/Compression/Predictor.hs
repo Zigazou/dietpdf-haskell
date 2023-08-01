@@ -57,6 +57,9 @@ import           Data.List                      ( genericLength
                                                 , minimumBy
                                                 )
 import qualified Codec.Compression.Flate       as FL
+import           Pdf.Object.Object              ( PDFObject(PDFNumber)
+                                                , ToPDFNumber(mkPDFNumber)
+                                                )
 
 data Predictor
   = TIFFNoPrediction
@@ -124,6 +127,10 @@ toWord8 PNGUp            = 12
 toWord8 PNGAverage       = 13
 toWord8 PNGPaeth         = 14
 toWord8 PNGOptimum       = 15
+
+instance ToPDFNumber Predictor where
+  mkPDFNumber :: Predictor -> PDFObject
+  mkPDFNumber = PDFNumber . fromIntegral . toWord8
 
 {- | Convert a `Predictor` to a PDF row predictor code.
 -}
@@ -447,7 +454,6 @@ unpredict predictor width components stream
     imgStm <- fromPredictedStream predictor width components stream
     let unpredicted = unpredictImageStream predictor imgStm
     return $ packStream unpredicted
-
 
 {- |
 Calculate the Shannon entropy of a `ByteString`.

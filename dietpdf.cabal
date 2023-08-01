@@ -114,6 +114,13 @@ library
       Strict
       DerivingStrategies
       OverloadedStrings
+      InstanceSigs
+      GADTs
+      FlexibleInstances
+      LambdaCase
+      FlexibleContexts
+      MultiWayIf
+      TupleSections
   ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
@@ -160,6 +167,13 @@ executable dietpdf
       BangPatterns
       DerivingStrategies
       OverloadedStrings
+      InstanceSigs
+      GADTs
+      FlexibleInstances
+      LambdaCase
+      FlexibleContexts
+      MultiWayIf
+      TupleSections
   ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
@@ -237,6 +251,13 @@ test-suite dietpdf-test
       BangPatterns
       DerivingStrategies
       OverloadedStrings
+      InstanceSigs
+      GADTs
+      FlexibleInstances
+      LambdaCase
+      FlexibleContexts
+      MultiWayIf
+      TupleSections
   ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe
   build-depends:
       QuickCheck

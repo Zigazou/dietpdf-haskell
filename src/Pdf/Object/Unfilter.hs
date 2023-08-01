@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
-
 {-|
 This module facilitates unfiltering of `PDFObject`.
 -}

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings   #-}
-
 -- | This modules contains functions to help manipulating of ByteString.
 module Util.ByteString
   ( splitRaw

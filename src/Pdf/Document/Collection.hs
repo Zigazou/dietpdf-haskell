@@ -1,7 +1,3 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE InstanceSigs #-}
-
 {- |
 This module manipulates collections of `PDFObject`.
 
