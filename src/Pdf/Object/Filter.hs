@@ -14,6 +14,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFName
                                                   , PDFNumber
                                                   , PDFNumber
+                                                  , PDFXRefStream
                                                   )
                                                 , hasStream
                                                 )
@@ -40,6 +41,7 @@ import           Pdf.Object.FilterCombine.PredZopfli
                                                 ( predZopfli )
 import           Pdf.Object.FilterCombine.PredRleZopfli
                                                 ( predRleZopfli )
+import           Pdf.Document.XRef              ( xrefStreamWidth )
 
 filterInfo
   :: Logging m => T.Text -> BS.ByteString -> BS.ByteString -> FallibleT m ()
@@ -104,6 +106,9 @@ applyEveryFilter Nothing stream = do
                         ]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
+getWidthComponents object@PDFXRefStream{} =
+  xrefStreamWidth object <&> Just . (, 1)
+
 getWidthComponents object = do
   width      <- getValue "Width" object
   colorSpace <- getValue "ColorSpace" object

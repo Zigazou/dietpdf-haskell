@@ -79,6 +79,7 @@ data UnifiedError
   | UnknownScalerType !String
   | ObjectStreamNotFound
   | ObjectNotFound
+  | XRefStreamNoW !String
   | UnsupportedFeature !String
   deriving stock (Eq)
 
@@ -106,6 +107,7 @@ errorType InvalidFilterParm          = EncodingError
 errorType (NoStream             _)   = StructureError
 errorType (NoDictionary         _)   = StructureError
 errorType (InvalidObjectToEmbed _)   = StructureError
+errorType (XRefStreamNoW _)          = StructureError
 errorType NoObjectToEncode           = EncodingError
 errorType (UnknownScalerType _)      = ParsingError
 errorType ObjectStreamNotFound       = ParsingError
@@ -161,6 +163,8 @@ instance Show UnifiedError where
   show err@NoObjectToEncode        = show' err "No object to encode"
   show err@(UnknownScalerType msg) = show' err ("Unknown scaler type: " ++ msg)
   show err@ObjectStreamNotFound    = show' err "Object stream not found"
+  show err@(XRefStreamNoW msg) =
+    show' err ("XRef stream with invalid or no W field: " ++ msg)
   show err@(UnsupportedFeature msg) =
     show' err ("Unsupported feature: " ++ msg)
 

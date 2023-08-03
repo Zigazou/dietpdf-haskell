@@ -12,7 +12,6 @@ module Pdf.Document.Partition
 import           Data.Foldable                  ( find )
 import           Data.Maybe                     ( fromMaybe )
 import           Pdf.Document.Document          ( PDFDocument
-                                                , cFilter
                                                 , deepFind
                                                 )
 import           Pdf.Object.Object              ( PDFObject
@@ -30,12 +29,18 @@ import           Util.Logging                   ( Logging
                                                 , sayF
                                                 )
 import           Util.UnifiedError              ( FallibleT )
-import           Pdf.Document.Uncompress        ( uncompress )
+import           Pdf.Document.Uncompress        ( uncompressObjects
+                                                , uncompressDocument
+                                                )
+import           Pdf.Document.Collection        ( PDFObjects
+                                                , toPDFDocument
+                                                )
+import qualified Data.IntMap                   as IM
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 data PDFPartition = PDFPartition
-  { -- | Numbered objects in order of appearance
-    ppIndirectObjects :: !PDFDocument
+  { -- | Numbered objects
+    ppIndirectObjects :: !PDFObjects
   ,
     -- | PDF versions in order of appearance
     ppHeads           :: !PDFDocument
@@ -82,22 +87,22 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
 removeUnused :: Logging m => PDFPartition -> FallibleT m PDFPartition
 removeUnused (PDFPartition indirectObjects heads trailers) = do
   sayF "  - Uncompressing indirect objects"
-  uIndirectObjects <- uncompress indirectObjects
+  uIndirectObjects <- uncompressObjects indirectObjects
   sayF "  - Uncompressing head objects"
-  uHeads <- uncompress heads
+  uHeads <- uncompressDocument heads
   sayF "  - Uncompressing trailer objects"
-  uTrailers <- uncompress trailers
+  uTrailers <- uncompressDocument trailers
 
   sayF "  - Locating all references"
   let references =
         deepFind isReference uHeads
           <> deepFind isReference uTrailers
-          <> deepFind isReference uIndirectObjects
+          <> deepFind isReference (toPDFDocument uIndirectObjects)
 
   sayF "  - Removing unused objects"
 
   return $ PDFPartition
-    { ppIndirectObjects = cFilter (used references) indirectObjects
+    { ppIndirectObjects = IM.filter (used references) indirectObjects
     , ppHeads           = heads
     , ppTrailers        = trailers
     }

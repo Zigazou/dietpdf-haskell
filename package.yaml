@@ -68,7 +68,6 @@ library:
   - monad-loops
   - utf8-string
   - split
-  - sort
   - zlib
   - hopfli
   - text

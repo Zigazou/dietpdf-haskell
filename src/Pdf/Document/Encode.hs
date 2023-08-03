@@ -29,11 +29,6 @@ import           Pdf.Object.Object              ( PDFObject
                                                 )
 import           Pdf.Document.Document          ( PDFDocument
                                                 , cFilter
-                                                , findLast
-                                                , fromList
-                                                , toList
-                                                , cfMap
-                                                , cSize
                                                 , singleton
                                                 )
 import           Pdf.Document.Partition         ( PDFPartition
@@ -65,6 +60,7 @@ import           Util.Logging                   ( Logging
                                                 )
 import           Pdf.Document.Collection        ( encodeObject
                                                 , eoBinaryData
+                                                , findLast, fromPDFDocument
                                                 )
 import           Pdf.Object.State               ( setValue
                                                 , getValue
@@ -73,8 +69,9 @@ import           Control.Monad.Trans.Except     ( throwE
                                                 , runExcept
                                                 )
 import           Control.Monad                  ( when )
-import           Pdf.Document.ObjectStream      ( explode )
+import           Pdf.Document.ObjectStream      ( explodeDocument )
 import           Util.Dictionary                ( mkDictionary )
+import qualified Data.IntMap as IM
 
 updateTrailer :: Logging m => Int -> PDFObject -> FallibleT m PDFObject
 updateTrailer entriesCount =
@@ -140,10 +137,10 @@ pdfEncode
   -> FallibleT m BS.ByteString -- ^ A unified error or a bytestring
 pdfEncode objects = do
   -- Extract objects embedded in object streams
-  exploded <- explode objects
+  exploded <- explodeDocument objects
 
   let partition = PDFPartition
-        { ppIndirectObjects = cFilter isIndirect exploded
+        { ppIndirectObjects = fromPDFDocument $ cFilter isIndirect exploded
         , ppHeads           = cFilter isHeader exploded
         , ppTrailers        = cFilter isTrailer exploded
         }
@@ -175,7 +172,7 @@ pdfEncode objects = do
 
   sayF "Optimizing PDF"
 
-  oIndirectObjects <- cfMap optimize (ppIndirectObjects partition)
+  oIndirectObjects <- mapM optimize (ppIndirectObjects partition)
   let oPartition = partition { ppIndirectObjects = oIndirectObjects
                              , ppTrailers        = singleton pdfTrailer
                              }
@@ -184,8 +181,8 @@ pdfEncode objects = do
   cleaned <- tryF (removeUnused oPartition) >>= \case
     Right unusedRemoved -> do
       sayComparisonF "Unused objects removal"
-                     (cSize (ppIndirectObjects partition))
-                     (cSize (ppIndirectObjects unusedRemoved))
+                     (IM.size (ppIndirectObjects partition))
+                     (IM.size (ppIndirectObjects unusedRemoved))
       return unusedRemoved
     Left theError -> do
       sayErrorF "Unable to remove unused objects" theError
@@ -193,15 +190,21 @@ pdfEncode objects = do
 
   sayF "Encoding PDF"
   let
-    encodeds    = encodeObject <$> toList (ppIndirectObjects cleaned)
-    body        = BS.concat $ eoBinaryData <$> encodeds
-    --xref        = xrefTable (BS.length pdfHead) (fromList encodeds)
-    -- xrefObjectNumber = snd (objectsNumberRange encodeds)
-    xref = xrefStreamTable 100000 (BS.length pdfHead) (fromList encodeds)
+    encodeds    = encodeObject <$> ppIndirectObjects cleaned
+    body        = BS.concat $ eoBinaryData . snd <$> IM.toAscList encodeds
+    xrefObjectNumber = fst . IM.findMax $ encodeds
+
+  sayF "Optimize XRef stream table"
+  xref <- optimize $
+    xrefStreamTable (xrefObjectNumber + 1) (BS.length pdfHead) encodeds
+
+  let
     encodedXRef = fromPDFObject xref
     startxref =
       fromPDFObject (PDFStartXRef (BS.length pdfHead + BS.length body))
 
   trailer <- fromPDFObject <$> updateTrailer (xrefCount xref) pdfTrailer
+
+  sayF "PDF has been optimized!"
 
   return $ BS.concat [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]

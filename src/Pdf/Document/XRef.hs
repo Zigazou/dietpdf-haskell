@@ -3,6 +3,7 @@ module Pdf.Document.XRef
     calcOffsets
   , encodeObject
   , xrefTable
+  , xrefStreamWidth
   , xrefStreamTable
   , objectsNumberRange
   , PDFObjects
@@ -16,11 +17,12 @@ import qualified Data.IntMap.Strict            as IM
 import           Data.Ix                        ( range
                                                 , rangeSize
                                                 )
-import           Data.Sort                      ( sort )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFXRef
                                                   , PDFXRefStream
                                                   , PDFName
+                                                  , PDFArray
+                                                  , PDFNumber
                                                   )
                                                 , XRefSubsection(XRefSubsection)
                                                 , freeEntry
@@ -37,19 +39,23 @@ import           Pdf.Document.Collection        ( PDFObjects
                                                   )
                                                 , encodeObject
                                                 )
-import           Pdf.Document.Document          ( toList
-                                                , cSize
-                                                )
 import           Util.Number                    ( encodeIntToBytes
                                                 , bytesNeededToEncode
                                                 )
 import           Util.Dictionary                ( mkDictionary )
 import qualified Data.ByteString               as BS
 import           Data.Maybe                     ( fromMaybe )
+import           Util.UnifiedError              ( FallibleT
+                                                , UnifiedError(XRefStreamNoW)
+                                                )
+import qualified Data.Sequence                 as SQ
+import           Pdf.Object.State               ( getValue )
+import           Control.Monad.Trans.Except     ( throwE )
+import           Util.Logging                   ( Logging )
 
 -- | Given a collection of encoded objects, calculates their offsets
 calcOffsets :: Int -> EncodedObjects -> ObjectOffsets
-calcOffsets startOffset = snd . calcOffset . sort . toList
+calcOffsets startOffset = snd . calcOffset . fmap snd . IM.toAscList
  where
   calcOffset :: [EncodedObject] -> (Int, ObjectOffsets)
   calcOffset = foldl'
@@ -62,12 +68,10 @@ calcOffsets startOffset = snd . calcOffset . sort . toList
 Given the objects offsets, return the range of numbers of the objects.
 -}
 objectsNumberRange :: ObjectOffsets -> (Int, Int)
-objectsNumberRange offsets = if IM.null offsets
-  then (0, 0)
-  else IM.foldlWithKey'
-    (\(mini, maxi) objNum _ -> (min objNum mini, max objNum maxi))
-    (maxBound, minBound)
-    offsets
+objectsNumberRange offsets =
+  case (IM.minViewWithKey offsets, IM.maxViewWithKey offsets) of
+    (Just ((minKey, _), _), Just ((maxKey, _), _)) -> (minKey, maxKey)
+    _anyOtherCase -> (0, 0)
 
 {- |
 Given a collection of encoded objects, generates an old format XRef table
@@ -87,6 +91,27 @@ xrefTable startOffset objects | objects == mempty = PDFXRef []
     ]
   xrefSubsection = XRefSubsection (fst numRange) (rangeSize numRange) entries
 
+xrefStreamWidth :: Logging m => PDFObject -> FallibleT m Int
+xrefStreamWidth object@PDFXRefStream{} = do
+  w <- getValue "W" object
+  case w of
+    Just w' -> case getWidth w' of
+      Just width     -> return width
+      _anyOtherValue -> throwE (XRefStreamNoW "Cannot decode entries")
+    Nothing -> throwE (XRefStreamNoW "No W field")
+ where
+  getWidth :: PDFObject -> Maybe Int
+  getWidth (PDFArray array) = do
+    typeWidth   <- array SQ.!? 0
+    offsetWidth <- array SQ.!? 1
+    numberWidth <- array SQ.!? 2
+    case (typeWidth, offsetWidth, numberWidth) of
+      (PDFNumber typeWidth', PDFNumber offsetWidth', PDFNumber numberWidth') ->
+        return $ round (typeWidth' + offsetWidth' + numberWidth')
+      _anyOtherCase -> Nothing
+  getWidth _anyOtherCase = Nothing
+xrefStreamWidth _anyOtherCase = throwE (XRefStreamNoW "Not a PDFXRefStream")
+
 -- | Given a collection of encoded objects, generates a cross-reference stream.
 xrefStreamTable
   :: Int -- ^ Number of the object to create
@@ -103,7 +128,7 @@ xrefStreamTable number startOffset objects
   numberByteCount           = bytesNeededToEncode lastNumber
   lastNumberOffset = fromMaybe startOffset (IM.lookup lastNumber offsets)
   offsetByteCount           = bytesNeededToEncode lastNumberOffset
-  offsetCount               = cSize objects
+  offsetCount               = IM.size objects
 
   xrefDictionary            = mkDictionary
     [ ("Type", PDFName "XRef")

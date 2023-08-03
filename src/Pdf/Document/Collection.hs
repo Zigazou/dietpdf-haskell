@@ -7,6 +7,9 @@ module Pdf.Document.Collection
   ( -- * Encoding of object collections
     encodeObject
   , PDFObjects
+  , toPDFDocument
+  , fromPDFDocument
+  , findLast
   , EncodedObject(EncodedObject, eoObjectNumber, eoObjectLength, eoBinaryData)
   , EncodedObjects
   , ObjectOffsets
@@ -18,13 +21,42 @@ import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFObjectStream
+                                                  , PDFIndirectObjectWithGraphics
+                                                  , PDFXRefStream
                                                   )
                                                 , fromPDFObject
                                                 )
-import           Pdf.Document.Document          ( CollectionOf )
+import           Pdf.Document.Document          ( PDFDocument
+                                                , fromList
+                                                , toList
+                                                )
+import           Data.List                      ( find )
 
 -- | A collection of objects indexed by the object number
 type PDFObjects = IM.IntMap PDFObject
+
+toPDFDocument :: PDFObjects -> PDFDocument
+toPDFDocument = fromList . fmap snd . IM.toAscList
+
+fromPDFDocument :: PDFDocument -> PDFObjects
+fromPDFDocument = IM.fromList . fmap createCouple . toList
+ where
+  createCouple :: PDFObject -> (Int, PDFObject)
+  createCouple object@(PDFIndirectObject number _ _) = (number, object)
+  createCouple object@(PDFIndirectObjectWithGraphics number _ _ _) =
+    (number, object)
+  createCouple object@(PDFIndirectObjectWithStream number _ _ _) =
+    (number, object)
+  createCouple object@(PDFXRefStream number _ _ _) = (number, object)
+  createCouple object                              = (0, object)
+
+{- |
+Find last value in a `CollectionOf` satisfying a predicate.
+
+If the predicate is never satisfied, the function returns `Nothing`.
+-}
+findLast :: (PDFObject -> Bool) -> PDFObjects -> Maybe PDFObject
+findLast p = find p . fmap snd . IM.toDescList
 
 -- | A collection of object offsets indexed by the object number
 type ObjectOffsets = IM.IntMap Int
@@ -38,7 +70,7 @@ data EncodedObject = EncodedObject
   deriving stock (Eq, Show)
 
 -- | A collection of encoded objects with no duplicate
-type EncodedObjects = CollectionOf EncodedObject
+type EncodedObjects = IM.IntMap EncodedObject
 
 instance Ord EncodedObject where
   compare :: EncodedObject -> EncodedObject -> Ordering

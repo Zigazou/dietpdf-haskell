@@ -15,7 +15,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFIndirectObjectWithStream
                                                   , PDFName
                                                   , PDFObjectStream
-                                                  , PDFTrailer
+                                                  , PDFTrailer, PDFXRefStream
                                                   )
                                                 , hasStream
                                                 , hasKey
@@ -120,6 +120,7 @@ known by DietPDF or because its structure is optimizable.
 optimizable :: Logging m => PDFObject -> FallibleT m Bool
 optimizable PDFIndirectObject{}                  = return True
 optimizable PDFTrailer{}                         = return True
+optimizable PDFXRefStream{}                      = return True
 optimizable object@PDFIndirectObjectWithStream{} = do
   filters <- getFilters object
   let unsupportedFilters = SQ.filter (not . isFilterOK) filters

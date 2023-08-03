@@ -29,6 +29,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   , PDFTrailer
                                                   , PDFVersion
                                                   , PDFXRef
+                                                  , PDFXRefStream
                                                   )
                                                 , ToPDFNumber(mkPDFNumber)
                                                 )
@@ -58,6 +59,7 @@ getStream :: Logging m => PDFObject -> FallibleT m BS.ByteString
 getStream object = case object of
   (PDFIndirectObjectWithStream _ _ _ stream) -> return stream
   (PDFObjectStream             _ _ _ stream) -> return stream
+  (PDFXRefStream               _ _ _ stream) -> return stream
   _anyOtherObject                            -> throwE (NoStream "")
 
 {- |
@@ -93,6 +95,7 @@ getValue name object = case object of
   (PDFObjectStream             _ _ dict _    ) -> return $ dict Map.!? name
   (PDFIndirectObject _ _ (PDFDictionary dict)) -> return $ dict Map.!? name
   (PDFTrailer (PDFDictionary dict)           ) -> return $ dict Map.!? name
+  (PDFXRefStream _ _ dict _                  ) -> return $ dict Map.!? name
   _anyOtherObject                              -> return Nothing
 
 {- |
@@ -120,6 +123,8 @@ setValue name value object = case object of
       $ PDFIndirectObject num gen (PDFDictionary (Map.insert name value dict))
   (PDFTrailer (PDFDictionary dict)) ->
     return $ PDFTrailer (PDFDictionary (Map.insert name value dict))
+  (PDFXRefStream num gen dict stream) ->
+    return $ PDFXRefStream num gen (Map.insert name value dict) stream
   _anyOtherObject -> return object
 
 {- |
@@ -154,6 +159,9 @@ setStream newStream object = case object of
       >>= setValue "Length" newLength
   (PDFObjectStream number revision dict _) -> do
     pure (PDFObjectStream number revision dict newStream)
+      >>= setValue "Length" newLength
+  (PDFXRefStream number revision dict _) -> do
+    pure (PDFXRefStream number revision dict newStream)
       >>= setValue "Length" newLength
   _anyOtherObject -> return object
  where
