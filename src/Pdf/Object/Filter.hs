@@ -26,21 +26,18 @@ import           Util.Logging                   ( Logging
                                                 , sayComparisonF
                                                 )
 import           Util.Array                     ( mkArray )
+import           Util.ByteString                ( sndLengthCompare )
 import qualified Data.Text                     as T
 import           Control.Monad.Trans.Except     ( except )
 import           Data.Functor                   ( (<&>) )
 
 import           Pdf.Object.FilterCombine.Zopfli
                                                 ( zopfli )
-import           Pdf.Object.FilterCombine.Deflate
-                                                ( deflate )
 import           Pdf.Object.FilterCombine.Rle   ( rle )
 import           Pdf.Object.FilterCombine.RleZopfli
                                                 ( rleZopfli )
 import           Pdf.Object.FilterCombine.PredZopfli
                                                 ( predZopfli )
-import           Pdf.Object.FilterCombine.PredDeflate
-                                                ( predDeflate )
 import           Pdf.Object.FilterCombine.PredRleZopfli
                                                 ( predRleZopfli )
 
@@ -56,18 +53,13 @@ applyEveryFilter
   => Maybe (Int, Int)
   -> BS.ByteString
   -> FallibleT m [(FilterList, BS.ByteString)]
+-- The stream has width and components information.
 applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
   rRle <- except $ rle widthComponents stream
   filterInfo "RLE" stream (snd rRle)
 
   rZopfli <- except $ zopfli widthComponents stream
   filterInfo "Zopfli" stream (snd rZopfli)
-
-  rDeflate <- except $ deflate widthComponents stream
-  filterInfo "Deflate" stream (snd rDeflate)
-
-  rPredDeflate <- except $ predDeflate widthComponents stream
-  filterInfo "Predictor/Deflate" stream (snd rPredDeflate)
 
   if (BS.length . snd $ rRle) < BS.length stream
     then do
@@ -80,15 +72,7 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
 
-      return
-        [ rRle
-        , rZopfli
-        , rPredRleZopfli
-        , rRleZopfli
-        , rPredZopfli
-        , rDeflate
-        , rPredDeflate
-        ]
+      return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
     else do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
@@ -96,8 +80,9 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rPredRleZopfli <- except $ predRleZopfli widthComponents stream
       filterInfo "Predictor/Store+RLE+Zopfli" stream (snd rPredRleZopfli)
 
-      return [rZopfli, rPredZopfli, rPredRleZopfli, rDeflate, rPredDeflate]
+      return [rZopfli, rPredZopfli, rPredRleZopfli]
 
+-- The stream has no width nor components information.
 applyEveryFilter Nothing stream = do
   rRle <- except $ rle Nothing stream
   filterInfo "RLE" stream (snd rRle)
@@ -105,16 +90,18 @@ applyEveryFilter Nothing stream = do
   rZopfli <- except $ zopfli Nothing stream
   filterInfo "Zopfli" stream (snd rZopfli)
 
-  rDeflate <- except $ deflate Nothing stream
-  filterInfo "Deflate" stream (snd rDeflate)
-
   if (BS.length . snd $ rRle) < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
-      return [rRle, rZopfli, rRleZopfli, rDeflate]
-    else return [rZopfli, rDeflate]
+      return
+        [ rRle
+        , rZopfli
+        , rRleZopfli{-, rDeflate-}
+        ]
+    else return [rZopfli{-, rDeflate -}
+                        ]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object = do
@@ -138,10 +125,7 @@ filterOptimize object = if hasStream object
     widthComponents <- getWidthComponents object
 
     candidates      <- applyEveryFilter widthComponents stream <&> mkArray
-    let (bestFilters, bestStream) = minimumBy eMinOrder candidates
+    let (bestFilters, bestStream) = minimumBy sndLengthCompare candidates
 
     setStream bestStream object >>= setFilters bestFilters
   else return object
- where
-  eMinOrder :: (a, BS.ByteString) -> (a, BS.ByteString) -> Ordering
-  eMinOrder (_, x) (_, y) = compare (BS.length x) (BS.length y)

@@ -51,11 +51,7 @@ import           Util.UnifiedError              ( UnifiedError
                                                   , InvalidPredictor
                                                   )
                                                 )
-import           Data.List                      ( genericLength
-                                                , group
-                                                , sort
-                                                , minimumBy
-                                                )
+import           Data.List                      ( minimumBy )
 import qualified Codec.Compression.Flate       as FL
 import           Pdf.Object.Object              ( PDFObject(PDFNumber)
                                                 , ToPDFNumber(mkPDFNumber)
@@ -461,10 +457,18 @@ Adapted from https://rosettacode.org/wiki/Entropy
 -}
 entropyShannon :: BS.ByteString -> Double
 entropyShannon =
-  sum . map ponderate . frequency . map genericLength . group . sort . BS.unpack
+  sum'
+    . map ponderate
+    . frequency
+    . map (fromIntegral . BS.length)
+    . BS.group
+    . BS.sort
  where
+  sum' :: [Double] -> Double
+  sum' = foldr (+) 0.0
+
   ponderate :: Double -> Double
   ponderate value = -value * logBase 2 value
 
   frequency :: [Double] -> [Double]
-  frequency values = let valuesSum = sum values in map (/ valuesSum) values
+  frequency values = let valuesSum = sum' values in map (/ valuesSum) values

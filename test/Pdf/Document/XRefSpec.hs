@@ -9,23 +9,30 @@ import           Pdf.Document.Collection        ( EncodedObject(EncodedObject)
                                                 , ObjectOffsets
                                                 )
 import           Pdf.Document.Document          ( fromList )
-import           Pdf.Object.Object              ( PDFObject(PDFXRef)
+import           Pdf.Object.Object              ( PDFObject
+                                                  ( PDFXRef
+                                                  , PDFXRefStream
+                                                  , PDFName
+                                                  )
                                                 , XRefEntry(XRefEntry)
                                                 , XRefState
                                                   ( FreeEntry
                                                   , InUseEntry
                                                   )
                                                 , XRefSubsection(XRefSubsection)
+                                                , mkPDFArray
+                                                , ToPDFNumber(mkPDFNumber)
                                                 )
 import           Test.Hspec                     ( Spec
                                                 , describe
                                                 , it
                                                 , shouldBe
                                                 )
-
 import           Pdf.Document.XRef              ( calcOffsets
                                                 , xrefTable
+                                                , xrefStreamTable
                                                 )
+import           Util.Dictionary                ( mkDictionary )
 
 calcOffsetsExamples :: [(EncodedObjects, ObjectOffsets)]
 calcOffsetsExamples =
@@ -61,6 +68,42 @@ xrefTableExamples =
     )
   ]
 
+xrefStreamTableExamples :: [(EncodedObjects, PDFObject)]
+xrefStreamTableExamples =
+  [ ( fromList
+      [ EncodedObject 2 3 "def"
+      , EncodedObject 5 5 "ghijk"
+      , EncodedObject 1 3 "abc"
+      ]
+    , PDFXRefStream
+      10
+      0
+      (mkDictionary
+        [ ("Type", PDFName "XRef")
+        , ( "W"
+          , mkPDFArray
+            [ mkPDFNumber (1 :: Double)
+            , mkPDFNumber (1 :: Double)
+            , mkPDFNumber (1 :: Double)
+            ]
+          )
+        , ( "Index"
+          , mkPDFArray [mkPDFNumber (1 :: Double), mkPDFNumber (3 :: Double)]
+          )
+        , ("Size", mkPDFNumber (9 :: Double))
+        ]
+      )
+      "\x01\x00\x01\
+      \\x01\x03\x02\
+      \\x01\x06\x05"
+    )
+  ]
+
+req :: PDFObject -> PDFObject -> Bool
+req (PDFXRefStream x1 y1 d1 s1) (PDFXRefStream x2 y2 d2 s2) =
+  x1 == x2 && y1 == y2 && d1 == d2 && s1 == s2
+req _ _ = False
+
 spec :: Spec
 spec = do
   describe "calcOffsets" $ forM_ calcOffsetsExamples $ \(example, expected) ->
@@ -72,3 +115,15 @@ spec = do
     it ("should give right result for " ++ show example)
       $          xrefTable 0 example
       `shouldBe` expected
+
+  describe "xrefStreamTable"
+    $ forM_ xrefStreamTableExamples
+    $ \(example, expected) -> do
+        let actual = xrefStreamTable 10 0 example
+        it
+            (  "should give right result for "
+            ++ show actual
+            ++ " --> "
+            ++ show expected
+            )
+          $ shouldBe (req actual expected) True

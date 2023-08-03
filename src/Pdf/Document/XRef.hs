@@ -4,6 +4,7 @@ module Pdf.Document.XRef
   , encodeObject
   , xrefTable
   , xrefStreamTable
+  , objectsNumberRange
   , PDFObjects
   , EncodedObject(..)
   , EncodedObjects
@@ -16,10 +17,16 @@ import           Data.Ix                        ( range
                                                 , rangeSize
                                                 )
 import           Data.Sort                      ( sort )
-import           Pdf.Object.Object              ( PDFObject(PDFXRef)
+import           Pdf.Object.Object              ( PDFObject
+                                                  ( PDFXRef
+                                                  , PDFXRefStream
+                                                  , PDFName
+                                                  )
                                                 , XRefSubsection(XRefSubsection)
                                                 , freeEntry
                                                 , inUseEntry
+                                                , mkPDFArray
+                                                , ToPDFNumber(mkPDFNumber)
                                                 )
 import           Pdf.Document.Collection        ( PDFObjects
                                                 , EncodedObjects
@@ -30,7 +37,15 @@ import           Pdf.Document.Collection        ( PDFObjects
                                                   )
                                                 , encodeObject
                                                 )
-import           Pdf.Document.Document          ( toList )
+import           Pdf.Document.Document          ( toList
+                                                , cSize
+                                                )
+import           Util.Number                    ( encodeIntToBytes
+                                                , bytesNeededToEncode
+                                                )
+import           Util.Dictionary                ( mkDictionary )
+import qualified Data.ByteString               as BS
+import           Data.Maybe                     ( fromMaybe )
 
 -- | Given a collection of encoded objects, calculates their offsets
 calcOffsets :: Int -> EncodedObjects -> ObjectOffsets
@@ -43,18 +58,29 @@ calcOffsets startOffset = snd . calcOffset . sort . toList
     )
     (startOffset, IM.empty)
 
--- | Given a collection of encoded objects, generates an old format XRef table
-xrefTable :: Int -> EncodedObjects -> PDFObject
+{- |
+Given the objects offsets, return the range of numbers of the objects.
+-}
+objectsNumberRange :: ObjectOffsets -> (Int, Int)
+objectsNumberRange offsets = if IM.null offsets
+  then (0, 0)
+  else IM.foldlWithKey'
+    (\(mini, maxi) objNum _ -> (min objNum mini, max objNum maxi))
+    (maxBound, minBound)
+    offsets
+
+{- |
+Given a collection of encoded objects, generates an old format XRef table
+-}
+xrefTable
+  :: Int -- ^ Absolute offset of the first object
+  -> EncodedObjects -- ^ The encoded objects to reference
+  -> PDFObject -- ^ The old format XRef table
 xrefTable startOffset objects | objects == mempty = PDFXRef []
                               | otherwise         = PDFXRef [xrefSubsection]
  where
   offsets  = calcOffsets startOffset objects
-  numRange = if IM.null offsets
-    then (0, 0)
-    else IM.foldlWithKey'
-      (\(mini, maxi) objNum _ -> (min objNum mini, max objNum maxi))
-      (maxBound, minBound)
-      offsets
+  numRange = objectsNumberRange offsets
   entries =
     [ maybe freeEntry (`inUseEntry` 0) (IM.lookup index offsets)
     | index <- range numRange
@@ -62,25 +88,43 @@ xrefTable startOffset objects | objects == mempty = PDFXRef []
   xrefSubsection = XRefSubsection (fst numRange) (rangeSize numRange) entries
 
 -- | Given a collection of encoded objects, generates a cross-reference stream.
-xrefStreamTable :: Int -> EncodedObjects -> PDFObject
-xrefStreamTable = error "todo"
-{-
-xrefStreamTable number objects
-    | OS.null objects = PDFIndirectObject number 0 []
-    | otherwise       = PDFIndirectObject number 0 [xrefSubsection]
-    fromIndirectObject number revision object (Just stream) = BS.concat
+xrefStreamTable
+  :: Int -- ^ Number of the object to create
+  -> Int -- ^ Absolute offset of the first object
+  -> EncodedObjects -- ^ The encoded objects to reference
+  -> PDFObject -- ^ The new format XRef table
+xrefStreamTable number startOffset objects
+  | objects == mempty = PDFXRef []
+  | otherwise         = PDFXRefStream number 0 xrefDictionary stream
 
  where
-  offsets  = calcOffsets objects
-  numRange = if HM.null offsets
-    then (0, 0)
-    else HM.foldlWithKey'
-      (\(mini, maxi) objNum _ -> (min objNum mini, max objNum maxi))
-      (maxBound, minBound)
-      offsets
-  entries =
-    [ maybe freeEntry (`inUseEntry` 0) (HM.lookup index offsets)
-    | index <- range numRange
+  offsets                   = calcOffsets startOffset objects
+  (firstNumber, lastNumber) = objectsNumberRange offsets
+  numberByteCount           = bytesNeededToEncode lastNumber
+  lastNumberOffset = fromMaybe startOffset (IM.lookup lastNumber offsets)
+  offsetByteCount           = bytesNeededToEncode lastNumberOffset
+  offsetCount               = cSize objects
+
+  xrefDictionary            = mkDictionary
+    [ ("Type", PDFName "XRef")
+    , ( "W"
+      , mkPDFArray
+        [ mkPDFNumber (1 :: Double)
+        , mkPDFNumber offsetByteCount
+        , mkPDFNumber numberByteCount
+        ]
+      )
+    , ("Index", mkPDFArray [mkPDFNumber firstNumber, mkPDFNumber offsetCount])
+    , ("Size" , mkPDFNumber (BS.length stream))
     ]
-  xrefSubsection = XRefSubsection (fst numRange) (rangeSize numRange) entries
--}
+
+  stream = IM.foldrWithKey
+    (\index offset stream' -> BS.concat
+      [ "\x01"
+      , encodeIntToBytes offsetByteCount offset
+      , encodeIntToBytes numberByteCount index
+      , stream'
+      ]
+    )
+    ""
+    offsets

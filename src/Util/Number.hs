@@ -4,6 +4,8 @@ module Util.Number
   ( fromNumber
   , fromInt
   , toNumber
+  , bytesNeededToEncode
+  , encodeIntToBytes
   ) where
 
 import qualified Data.ByteString               as BS
@@ -16,6 +18,7 @@ import           Util.Ascii                     ( asciiDIGITZERO
 import           Data.Double.Conversion.ByteString
                                                 ( toShortest )
 import           Util.String                    ( startsWith )
+import           Data.Bits                      ( shiftR )
 
 round' :: Int -> Double -> Double
 round' limit x = fromIntegral (round (x * t) :: Int) / t
@@ -54,3 +57,27 @@ fromNumber number
 -- | Output an int
 fromInt :: Int -> BS.ByteString
 fromInt = fromString . show
+
+{- |
+Calculates the number of bytes needed to encode a number in binary.
+
+This function only works for positive numbers.
+-}
+bytesNeededToEncode :: Int -> Int
+bytesNeededToEncode 0 = 1
+bytesNeededToEncode number =
+  floor (logBase 256 (fromIntegral number :: Double)) + 1
+
+{- |
+Encodes a number in the minimum bytes required.
+-}
+encodeIntToBytes :: Int -> Int -> BS.ByteString
+encodeIntToBytes count number
+  | count == 0 = ""
+  | otherwise = BS.snoc (encodeIntToBytes (count - 1) leftPart) rightPart
+  where
+    leftPart :: Int
+    leftPart = shiftR number 8
+
+    rightPart :: Word8
+    rightPart = fromIntegral number

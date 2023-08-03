@@ -722,7 +722,8 @@ If the object is not a `PDFXRef`, it returns 0.
 -}
 xrefCount :: PDFObject -> Int
 xrefCount (PDFXRef subsections) = foldl' (+) 0 $ xrssCount <$> subsections
-xrefCount _                     = 0
+xrefCount (PDFXRefStream _ _ _ stream) = BS.length stream
+xrefCount _ = 0
 
 {- |
 Given a `Dictionary`, generate a human `ByteString` describing the object based

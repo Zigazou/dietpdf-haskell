@@ -3,6 +3,7 @@ module Util.ByteString
   ( splitRaw
   , separateComponents
   , groupComponents
+  , sndLengthCompare
   ) where
 
 import qualified Data.ByteString               as BS
@@ -35,3 +36,9 @@ Group a `List` of `ByteString` (color components) into a `ByteString`.
 -}
 groupComponents :: [BS.ByteString] -> BS.ByteString
 groupComponents = BS.concat . BS.transpose
+
+{- |
+Compare lengths of bytestrings in second position of couples.
+-}
+sndLengthCompare :: (a, BS.ByteString) -> (a, BS.ByteString) -> Ordering
+sndLengthCompare (_, x) (_, y) = compare (BS.length x) (BS.length y)

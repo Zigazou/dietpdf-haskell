@@ -13,7 +13,6 @@ import           Pdf.Object.Parser.IndirectObject
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFIndirectObject
                                                   , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
                                                   , PDFNumber
                                                   , PDFDictionary
                                                   , PDFReference
@@ -60,23 +59,6 @@ indirectObjectExamples =
         (fromList [("Type", PDFName "Page"), ("Parent", PDFReference 1 0)])
       )
     )
-  , ( "1 0 obj<</Length 2437/N 100/Type/ObjStm/First 808/Filter/FlateDecode>>\
-      \stream\n\
-      \NotEnoughBytes\n\
-      \endstream endobj"
-    , PDFObjectStream
-      1
-      0
-      (fromList
-        [ ("Length", PDFNumber 2437.0)
-        , ("N"     , PDFNumber 100)
-        , ("Type"  , PDFName "ObjStm")
-        , ("First" , PDFNumber 808)
-        , ("Filter", PDFName "FlateDecode")
-        ]
-      )
-      "NotEnoughBytes"
-    )
   , ( "219 0 obj<</Length 289/B 314/E 282/Filter/FlateDecode/I 338/L 298/S 183\
       \>>stream\r\n***********************************************************\
       \***********************************************************************\
@@ -88,12 +70,12 @@ indirectObjectExamples =
       0
       (fromList
         [ ("Length", PDFNumber 289.0)
-        , ("B", PDFNumber 314.0)
-        , ("E", PDFNumber 282.0)
+        , ("B"     , PDFNumber 314.0)
+        , ("E"     , PDFNumber 282.0)
         , ("Filter", PDFName "FlateDecode")
-        , ("I", PDFNumber 338.0)
-        , ("L", PDFNumber 298.0)
-        , ("S", PDFNumber 183.0)
+        , ("I"     , PDFNumber 338.0)
+        , ("L"     , PDFNumber 298.0)
+        , ("S"     , PDFNumber 183.0)
         ]
       )
       "***********************************************************\

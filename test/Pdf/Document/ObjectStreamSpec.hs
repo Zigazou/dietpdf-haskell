@@ -32,10 +32,7 @@ import           Test.Hspec                     ( Spec
                                                 , it
                                                 , shouldBe
                                                 )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( NoObjectToEncode
-                                                  , ObjectStreamNotFound
-                                                  )
+import           Util.UnifiedError              ( UnifiedError(NoObjectToEncode)
                                                 , Fallible
                                                 )
 import           Control.Monad.Trans.Except     ( runExceptT )

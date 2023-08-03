@@ -56,7 +56,7 @@ import           Util.UnifiedError              ( UnifiedError
                                                 )
 import           Pdf.Object.Optimize            ( optimize )
 import           Pdf.Document.XRef              ( calcOffsets
-                                                , xrefTable
+                                                , xrefStreamTable
                                                 )
 import           Util.Logging                   ( Logging
                                                 , sayF
@@ -195,7 +195,9 @@ pdfEncode objects = do
   let
     encodeds    = encodeObject <$> toList (ppIndirectObjects cleaned)
     body        = BS.concat $ eoBinaryData <$> encodeds
-    xref        = xrefTable (BS.length pdfHead) (fromList encodeds)
+    --xref        = xrefTable (BS.length pdfHead) (fromList encodeds)
+    -- xrefObjectNumber = snd (objectsNumberRange encodeds)
+    xref = xrefStreamTable 100000 (BS.length pdfHead) (fromList encodeds)
     encodedXRef = fromPDFObject xref
     startxref =
       fromPDFObject (PDFStartXRef (BS.length pdfHead + BS.length body))
