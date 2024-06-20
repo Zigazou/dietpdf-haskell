@@ -88,6 +88,9 @@ import           Util.Array                     ( Array
                                                 , mkEmptyArray
                                                 )
 
+import qualified Data.ByteString.Builder as BB
+import qualified Data.ByteString.Lazy as BL
+
 {-|
 Test if a byte is a GFX delimiter.
 
@@ -699,13 +702,17 @@ Takes an `Array` of `GFXObject`, converts them to the `ByteString`
 representation and inserts spaces between them if necessary.
 -}
 separateGfx :: Array GFXObject -> BS.ByteString
-separateGfx SQ.Empty = ""
-separateGfx (object1 SQ.:<| SQ.Empty) = fromGFXObject object1
-separateGfx (object1 SQ.:<| object2 SQ.:<| others) = BS.concat
-  [ fromGFXObject object1
-  , spaceIfNeeded object1 object2
-  , separateGfx (object2 SQ.:<| others)
-  ]
+separateGfx items = BL.toStrict $ BB.toLazyByteString $ separateGfx' items
+  where
+    separateGfx' :: Array GFXObject -> BB.Builder
+    separateGfx' SQ.Empty = mempty
+    separateGfx' (object1 SQ.:<| SQ.Empty) = BB.byteString (fromGFXObject object1)
+    separateGfx' (object1 SQ.:<| object2 SQ.:<| others) = 
+      BB.byteString (fromGFXObject object1)
+      <>
+      BB.byteString (spaceIfNeeded object1 object2)
+      <>
+      separateGfx' (object2 SQ.:<| others)
 
 fromArray :: Array GFXObject -> BS.ByteString
 fromArray items = BS.concat ["[", separateGfx items, "]"]
