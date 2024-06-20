@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -149,6 +149,7 @@ executable dietpdf
       Command.Hash
       Command.Info
       Command.Optimize
+      Command.ParseGfx
       Command.Predict
       Command.Unpredict
       Paths_dietpdf

@@ -74,4 +74,6 @@ unfilter object = if hasStream object
     sayF (T.concat ["  - Unfiltering ", txtObjectNumberVersion object])
     unfiltered object >>= \(remainingFilters, unfilteredStream) ->
       setStream unfilteredStream object >>= setFilters remainingFilters
-  else return object
+  else do
+    sayF (T.concat ["  - Leaving as is ", txtObjectNumberVersion object])
+    return object

@@ -23,60 +23,45 @@ module Pdf.Document.ObjectStream
   , isObjectStreamable
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , isDigit
-                                                , many'
-                                                , parseOnly
-                                                , skipWhile
-                                                , takeWhile1
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.Number                    ( fromInt )
+import           Control.Applicative         ((<|>))
+import           Data.Binary.Parser          (Get, isDigit, many', parseOnly,
+                                              skipWhile, takeWhile1)
+import qualified Data.ByteString             as BS
+import           Util.Number                 (fromInt)
 
-import           Pdf.Document.Document          ( PDFDocument
-                                                , cFilter
-                                                , fromList
-                                                , toList
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFName
-                                                  , PDFNumber
-                                                  , PDFObjectStream
-                                                  )
-                                                , fromPDFObject
-                                                , isWhiteSpace
-                                                )
-import           Pdf.Object.State               ( getStream
-                                                , getValue
-                                                )
-import           Control.Monad                  ( forM )
-import           Data.Functor                   ( (<&>) )
-import           Pdf.Object.Unfilter            ( unfilter )
-import           Pdf.Object.Parser.Container    ( arrayP
-                                                , dictionaryP
-                                                )
-import           Pdf.Object.Parser.HexString    ( hexStringP )
-import           Pdf.Object.Parser.Keyword      ( keywordP )
-import           Pdf.Object.Parser.Name         ( nameP )
-import           Pdf.Object.Parser.Number       ( numberP )
-import           Pdf.Object.Parser.Reference    ( referenceP )
-import           Pdf.Object.Parser.String       ( stringP )
-import           Util.Ascii                     ( asciiDIGITZERO )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( NoObjectToEncode
-                                                  , ParseError
-                                                  , ObjectStreamNotFound
-                                                  )
-                                                , FallibleT
-                                                )
-import           Data.Foldable                  ( foldl' )
-import           Util.Dictionary                ( Dictionary
-                                                , mkDictionary
-                                                )
-import           Util.Logging                   ( Logging )
-import           Control.Monad.Trans.Except     ( throwE )
+import           Control.Monad               (forM)
+import           Control.Monad.Trans.Except  (throwE)
+import           Data.Foldable               (foldl')
+import           Data.Functor                ((<&>))
+import qualified Data.Text                   as T
+import           Pdf.Document.Document       (PDFDocument, cFilter, fromList,
+                                              toList)
+import           Pdf.Object.Format           (txtObjectNumberVersion)
+import           Pdf.Object.Object           (PDFObject
+                                              ( PDFIndirectObject
+                                              , PDFName
+                                              , PDFNumber
+                                              , PDFObjectStream
+                                              )
+                                              , fromPDFObject
+                                              , isWhiteSpace)
+import           Pdf.Object.Parser.Container (arrayP, dictionaryP)
+import           Pdf.Object.Parser.HexString (hexStringP)
+import           Pdf.Object.Parser.Keyword   (keywordP)
+import           Pdf.Object.Parser.Name      (nameP)
+import           Pdf.Object.Parser.Number    (numberP)
+import           Pdf.Object.Parser.Reference (referenceP)
+import           Pdf.Object.Parser.String    (stringP)
+import           Pdf.Object.State            (getStream, getValue)
+import           Pdf.Object.Unfilter         (unfilter)
+import           Util.Ascii                  (asciiDIGITZERO)
+import           Util.Dictionary             (Dictionary, mkDictionary)
+import           Util.Logging                (Logging, sayF)
+import           Util.UnifiedError           (FallibleT,
+                                              UnifiedError
+                                                ( NoObjectToEncode
+                                                , ObjectStreamNotFound
+                                                , ParseError))
 
 data ObjectStream = ObjectStream
   { osCount   :: !Int
@@ -138,6 +123,7 @@ extractObjects :: Logging m => ObjectStream -> FallibleT m [PDFObject]
 extractObjects (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
   exploded   <- forM numOffsets $ \(NumberOffset objectNumber offset) -> do
+    sayF (T.concat ["  - Extracting object ", T.pack (show objectNumber)])
     case parseOnly oneObjectP (BS.drop offset objects) of
       Left  msg    -> throwE $! ParseError ("", fromIntegral offset, msg)
       Right object -> return $! PDFIndirectObject objectNumber 0 object
@@ -161,6 +147,7 @@ getObjectStream object = do
 
 explodeList :: Logging m => [PDFObject] -> FallibleT m [PDFObject]
 explodeList (objstm@PDFObjectStream{} : xs) = do
+  sayF (T.concat ["  - Extracting object ", txtObjectNumberVersion objstm])
   extracted <- getObjectStream objstm >>= extractObjects
   remains   <- explodeList xs
   return (extracted ++ remains)
