@@ -149,7 +149,6 @@ executable dietpdf
       Command.Hash
       Command.Info
       Command.Optimize
-      Command.ParseGfx
       Command.Predict
       Command.Unpredict
       Paths_dietpdf

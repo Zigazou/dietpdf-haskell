@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE InstanceSigs #-}
 
@@ -124,6 +125,7 @@ import           Util.Array                     ( Array
 import           Pdf.Graphics.Object            ( GFXObject
                                                 , separateGfx
                                                 )
+import           Data.Data                      ( Data (toConstr) )
 
 {-|
 Test if a byte is a PDF delimiter.
@@ -216,7 +218,7 @@ isNameRegularChar byte | byte == asciiNUMBERSIGN = False
 data XRefState
   = InUseEntry -- ^ Regular entry
   | FreeEntry -- ^ Free entry
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Data)
 
 instance Ord XRefState where
   compare :: XRefState -> XRefState -> Ordering
@@ -234,7 +236,7 @@ data XRefEntry = XRefEntry
   , xreState      :: !XRefState
     -- ^ State of the entry
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Data)
 
 instance Ord XRefEntry where
   compare :: XRefEntry -> XRefEntry -> Ordering
@@ -266,7 +268,7 @@ data XRefSubsection = XRefSubsection
   , xrssEntries :: ![XRefEntry]
     -- ^ Entries
   }
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Data)
 
 instance Ord XRefSubsection where
   compare :: XRefSubsection -> XRefSubsection -> Ordering
@@ -327,7 +329,7 @@ data PDFObject
     PDFTrailer !PDFObject
   | -- | A reference to an XRef table (offset from beginning of a PDF)
     PDFStartXRef !Int
-  deriving stock (Show)
+  deriving stock (Show, Data)
 
 {- |
 Create an empty `PDFDictionary`.
@@ -355,30 +357,34 @@ mkPDFArray = PDFArray . mkArray
 
 instance Eq PDFObject where
   (==) :: PDFObject -> PDFObject -> Bool
-  (PDFComment x)       == (PDFComment y)       = x == y
-  (PDFVersion _)       == (PDFVersion _)       = True
-  PDFEndOfFile         == PDFEndOfFile         = True
-  (PDFNumber    x    ) == (PDFNumber    y    ) = x == y
-  (PDFKeyword   x    ) == (PDFKeyword   y    ) = x == y
-  (PDFName      x    ) == (PDFName      y    ) = x == y
-  (PDFString    x    ) == (PDFString    y    ) = x == y
-  (PDFHexString x    ) == (PDFHexString y    ) = x == y
-  (PDFReference xn xr) == (PDFReference yn yr) = xn == yn && xr == yr
-  (PDFArray      x   ) == (PDFArray      y   ) = x == y
-  (PDFDictionary x   ) == (PDFDictionary y   ) = x == y
-  (PDFIndirectObject xn xr _) == (PDFIndirectObject yn yr _) =
-    xn == yn && xr == yr
-  (PDFIndirectObjectWithStream xn xr _ _) == (PDFIndirectObjectWithStream yn yr _ _)
-    = xn == yn && xr == yr
-  (PDFObjectStream xn xr _ _) == (PDFObjectStream yn yr _ _) =
-    xn == yn && xr == yr
-  (PDFXRefStream xn xr _ _) == (PDFXRefStream yn yr _ _) = xn == yn && xr == yr
-  (PDFBool x              ) == (PDFBool y              ) = x == y
-  PDFNull                   == PDFNull                   = True
-  (PDFXRef      x)          == (PDFXRef      y)          = x == y
-  (PDFTrailer   x)          == (PDFTrailer   y)          = x == y
-  (PDFStartXRef x)          == (PDFStartXRef y)          = x == y
-  _anyObjectA               == _anyObjectB               = False
+  (==) a b | toConstr a /= toConstr b = False
+           | otherwise = a ~= b
+    where
+      (~=) :: PDFObject -> PDFObject -> Bool
+      (PDFName      x    ) ~= (PDFName      y    ) = x == y
+      (PDFNumber    x    ) ~= (PDFNumber    y    ) = x == y
+      (PDFKeyword   x    ) ~= (PDFKeyword   y    ) = x == y
+      (PDFString    x    ) ~= (PDFString    y    ) = x == y
+      (PDFReference xn xr) ~= (PDFReference yn yr) = xn == yn && xr == yr
+      (PDFArray      x   ) ~= (PDFArray      y   ) = x == y
+      (PDFDictionary x   ) ~= (PDFDictionary y   ) = x == y
+      (PDFIndirectObject xn xr _) ~= (PDFIndirectObject yn yr _) =
+        xn == yn && xr == yr
+      (PDFIndirectObjectWithStream xn xr _ _) ~= (PDFIndirectObjectWithStream yn yr _ _)
+        = xn == yn && xr == yr
+      (PDFObjectStream xn xr _ _) ~= (PDFObjectStream yn yr _ _) =
+        xn == yn && xr == yr
+      (PDFXRefStream xn xr _ _) ~= (PDFXRefStream yn yr _ _) = xn == yn && xr == yr
+      (PDFBool x              ) ~= (PDFBool y              ) = x == y
+      (PDFHexString x    )      ~= (PDFHexString y    ) = x == y
+      PDFNull                   ~= PDFNull                   = True
+      (PDFXRef      x)          ~= (PDFXRef      y)          = x == y
+      (PDFTrailer   x)          ~= (PDFTrailer   y)          = x == y
+      (PDFStartXRef x)          ~= (PDFStartXRef y)          = x == y
+      (PDFComment x)            ~= (PDFComment y)       = x == y
+      (PDFVersion _)            ~= (PDFVersion _)       = True
+      PDFEndOfFile              ~= PDFEndOfFile         = True
+      _anyObjectA               ~= _anyObjectB               = False
 
 objectRank :: PDFObject -> Int
 objectRank (PDFVersion _)                  = 0

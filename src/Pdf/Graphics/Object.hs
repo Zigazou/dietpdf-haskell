@@ -1,4 +1,5 @@
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 {-|
 This module defines what is a GFX object and functions in relation with the
@@ -87,9 +88,9 @@ import           Util.Array                     ( Array
                                                 , mkArray
                                                 , mkEmptyArray
                                                 )
-
-import qualified Data.ByteString.Builder as BB
-import qualified Data.ByteString.Lazy as BL
+import           Data.Data                      ( Data (toConstr) )
+import qualified Data.ByteString.Builder       as BB
+import qualified Data.ByteString.Lazy          as BL
 
 {-|
 Test if a byte is a GFX delimiter.
@@ -181,7 +182,7 @@ data GFXLineCap
     GFXRoundCap
     -- | Projecting square cap (2)
   | GFXProjectingSquareCap
-  deriving stock (Eq, Show, Enum)
+  deriving stock (Eq, Show, Enum, Data)
 
 -- | Line join styles
 data GFXLineJoin
@@ -191,7 +192,7 @@ data GFXLineJoin
     GFXRoundJoin
     -- | Bevel join (2)
   | GFXBevelJoin
-  deriving stock (Eq, Show, Enum)
+  deriving stock (Eq, Show, Enum, Data)
 
 -- | Text rendering mode
 data GFXTextRenderMode
@@ -211,7 +212,7 @@ data GFXTextRenderMode
     GFXFillStrokeTextClipping
   | -- | Add text to path for clipping (7)
     GFXTextClipping
-  deriving stock (Eq, Show, Enum)
+  deriving stock (Eq, Show, Enum, Data)
 
 -- | PDF colour spaces
 data GFXColorSpace
@@ -380,7 +381,7 @@ data GSOperator
     GSIntersectClippingPathEOR
   | -- | Unknown operator
     GSUnknown !BS.ByteString
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Data)
 
 {- |
 Converts a `ByteString` to a `GSOperator`.
@@ -564,7 +565,7 @@ data GFXObject
     GFXInlineImage (Dictionary GFXObject) BS.ByteString
   | -- | An operator
     GFXOperator GSOperator
-  deriving stock Show
+  deriving stock (Show, Data)
 
 {- |
 Create an empty `GFXDictionary`.
@@ -592,19 +593,23 @@ mkGFXArray = GFXArray . mkArray
 
 instance Eq GFXObject where
   (==) :: GFXObject -> GFXObject -> Bool
-  GFXComment   x       == GFXComment   y       = x == y
-  GFXNumber    x       == GFXNumber    y       = x == y
-  GFXName      x       == GFXName      y       = x == y
-  GFXString    x       == GFXString    y       = x == y
-  GFXHexString x       == GFXHexString y       = x == y
-  GFXReference xn xr   == GFXReference yn yr   = xn == yn && xr == yr
-  GFXArray      x      == GFXArray      y      = x == y
-  GFXDictionary x      == GFXDictionary y      = x == y
-  GFXBool       x      == GFXBool       y      = x == y
-  GFXNull              == GFXNull              = True
-  GFXOperator x        == GFXOperator y        = x == y
-  GFXInlineImage dx ix == GFXInlineImage dy iy = dx == dy && ix == iy
-  _anyObjectA          == _anyObjectB          = False
+  (==) a b | toConstr a /= toConstr b = False
+           | otherwise = a ~= b
+    where
+      (~=) :: GFXObject -> GFXObject -> Bool
+      GFXComment   x       ~= GFXComment   y       = x == y
+      GFXNumber    x       ~= GFXNumber    y       = x == y
+      GFXName      x       ~= GFXName      y       = x == y
+      GFXString    x       ~= GFXString    y       = x == y
+      GFXHexString x       ~= GFXHexString y       = x == y
+      GFXReference xn xr   ~= GFXReference yn yr   = xn == yn && xr == yr
+      GFXArray      x      ~= GFXArray      y      = x == y
+      GFXDictionary x      ~= GFXDictionary y      = x == y
+      GFXBool       x      ~= GFXBool       y      = x == y
+      GFXNull              ~= GFXNull              = True
+      GFXOperator x        ~= GFXOperator y        = x == y
+      GFXInlineImage dx ix ~= GFXInlineImage dy iy = dx == dy && ix == iy
+      _anyObjectA          ~= _anyObjectB          = False
 
 {- |
 Indicates whether the `GFXObject` ends with a delimiter when converted to a
