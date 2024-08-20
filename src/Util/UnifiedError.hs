@@ -14,8 +14,8 @@ module Util.UnifiedError
 
 import           Control.Monad.Except           ( ExceptT
                                                 , runExceptT
-                                                , MonadTrans(lift)
                                                 )
+import           Control.Monad.Trans.Class      ( MonadTrans(lift) )
 import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )

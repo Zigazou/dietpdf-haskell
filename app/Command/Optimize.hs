@@ -11,7 +11,7 @@ import           Formatting                     ( (%)
 import           Pdf.Document.Document          ( PDFDocument )
 import           Pdf.Document.Encode            ( pdfEncode )
 import           Util.UnifiedError              ( FallibleT )
-import           Control.Monad.Except           ( MonadTrans(lift) )
+import           Control.Monad.Trans.Class      ( MonadTrans(lift) )
 
 optimize :: FilePath -> PDFDocument -> FallibleT IO ()
 optimize outputPDF objects = do
