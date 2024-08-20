@@ -1,6 +1,10 @@
 cabal-version: 1.12
 
+<<<<<<< HEAD
 -- This file has been generated from package.yaml by hpack version 0.37.0.
+=======
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+>>>>>>> 22fc58f3461979b1cfb82cd647a2b8666e317fb7
 --
 -- see: https://github.com/sol/hpack
 

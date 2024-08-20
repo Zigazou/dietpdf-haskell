@@ -11,8 +11,13 @@ module Pdf.Document.Partition
 
 import           Data.Foldable                  ( find )
 import           Data.Maybe                     ( fromMaybe )
+import           Data.Set                       ( Set
+                                                , member
+                                                , fromAscList
+                                                )
 import           Pdf.Document.Document          ( PDFDocument
                                                 , deepFind
+                                                , toList
                                                 )
 import           Pdf.Object.Object              ( PDFObject
                                                   ( PDFNull
@@ -94,7 +99,7 @@ removeUnused (PDFPartition indirectObjects heads trailers) = do
   uTrailers <- uncompressDocument trailers
 
   sayF "  - Locating all references"
-  let references =
+  let references = fromAscList . toList $
         deepFind isReference uHeads
           <> deepFind isReference uTrailers
           <> deepFind isReference (toPDFDocument uIndirectObjects)
@@ -110,16 +115,16 @@ removeUnused (PDFPartition indirectObjects heads trailers) = do
   isNotLinearized :: PDFObject -> Bool
   isNotLinearized = not . hasKey "Linearized"
 
-  isReferenced :: PDFDocument -> PDFObject -> Bool
+  isReferenced :: Set PDFObject -> PDFObject -> Bool
   isReferenced refs (PDFIndirectObject num gen _) =
-    PDFReference num gen `elem` refs
+    PDFReference num gen `member` refs
   isReferenced refs (PDFIndirectObjectWithStream num gen _ _) =
-    PDFReference num gen `elem` refs
+    PDFReference num gen `member` refs
   isReferenced refs (PDFObjectStream num gen _ _) =
-    PDFReference num gen `elem` refs
+    PDFReference num gen `member` refs
   isReferenced _anyRefs _anyOtherObject = True
 
-  used :: PDFDocument -> PDFObject -> Bool
+  used :: Set PDFObject -> PDFObject -> Bool
   used refs object = isNotLinearized object && isReferenced refs object
 
   isReference :: PDFObject -> Bool

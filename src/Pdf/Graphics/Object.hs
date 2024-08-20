@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+
+>>>>>>> 22fc58f3461979b1cfb82cd647a2b8666e317fb7
 {-|
 This module defines what is a GFX object and functions in relation with the
 PDF specification.
@@ -86,6 +92,9 @@ import           Util.Array                     ( Array
                                                 , mkArray
                                                 , mkEmptyArray
                                                 )
+import           Data.Data                      ( Data (toConstr) )
+import qualified Data.ByteString.Builder       as BB
+import qualified Data.ByteString.Lazy          as BL
 
 {-|
 Test if a byte is a GFX delimiter.
@@ -178,7 +187,7 @@ data GFXLineCap
     GFXRoundCap
     -- | Projecting square cap (2)
   | GFXProjectingSquareCap
-  deriving stock (Eq, Show, Enum)
+  deriving stock (Eq, Show, Enum, Data)
 
 -- | Line join styles
 type GFXLineJoin :: Type
@@ -189,7 +198,7 @@ data GFXLineJoin
     GFXRoundJoin
     -- | Bevel join (2)
   | GFXBevelJoin
-  deriving stock (Eq, Show, Enum)
+  deriving stock (Eq, Show, Enum, Data)
 
 -- | Text rendering mode
 type GFXTextRenderMode :: Type
@@ -210,7 +219,7 @@ data GFXTextRenderMode
     GFXFillStrokeTextClipping
   | -- | Add text to path for clipping (7)
     GFXTextClipping
-  deriving stock (Eq, Show, Enum)
+  deriving stock (Eq, Show, Enum, Data)
 
 -- | PDF colour spaces
 type GFXColorSpace :: Type
@@ -382,7 +391,7 @@ data GSOperator
     GSIntersectClippingPathEOR
   | -- | Unknown operator
     GSUnknown !BS.ByteString
-  deriving stock (Eq, Show)
+  deriving stock (Eq, Show, Data)
 
 {- |
 Converts a `ByteString` to a `GSOperator`.
@@ -567,7 +576,7 @@ data GFXObject
     GFXInlineImage (Dictionary GFXObject) BS.ByteString
   | -- | An operator
     GFXOperator GSOperator
-  deriving stock Show
+  deriving stock (Show, Data)
 
 {- |
 Create an empty `GFXDictionary`.
@@ -595,19 +604,23 @@ mkGFXArray = GFXArray . mkArray
 
 instance Eq GFXObject where
   (==) :: GFXObject -> GFXObject -> Bool
-  GFXComment   x       == GFXComment   y       = x == y
-  GFXNumber    x       == GFXNumber    y       = x == y
-  GFXName      x       == GFXName      y       = x == y
-  GFXString    x       == GFXString    y       = x == y
-  GFXHexString x       == GFXHexString y       = x == y
-  GFXReference xn xr   == GFXReference yn yr   = xn == yn && xr == yr
-  GFXArray      x      == GFXArray      y      = x == y
-  GFXDictionary x      == GFXDictionary y      = x == y
-  GFXBool       x      == GFXBool       y      = x == y
-  GFXNull              == GFXNull              = True
-  GFXOperator x        == GFXOperator y        = x == y
-  GFXInlineImage dx ix == GFXInlineImage dy iy = dx == dy && ix == iy
-  _anyObjectA          == _anyObjectB          = False
+  (==) a b | toConstr a /= toConstr b = False
+           | otherwise = a ~= b
+    where
+      (~=) :: GFXObject -> GFXObject -> Bool
+      GFXComment   x       ~= GFXComment   y       = x == y
+      GFXNumber    x       ~= GFXNumber    y       = x == y
+      GFXName      x       ~= GFXName      y       = x == y
+      GFXString    x       ~= GFXString    y       = x == y
+      GFXHexString x       ~= GFXHexString y       = x == y
+      GFXReference xn xr   ~= GFXReference yn yr   = xn == yn && xr == yr
+      GFXArray      x      ~= GFXArray      y      = x == y
+      GFXDictionary x      ~= GFXDictionary y      = x == y
+      GFXBool       x      ~= GFXBool       y      = x == y
+      GFXNull              ~= GFXNull              = True
+      GFXOperator x        ~= GFXOperator y        = x == y
+      GFXInlineImage dx ix ~= GFXInlineImage dy iy = dx == dy && ix == iy
+      _anyObjectA          ~= _anyObjectB          = False
 
 {- |
 Indicates whether the `GFXObject` ends with a delimiter when converted to a
@@ -705,13 +718,17 @@ Takes an `Array` of `GFXObject`, converts them to the `ByteString`
 representation and inserts spaces between them if necessary.
 -}
 separateGfx :: Array GFXObject -> BS.ByteString
-separateGfx SQ.Empty = ""
-separateGfx (object1 SQ.:<| SQ.Empty) = fromGFXObject object1
-separateGfx (object1 SQ.:<| object2 SQ.:<| others) = BS.concat
-  [ fromGFXObject object1
-  , spaceIfNeeded object1 object2
-  , separateGfx (object2 SQ.:<| others)
-  ]
+separateGfx items = BL.toStrict $ BB.toLazyByteString $ separateGfx' items
+  where
+    separateGfx' :: Array GFXObject -> BB.Builder
+    separateGfx' SQ.Empty = mempty
+    separateGfx' (object1 SQ.:<| SQ.Empty) = BB.byteString (fromGFXObject object1)
+    separateGfx' (object1 SQ.:<| object2 SQ.:<| others) = 
+      BB.byteString (fromGFXObject object1)
+      <>
+      BB.byteString (spaceIfNeeded object1 object2)
+      <>
+      separateGfx' (object2 SQ.:<| others)
 
 fromArray :: Array GFXObject -> BS.ByteString
 fromArray items = BS.concat ["[", separateGfx items, "]"]
