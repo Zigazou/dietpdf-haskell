@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -121,7 +121,8 @@ library
       FlexibleContexts
       MultiWayIf
       TupleSections
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
+      StandaloneKindSignatures
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
     , binary
@@ -173,14 +174,14 @@ executable dietpdf
       FlexibleContexts
       MultiWayIf
       TupleSections
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
+      StandaloneKindSignatures
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
     , bytestring
     , containers
     , dietpdf
     , formatting
-    , mtl
     , optparse-applicative
     , pretty-hex
     , text
@@ -257,7 +258,7 @@ test-suite dietpdf-test
       FlexibleContexts
       MultiWayIf
       TupleSections
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns
   build-depends:
       QuickCheck
     , base >=4.7 && <5

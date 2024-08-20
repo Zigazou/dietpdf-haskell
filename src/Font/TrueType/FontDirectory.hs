@@ -15,6 +15,7 @@ module Font.TrueType.FontDirectory
   , calcTableChecksum
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 import           Data.Either                    ( fromRight )
 import           Data.Binary.Parser             ( parseOnly
@@ -51,6 +52,7 @@ calcChecksum raw =
           + (fromIntegral c `shiftL` 8)
       _anyError -> 0
 
+type OffsetSubtable :: Type
 data OffsetSubtable = OffsetSubtable
   { osScalerType    :: ScalerType -- ^ Scaler to be used to rasterize this font
   , osNumTables     :: Word16 -- ^ Number of tables
@@ -60,6 +62,7 @@ data OffsetSubtable = OffsetSubtable
   }
   deriving stock (Eq, Show)
 
+type TableEntry :: Type
 data TableEntry = TableEntry
   { teTag      :: TableIdentifier -- ^ 4-byte identifier
   , teChecksum :: Word32 -- ^ Checksum for this table
@@ -87,8 +90,10 @@ calcTableChecksum TableEntry { teData = FTRaw raw } = calcChecksum raw
 calcTableChecksum TableEntry { teData = FTHead fontHead } =
   calcChecksum (fromHead fontHead { hCheckSumAdjustment = 0 })
 
+type TableDirectory :: Type
 type TableDirectory = Array TableEntry
 
+type FontDirectory :: Type
 data FontDirectory = FontDirectory
   { fdOffsetSubtable :: OffsetSubtable
   , fdTableDirectory :: TableDirectory

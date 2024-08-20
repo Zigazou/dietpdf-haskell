@@ -12,8 +12,10 @@ module Font.TrueType.TableIdentifier
   , toTableIdentifier
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 
+type TableIdentifier :: Type
 data TableIdentifier
   = OTTAccentAttachment               -- ^ 'acnt' (optional)
   | OTTAnchorPointTable               -- ^ 'ankr' (optional)

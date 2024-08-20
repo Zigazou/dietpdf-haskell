@@ -10,8 +10,10 @@ module Font.TrueType.ScalerType
   , isUnknown
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 
+type ScalerType :: Type
 data ScalerType
   = FontTrueTypeTrue -- ^ 'true' TrueType font
   | FontTrueType00010000 -- ^  '\000\001\000\000' TrueType font

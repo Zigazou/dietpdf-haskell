@@ -44,6 +44,7 @@ module Pdf.Graphics.Object
   , spaceIfNeeded
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 import qualified Data.Sequence                 as SQ
 import qualified Data.Text.Lazy                as TL
@@ -169,6 +170,7 @@ isNameRegularChar byte | byte == asciiNUMBERSIGN = False
                        | otherwise               = True
 
 -- | Line cap styles
+type GFXLineCap :: Type
 data GFXLineCap
   = -- | Butt cap (0)
     GFXButtCap
@@ -179,6 +181,7 @@ data GFXLineCap
   deriving stock (Eq, Show, Enum)
 
 -- | Line join styles
+type GFXLineJoin :: Type
 data GFXLineJoin
   = -- | Mitter join (0)
     GFXMiterJoin
@@ -189,6 +192,7 @@ data GFXLineJoin
   deriving stock (Eq, Show, Enum)
 
 -- | Text rendering mode
+type GFXTextRenderMode :: Type
 data GFXTextRenderMode
   = -- | Fill text (0)
     GFXFillText
@@ -209,6 +213,7 @@ data GFXTextRenderMode
   deriving stock (Eq, Show, Enum)
 
 -- | PDF colour spaces
+type GFXColorSpace :: Type
 data GFXColorSpace
   = -- | Gray colour space (/DeviceGray)
     GFXDeviceGray
@@ -234,6 +239,8 @@ data GFXColorSpace
     GFXSpecialDeviceN
   deriving stock (Eq, Show)
 
+-- | PDF operator
+type GSOperator :: Type
 data GSOperator
   = -- | Save the current graphics state on the graphics state stack (q)
     GSSaveGS
@@ -534,6 +541,7 @@ A GFX is a collection of objects, here named GFX objects.
 
 Values contained are decoded, meaning they no longer contain escape sequences.
 -}
+type GFXObject :: Type
 data GFXObject
   = -- | A comment (without the starting %)
     GFXComment BS.ByteString

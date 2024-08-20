@@ -72,6 +72,9 @@ module Pdf.Object.Object
   , isTrailer
   ) where
 
+import           Data.Kind                      ( Type
+                                                , Constraint
+                                                )
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.UTF8          as BSU
 import qualified Data.Text.Lazy                as TL
@@ -209,6 +212,7 @@ isNameRegularChar byte | byte == asciiNUMBERSIGN = False
                        | otherwise               = True
 
 -- | State of an entry in an XRef table (old format).
+type XRefState :: Type
 data XRefState
   = InUseEntry -- ^ Regular entry
   | FreeEntry -- ^ Free entry
@@ -222,6 +226,7 @@ instance Ord XRefState where
   compare FreeEntry  InUseEntry = LT
 
 -- | Entry in an XRef table (old format).
+type XRefEntry :: Type
 data XRefEntry = XRefEntry
   { xreOffset     :: !Int
     -- ^ Offset from the beginning of the PDF file
@@ -254,6 +259,7 @@ An XRef table may contain many subsections.
 
 An XRef subsection itself may contain many entries.
 -}
+type XRefSubsection :: Type
 data XRefSubsection = XRefSubsection
   { xrssStart   :: !Int
     -- ^ Index of the first entry
@@ -269,6 +275,7 @@ instance Ord XRefSubsection where
   compare (XRefSubsection xs xc xe) (XRefSubsection ys yc ye) =
     compare xs ys <> compare xc yc <> compare xe ye
 
+type XRefStmFieldType :: Type
 data XRefStmFieldType =
     XRSFFreeEntry
   | XRSFUncompressedObject
@@ -280,6 +287,7 @@ A PDF is a collection of objects, here named PDF objects.
 
 Values contained are decoded, meaning they no longer contain escape sequences.
 -}
+type PDFObject :: Type
 data PDFObject
   = -- | A comment (without the starting %)
     PDFComment !BS.ByteString
@@ -733,9 +741,9 @@ If the dictionary contains does not contain a Type key, it returns `Nothing`.
 -}
 objectType :: Dictionary PDFObject -> Maybe BS.ByteString
 objectType dictionary =
-  case (Map.lookup "Type" dictionary, Map.lookup "Type" dictionary) of
+  case (Map.lookup "Type" dictionary, Map.lookup "SubType" dictionary) of
     (Just (PDFName typeValue), Just (PDFName subtypeValue)) ->
-      Just $ BS.concat [typeValue, "/", subtypeValue]
+      Just $ BS.concat [typeValue, "/", subtypeValue] 
     (Just (PDFName typeValue), _noSubtype) -> Just typeValue
     _noType -> Nothing
 
@@ -780,6 +788,7 @@ hasStream _anyOtherObject               = False
 {- |
 Allow easy creation of `PDFNumber` objects with auto conversion.
 -}
+type ToPDFNumber :: Type -> Constraint
 class ToPDFNumber t where
   mkPDFNumber :: t -> PDFObject
 

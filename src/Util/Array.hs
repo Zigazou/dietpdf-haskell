@@ -7,11 +7,13 @@ module Util.Array
   , mkEmptyArray
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.Sequence                 as SQ
 
 {-|
 An `Array` is a `Sequence` of object.
 -}
+type Array :: Type -> Type
 type Array a = SQ.Seq a
 
 {- |

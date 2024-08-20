@@ -33,6 +33,7 @@ ghc-options:
 - -Wno-all-missed-specialisations
 - -Wno-unsafe
 - -Wno-safe
+- -Wno-redundant-bang-patterns
 
 library:
   source-dirs: src
@@ -49,6 +50,7 @@ library:
   - FlexibleContexts
   - MultiWayIf
   - TupleSections
+  - StandaloneKindSignatures  
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16
@@ -96,6 +98,7 @@ executables:
     - FlexibleContexts
     - MultiWayIf
     - TupleSections
+    - StandaloneKindSignatures  
     ghc-options:
     - -O2
     - -funfolding-use-threshold=16
@@ -112,7 +115,6 @@ executables:
     - text
     - formatting
     - transformers
-    - mtl
     - pretty-hex
     - containers
 

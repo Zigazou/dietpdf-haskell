@@ -5,6 +5,7 @@ module Pdf.Object.Optimize
   ( optimize
   ) where
 
+import           Data.Kind                      ( Type )
 import           Codec.Compression.XML          ( optimizeXML )
 import           Pdf.Object.Container           ( deepMap
                                                 , Filter(fFilter)
@@ -42,6 +43,7 @@ import           Util.UnifiedError              ( FallibleT
 import qualified Data.ByteString               as BS
 import qualified Data.Sequence                 as SQ
 
+type OptimizationType :: Type
 data OptimizationType = XMLOptimization
                       | GfxOptimization
                       | ObjectStreamOptimization
@@ -83,7 +85,7 @@ streamOptimize object = whatOptimizationFor object >>= \case
         sayComparisonF "GFX objects optimization"
                        (BS.length stream)
                        (BS.length optimizedStream)
-        setStream optimizedStream object
+        setStream optimizedStream object 
       _error -> do
         sayF "  - No stream content to optimize"
         return object

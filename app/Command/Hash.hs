@@ -2,6 +2,7 @@ module Command.Hash
   ( objectHashes
   ) where
 
+import           Data.Kind                      ( Type )
 import           Pdf.Document.Document          ( PDFDocument
                                                 , toList
                                                 )
@@ -21,6 +22,7 @@ import           Data.Set                       ( Set
 import           Data.Foldable                  ( foldrM )
 import           Data.Maybe                     ( catMaybes )
 
+type ObjectHash :: Type
 data ObjectHash = ObjectHash !Int !T.Text
 
 instance Eq ObjectHash where

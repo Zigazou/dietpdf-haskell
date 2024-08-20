@@ -29,6 +29,7 @@ import           Options.Applicative            ( Parser
                                                 )
 import           Codec.Compression.Predictor    ( Predictor )
 
+type Codec :: *
 data Codec = LZW
            | Deflate
            | NoCompress
@@ -47,6 +48,7 @@ predictorsHelp =
   "Predictor to use (TIFFNoPrediction, TIFFPredictor2, PNGNone, PNGSub, PNGUp, \
   \PNGAverage, PNGPaeth, PNGOptimum)"
 
+type AppOptions :: *
 data AppOptions
   = OptimizeOptions !FilePath !FilePath
   | InfoOptions !FilePath

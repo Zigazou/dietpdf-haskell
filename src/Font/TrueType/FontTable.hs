@@ -24,6 +24,7 @@ module Font.TrueType.FontTable
   , Fixed(Fixed)
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 import qualified Data.ByteString.Lazy          as BSL
 import           Data.Word                      ( Word16
@@ -40,9 +41,11 @@ import           Data.Binary.Put                ( PutM
                                                 , runPut
                                                 )
 
+type Fixed :: Type
 data Fixed = Fixed Word16 Word16
   deriving stock (Eq, Show)
 
+type Head :: Type
 data Head = Head
   { -- | Version, 0x00010000 if (version 1.0)
     hVersion            :: Fixed
@@ -107,6 +110,7 @@ fromHead fontHead = BSL.toStrict $ runPut $ do
   putInt16be (hIndexToLocFormat fontHead)
   putInt16be (hGlyphDataFormat fontHead)
 
+type FontTable :: Type
 data FontTable
   = FTRaw BS.ByteString
   | FTHead Head

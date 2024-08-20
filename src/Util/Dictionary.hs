@@ -8,6 +8,7 @@ module Util.Dictionary
   , dictHasKey
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 import qualified Data.Map.Strict               as Map
 import           Data.Maybe                     ( isJust )
@@ -17,6 +18,7 @@ A `Dictionary` is a handy type.
 
 It is a `Map` of object of type a indexed by `ByteString`.
 -}
+type Dictionary :: Type -> Type
 type Dictionary a = Map.Map BS.ByteString a
 
 -- | Returns an empty `Dictionary`
