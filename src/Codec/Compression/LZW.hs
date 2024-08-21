@@ -6,6 +6,7 @@ module Codec.Compression.LZW
   ( decompress
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 import           Data.Bits                      ( (.&.)
                                                 , shiftL
@@ -27,6 +28,7 @@ import           Control.Monad.State.Lazy       ( State()
 import           Control.Monad.Loops            ( whileM )
 import           Data.Maybe                     ( isNothing )
 
+type BitsSlice :: Type
 data BitsSlice = BitsSlice
   { bslByteMask0 :: Int
   , bslByteMask1 :: Int
@@ -58,6 +60,7 @@ bitsSlices spanLength offset
   mask :: Int
   mask = shiftR (shiftL 0xffffffff (24 - spanLength) .&. 0x00ffffff) offset
 
+type Dictionary :: Type
 type Dictionary = SQ.Seq BS.ByteString
 
 clearTableMarker, endOfDataMarker :: Int
@@ -70,6 +73,7 @@ newDictionary = SQ.fromList
   | item <- [0 .. endOfDataMarker]
   ]
 
+type ProcessStep :: Type
 data ProcessStep = ProcessStep
   { psPreviousWordIndex :: Int
   , psBitPosition       :: Int

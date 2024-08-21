@@ -13,6 +13,7 @@ module AppOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
   ) where
 
+import           Data.Kind                      ( Type )
 import           Options.Applicative            ( Parser
                                                 , argument
                                                 , command
@@ -29,7 +30,7 @@ import           Options.Applicative            ( Parser
                                                 )
 import           Codec.Compression.Predictor    ( Predictor )
 
-type Codec :: *
+type Codec :: Type
 data Codec = LZW
            | Deflate
            | NoCompress
@@ -48,7 +49,7 @@ predictorsHelp =
   "Predictor to use (TIFFNoPrediction, TIFFPredictor2, PNGNone, PNGSub, PNGUp, \
   \PNGAverage, PNGPaeth, PNGOptimum)"
 
-type AppOptions :: *
+type AppOptions :: Type
 data AppOptions
   = OptimizeOptions !FilePath !FilePath
   | InfoOptions !FilePath

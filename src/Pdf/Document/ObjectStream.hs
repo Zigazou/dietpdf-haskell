@@ -21,6 +21,7 @@ module Pdf.Document.ObjectStream
   , isObjectStreamable
   ) where
 
+import           Data.Kind                      ( Type )
 import           Control.Applicative            ( (<|>) )
 import           Data.Binary.Parser             ( Get
                                                 , isDigit
@@ -83,6 +84,7 @@ import           Data.IntMap                    ( union
                                                 )
 import qualified Pdf.Document.Document         as D
 
+type ObjectStream :: Type
 data ObjectStream = ObjectStream
   { osCount   :: !Int
   , osOffset  :: !Int
@@ -90,6 +92,7 @@ data ObjectStream = ObjectStream
   , osObjects :: !BS.ByteString
   }
 
+type NumberOffset :: Type
 data NumberOffset = NumberOffset !Int !Int
 
 emptyObjectStream :: ObjectStream

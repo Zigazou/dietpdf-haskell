@@ -24,6 +24,7 @@ module Codec.Compression.RunLength
   , decompress
   ) where
 
+import           Data.Kind                      ( Type )
 import           Data.Binary.Parser             ( Get
                                                 , anyWord8
                                                 , endOfInput
@@ -41,6 +42,7 @@ import           Util.UnifiedError                    ( UnifiedError
                                                   )
                                                 )
 
+type RLEAction :: Type
 data RLEAction
   = RLERepeat Int Word8
   | RLECopy BS.ByteString

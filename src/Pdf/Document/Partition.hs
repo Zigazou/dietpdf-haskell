@@ -9,6 +9,7 @@ module Pdf.Document.Partition
   , removeUnused
   ) where
 
+import           Data.Kind                      ( Type )
 import           Data.Foldable                  ( find )
 import           Data.Maybe                     ( fromMaybe )
 import           Pdf.Document.Document          ( PDFDocument
@@ -38,6 +39,7 @@ import           Pdf.Document.Collection        ( PDFObjects
 import qualified Data.IntMap                   as IM
 
 -- | A partition separates numbered objects from PDF versions and trailers.
+type PDFPartition :: Type
 data PDFPartition = PDFPartition
   { -- | Numbered objects
     ppIndirectObjects :: !PDFObjects

@@ -12,6 +12,7 @@ module Util.UnifiedError
   , ifFail
   ) where
 
+import           Data.Kind                      ( Type )
 import           Control.Monad.Except           ( ExceptT
                                                 , runExceptT
                                                 )
@@ -20,6 +21,7 @@ import           Data.Binary.Get                ( ByteOffset )
 import qualified Data.ByteString               as BS
 import           Data.Word                      ( Word8 )
 
+type ErrorType :: Type
 data ErrorType = ReadingError
                | ParsingError
                | EncodingError
@@ -35,6 +37,7 @@ instance Show ErrorType where
   show StructureError   = "structure"
   show UnsupportedError = "unsupported"
 
+type UnifiedError :: Type
 data UnifiedError
   -- | Parsing error (Remaining bytes, offset of the error and error message)
   = ParseError !(BS.ByteString, ByteOffset, String)
@@ -83,7 +86,10 @@ data UnifiedError
   | UnsupportedFeature !String
   deriving stock (Eq)
 
+type FallibleT :: (Type -> Type) -> Type -> Type
 type FallibleT = ExceptT UnifiedError
+
+type Fallible :: Type -> Type
 type Fallible = Either UnifiedError
 
 errorType :: UnifiedError -> ErrorType

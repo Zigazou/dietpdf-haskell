@@ -5,6 +5,9 @@ module Util.Logging
   , sayErrorF
   ) where
 
+import           Data.Kind                      ( Type
+                                                , Constraint
+                                                )
 import qualified Data.Text                     as T
 import qualified Data.Text.IO                  as TIO
 import           Control.Monad.Identity         ( Identity )
@@ -25,6 +28,7 @@ import           Fmt                            ( padLeftF
 import           Util.UnifiedError              ( UnifiedError )
 import           System.IO                      ( stderr )
 
+type Logging :: (Type -> Type) -> Constraint
 class Monad m => Logging m where
   say :: T.Text -> m ()
 
