@@ -39,6 +39,7 @@ module Codec.Compression.Predictor
   , EntropyType(EntropyDeflate, EntropyShannon)
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 import           Data.Maybe                     ( fromMaybe )
 import           Data.Word                      ( Word8 )
@@ -57,6 +58,7 @@ import           Pdf.Object.Object              ( PDFObject(PDFNumber)
                                                 , ToPDFNumber(mkPDFNumber)
                                                 )
 
+type Predictor :: Type
 data Predictor
   = TIFFNoPrediction
     -- ^ No prediction.
@@ -169,6 +171,7 @@ A `Scanline` is a line of pixels.
 Each scanline may have an associated `Predictor` indicating the state in which
 the pixels are stored.
 -}
+type Scanline :: Type
 data Scanline = Scanline
   { slPredictor :: Maybe Predictor
   , slStream    :: [BS.ByteString]
@@ -190,6 +193,7 @@ emptyScanline width components = Scanline
 An image stream is a structure holding samples from an image stream while
 allowing easier handling when applying predictors.
 -}
+type ImageStream :: Type
 data ImageStream = ImageStream
   { iWidth            :: Int
   , iComponents       :: Int
@@ -202,6 +206,7 @@ data ImageStream = ImageStream
 A `Samples` is a utilitary structure used to facilitate computations of
 predictors. It holds a sample and it’s 3 preceding samples.
 -}
+type Samples :: Type
 data Samples = Samples
   { sUpperLeft :: Word8
   , sAbove     :: Word8
@@ -213,6 +218,7 @@ data Samples = Samples
 A predictor function is a function taking samples as input and returning the
 resulting sample.
 -}
+type PredictorFunc :: Type
 type PredictorFunc = Samples -> Word8
 
 {- |
@@ -268,6 +274,7 @@ unpredictF PNGPaeth =
   \s -> sCurrent s + paethBest (sLeft s) (sAbove s) (sUpperLeft s)
 unpredictF _anyOtherPredictor = sCurrent
 
+type EntropyType :: Type
 data EntropyType = EntropyShannon | EntropyDeflate deriving stock Eq
 
 scanlineEntropy :: EntropyType -> Scanline -> Double

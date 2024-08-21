@@ -13,6 +13,7 @@ module Pdf.Object.Container
   , getFilters
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.Map.Strict               as Map
 import qualified Data.Sequence                 as SQ
 import           Pdf.Object.Object              ( PDFObject
@@ -64,6 +65,7 @@ deepMap fn container = case container of
 {- |
 A filter with its parameters.
 -}
+type Filter :: Type
 data Filter = Filter
   { fFilter      :: !PDFObject
   , fDecodeParms :: !PDFObject
@@ -74,6 +76,7 @@ hasNoDecodeParms :: Filter -> Bool
 hasNoDecodeParms = (== PDFNull) . fDecodeParms
 
 -- | A list of `Filter`.
+type FilterList :: Type
 type FilterList = SQ.Seq Filter
 
 -- | Create a `FilterList`.

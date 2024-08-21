@@ -15,6 +15,7 @@ module Pdf.Document.Collection
   , ObjectOffsets
   ) where
 
+import           Data.Kind                      ( Type )
 import qualified Data.ByteString               as BS
 import qualified Data.IntMap.Strict            as IM
 import           Pdf.Object.Object              ( PDFObject
@@ -33,6 +34,7 @@ import           Pdf.Document.Document          ( PDFDocument
 import           Data.List                      ( find )
 
 -- | A collection of objects indexed by the object number
+type PDFObjects :: Type
 type PDFObjects = IM.IntMap PDFObject
 
 toPDFDocument :: PDFObjects -> PDFDocument
@@ -59,9 +61,11 @@ findLast :: (PDFObject -> Bool) -> PDFObjects -> Maybe PDFObject
 findLast p = find p . fmap snd . IM.toDescList
 
 -- | A collection of object offsets indexed by the object number
+type ObjectOffsets :: Type
 type ObjectOffsets = IM.IntMap Int
 
 -- | An object that has been encoded
+type EncodedObject :: Type
 data EncodedObject = EncodedObject
   { eoObjectNumber :: !Int           -- ^ Object number
   , eoObjectLength :: !Int           -- ^ Object length (in bytes)
@@ -70,6 +74,7 @@ data EncodedObject = EncodedObject
   deriving stock (Eq, Show)
 
 -- | A collection of encoded objects with no duplicate
+type EncodedObjects :: Type
 type EncodedObjects = IM.IntMap EncodedObject
 
 instance Ord EncodedObject where

@@ -16,9 +16,9 @@ module Pdf.Document.Document
   , findLast
   ) where
 
+import           Data.Kind                      ( Type )
 import           Control.Applicative            ( (<|>)
                                                 , Alternative
-                                                , liftA2
                                                 )
 import           Data.Foldable                  ( foldl' )
 import qualified Data.Set.Ordered              as OS
@@ -37,6 +37,7 @@ import           Util.UnifiedError              ( FallibleT )
 This is a simple trick to allow `PDFDocument` to be foldable because it is not
 of kind '* -> *' as required by the Foldable class.
 -}
+type CollectionOf :: Type -> Type
 newtype CollectionOf a = CollectionOf (OS.OSet a) deriving stock (Eq, Show)
 
 {- |
@@ -45,6 +46,7 @@ having no duplicates.
 
 Every function working on `CollectionOf` works on `PDFDocument`.
 -}
+type PDFDocument :: Type
 type PDFDocument = CollectionOf PDFObject
 
 instance Foldable CollectionOf where

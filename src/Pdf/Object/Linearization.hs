@@ -19,6 +19,7 @@ module Pdf.Object.Linearization
   , getLinearization
   ) where
 
+import           Data.Kind                      ( Type )
 import           Control.Monad                  ( msum )
 import qualified Data.Map.Strict               as Map
 import qualified Data.Sequence                 as SQ
@@ -33,6 +34,7 @@ import           Pdf.Object.Object              ( PDFObject
                                                   )
                                                 )
 
+type Linearization :: Type
 data Linearization = Linearization
   { lnVersion               :: !Double
     -- ^ A version identification for the linearized format.
