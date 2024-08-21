@@ -2,21 +2,15 @@ module Pdf.Object.StringSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFString
-                                                  , PDFHexString
-                                                  )
-                                                , fromPDFObject
-                                                )
-import           Pdf.Object.String              ( optimizeString )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Control.Monad.Trans.Except     ( runExceptT )
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFHexString, PDFString), fromPDFObject)
+import Pdf.Object.String (optimizeString)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 stringExamples :: [(PDFObject, BS.ByteString)]
 stringExamples =

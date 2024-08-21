@@ -1,37 +1,25 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE LambdaCase #-}
 
 module Pdf.Object.LinearizationSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Document.Document          ( PDFDocument )
-import           Pdf.Document.Parser            ( pdfParse )
-import           Pdf.Object.Linearization       ( Linearization
-                                                  ( Linearization
-                                                  , lnFileLength
-                                                  , lnFirstPageEndOffset
-                                                  , lnFirstPageNumber
-                                                  , lnFirstPageObjectNumber
-                                                  , lnNumberOfPages
-                                                  , lnOverflowHintLength
-                                                  , lnOverflowHintOffset
-                                                  , lnPrimaryHintLength
-                                                  , lnPrimaryHintOffset
-                                                  , lnVersion
-                                                  , lnXRefFirstEntryOffset
-                                                  )
-                                                , getLinearization
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Control.Monad.Trans.Except     ( runExceptT )
-import           Util.Logging                   ( Logging )
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Document.Document (PDFDocument)
+import Pdf.Document.Parser (pdfParse)
+import Pdf.Object.Linearization
+    ( Linearization (Linearization, lnFileLength, lnFirstPageEndOffset, lnFirstPageNumber, lnFirstPageObjectNumber, lnNumberOfPages, lnOverflowHintLength, lnOverflowHintOffset, lnPrimaryHintLength, lnPrimaryHintOffset, lnVersion, lnXRefFirstEntryOffset)
+    , getLinearization
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Logging (Logging)
 
 linearizationExamples :: [(BS.ByteString, Maybe Linearization)]
 linearizationExamples =

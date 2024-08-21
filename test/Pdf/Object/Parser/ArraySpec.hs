@@ -2,20 +2,17 @@ module Pdf.Object.Parser.ArraySpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Object.Parser.Container    ( arrayP )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFNumber
-                                                  , PDFName
-                                                  , PDFString
-                                                  , PDFReference
-                                                  )
-                                                , mkPDFArray
-                                                )
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object
+    ( PDFObject (PDFName, PDFNumber, PDFReference, PDFString)
+    , mkPDFArray
+    )
+import Pdf.Object.Parser.Container (arrayP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 arrayExamples :: [(BS.ByteString, PDFObject)]
 arrayExamples =

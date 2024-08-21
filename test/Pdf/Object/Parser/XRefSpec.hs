@@ -2,20 +2,19 @@ module Pdf.Object.Parser.XRefSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Object.Parser.XRef         ( xrefP )
-import           Pdf.Object.Object              ( PDFObject(PDFXRef)
-                                                , XRefState
-                                                  ( InUseEntry
-                                                  , FreeEntry
-                                                  )
-                                                , XRefEntry(XRefEntry)
-                                                , XRefSubsection(XRefSubsection)
-                                                )
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object
+    ( PDFObject (PDFXRef)
+    , XRefEntry (XRefEntry)
+    , XRefState (FreeEntry, InUseEntry)
+    , XRefSubsection (XRefSubsection)
+    )
+import Pdf.Object.Parser.XRef (xrefP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 
 xrefExamples :: [(BS.ByteString, PDFObject)]

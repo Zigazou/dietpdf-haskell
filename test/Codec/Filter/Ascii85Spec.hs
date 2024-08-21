@@ -2,24 +2,17 @@ module Codec.Filter.Ascii85Spec
   ( spec
   ) where
 
-import           Codec.Filter.Ascii85           ( decode
-                                                , encode
-                                                )
-import           Control.Monad                  ( forM
-                                                , forM_
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Test.QuickCheck                ( Gen
-                                                , arbitrary
-                                                , forAll
-                                                )
-import           Util.UnifiedError                    ( UnifiedError )
+import Codec.Filter.Ascii85 (decode, encode)
+
+import Control.Monad (forM, forM_)
+
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.QuickCheck (Gen, arbitrary, forAll)
+
+import Util.UnifiedError (UnifiedError)
 
 decodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
 decodeExamples =

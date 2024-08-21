@@ -19,6 +19,7 @@ module Pdf.Document.ObjectStream
   , explodeDocument
   , insert
   , isObjectStreamable
+  , explodeList
   ) where
 
 import Control.Applicative ((<|>))
@@ -132,25 +133,25 @@ Any other object is kept as is.
 -}
 explodeDocument :: Logging m => PDFDocument -> FallibleT m PDFDocument
 explodeDocument = (<&> D.fromList) . explodeList . D.toList
- where
-  extractList :: Logging m => ObjectStream -> FallibleT m [PDFObject]
-  extractList (ObjectStream _ _ indices objects) = do
-    numOffsets <- parseObjectNumberOffsets indices
-    exploded   <- forM numOffsets $ \(NumberOffset objectNumber offset) -> do
-      case parseOnly oneObjectP (BS.drop offset objects) of
-        Left  msg    -> throwE $! ParseError ("", fromIntegral offset, msg)
-        Right object -> return $! PDFIndirectObject objectNumber 0 object
-    return $! exploded
 
-  explodeList :: Logging m => [PDFObject] -> FallibleT m [PDFObject]
-  explodeList (objstm@PDFObjectStream{} : xs) = do
-    extracted <- getObjectStream objstm >>= extractList
-    remains   <- explodeList xs
-    return (extracted ++ remains)
-  explodeList (object : xs) = do
-    remains <- explodeList xs
-    return (object : remains)
-  explodeList [] = return []
+extractList :: Logging m => ObjectStream -> FallibleT m [PDFObject]
+extractList (ObjectStream _ _ indices objects) = do
+  numOffsets <- parseObjectNumberOffsets indices
+  exploded   <- forM numOffsets $ \(NumberOffset objectNumber offset) -> do
+    case parseOnly oneObjectP (BS.drop offset objects) of
+      Left  msg    -> throwE $! ParseError ("", fromIntegral offset, msg)
+      Right object -> return $! PDFIndirectObject objectNumber 0 object
+  return $! exploded
+
+explodeList :: Logging m => [PDFObject] -> FallibleT m [PDFObject]
+explodeList (objstm@PDFObjectStream{} : xs) = do
+  extracted <- getObjectStream objstm >>= extractList
+  remains   <- explodeList xs
+  return (extracted ++ remains)
+explodeList (object : xs) = do
+  remains <- explodeList xs
+  return (object : remains)
+explodeList [] = return []
 
 getObjectStream :: Logging m => PDFObject -> FallibleT m ObjectStream
 getObjectStream object = do

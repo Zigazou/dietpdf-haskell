@@ -2,14 +2,13 @@ module Codec.Compression.XMLSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Codec.Compression.XML          ( optimizeXML )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Codec.Compression.XML (optimizeXML)
+
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 xmlExamples :: [(BS.ByteString, BS.ByteString)]
 xmlExamples =

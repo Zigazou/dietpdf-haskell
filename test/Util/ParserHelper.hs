@@ -9,20 +9,22 @@ module Util.ParserHelper
   )
 where
 
-import           Control.Monad                  ( unless )
-import           Data.Binary.Parser             ( parseDetail
-                                                , ByteOffset
-                                                , Get
-                                                )
-import           Test.Hspec                     ( HasCallStack
-                                                , Expectation
-                                                , expectationFailure
-                                                , shouldBe
-                                                , it
-                                                , SpecWith
-                                                )
-import qualified Data.ByteString               as BS
+import Control.Monad (unless)
 
+import Data.Binary.Parser (ByteOffset, Get, parseDetail)
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
+
+import Test.Hspec
+    ( Expectation
+    , HasCallStack
+    , SpecWith
+    , expectationFailure
+    , it
+    , shouldBe
+    )
+
+type ParseDetailResult :: Type -> Type
 type ParseDetailResult a
   = Either (BS.ByteString, ByteOffset, String) (BS.ByteString, ByteOffset, a)
 

@@ -2,41 +2,22 @@ module Pdf.Document.ObjectStreamSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import           Pdf.Document.Document          ( PDFDocument
-                                                , fromList
-                                                )
-import           Pdf.Document.ObjectStream      ( insert
-                                                , explodeList
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFName
-                                                  , PDFNull
-                                                  , PDFNumber
-                                                  , PDFObjectStream
-                                                  , PDFString
-                                                  , PDFDictionary
-                                                  , PDFHexString
-                                                  , PDFArray
-                                                  )
-                                                , mkPDFDictionary
-                                                , mkPDFArray
-                                                )
-import           Util.Dictionary                ( mkDictionary
-                                                , mkEmptyDictionary
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Util.UnifiedError              ( UnifiedError(NoObjectToEncode)
-                                                , Fallible
-                                                )
-import           Control.Monad.Trans.Except     ( runExceptT )
-import           Util.Array                     ( mkArray )
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
+
+import Pdf.Document.Document (PDFDocument, fromList)
+import Pdf.Document.ObjectStream (explodeList, insert)
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFDictionary, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFString)
+    , mkPDFArray
+    , mkPDFDictionary
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Array (mkArray)
+import Util.Dictionary (mkDictionary, mkEmptyDictionary)
+import Util.UnifiedError (Fallible, UnifiedError (NoObjectToEncode))
 
 fromObjectStreamExamples :: [(PDFObject, Fallible [PDFObject])]
 fromObjectStreamExamples =

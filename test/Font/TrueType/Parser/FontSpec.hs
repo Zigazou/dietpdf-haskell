@@ -2,47 +2,27 @@ module Font.TrueType.Parser.FontSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                , shouldBe
-                                                , it
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word32 )
-import           Font.TrueType.FontDirectory    ( FontDirectory
-                                                  ( FontDirectory
-                                                  , fdOffsetSubtable
-                                                  , fdTableDirectory
-                                                  )
-                                                , OffsetSubtable
-                                                  ( OffsetSubtable
-                                                  , osScalerType
-                                                  , osNumTables
-                                                  , osSearchRange
-                                                  , osEntrySelector
-                                                  , osRangeShift
-                                                  )
-                                                , TableEntry
-                                                  ( TableEntry
-                                                  , teTag
-                                                  , teChecksum
-                                                  , teOffset
-                                                  , teLength
-                                                  , teData
-                                                  )
-                                                , loadContent
-                                                , calcChecksum
-                                                , calcTableChecksum
-                                                )
-import           Font.TrueType.Parser.Font      ( ttfParse )
-import           Font.TrueType.ScalerType       ( ScalerType
-                                                  ( FontTrueType00010000
-                                                  )
-                                                )
-import           Font.TrueType.TableIdentifier  ( toTableIdentifier )
-import           Control.Monad                  ( forM_ )
-import           Util.Array                     ( mkArray )
-import           Font.TrueType.FontTable        ( FontTable(FTRaw) )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+import Data.Word (Word32)
+
+import Font.TrueType.FontDirectory
+    ( FontDirectory (FontDirectory, fdOffsetSubtable, fdTableDirectory)
+    , OffsetSubtable (OffsetSubtable, osEntrySelector, osNumTables, osRangeShift, osScalerType, osSearchRange)
+    , TableEntry (TableEntry, teChecksum, teData, teLength, teOffset, teTag)
+    , calcChecksum
+    , calcTableChecksum
+    , loadContent
+    )
+import Font.TrueType.FontTable (FontTable (FTRaw))
+import Font.TrueType.Parser.Font (ttfParse)
+import Font.TrueType.ScalerType (ScalerType (FontTrueType00010000))
+import Font.TrueType.TableIdentifier (toTableIdentifier)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Array (mkArray)
 
 fontExamples :: [(FilePath, FontDirectory)]
 fontExamples =

@@ -2,25 +2,17 @@ module Codec.Compression.FlateSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_
-                                                , forM
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Codec.Compression.Flate        ( compress
-                                                , decompress
-                                                )
-import           Util.UnifiedError                    ( UnifiedError(FlateDecodeError)
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Test.QuickCheck                ( Gen
-                                                , arbitrary
-                                                , forAll
-                                                )
+import Codec.Compression.Flate (compress, decompress)
+
+import Control.Monad (forM, forM_)
+
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.QuickCheck (Gen, arbitrary, forAll)
+
+import Util.UnifiedError (UnifiedError (FlateDecodeError))
 
 errorExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
 errorExamples =

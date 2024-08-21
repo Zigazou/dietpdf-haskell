@@ -2,13 +2,14 @@ module Pdf.Graphics.Parser.NumberSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Graphics.Parser.Number     ( numberP )
-import           Pdf.Graphics.Object            ( GFXObject(GFXNumber) )
+import Data.ByteString qualified as BS
+
+import Pdf.Graphics.Object (GFXObject (GFXNumber))
+import Pdf.Graphics.Parser.Number (numberP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 numberExamples :: [(BS.ByteString, GFXObject)]
 numberExamples =

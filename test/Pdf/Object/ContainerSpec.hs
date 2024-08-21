@@ -4,33 +4,26 @@ module Pdf.Object.ContainerSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFName
-                                                  , PDFNull
-                                                  , PDFNumber
-                                                  , PDFString
-                                                  )
-                                                , mkPDFArray
-                                                , mkPDFDictionary
-                                                , mkEmptyPDFDictionary
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
 
-import           Pdf.Object.Container           ( Filter(Filter)
-                                                , FilterList
-                                                , mkFilterList
-                                                , deepMap
-                                                , setFilters
-                                                )
-import           Util.UnifiedError              ( FallibleT
-                                                )
-import           Control.Monad.Trans.Except     ( runExceptT )
+import Pdf.Object.Container
+    ( Filter (Filter)
+    , FilterList
+    , deepMap
+    , mkFilterList
+    , setFilters
+    )
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFString)
+    , mkEmptyPDFDictionary
+    , mkPDFArray
+    , mkPDFDictionary
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.UnifiedError (FallibleT)
 
 deepMapExamples
   :: [(PDFObject, PDFObject -> FallibleT IO PDFObject, PDFObject)]

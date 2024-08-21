@@ -2,14 +2,15 @@ module Pdf.Graphics.Parser.CommentSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                )
-import qualified Data.ByteString               as BS
-import           Pdf.Graphics.Object            ( GFXObject(GFXComment) )
-import           Data.Binary.Parser             ( endOfInput )
-import           Pdf.Graphics.Parser.Comment    ( commentP )
-import           Util.ParserHelper              ( itWith )
+import Data.Binary.Parser (endOfInput)
+import Data.ByteString qualified as BS
+
+import Pdf.Graphics.Object (GFXObject (GFXComment))
+import Pdf.Graphics.Parser.Comment (commentP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 commentExamples :: [(BS.ByteString, GFXObject)]
 commentExamples =

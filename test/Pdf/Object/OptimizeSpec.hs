@@ -2,25 +2,22 @@ module Pdf.Object.OptimizeSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString.Lazy          as BL
-import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObjectWithStream
-                                                  , PDFNumber
-                                                  , PDFName
-                                                  )
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import qualified Codec.Compression.Zlib        as ZL
-import qualified Codec.Compression.RunLength   as RL
-import           Pdf.Object.Optimize            ( optimize )
-import           Data.Either.Extra              ( fromRight )
-import           Control.Monad.Trans.Except     ( runExceptT )
+import Codec.Compression.RunLength qualified as RL
+import Codec.Compression.Zlib qualified as ZL
+
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
+
+import Data.ByteString.Lazy qualified as BL
+import Data.Either.Extra (fromRight)
+import Data.Map.Strict qualified as Map
+
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObjectWithStream, PDFName, PDFNumber)
+    )
+import Pdf.Object.Optimize (optimize)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 
 objectExamples :: [(PDFObject, PDFObject)]

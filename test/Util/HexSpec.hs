@@ -2,16 +2,13 @@ module Util.HexSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Util.Hex                       ( fromHexDigits
-                                                , toHexDigits
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Hex (fromHexDigits, toHexDigits)
 
 fromHexDigitsExamples :: [(BS.ByteString, BS.ByteString)]
 fromHexDigitsExamples =

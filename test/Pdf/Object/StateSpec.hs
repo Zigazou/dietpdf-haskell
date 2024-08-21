@@ -2,38 +2,25 @@ module Pdf.Object.StateSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFEndOfFile
-                                                  , PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFName
-                                                  , PDFNull
-                                                  , PDFNumber
-                                                  , PDFObjectStream
-                                                  )
-                                                , mkEmptyPDFArray
-                                                , mkPDFArray
-                                                , mkEmptyPDFDictionary
-                                                , mkPDFDictionary
-                                                )
-import           Util.Dictionary                ( mkDictionary
-                                                , mkEmptyDictionary
-                                                )
-import           Pdf.Object.State               ( embedObject
-                                                , setMaybe
-                                                , setStream
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Util.UnifiedError              ( FallibleT )
-import           Util.Logging                   ( Logging )
-import           Control.Monad.Trans.Except     ( runExceptT )
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
+
+import Data.Map.Strict qualified as Map
+
+import Pdf.Object.Object
+    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream)
+    , mkEmptyPDFArray
+    , mkEmptyPDFDictionary
+    , mkPDFArray
+    , mkPDFDictionary
+    )
+import Pdf.Object.State (embedObject, setMaybe, setStream)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Dictionary (mkDictionary, mkEmptyDictionary)
+import Util.Logging (Logging)
+import Util.UnifiedError (FallibleT)
 
 setMaybeExamples
   :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]

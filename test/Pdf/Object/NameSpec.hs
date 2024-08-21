@@ -3,16 +3,13 @@ module Pdf.Object.NameSpec
   )
 where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject(PDFName)
-                                                , fromPDFObject
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFName), fromPDFObject)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 nameExamples :: [(PDFObject, BS.ByteString)]
 nameExamples =

@@ -2,37 +2,18 @@ module Font.TrueType.Parser.HeadSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                , shouldBe
-                                                , it
-                                                )
-import           Data.Binary.Parser             ( parseOnly )
-import qualified Data.ByteString               as BS
-import           Font.TrueType.Parser.Head      ( headP )
-import           Font.TrueType.FontTable        ( Head
-                                                  ( Head
-                                                  , hVersion
-                                                  , hFontRevision
-                                                  , hCheckSumAdjustment
-                                                  , hMagicNumber
-                                                  , hFlags
-                                                  , hUnitsPerEm
-                                                  , hCreated
-                                                  , hModified
-                                                  , hXMin
-                                                  , hYMin
-                                                  , hXMax
-                                                  , hYMax
-                                                  , hMacStyle
-                                                  , hLowestRecPPEM
-                                                  , hFontDirectionHint
-                                                  , hIndexToLocFormat
-                                                  , hGlyphDataFormat
-                                                  )
-                                                , Fixed(Fixed)
-                                                )
-import           Control.Monad                  ( forM_ )
+import Control.Monad (forM_)
+
+import Data.Binary.Parser (parseOnly)
+import Data.ByteString qualified as BS
+
+import Font.TrueType.FontTable
+    ( Fixed (Fixed)
+    , Head (Head, hCheckSumAdjustment, hCreated, hFlags, hFontDirectionHint, hFontRevision, hGlyphDataFormat, hIndexToLocFormat, hLowestRecPPEM, hMacStyle, hMagicNumber, hModified, hUnitsPerEm, hVersion, hXMax, hXMin, hYMax, hYMin)
+    )
+import Font.TrueType.Parser.Head (headP)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 headPExamples :: [(BS.ByteString, Head)]
 headPExamples =

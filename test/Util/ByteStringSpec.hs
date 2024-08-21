@@ -2,17 +2,13 @@ module Util.ByteStringSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Util.ByteString                ( splitRaw
-                                                , separateComponents
-                                                , groupComponents
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.ByteString (groupComponents, separateComponents, splitRaw)
 
 splitRawExamples :: [(BS.ByteString, Int, [BS.ByteString])]
 splitRawExamples =

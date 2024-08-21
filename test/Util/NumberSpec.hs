@@ -2,18 +2,13 @@ module Util.NumberSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Util.Number                    ( toNumber
-                                                , fromNumber
-                                                , bytesNeededToEncode
-                                                , encodeIntToBytes
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Number (bytesNeededToEncode, encodeIntToBytes, fromNumber, toNumber)
 
 toNumberExamples :: [(BS.ByteString, Int)]
 toNumberExamples =

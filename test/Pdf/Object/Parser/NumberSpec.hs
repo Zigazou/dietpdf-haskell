@@ -2,13 +2,14 @@ module Pdf.Object.Parser.NumberSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Object.Parser.Number       ( numberP )
-import           Pdf.Object.Object              ( PDFObject(PDFNumber) )
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFNumber))
+import Pdf.Object.Parser.Number (numberP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 numberExamples :: [(BS.ByteString, PDFObject)]
 numberExamples =

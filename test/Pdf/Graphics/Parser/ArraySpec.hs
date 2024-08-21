@@ -2,20 +2,17 @@ module Pdf.Graphics.Parser.ArraySpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Graphics.Parser.Container    ( arrayP )
-import           Pdf.Graphics.Object              ( GFXObject
-                                                  ( GFXNumber
-                                                  , GFXName
-                                                  , GFXString
-                                                  , GFXReference
-                                                  )
-                                                , mkGFXArray
-                                                )
+import Data.ByteString qualified as BS
+
+import Pdf.Graphics.Object
+    ( GFXObject (GFXName, GFXNumber, GFXReference, GFXString)
+    , mkGFXArray
+    )
+import Pdf.Graphics.Parser.Container (arrayP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 arrayExamples :: [(BS.ByteString, GFXObject)]
 arrayExamples =

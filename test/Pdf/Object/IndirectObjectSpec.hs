@@ -2,19 +2,16 @@ module Pdf.Object.IndirectObjectSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFNumber
-                                                  )
-                                                , fromPDFObject
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFNumber)
+    , fromPDFObject
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 indirectObjectExamples :: [(PDFObject, BS.ByteString)]
 indirectObjectExamples =

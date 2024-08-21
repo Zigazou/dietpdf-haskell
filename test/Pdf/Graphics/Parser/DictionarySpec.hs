@@ -2,21 +2,19 @@ module Pdf.Graphics.Parser.DictionarySpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Graphics.Parser.Container  ( dictionaryP )
-import           Pdf.Graphics.Object            ( GFXObject
-                                                  ( GFXNumber
-                                                  , GFXReference
-                                                  , GFXName
-                                                  )
-                                                , mkGFXArray
-                                                , mkGFXDictionary
-                                                , mkEmptyGFXDictionary
-                                                )
+import Data.ByteString qualified as BS
+
+import Pdf.Graphics.Object
+    ( GFXObject (GFXName, GFXNumber, GFXReference)
+    , mkEmptyGFXDictionary
+    , mkGFXArray
+    , mkGFXDictionary
+    )
+import Pdf.Graphics.Parser.Container (dictionaryP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 dictionaryExamples :: [(BS.ByteString, GFXObject)]
 dictionaryExamples =

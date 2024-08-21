@@ -2,18 +2,15 @@ module Pdf.Object.Parser.NameSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , it
-                                                , Spec
-                                                )
-import           Data.Binary.Parser             ( parseDetail )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( shouldBeParsedAs
-                                                , shouldBeFullyParsed
-                                                , itWith
-                                                )
-import           Pdf.Object.Parser.Name         ( nameP )
-import           Pdf.Object.Object              ( PDFObject(PDFName) )
+import Data.Binary.Parser (parseDetail)
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFName))
+import Pdf.Object.Parser.Name (nameP)
+
+import Test.Hspec (Spec, describe, it)
+
+import Util.ParserHelper (itWith, shouldBeFullyParsed, shouldBeParsedAs)
 
 nameExamples :: [(BS.ByteString, PDFObject)]
 nameExamples =

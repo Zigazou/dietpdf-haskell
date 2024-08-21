@@ -2,14 +2,14 @@ module Pdf.Object.Parser.StartXRefSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
+import Data.ByteString qualified as BS
 
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Object.Parser.StartXRef    ( startXRefP )
-import           Pdf.Object.Object              ( PDFObject(PDFStartXRef) )
+import Pdf.Object.Object (PDFObject (PDFStartXRef))
+import Pdf.Object.Parser.StartXRef (startXRefP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 startXRefExamples :: [(BS.ByteString, PDFObject)]
 startXRefExamples = [("startxref\n\

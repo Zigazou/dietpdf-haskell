@@ -3,16 +3,13 @@ module Pdf.Object.NumberSpec
   )
 where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject(PDFNumber)
-                                                , fromPDFObject
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFNumber), fromPDFObject)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 numberExamples :: [(PDFObject, BS.ByteString)]
 numberExamples =

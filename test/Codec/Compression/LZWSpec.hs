@@ -3,16 +3,13 @@ module Codec.Compression.LZWSpec
   ) where
 
 
-import qualified Data.ByteString               as BS
-import           Codec.Compression.LZW          ( decompress )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldSatisfy
-                                                , shouldBe
-                                                )
+import Codec.Compression.LZW (decompress)
 
-import           Control.Monad                  ( forM_ )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)
 
 errorExamples :: [BS.ByteString]
 errorExamples =
@@ -29,7 +26,7 @@ examples =
   ]
 
 isLeft :: Either a b -> Bool
-isLeft (Left _) = True
+isLeft (Left _)   = True
 isLeft (Right _ ) = False
 
 spec :: Spec

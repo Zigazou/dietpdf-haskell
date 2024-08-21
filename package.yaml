@@ -14,9 +14,6 @@ extra-source-files:
 # synopsis:            Short description of your package
 # category:            Web
 
-# To avoid duplicated efforts in documentation and dealing with the
-# complications of embedding Haddock markup inside cabal files, it is
-# common to point users to the README.md file.
 description: Please see the README on GitHub at <https://github.com/zigazou/dietpdf#readme>
 
 dependencies:
@@ -137,6 +134,7 @@ tests:
     - FlexibleContexts
     - MultiWayIf
     - TupleSections
+    - ImportQualifiedPost
     dependencies:
     - dietpdf
     - hspec

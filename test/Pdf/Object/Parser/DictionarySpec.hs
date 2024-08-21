@@ -2,23 +2,19 @@ module Pdf.Object.Parser.DictionarySpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Object.Parser.Container    ( dictionaryP )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFNumber
-                                                  , PDFReference
-                                                  , PDFName
-                                                  , PDFHexString
-                                                  , PDFString
-                                                  )
-                                                , mkPDFArray
-                                                , mkPDFDictionary
-                                                , mkEmptyPDFDictionary
-                                                )
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object
+    ( PDFObject (PDFHexString, PDFName, PDFNumber, PDFReference, PDFString)
+    , mkEmptyPDFDictionary
+    , mkPDFArray
+    , mkPDFDictionary
+    )
+import Pdf.Object.Parser.Container (dictionaryP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 dictionaryExamples :: [(BS.ByteString, PDFObject)]
 dictionaryExamples =

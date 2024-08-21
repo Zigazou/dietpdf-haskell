@@ -2,19 +2,14 @@ module Pdf.Graphics.Parser.LooseEndOfLineSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                )
-import qualified Data.ByteString               as BS
-import           Pdf.Graphics.Parser.LooseEndOfLine
-                                                ( looseEndOfLineP
-                                                , isLooseEndOfLine
-                                                )
-import           Data.Binary.Parser             ( sepBy
-                                                , some'
-                                                , takeTill
-                                                )
-import           Util.ParserHelper              ( itWith )
+import Data.Binary.Parser (sepBy, some', takeTill)
+import Data.ByteString qualified as BS
+
+import Pdf.Graphics.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 leolExamples :: [(BS.ByteString, [BS.ByteString])]
 leolExamples =

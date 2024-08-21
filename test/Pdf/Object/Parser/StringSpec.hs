@@ -2,18 +2,15 @@ module Pdf.Object.Parser.StringSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , it
-                                                , Spec
-                                                )
+import Data.Binary.Parser (parseDetail)
+import Data.ByteString qualified as BS
 
-import           Data.Binary.Parser             ( parseDetail )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( shouldFail
-                                                , itWith
-                                                )
-import           Pdf.Object.Parser.String       ( stringP )
-import           Pdf.Object.Object              ( PDFObject(PDFString) )
+import Pdf.Object.Object (PDFObject (PDFString))
+import Pdf.Object.Parser.String (stringP)
+
+import Test.Hspec (Spec, describe, it)
+
+import Util.ParserHelper (itWith, shouldFail)
 
 
 stringExamples :: [(BS.ByteString, PDFObject)]

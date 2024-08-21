@@ -2,27 +2,21 @@ module Pdf.Object.DictionarySpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFBool
-                                                  , PDFIndirectObject
-                                                  , PDFName
-                                                  , PDFNumber
-                                                  , PDFTrailer
-                                                  )
-                                                , fromPDFObject
-                                                , mkEmptyPDFDictionary
-                                                , mkPDFDictionary
-                                                , mkPDFArray
-                                                )
-import           Pdf.Object.State               ( getValue )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Control.Monad.Trans.Except     ( runExceptT )
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object
+    ( PDFObject (PDFBool, PDFIndirectObject, PDFName, PDFNumber, PDFTrailer)
+    , fromPDFObject
+    , mkEmptyPDFDictionary
+    , mkPDFArray
+    , mkPDFDictionary
+    )
+import Pdf.Object.State (getValue)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 dictionaryExamples :: [(PDFObject, BS.ByteString)]
 dictionaryExamples =

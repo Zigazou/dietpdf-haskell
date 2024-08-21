@@ -2,27 +2,18 @@ module Pdf.Parser.IndirectObjectSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Object.Parser.IndirectObject
-                                                ( indirectObjectP )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFNumber
-                                                  , PDFDictionary
-                                                  , PDFReference
-                                                  , PDFName
-                                                  , PDFArray
-                                                  , PDFString
-                                                  , PDFXRefStream
-                                                  )
-                                                )
-import           Util.Dictionary                ( mkDictionary )
-import           Util.Array                     ( mkArray )
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFReference, PDFString, PDFXRefStream)
+    )
+import Pdf.Object.Parser.IndirectObject (indirectObjectP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.Array (mkArray)
+import Util.Dictionary (mkDictionary)
+import Util.ParserHelper (itWith)
 
 indirectObjectExamples :: [(BS.ByteString, PDFObject)]
 indirectObjectExamples =

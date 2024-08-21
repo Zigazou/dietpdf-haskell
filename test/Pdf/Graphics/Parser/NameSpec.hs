@@ -2,18 +2,15 @@ module Pdf.Graphics.Parser.NameSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , it
-                                                , Spec
-                                                )
-import           Data.Binary.Parser             ( parseDetail )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( shouldBeParsedAs
-                                                , shouldBeFullyParsed
-                                                , itWith
-                                                )
-import           Pdf.Graphics.Parser.Name       ( nameP )
-import           Pdf.Graphics.Object            ( GFXObject(GFXName) )
+import Data.Binary.Parser (parseDetail)
+import Data.ByteString qualified as BS
+
+import Pdf.Graphics.Object (GFXObject (GFXName))
+import Pdf.Graphics.Parser.Name (nameP)
+
+import Test.Hspec (Spec, describe, it)
+
+import Util.ParserHelper (itWith, shouldBeFullyParsed, shouldBeParsedAs)
 
 nameExamples :: [(BS.ByteString, GFXObject)]
 nameExamples =

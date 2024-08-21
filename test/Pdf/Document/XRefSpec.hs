@@ -2,37 +2,29 @@ module Pdf.Document.XRefSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.IntMap.Strict            as IM
-import           Pdf.Document.Collection        ( EncodedObject(EncodedObject)
-                                                , EncodedObjects
-                                                , ObjectOffsets
-                                                )
-import           Pdf.Document.Document          ( fromList )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFXRef
-                                                  , PDFXRefStream
-                                                  , PDFName
-                                                  )
-                                                , XRefEntry(XRefEntry)
-                                                , XRefState
-                                                  ( FreeEntry
-                                                  , InUseEntry
-                                                  )
-                                                , XRefSubsection(XRefSubsection)
-                                                , mkPDFArray
-                                                , ToPDFNumber(mkPDFNumber)
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Pdf.Document.XRef              ( calcOffsets
-                                                , xrefTable
-                                                , xrefStreamTable
-                                                )
-import           Util.Dictionary                ( mkDictionary )
+import Control.Monad (forM_)
+
+import Data.IntMap.Strict qualified as IM
+
+import Pdf.Document.Collection
+    ( EncodedObject (EncodedObject)
+    , EncodedObjects
+    , ObjectOffsets
+    )
+import Pdf.Document.Document (fromList)
+import Pdf.Document.XRef (calcOffsets, xrefStreamTable, xrefTable)
+import Pdf.Object.Object
+    ( PDFObject (PDFName, PDFXRef, PDFXRefStream)
+    , ToPDFNumber (mkPDFNumber)
+    , XRefEntry (XRefEntry)
+    , XRefState (FreeEntry, InUseEntry)
+    , XRefSubsection (XRefSubsection)
+    , mkPDFArray
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Dictionary (mkDictionary)
 
 calcOffsetsExamples :: [(EncodedObjects, ObjectOffsets)]
 calcOffsetsExamples =

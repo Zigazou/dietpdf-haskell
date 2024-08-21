@@ -2,37 +2,25 @@ module Pdf.Parser.ParserSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , it
-                                                , Spec
-                                                , shouldBe
-                                                )
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Document.Document          ( PDFDocument
-                                                , fromList
-                                                )
-import           Pdf.Document.Parser            ( pdfParse )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFEndOfFile
-                                                  , PDFVersion
-                                                  , PDFDictionary
-                                                  , PDFNumber
-                                                  , PDFXRef
-                                                  , PDFTrailer
-                                                  , PDFReference
-                                                  , PDFHexString
-                                                  , PDFArray
-                                                  )
-                                                , XRefSubsection(XRefSubsection)
-                                                , XRefEntry(XRefEntry)
-                                                , XRefState(InUseEntry)
-                                                )
-import           Util.UnifiedError              ( UnifiedError )
-import           Util.Dictionary                ( mkDictionary )
-import           Util.Array                     ( mkArray )
-import           Control.Monad.Trans.Except     ( runExceptT )
+import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Document.Document (PDFDocument, fromList)
+import Pdf.Document.Parser (pdfParse)
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFNumber, PDFReference, PDFTrailer, PDFVersion, PDFXRef)
+    , XRefEntry (XRefEntry)
+    , XRefState (InUseEntry)
+    , XRefSubsection (XRefSubsection)
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Array (mkArray)
+import Util.Dictionary (mkDictionary)
+import Util.UnifiedError (UnifiedError)
 
 pdfParseExamples :: [(BS.ByteString, Either UnifiedError PDFDocument)]
 pdfParseExamples =

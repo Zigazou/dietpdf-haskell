@@ -3,16 +3,13 @@ module Pdf.Object.HexStringSpec
   )
 where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject(PDFHexString)
-                                                , fromPDFObject
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFHexString), fromPDFObject)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 hexStringExamples :: [(PDFObject, BS.ByteString)]
 hexStringExamples =

@@ -2,18 +2,15 @@ module Pdf.Graphics.Parser.StringSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , it
-                                                , Spec
-                                                )
+import Data.Binary.Parser (parseDetail)
+import Data.ByteString qualified as BS
 
-import           Data.Binary.Parser             ( parseDetail )
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( shouldFail
-                                                , itWith
-                                                )
-import           Pdf.Graphics.Parser.String     ( stringP )
-import           Pdf.Graphics.Object            ( GFXObject(GFXString) )
+import Pdf.Graphics.Object (GFXObject (GFXString))
+import Pdf.Graphics.Parser.String (stringP)
+
+import Test.Hspec (Spec, describe, it)
+
+import Util.ParserHelper (itWith, shouldFail)
 
 stringExamples :: [(BS.ByteString, GFXObject)]
 stringExamples =

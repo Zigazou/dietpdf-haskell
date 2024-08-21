@@ -2,41 +2,21 @@ module Pdf.Graphics.Parser.StreamSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , it
-                                                , Spec
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
 
-import qualified Data.ByteString               as BS
-import           Pdf.Graphics.Parser.Stream     ( gfxParse )
-import           Control.Monad                  ( forM_ )
-import           Pdf.Graphics.Object            ( GFXObject
-                                                  ( GFXString
-                                                  , GFXOperator
-                                                  , GFXNumber
-                                                  , GFXString
-                                                  , GFXComment
-                                                  , GFXName
-                                                  , GFXInlineImage
-                                                  )
-                                                , GSOperator
-                                                  ( GSBeginText
-                                                  , GSEndText
-                                                  , GSSetTextFont
-                                                  , GSSetTextMatrix
-                                                  , GSSetCharacterSpacing
-                                                  , GSSetWordSpacing
-                                                  , GSSetNonStrokeRGBColorspace
-                                                  , GSShowText
-                                                  , GSIntersectClippingPathEOR
-                                                  )
-                                                , mkGFXArray
-                                                )
-import           Util.Dictionary                ( mkDictionary )
-import           Util.Array                     ( Array
-                                                , mkArray
-                                                )
+import Data.ByteString qualified as BS
+
+import Pdf.Graphics.Object
+    ( GFXObject (GFXComment, GFXInlineImage, GFXName, GFXNumber, GFXOperator, GFXString, GFXString)
+    , GSOperator (GSBeginText, GSEndText, GSIntersectClippingPathEOR, GSSetCharacterSpacing, GSSetNonStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetWordSpacing, GSShowText)
+    , mkGFXArray
+    )
+import Pdf.Graphics.Parser.Stream (gfxParse)
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Array (Array, mkArray)
+import Util.Dictionary (mkDictionary)
 
 streamExamples :: [(BS.ByteString, Array GFXObject)]
 streamExamples =

@@ -4,16 +4,13 @@ module Util.LoggingSpec
   ( spec
   ) where
 
-import           Util.Logging                   ( say )
-import qualified Data.Text                     as T
-import           Control.Monad.Writer           ( Writer
-                                                , runWriter
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad.Writer (Writer, runWriter)
+
+import Data.Text qualified as T
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Logging (say)
 
 calc2 :: Int -> Writer [T.Text] Int
 calc2 n = do

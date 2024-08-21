@@ -2,25 +2,19 @@ module Codec.Compression.PredictorSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
-import           Codec.Compression.Predictor    ( predict
-                                                , unpredict
-                                                , entropyShannon
-                                                , EntropyType(EntropyShannon)
-                                                , Predictor
-                                                  ( TIFFNoPrediction
-                                                  , PNGNone
-                                                  , PNGSub
-                                                  , PNGUp
-                                                  , PNGAverage
-                                                  )
-                                                )
+import Codec.Compression.Predictor
+    ( EntropyType (EntropyShannon)
+    , Predictor (PNGAverage, PNGNone, PNGSub, PNGUp, TIFFNoPrediction)
+    , entropyShannon
+    , predict
+    , unpredict
+    )
+
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 predictorExamples :: [((Predictor, Int, Int), (BS.ByteString, BS.ByteString))]
 predictorExamples =

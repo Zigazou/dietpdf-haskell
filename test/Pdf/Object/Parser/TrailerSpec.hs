@@ -2,22 +2,15 @@ module Pdf.Object.Parser.TrailerSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( describe
-                                                , Spec
-                                                )
+import Data.ByteString qualified as BS
+import Data.Map.Strict (empty, fromList)
 
-import qualified Data.ByteString               as BS
-import           Util.ParserHelper              ( itWith )
-import           Pdf.Object.Parser.Trailer      ( trailerP )
-import           Data.Map.Strict                ( fromList
-                                                , empty
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFTrailer
-                                                  , PDFDictionary
-                                                  , PDFReference
-                                                  )
-                                                )
+import Pdf.Object.Object (PDFObject (PDFDictionary, PDFReference, PDFTrailer))
+import Pdf.Object.Parser.Trailer (trailerP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 trailerExamples :: [(BS.ByteString, PDFObject)]
 trailerExamples =

@@ -2,19 +2,15 @@ module Pdf.Object.Parser.CommentSpec
   ( spec
   ) where
 
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFComment
-                                                  , PDFEndOfFile
-                                                  , PDFVersion
-                                                  )
-                                                )
-import           Data.Binary.Parser             ( endOfInput )
-import           Pdf.Object.Parser.Comment      ( commentP )
-import           Util.ParserHelper              ( itWith )
+import Data.Binary.Parser (endOfInput)
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFComment, PDFEndOfFile, PDFVersion))
+import Pdf.Object.Parser.Comment (commentP)
+
+import Test.Hspec (Spec, describe)
+
+import Util.ParserHelper (itWith)
 
 commentExamples :: [(BS.ByteString, PDFObject)]
 commentExamples =

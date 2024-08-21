@@ -2,26 +2,16 @@ module Pdf.Document.DocumentSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import           Pdf.Document.Document          ( deepFind
-                                                , fromList
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFName
-                                                  , PDFNull
-                                                  , PDFNumber
-                                                  , PDFTrailer
-                                                  , PDFVersion
-                                                  )
-                                                , mkPDFArray
-                                                , mkPDFDictionary
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Pdf.Document.Document (deepFind, fromList)
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFTrailer, PDFVersion)
+    , mkPDFArray
+    , mkPDFDictionary
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 createExamples :: [([PDFObject], Int)]
 createExamples =

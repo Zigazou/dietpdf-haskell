@@ -2,22 +2,18 @@ module Pdf.Object.ArraySpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFBool
-                                                  , PDFName
-                                                  , PDFNumber
-                                                  )
-                                                , mkPDFArray
-                                                , mkEmptyPDFArray
-                                                , fromPDFObject
-                                                )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object
+    ( PDFObject (PDFBool, PDFName, PDFNumber)
+    , fromPDFObject
+    , mkEmptyPDFArray
+    , mkPDFArray
+    )
+
+import Test.Hspec (Spec, describe, it, shouldBe)
 
 arrayExamples :: [(PDFObject, BS.ByteString)]
 arrayExamples =

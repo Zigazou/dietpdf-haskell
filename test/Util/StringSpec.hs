@@ -2,14 +2,13 @@ module Util.StringSpec
   ( spec
   ) where
 
-import           Control.Monad                  ( forM_ )
-import qualified Data.ByteString               as BS
-import           Util.String                    ( hexStringToString )
-import           Test.Hspec                     ( Spec
-                                                , describe
-                                                , it
-                                                , shouldBe
-                                                )
+import Control.Monad (forM_)
+
+import Data.ByteString qualified as BS
+
+import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.String (hexStringToString)
 
 hexStringExamples :: [(BS.ByteString, BS.ByteString)]
 hexStringExamples =
