@@ -15,7 +15,7 @@ import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 
 import Pdf.Document.Collection (PDFObjects, toPDFDocument)
-import Pdf.Document.Document (PDFDocument, deepFind)
+import Pdf.Document.Document (PDFDocument, deepFind, member)
 import Pdf.Document.Uncompress (uncompressDocument, uncompressObjects)
 import Pdf.Object.Object
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFReference, PDFTrailer, PDFVersion)
@@ -99,21 +99,25 @@ removeUnused (PDFPartition indirectObjects heads trailers) = do
     , ppTrailers        = trailers
     }
  where
+  {-# INLINE isNotLinearized #-}
   isNotLinearized :: PDFObject -> Bool
   isNotLinearized = not . hasKey "Linearized"
 
+  {-# INLINE isReferenced #-}
   isReferenced :: PDFDocument -> PDFObject -> Bool
   isReferenced refs (PDFIndirectObject num gen _) =
-    PDFReference num gen `elem` refs
+    PDFReference num gen `member` refs
   isReferenced refs (PDFIndirectObjectWithStream num gen _ _) =
-    PDFReference num gen `elem` refs
+    PDFReference num gen `member` refs
   isReferenced refs (PDFObjectStream num gen _ _) =
-    PDFReference num gen `elem` refs
+    PDFReference num gen `member` refs
   isReferenced _anyRefs _anyOtherObject = True
 
+  {-# INLINE used #-}
   used :: PDFDocument -> PDFObject -> Bool
   used refs object = isNotLinearized object && isReferenced refs object
 
+  {-# INLINE isReference #-}
   isReference :: PDFObject -> Bool
   isReference PDFReference{}  = True
   isReference _anyOtherObject = False

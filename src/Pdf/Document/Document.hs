@@ -14,6 +14,7 @@ module Pdf.Document.Document
   , dSepBy
   , deepFind
   , findLast
+  , member
   ) where
 
 import Control.Applicative (Alternative, (<|>))
@@ -44,7 +45,11 @@ Every function working on `CollectionOf` works on `PDFDocument`.
 type PDFDocument :: Type
 type PDFDocument = CollectionOf PDFObject
 
+member :: Ord a => a -> CollectionOf a -> Bool
+member object (CollectionOf objects) = OS.member object objects
+
 instance Foldable CollectionOf where
+  {-# INLINE foldMap #-}
   foldMap :: Monoid m => (a -> m) -> CollectionOf a -> m
   foldMap f (CollectionOf dict) = foldMap f dict
 
@@ -154,11 +159,11 @@ Find every `PDFObject` satisfiying a predicate, even when deeply nested in
 containers.
 -}
 deepFind :: (PDFObject -> Bool) -> PDFDocument -> PDFDocument
-deepFind p = foldr walk mempty
+deepFind predicate = foldr walk mempty
  where
   walk :: PDFObject -> PDFDocument -> PDFDocument
   walk !object collection@(CollectionOf !objects)
-    | p object = CollectionOf (object OS.|< objects)
+    | predicate object = CollectionOf (object OS.|< objects)
     | otherwise = case object of
       (PDFTrailer eObject           ) -> walk eObject collection
       (PDFIndirectObject _ _ eObject) -> walk eObject collection
