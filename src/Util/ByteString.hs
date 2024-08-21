@@ -6,7 +6,7 @@ module Util.ByteString
   , sndLengthCompare
   ) where
 
-import qualified Data.ByteString               as BS
+import Data.ByteString qualified as BS
 
 {- |
 Split a `ByteString` in `ByteString` of specific length.
@@ -25,11 +25,11 @@ Divide a `ByteString` into `List` of (color) components.
 ["ADGJM", "BEHKN", "CFILO"]
 -}
 separateComponents :: Int -> BS.ByteString -> [BS.ByteString]
-separateComponents 1 raw = [raw]
+separateComponents 1 raw          = [raw]
 separateComponents components raw = BS.transpose (splitRaw components raw)
 
 {- |
-Group a `List` of `ByteString` (color components) into a `ByteString`. 
+Group a `List` of `ByteString` (color components) into a `ByteString`.
 
 >>> groupComponents ["ADGJM", "BEHKN", "CFILO"]
 "ABCDEFGHIJKLMNO"

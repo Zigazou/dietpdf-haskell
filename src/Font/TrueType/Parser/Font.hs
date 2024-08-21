@@ -3,34 +3,26 @@ module Font.TrueType.Parser.Font
   , fontDirectoryP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , parseOnly
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.UnifiedError                    ( UnifiedError
-                                                  ( UnknownScalerType
-                                                  )
-                                                )
-import           Font.TrueType.FontDirectory    ( FontDirectory(FontDirectory)
-                                                , OffsetSubtable
-                                                  ( OffsetSubtable
-                                                  , osScalerType
-                                                  , osNumTables
-                                                  )
-                                                , TableEntry(TableEntry)
-                                                , loadContent
-                                                )
-import           Data.Binary                    ( get )
-import           Font.TrueType.Parser.ScalerType
-                                                ( scalerTypeP )
-import           Font.TrueType.Parser.TableIdentifier
-                                                ( tableIdentifierP )
-import           Control.Monad                  ( when )
-import           Font.TrueType.ScalerType       ( isUnknown )
-import           Util.Array                     ( Array )
-import qualified Data.Sequence                 as SQ
-import           Font.TrueType.FontTable        ( FontTable(FTRaw) )
+import Control.Monad (when)
+
+import Data.Binary (get)
+import Data.Binary.Parser (Get, label, parseOnly)
+import Data.ByteString qualified as BS
+import Data.Sequence qualified as SQ
+
+import Font.TrueType.FontDirectory
+    ( FontDirectory (FontDirectory)
+    , OffsetSubtable (OffsetSubtable, osNumTables, osScalerType)
+    , TableEntry (TableEntry)
+    , loadContent
+    )
+import Font.TrueType.FontTable (FontTable (FTRaw))
+import Font.TrueType.Parser.ScalerType (scalerTypeP)
+import Font.TrueType.Parser.TableIdentifier (tableIdentifierP)
+import Font.TrueType.ScalerType (isUnknown)
+
+import Util.Array (Array)
+import Util.UnifiedError (UnifiedError (UnknownScalerType))
 
 offsetSubtableP :: Get OffsetSubtable
 offsetSubtableP =

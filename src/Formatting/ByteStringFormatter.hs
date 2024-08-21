@@ -5,11 +5,12 @@ module Formatting.ByteStringFormatter
   ( utf8
   ) where
 
-import qualified Data.ByteString               as BS
-import qualified Data.ByteString.UTF8          as BSU
-import qualified Data.Text.Lazy                as TL
-import qualified Data.Text.Lazy.Builder        as TL
-import           Formatting.Internal            ( Format(Format) )
+import Data.ByteString qualified as BS
+import Data.ByteString.UTF8 qualified as BSU
+import Data.Text.Lazy qualified as TL
+import Data.Text.Lazy.Builder qualified as TL
+
+import Formatting.Internal (Format (Format))
 
 {- |
 Formats a bytestring as an UTF8 string.

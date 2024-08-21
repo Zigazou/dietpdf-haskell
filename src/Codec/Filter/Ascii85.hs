@@ -47,31 +47,32 @@ module Codec.Filter.Ascii85
   , encode
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , anyWord8
-                                                , endOfInput
-                                                , label
-                                                , many'
-                                                , parseOnly
-                                                , satisfy
-                                                , skipMany
-                                                , word8
-                                                
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( isWhiteSpace )
-import           Util.Ascii                     ( asciiEXCLAMATIONMARK
-                                                , asciiGREATERTHANSIGN
-                                                , asciiLOWERU
-                                                , asciiLOWERZ
-                                                , asciiTILDE
-                                                )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( InvalidAscii85Stream
-                                                  )
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser
+    ( Get
+    , anyWord8
+    , endOfInput
+    , label
+    , many'
+    , parseOnly
+    , satisfy
+    , skipMany
+    , word8
+    )
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Pdf.Object.Object (isWhiteSpace)
+
+import Util.Ascii
+    ( asciiEXCLAMATIONMARK
+    , asciiGREATERTHANSIGN
+    , asciiLOWERU
+    , asciiLOWERZ
+    , asciiTILDE
+    )
+import Util.UnifiedError (UnifiedError (InvalidAscii85Stream))
 
 specialZeroP :: Get BS.ByteString
 specialZeroP = label "specialzero" $ do

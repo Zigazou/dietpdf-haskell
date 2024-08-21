@@ -39,24 +39,18 @@ module Codec.Compression.Predictor
   , EntropyType(EntropyDeflate, EntropyShannon)
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
-import           Data.Maybe                     ( fromMaybe )
-import           Data.Word                      ( Word8 )
-import           Util.ByteString                ( splitRaw
-                                                , separateComponents
-                                                , groupComponents
-                                                )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( InvalidNumberOfBytes
-                                                  , InvalidPredictor
-                                                  )
-                                                )
-import           Data.List                      ( minimumBy )
-import qualified Codec.Compression.Flate       as FL
-import           Pdf.Object.Object              ( PDFObject(PDFNumber)
-                                                , ToPDFNumber(mkPDFNumber)
-                                                )
+import Codec.Compression.Flate qualified as FL
+
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
+import Data.List (minimumBy)
+import Data.Maybe (fromMaybe)
+import Data.Word (Word8)
+
+import Pdf.Object.Object (PDFObject (PDFNumber), ToPDFNumber (mkPDFNumber))
+
+import Util.ByteString (groupComponents, separateComponents, splitRaw)
+import Util.UnifiedError (UnifiedError (InvalidNumberOfBytes, InvalidPredictor))
 
 type Predictor :: Type
 data Predictor
@@ -71,7 +65,7 @@ data Predictor
     --   is only necessary to insert a filter type byte before the data.
   | PNGSub
     -- ^ The Sub filter transmits the difference between each byte and the
-    --   value of the corresponding byte of the prior pixel.  
+    --   value of the corresponding byte of the prior pixel.
   | PNGUp
     -- ^ The Up filter is just like the Sub filter except that the pixel
     --   immediately above the current pixel, rather than just to its left,

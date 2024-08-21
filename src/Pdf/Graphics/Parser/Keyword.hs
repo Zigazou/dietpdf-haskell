@@ -11,18 +11,13 @@ module Pdf.Graphics.Parser.Keyword
   ( keywordP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , takeWhile1
-                                                )
-import           Pdf.Graphics.Object            ( GFXObject
-                                                  ( GFXBool
-                                                  , GFXNull
-                                                  , GFXOperator
-                                                  )
-                                                , isKeywordCharacter
-                                                , toGSOperator
-                                                )
+import Data.Binary.Parser (Get, label, takeWhile1)
+
+import Pdf.Graphics.Object
+    ( GFXObject (GFXBool, GFXNull, GFXOperator)
+    , isKeywordCharacter
+    , toGSOperator
+    )
 
 {- |
 A binary parser for a GFX keyword.

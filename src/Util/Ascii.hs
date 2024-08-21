@@ -150,7 +150,7 @@ module Util.Ascii
   , asciiLOWERZ
   ) where
 
-import           Data.Word                      ( Word8 )
+import Data.Word (Word8)
 
 -- $controlCharacters
 

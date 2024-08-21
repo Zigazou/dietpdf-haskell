@@ -2,31 +2,29 @@ module Command.Extract
   ( extract
   ) where
 
-import qualified Data.ByteString               as BS
-import           Data.List                      ( find )
-import           Pdf.Document.Document          ( PDFDocument )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
-                                                  )
-                                                )
-import           Pdf.Object.State               ( getStream )
-import           Pdf.Object.Unfilter            ( unfilter )
-import           Util.UnifiedError              ( FallibleT
-                                                , UnifiedError
-                                                  ( ObjectNotFound
-                                                  , ObjectStreamNotFound
-                                                  )
-                                                )
-import           Control.Monad.Trans.Except     ( throwE )
-import           Control.Monad.Trans.Class      ( lift )
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (throwE)
+
+import Data.ByteString qualified as BS
+import Data.List (find)
+
+import Pdf.Document.Document (PDFDocument)
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream)
+    )
+import Pdf.Object.State (getStream)
+import Pdf.Object.Unfilter (unfilter)
+
+import Util.UnifiedError
+    ( FallibleT
+    , UnifiedError (ObjectNotFound, ObjectStreamNotFound)
+    )
 
 objectWithNumber :: Int -> PDFObject -> Bool
 objectWithNumber n (PDFIndirectObjectWithStream num _ _ _) = n == num
-objectWithNumber n (PDFObjectStream num _ _ _) = n == num
-objectWithNumber n (PDFIndirectObject num _ _) = n == num
-objectWithNumber _ _ = False
+objectWithNumber n (PDFObjectStream num _ _ _)             = n == num
+objectWithNumber n (PDFIndirectObject num _ _)             = n == num
+objectWithNumber _ _                                       = False
 
 extract :: Int -> PDFDocument -> FallibleT IO ()
 extract objectNumber objects =

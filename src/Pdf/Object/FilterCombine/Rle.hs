@@ -2,14 +2,15 @@ module Pdf.Object.FilterCombine.Rle
   ( rle
   ) where
 
-import qualified Codec.Compression.RunLength   as RL
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Container           ( Filter(Filter)
-                                                , FilterList
-                                                )
-import           Pdf.Object.Object              ( PDFObject(PDFName, PDFNull) )
-import           Util.UnifiedError              ( UnifiedError )
-import           Util.Array                     ( mkArray )
+import Codec.Compression.RunLength qualified as RL
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
+
+import Util.Array (mkArray)
+import Util.UnifiedError (UnifiedError)
 
 rle
   :: Maybe (Int, Int)

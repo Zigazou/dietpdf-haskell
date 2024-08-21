@@ -3,27 +3,18 @@ module Pdf.Graphics.Parser.InlineImage
   ( inlineImageP
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import qualified Data.ByteString               as BS
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , sepBy
-                                                , word8
-                                                , string
-                                                , satisfy
-                                                , manyTill
-                                                )
-import           Data.Map.Strict                ( fromList )
-import           Pdf.Graphics.Object            ( GFXObject(GFXInlineImage)
-                                                , isWhiteSpace
-                                                )
-import           Pdf.Graphics.Parser.Container  ( dictionaryKeyValueP )
-import           Pdf.Graphics.Parser.EmptyContent
-                                                ( emptyContentP )
-import           Util.Ascii                     ( asciiCR
-                                                , asciiLF
-                                                )
-import           Control.Monad                  ( when )
+import Control.Applicative ((<|>))
+import Control.Monad (when)
+
+import Data.Binary.Parser (Get, label, manyTill, satisfy, sepBy, string, word8)
+import Data.ByteString qualified as BS
+import Data.Map.Strict (fromList)
+
+import Pdf.Graphics.Object (GFXObject (GFXInlineImage), isWhiteSpace)
+import Pdf.Graphics.Parser.Container (dictionaryKeyValueP)
+import Pdf.Graphics.Parser.EmptyContent (emptyContentP)
+
+import Util.Ascii (asciiCR, asciiLF)
 
 whiteSpaceP :: Get ()
 whiteSpaceP = do

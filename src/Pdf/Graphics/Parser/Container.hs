@@ -5,33 +5,27 @@ module Pdf.Graphics.Parser.Container
   , dictionaryKeyValueP
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , sepBy
-                                                , word8
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Map.Strict                ( fromList )
-import           Pdf.Graphics.Object            ( GFXObject
-                                                  ( GFXDictionary
-                                                  , GFXName
-                                                  )
-                                                , mkGFXArray
-                                                )
-import           Pdf.Graphics.Parser.HexString  ( hexStringP )
-import           Pdf.Graphics.Parser.Keyword    ( keywordP )
-import           Pdf.Graphics.Parser.Name       ( nameP )
-import           Pdf.Graphics.Parser.Number     ( numberP )
-import           Pdf.Graphics.Parser.Reference  ( referenceP )
-import           Pdf.Graphics.Parser.String     ( stringP )
-import           Pdf.Graphics.Parser.EmptyContent
-                                                ( emptyContentP )
-import           Util.Ascii                     ( asciiGREATERTHANSIGN
-                                                , asciiLEFTSQUAREBRACKET
-                                                , asciiLESSTHANSIGN
-                                                , asciiRIGHTSQUAREBRACKET
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, label, sepBy, word8)
+import Data.ByteString qualified as BS
+import Data.Map.Strict (fromList)
+
+import Pdf.Graphics.Object (GFXObject (GFXDictionary, GFXName), mkGFXArray)
+import Pdf.Graphics.Parser.EmptyContent (emptyContentP)
+import Pdf.Graphics.Parser.HexString (hexStringP)
+import Pdf.Graphics.Parser.Keyword (keywordP)
+import Pdf.Graphics.Parser.Name (nameP)
+import Pdf.Graphics.Parser.Number (numberP)
+import Pdf.Graphics.Parser.Reference (referenceP)
+import Pdf.Graphics.Parser.String (stringP)
+
+import Util.Ascii
+    ( asciiGREATERTHANSIGN
+    , asciiLEFTSQUAREBRACKET
+    , asciiLESSTHANSIGN
+    , asciiRIGHTSQUAREBRACKET
+    )
 
 itemP :: Get GFXObject
 itemP =

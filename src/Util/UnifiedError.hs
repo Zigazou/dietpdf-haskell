@@ -12,14 +12,13 @@ module Util.UnifiedError
   , ifFail
   ) where
 
-import           Data.Kind                      ( Type )
-import           Control.Monad.Except           ( ExceptT
-                                                , runExceptT
-                                                )
-import           Control.Monad.Trans.Class      ( MonadTrans(lift) )
-import           Data.Binary.Get                ( ByteOffset )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
+import Control.Monad.Except (ExceptT, runExceptT)
+import Control.Monad.Trans.Class (MonadTrans (lift))
+
+import Data.Binary.Get (ByteOffset)
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
+import Data.Word (Word8)
 
 type ErrorType :: Type
 data ErrorType = ReadingError

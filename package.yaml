@@ -29,7 +29,6 @@ ghc-options:
 - -Weverything
 - -Wno-missing-safe-haskell-mode
 - -Wno-implicit-prelude
-- -Wno-prepositive-qualified-module
 - -Wno-all-missed-specialisations
 - -Wno-unsafe
 - -Wno-safe
@@ -51,6 +50,7 @@ library:
   - MultiWayIf
   - TupleSections
   - StandaloneKindSignatures  
+  - ImportQualifiedPost
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16
@@ -99,6 +99,7 @@ executables:
     - MultiWayIf
     - TupleSections
     - StandaloneKindSignatures  
+    - ImportQualifiedPost
     ghc-options:
     - -O2
     - -funfolding-use-threshold=16

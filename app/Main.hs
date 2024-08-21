@@ -2,57 +2,50 @@ module Main
   ( main
   ) where
 
-import           AppOptions                     ( AppOptions
-                                                  ( ExtractOptions
-                                                  , InfoOptions
-                                                  , OptimizeOptions
-                                                  , HashOptions
-                                                  , DecodeOptions
-                                                  , EncodeOptions
-                                                  , PredictOptions
-                                                  , UnpredictOptions
-                                                  )
-                                                , appOptions
-                                                )
-import           Control.Exception              ( tryJust )
-import           Control.Monad                  ( guard )
-import qualified Data.ByteString               as BS
-import           Command.Extract                ( extract )
-import           Command.Info                   ( showInfo )
-import           Command.Optimize               ( optimize )
-import           Command.Hash                   ( objectHashes )
-import           Command.Encode                 ( encodeByteString )
-import           Command.Decode                 ( decodeByteString )
-import           Command.Predict                ( predictByteString )
-import           Command.Unpredict              ( unpredictByteString )
-import           Options.Applicative            ( (<**>)
-                                                , execParser
-                                                , fullDesc
-                                                , header
-                                                , helper
-                                                , info
-                                                , progDesc
-                                                , ParserInfo
-                                                )
-import           Pdf.Document.Document          ( PDFDocument )
-import           Pdf.Document.Parser            ( pdfParse )
-import           System.IO.Error                ( isDoesNotExistError )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( UnableToOpenFile
-                                                  , ParseError
-                                                  )
-                                                , FallibleT
-                                                , tryF
-                                                )
-import           Control.Monad.Trans.Except     ( throwE
-                                                , runExceptT
-                                                )
-import           Control.Monad.Trans.Class      ( lift )
-import           Hexdump                        ( Cfg
-                                                , startByte
-                                                , defaultCfg
-                                                , prettyHexCfg
-                                                )
+import AppOptions
+    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, HashOptions, InfoOptions, OptimizeOptions, PredictOptions, UnpredictOptions)
+    , appOptions
+    )
+
+import Command.Decode (decodeByteString)
+import Command.Encode (encodeByteString)
+import Command.Extract (extract)
+import Command.Hash (objectHashes)
+import Command.Info (showInfo)
+import Command.Optimize (optimize)
+import Command.Predict (predictByteString)
+import Command.Unpredict (unpredictByteString)
+
+import Control.Exception (tryJust)
+import Control.Monad (guard)
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (runExceptT, throwE)
+
+import Data.ByteString qualified as BS
+
+import Hexdump (Cfg, defaultCfg, prettyHexCfg, startByte)
+
+import Options.Applicative
+    ( ParserInfo
+    , execParser
+    , fullDesc
+    , header
+    , helper
+    , info
+    , progDesc
+    , (<**>)
+    )
+
+import Pdf.Document.Document (PDFDocument)
+import Pdf.Document.Parser (pdfParse)
+
+import System.IO.Error (isDoesNotExistError)
+
+import Util.UnifiedError
+    ( FallibleT
+    , UnifiedError (ParseError, UnableToOpenFile)
+    , tryF
+    )
 
 readPDF :: FilePath -> FallibleT IO PDFDocument
 readPDF filename = do

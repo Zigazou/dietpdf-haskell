@@ -15,23 +15,16 @@ module Pdf.Document.Collection
   , ObjectOffsets
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
-import qualified Data.IntMap.Strict            as IM
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
-                                                  , PDFIndirectObjectWithGraphics
-                                                  , PDFXRefStream
-                                                  )
-                                                , fromPDFObject
-                                                )
-import           Pdf.Document.Document          ( PDFDocument
-                                                , fromList
-                                                , toList
-                                                )
-import           Data.List                      ( find )
+import Data.ByteString qualified as BS
+import Data.IntMap.Strict qualified as IM
+import Data.Kind (Type)
+import Data.List (find)
+
+import Pdf.Document.Document (PDFDocument, fromList, toList)
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFObjectStream, PDFXRefStream)
+    , fromPDFObject
+    )
 
 -- | A collection of objects indexed by the object number
 type PDFObjects :: Type

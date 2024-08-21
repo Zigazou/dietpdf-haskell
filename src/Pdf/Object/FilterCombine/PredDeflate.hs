@@ -2,27 +2,20 @@ module Pdf.Object.FilterCombine.PredDeflate
   ( predDeflate
   ) where
 
-import qualified Codec.Compression.Flate       as FL
-import           Codec.Compression.Predictor    ( Predictor(PNGOptimum)
-                                                , predict
-                                                , EntropyType
-                                                  ( EntropyShannon
-                                                  , EntropyDeflate
-                                                  )
-                                                )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Container           ( Filter(Filter)
-                                                , FilterList
-                                                )
-import           Pdf.Object.Object              ( PDFObject(PDFName)
-                                                , mkPDFDictionary
-                                                , mkPDFNumber
-                                                )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( InvalidFilterParm
-                                                  )
-                                                )
-import           Util.Array                     ( mkArray )
+import Codec.Compression.Flate qualified as FL
+import Codec.Compression.Predictor
+    ( EntropyType (EntropyDeflate, EntropyShannon)
+    , Predictor (PNGOptimum)
+    , predict
+    )
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Object (PDFObject (PDFName), mkPDFDictionary, mkPDFNumber)
+
+import Util.Array (mkArray)
+import Util.UnifiedError (UnifiedError (InvalidFilterParm))
 
 predDeflate
   :: Maybe (Int, Int)

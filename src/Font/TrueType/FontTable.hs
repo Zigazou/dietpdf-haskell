@@ -24,22 +24,19 @@ module Font.TrueType.FontTable
   , Fixed(Fixed)
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
-import qualified Data.ByteString.Lazy          as BSL
-import           Data.Word                      ( Word16
-                                                , Word32
-                                                )
-import           Data.Int                       ( Int16
-                                                , Int64
-                                                )
-import           Data.Binary.Put                ( PutM
-                                                , putWord16be
-                                                , putWord32be
-                                                , putInt64be
-                                                , putInt16be
-                                                , runPut
-                                                )
+import Data.Binary.Put
+    ( PutM
+    , putInt16be
+    , putInt64be
+    , putWord16be
+    , putWord32be
+    , runPut
+    )
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BSL
+import Data.Int (Int16, Int64)
+import Data.Kind (Type)
+import Data.Word (Word16, Word32)
 
 type Fixed :: Type
 data Fixed = Fixed Word16 Word16

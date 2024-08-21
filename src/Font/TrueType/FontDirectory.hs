@@ -15,26 +15,23 @@ module Font.TrueType.FontDirectory
   , calcTableChecksum
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
-import           Data.Either                    ( fromRight )
-import           Data.Binary.Parser             ( parseOnly
-                                                , many'
-                                                , getWord32be
-                                                )
-import           Util.Array                     ( Array )
-import           Data.Binary                    ( Word16
-                                                , Word32
-                                                )
-import           Font.TrueType.FontTable        ( FontTable(FTRaw, FTHead)
-                                                , fromHead
-                                                , Head(hCheckSumAdjustment)
-                                                )
-import           Font.TrueType.TableIdentifier  ( TableIdentifier(RTTFontHeader)
-                                                )
-import           Font.TrueType.ScalerType       ( ScalerType )
-import           Font.TrueType.Parser.Head      ( headP )
-import           Data.Bits                      ( shiftL )
+import Data.Binary (Word16, Word32)
+import Data.Binary.Parser (getWord32be, many', parseOnly)
+import Data.Bits (shiftL)
+import Data.ByteString qualified as BS
+import Data.Either (fromRight)
+import Data.Kind (Type)
+
+import Font.TrueType.FontTable
+    ( FontTable (FTHead, FTRaw)
+    , Head (hCheckSumAdjustment)
+    , fromHead
+    )
+import Font.TrueType.Parser.Head (headP)
+import Font.TrueType.ScalerType (ScalerType)
+import Font.TrueType.TableIdentifier (TableIdentifier (RTTFontHeader))
+
+import Util.Array (Array)
 
 calcChecksum :: BS.ByteString -> Word32
 calcChecksum raw =

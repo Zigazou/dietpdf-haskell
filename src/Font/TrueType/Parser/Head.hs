@@ -2,36 +2,14 @@ module Font.TrueType.Parser.Head
   ( headP
   ) where
 
-import           Font.TrueType.FontTable        ( Head
-                                                  ( Head
-                                                  , hVersion
-                                                  , hFontRevision
-                                                  , hCheckSumAdjustment
-                                                  , hMagicNumber
-                                                  , hFlags
-                                                  , hUnitsPerEm
-                                                  , hCreated
-                                                  , hModified
-                                                  , hXMin
-                                                  , hYMin
-                                                  , hXMax
-                                                  , hYMax
-                                                  , hMacStyle
-                                                  , hLowestRecPPEM
-                                                  , hFontDirectionHint
-                                                  , hIndexToLocFormat
-                                                  , hGlyphDataFormat
-                                                  )
-                                                , Fixed(Fixed)
-                                                )
+import Data.Binary.Get (getInt16be, getInt64be, getWord16be, getWord32be)
+import Data.Binary.Parser (Get)
+import Data.Binary.Parser.Word8 (string)
 
-import           Data.Binary.Parser             ( Get )
-import           Data.Binary.Parser.Word8       ( string )
-import           Data.Binary.Get                ( getWord32be
-                                                , getWord16be
-                                                , getInt64be
-                                                , getInt16be
-                                                )
+import Font.TrueType.FontTable
+    ( Fixed (Fixed)
+    , Head (Head, hCheckSumAdjustment, hCreated, hFlags, hFontDirectionHint, hFontRevision, hGlyphDataFormat, hIndexToLocFormat, hLowestRecPPEM, hMacStyle, hMagicNumber, hModified, hUnitsPerEm, hVersion, hXMax, hXMin, hYMax, hYMin)
+    )
 
 getFixed :: Get Fixed
 getFixed = Fixed <$> getWord16be <*> getWord16be

@@ -5,43 +5,30 @@ module Pdf.Object.Filter
   ( filterOptimize
   ) where
 
-import qualified Data.ByteString               as BS
-import           Data.Foldable                  ( minimumBy )
-import           Pdf.Object.Container           ( setFilters
-                                                , FilterList
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFName
-                                                  , PDFNumber
-                                                  , PDFNumber
-                                                  , PDFXRefStream
-                                                  )
-                                                , hasStream
-                                                )
-import           Pdf.Object.State               ( getStream
-                                                , getValue
-                                                , setStream
-                                                )
-import           Util.UnifiedError              ( FallibleT )
-import           Util.Logging                   ( Logging
-                                                , sayComparisonF
-                                                )
-import           Util.Array                     ( mkArray )
-import           Util.ByteString                ( sndLengthCompare )
-import qualified Data.Text                     as T
-import           Control.Monad.Trans.Except     ( except )
-import           Data.Functor                   ( (<&>) )
+import Control.Monad.Trans.Except (except)
 
-import           Pdf.Object.FilterCombine.Zopfli
-                                                ( zopfli )
-import           Pdf.Object.FilterCombine.Rle   ( rle )
-import           Pdf.Object.FilterCombine.RleZopfli
-                                                ( rleZopfli )
-import           Pdf.Object.FilterCombine.PredZopfli
-                                                ( predZopfli )
-import           Pdf.Object.FilterCombine.PredRleZopfli
-                                                ( predRleZopfli )
-import           Pdf.Document.XRef              ( xrefStreamWidth )
+import Data.ByteString qualified as BS
+import Data.Foldable (minimumBy)
+import Data.Functor ((<&>))
+import Data.Text qualified as T
+
+import Pdf.Document.XRef (xrefStreamWidth)
+import Pdf.Object.Container (FilterList, setFilters)
+import Pdf.Object.FilterCombine.PredRleZopfli (predRleZopfli)
+import Pdf.Object.FilterCombine.PredZopfli (predZopfli)
+import Pdf.Object.FilterCombine.Rle (rle)
+import Pdf.Object.FilterCombine.RleZopfli (rleZopfli)
+import Pdf.Object.FilterCombine.Zopfli (zopfli)
+import Pdf.Object.Object
+    ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
+    , hasStream
+    )
+import Pdf.Object.State (getStream, getValue, setStream)
+
+import Util.Array (mkArray)
+import Util.ByteString (sndLengthCompare)
+import Util.Logging (Logging, sayComparisonF)
+import Util.UnifiedError (FallibleT)
 
 filterInfo
   :: Logging m => T.Text -> BS.ByteString -> BS.ByteString -> FallibleT m ()

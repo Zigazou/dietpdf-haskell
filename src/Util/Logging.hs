@@ -5,28 +5,20 @@ module Util.Logging
   , sayErrorF
   ) where
 
-import           Data.Kind                      ( Type
-                                                , Constraint
-                                                )
-import qualified Data.Text                     as T
-import qualified Data.Text.IO                  as TIO
-import           Control.Monad.Identity         ( Identity )
-import           Control.Monad.Writer           ( Writer
-                                                , tell
-                                                )
-import           Control.Monad                  ( void )
-import           Control.Monad.Trans.Class      ( lift
-                                                , MonadTrans
-                                                )
-import           Fmt                            ( padLeftF
-                                                , (+|)
-                                                , (|+)
-                                                , commaizeF
-                                                , padRightF
-                                                , fixedF
-                                                )
-import           Util.UnifiedError              ( UnifiedError )
-import           System.IO                      ( stderr )
+import Control.Monad (void)
+import Control.Monad.Identity (Identity)
+import Control.Monad.Trans.Class (MonadTrans, lift)
+import Control.Monad.Writer (Writer, tell)
+
+import Data.Kind (Constraint, Type)
+import Data.Text qualified as T
+import Data.Text.IO qualified as TIO
+
+import Fmt (commaizeF, fixedF, padLeftF, padRightF, (+|), (|+))
+
+import System.IO (stderr)
+
+import Util.UnifiedError (UnifiedError)
 
 type Logging :: (Type -> Type) -> Constraint
 class Monad m => Logging m where

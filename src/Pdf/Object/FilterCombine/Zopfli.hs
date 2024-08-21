@@ -2,14 +2,15 @@ module Pdf.Object.FilterCombine.Zopfli
   ( zopfli
   ) where
 
-import qualified Codec.Compression.Flate       as FL
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Container           ( Filter(Filter)
-                                                , FilterList
-                                                )
-import           Pdf.Object.Object              ( PDFObject(PDFName, PDFNull) )
-import           Util.UnifiedError              ( UnifiedError )
-import           Util.Array                     ( mkArray )
+import Codec.Compression.Flate qualified as FL
+
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
+
+import Util.Array (mkArray)
+import Util.UnifiedError (UnifiedError)
 
 zopfli
   :: Maybe (Int, Int)

@@ -8,10 +8,10 @@ module Util.Dictionary
   , dictHasKey
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
-import qualified Data.Map.Strict               as Map
-import           Data.Maybe                     ( isJust )
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust)
 
 {- |
 A `Dictionary` is a handy type.

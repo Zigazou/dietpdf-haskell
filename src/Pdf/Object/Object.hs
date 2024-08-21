@@ -72,57 +72,39 @@ module Pdf.Object.Object
   , isTrailer
   ) where
 
-import           Data.Kind                      ( Type
-                                                , Constraint
-                                                )
-import qualified Data.ByteString               as BS
-import qualified Data.ByteString.UTF8          as BSU
-import qualified Data.Text.Lazy                as TL
-import qualified Data.Text                     as TS
-import           Data.Text.Encoding             ( encodeUtf8 )
-import           Formatting                     ( format
-                                                , (%)
-                                                , int
-                                                , text
-                                                , left
-                                                )
-import           Formatting.ByteStringFormatter ( utf8 )
-import qualified Data.Map.Strict               as Map
-import           Data.Ix                        ( inRange )
-import           Data.List                      ( foldl' )
-import           Data.Foldable                  ( toList )
-import           Data.Maybe                     ( isJust
-                                                , isNothing
-                                                )
-import           Data.Word                      ( Word8 )
-import           Util.Ascii                     ( asciiDIGITSEVEN
-                                                , asciiDIGITZERO
-                                                , asciiLOWERA
-                                                , asciiLOWERZ
-                                                , asciiNUL
-                                                , asciiNUMBERSIGN
-                                                , asciiUPPERA
-                                                , asciiUPPERZ
-                                                )
-import           Util.Name                      ( fromName )
-import           Util.Number                    ( fromInt
-                                                , fromNumber
-                                                )
-import           Util.String                    ( fromHexString
-                                                , fromString
-                                                )
-import           Util.Dictionary                ( Dictionary
-                                                , mkEmptyDictionary
-                                                , mkDictionary
-                                                , dictHasKey
-                                                )
-import           Util.Array                     ( Array
-                                                , mkEmptyArray
-                                                , mkArray
-                                                )
-import           Pdf.Graphics.Object            ( GFXObject
-                                                , separateGfx
-                                                )
+import Data.ByteString qualified as BS
+import Data.ByteString.UTF8 qualified as BSU
+import Data.Foldable (toList)
+import Data.Ix (inRange)
+import Data.Kind (Constraint, Type)
+import Data.List (foldl')
+import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust, isNothing)
+import Data.Text qualified as TS
+import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Lazy qualified as TL
+import Data.Word (Word8)
+
+import Formatting (format, int, left, text, (%))
+import Formatting.ByteStringFormatter (utf8)
+
+import Pdf.Graphics.Object (GFXObject, separateGfx)
+
+import Util.Array (Array, mkArray, mkEmptyArray)
+import Util.Ascii
+    ( asciiDIGITSEVEN
+    , asciiDIGITZERO
+    , asciiLOWERA
+    , asciiLOWERZ
+    , asciiNUL
+    , asciiNUMBERSIGN
+    , asciiUPPERA
+    , asciiUPPERZ
+    )
+import Util.Dictionary (Dictionary, dictHasKey, mkDictionary, mkEmptyDictionary)
+import Util.Name (fromName)
+import Util.Number (fromInt, fromNumber)
+import Util.String (fromHexString, fromString)
 
 {-|
 Test if a byte is a PDF delimiter.
@@ -743,7 +725,7 @@ objectType :: Dictionary PDFObject -> Maybe BS.ByteString
 objectType dictionary =
   case (Map.lookup "Type" dictionary, Map.lookup "SubType" dictionary) of
     (Just (PDFName typeValue), Just (PDFName subtypeValue)) ->
-      Just $ BS.concat [typeValue, "/", subtypeValue] 
+      Just $ BS.concat [typeValue, "/", subtypeValue]
     (Just (PDFName typeValue), _noSubtype) -> Just typeValue
     _noType -> Nothing
 

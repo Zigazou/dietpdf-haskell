@@ -12,8 +12,8 @@ module Font.TrueType.TableIdentifier
   , toTableIdentifier
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
 
 type TableIdentifier :: Type
 data TableIdentifier

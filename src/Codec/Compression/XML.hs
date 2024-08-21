@@ -5,21 +5,21 @@ module Codec.Compression.XML
   ( optimizeXML
   ) where
 
-import qualified Data.ByteString               as BS
-import qualified Data.ByteString.UTF8          as BSU
-import           Text.XML.Light                 ( showContent
-                                                , parseXML
-                                                , Content(Elem, Text)
-                                                , Element(Element, elContent)
-                                                , CData(CData)
-                                                )
-import           Data.Char                      ( isSpace )
-import           Data.Text.Encoding             ( decodeUtf8'
-                                                , decodeLatin1
-                                                )
-import           Data.ByteString.Search.DFA     ( replace )
-import           Data.ByteString.Lazy           ( toStrict )
-import qualified Data.Text                     as T
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy (toStrict)
+import Data.ByteString.Search.DFA (replace)
+import Data.ByteString.UTF8 qualified as BSU
+import Data.Char (isSpace)
+import Data.Text qualified as T
+import Data.Text.Encoding (decodeLatin1, decodeUtf8')
+
+import Text.XML.Light
+    ( CData (CData)
+    , Content (Elem, Text)
+    , Element (Element, elContent)
+    , parseXML
+    , showContent
+    )
 
 toText :: BS.ByteString -> T.Text
 toText bytes = case decodeUtf8' bytes of
@@ -46,7 +46,7 @@ optimizeXML stream = BS.concat
 
   isIndent :: Content -> Bool
   isIndent (Text (CData _ ('\n' : remain) _)) = all isSpace remain
-  isIndent _ = False
+  isIndent _                                  = False
 
   removeSpace :: [Content] -> [Content]
   removeSpace (text@(Text _) : remain) | isIndent text = removeSpace remain

@@ -3,32 +3,13 @@ module Pdf.Object.Format
   ( txtObjectNumberVersion
   ) where
 
-import qualified Data.Text                     as T
-import           Util.Text                      ( txtNumberVersion )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFXRefStream
-                                                  , PDFIndirectObjectWithGraphics
-                                                  , PDFXRef
-                                                  , PDFStartXRef
-                                                  , PDFTrailer
-                                                  , PDFNull
-                                                  , PDFBool
-                                                  , PDFObjectStream
-                                                  , PDFDictionary
-                                                  , PDFArray
-                                                  , PDFReference
-                                                  , PDFHexString
-                                                  , PDFString
-                                                  , PDFName
-                                                  , PDFKeyword
-                                                  , PDFNumber
-                                                  , PDFEndOfFile
-                                                  , PDFVersion
-                                                  , PDFComment
-                                                  )
-                                                )
+import Data.Text qualified as T
+
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
+    )
+
+import Util.Text (txtNumberVersion)
 
 txtObjectNumberVersion :: PDFObject -> T.Text
 txtObjectNumberVersion (PDFIndirectObject number version _) =

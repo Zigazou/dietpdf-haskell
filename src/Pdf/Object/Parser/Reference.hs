@@ -9,19 +9,13 @@ module Pdf.Object.Parser.Reference
   ( referenceP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , isDigit
-                                                , label
-                                                , satisfy
-                                                , some'
-                                                , takeWhile1
-                                                )
-import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( PDFObject(PDFReference)
-                                                , isKeywordCharacter
-                                                )
-import           Util.Number                    ( toNumber )
-import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
+import Data.Binary.Parser (Get, isDigit, label, satisfy, some', takeWhile1)
+import Data.Word (Word8)
+
+import Pdf.Object.Object (PDFObject (PDFReference), isKeywordCharacter)
+import Pdf.Object.Parser.EmptyContent (emptyContentP)
+
+import Util.Number (toNumber)
 
 digit :: Get Word8
 digit = satisfy isDigit

@@ -6,15 +6,12 @@ module Pdf.Object.Parser.LooseEndOfLine
   , isLooseEndOfLine
   ) where
 
-import           Data.Word                      ( Word8 )
-import           Data.Binary.Parser             ( Get
-                                                , word8
-                                                )
-import           Control.Applicative            ( (<|>) )
-import           Util.Ascii                     ( asciiCR
-                                                , asciiLF
-                                                , asciiSPACE
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, word8)
+import Data.Word (Word8)
+
+import Util.Ascii (asciiCR, asciiLF, asciiSPACE)
 
 -- | Returns True if a loose end of line is found, False otherwise
 isLooseEndOfLine :: Word8 -> Bool

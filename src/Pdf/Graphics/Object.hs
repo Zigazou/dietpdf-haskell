@@ -44,48 +44,36 @@ module Pdf.Graphics.Object
   , spaceIfNeeded
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
-import qualified Data.Sequence                 as SQ
-import qualified Data.Text.Lazy                as TL
-import           Formatting                     ( format
-                                                , (%)
-                                                , int
-                                                )
-import           Formatting.ByteStringFormatter ( utf8 )
-import qualified Data.Map.Strict               as Map
-import           Data.Ix                        ( inRange )
-import           Data.Maybe                     ( isJust
-                                                , isNothing
-                                                )
-import           Data.Word                      ( Word8 )
-import           Util.Ascii                     ( asciiDIGITSEVEN
-                                                , asciiDIGITZERO
-                                                , asciiLOWERA
-                                                , asciiLOWERZ
-                                                , asciiNUL
-                                                , asciiNUMBERSIGN
-                                                , asciiUPPERA
-                                                , asciiUPPERZ
-                                                , asciiASTERISK
-                                                , asciiAPOSTROPHE
-                                                , asciiQUOTATIONMARK
-                                                )
-import           Util.Name                      ( fromName )
-import           Util.Number                    ( fromInt
-                                                , fromNumber
-                                                )
-import           Util.String                    ( fromHexString
-                                                , fromString
-                                                )
-import           Util.Dictionary                ( Dictionary
-                                                , mkDictionary
-                                                , mkEmptyDictionary
-                                                )
-import           Util.Array                     ( Array
-                                                , mkArray
-                                                , mkEmptyArray
-                                                )
+import Data.ByteString qualified as BS
+import Data.Ix (inRange)
+import Data.Kind (Type)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (isJust, isNothing)
+import Data.Sequence qualified as SQ
+import Data.Text.Lazy qualified as TL
+import Data.Word (Word8)
+
+import Formatting (format, int, (%))
+import Formatting.ByteStringFormatter (utf8)
+
+import Util.Array (Array, mkArray, mkEmptyArray)
+import Util.Ascii
+    ( asciiAPOSTROPHE
+    , asciiASTERISK
+    , asciiDIGITSEVEN
+    , asciiDIGITZERO
+    , asciiLOWERA
+    , asciiLOWERZ
+    , asciiNUL
+    , asciiNUMBERSIGN
+    , asciiQUOTATIONMARK
+    , asciiUPPERA
+    , asciiUPPERZ
+    )
+import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
+import Util.Name (fromName)
+import Util.Number (fromInt, fromNumber)
+import Util.String (fromHexString, fromString)
 
 {-|
 Test if a byte is a GFX delimiter.

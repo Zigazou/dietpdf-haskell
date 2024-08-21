@@ -5,17 +5,12 @@ module Pdf.Graphics.Parser.Comment
   ( commentP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , takeTill
-                                                , word8
-                                                )
-import           Pdf.Graphics.Object            ( GFXObject(GFXComment) )
-import           Util.Ascii                     ( asciiPERCENTSIGN )
-import           Pdf.Graphics.Parser.LooseEndOfLine
-                                                ( looseEndOfLineP
-                                                , isLooseEndOfLine
-                                                )
+import Data.Binary.Parser (Get, label, takeTill, word8)
+
+import Pdf.Graphics.Object (GFXObject (GFXComment))
+import Pdf.Graphics.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
+
+import Util.Ascii (asciiPERCENTSIGN)
 
 {-|
 A binary parser for a graphics comment.

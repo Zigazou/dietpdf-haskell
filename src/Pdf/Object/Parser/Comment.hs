@@ -5,24 +5,15 @@ module Pdf.Object.Parser.Comment
   ( commentP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , takeTill
-                                                , word8, endOfInput
-                                                )
-import qualified Data.ByteString               as BS
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFComment
-                                                  , PDFEndOfFile
-                                                  , PDFVersion
-                                                  )
-                                                )
-import           Util.Ascii                     ( asciiPERCENTSIGN )
-import           Pdf.Object.Parser.LooseEndOfLine
-                                                ( looseEndOfLineP
-                                                , isLooseEndOfLine
-                                                )
 import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, endOfInput, label, takeTill, word8)
+import Data.ByteString qualified as BS
+
+import Pdf.Object.Object (PDFObject (PDFComment, PDFEndOfFile, PDFVersion))
+import Pdf.Object.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
+
+import Util.Ascii (asciiPERCENTSIGN)
 
 {-|
 A binary parser for a PDF comment.

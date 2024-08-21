@@ -24,23 +24,21 @@ module Codec.Compression.RunLength
   , decompress
   ) where
 
-import           Data.Kind                      ( Type )
-import           Data.Binary.Parser             ( Get
-                                                , anyWord8
-                                                , endOfInput
-                                                , getByteString
-                                                , many'
-                                                , parseOnly
-                                                , peekMaybe
-                                                , scan
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Util.UnifiedError                    ( UnifiedError
-                                                  ( RLEEncodeError
-                                                  , RLEDecodeError
-                                                  )
-                                                )
+import Data.Binary.Parser
+    ( Get
+    , anyWord8
+    , endOfInput
+    , getByteString
+    , many'
+    , parseOnly
+    , peekMaybe
+    , scan
+    )
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
+import Data.Word (Word8)
+
+import Util.UnifiedError (UnifiedError (RLEDecodeError, RLEEncodeError))
 
 type RLEAction :: Type
 data RLEAction

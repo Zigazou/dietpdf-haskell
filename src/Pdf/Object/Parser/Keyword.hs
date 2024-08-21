@@ -11,17 +11,12 @@ module Pdf.Object.Parser.Keyword
   ( keywordP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , takeWhile1
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFBool
-                                                  , PDFKeyword
-                                                  , PDFNull
-                                                  )
-                                                , isKeywordCharacter
-                                                )
+import Data.Binary.Parser (Get, label, takeWhile1)
+
+import Pdf.Object.Object
+    ( PDFObject (PDFBool, PDFKeyword, PDFNull)
+    , isKeywordCharacter
+    )
 
 {- |
 A binary parser for a PDF keyword.

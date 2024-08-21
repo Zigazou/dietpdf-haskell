@@ -15,37 +15,23 @@ module Pdf.Object.State
   , embedObject
   ) where
 
-import qualified Data.ByteString               as BS
-import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFComment
-                                                  , PDFDictionary
-                                                  , PDFEndOfFile
-                                                  , PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
-                                                  , PDFStartXRef
-                                                  , PDFTrailer
-                                                  , PDFVersion
-                                                  , PDFXRef
-                                                  , PDFXRefStream
-                                                  )
-                                                , ToPDFNumber(mkPDFNumber)
-                                                )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( InvalidObjectToEmbed
-                                                  , NoDictionary
-                                                  , NoStream
-                                                  )
-                                                , FallibleT
-                                                )
-import           Util.Dictionary                ( Dictionary )
-import           Control.Monad.Trans.Except     ( throwE
-                                                , runExceptT
-                                                )
-import           Control.Monad.Identity         ( Identity(runIdentity) )
-import           Util.Logging                   ( Logging )
+import Control.Monad.Identity (Identity (runIdentity))
+import Control.Monad.Trans.Except (runExceptT, throwE)
+
+import Data.ByteString qualified as BS
+import Data.Map.Strict qualified as Map
+
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFComment, PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFStartXRef, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
+    , ToPDFNumber (mkPDFNumber)
+    )
+
+import Util.Dictionary (Dictionary)
+import Util.Logging (Logging)
+import Util.UnifiedError
+    ( FallibleT
+    , UnifiedError (InvalidObjectToEmbed, NoDictionary, NoStream)
+    )
 
 {- |
 Returns the stream embedded in a `PDFObject`.

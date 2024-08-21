@@ -21,17 +21,11 @@ module Pdf.Object.Parser.Trailer
   ( trailerP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , string
-                                                , skipWhile
-                                                )
-import           Pdf.Object.Object              ( PDFObject(PDFTrailer)
-                                                , isWhiteSpace
-                                                )
-import           Pdf.Object.Parser.LooseEndOfLine
-                                                ( looseEndOfLineP )
-import           Pdf.Object.Parser.Container    ( dictionaryP )
+import Data.Binary.Parser (Get, label, skipWhile, string)
+
+import Pdf.Object.Object (PDFObject (PDFTrailer), isWhiteSpace)
+import Pdf.Object.Parser.Container (dictionaryP)
+import Pdf.Object.Parser.LooseEndOfLine (looseEndOfLineP)
 
 {- |
 Parse a `PDFTrailer`.

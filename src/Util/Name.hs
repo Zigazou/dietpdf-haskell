@@ -4,26 +4,28 @@ module Util.Name
   ( fromName
   ) where
 
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Util.Ascii                     ( asciiCR
-                                                , asciiFF
-                                                , asciiGREATERTHANSIGN
-                                                , asciiHT
-                                                , asciiLEFTCURLYBRACKET
-                                                , asciiLEFTPARENTHESIS
-                                                , asciiLEFTSQUAREBRACKET
-                                                , asciiLESSTHANSIGN
-                                                , asciiLF
-                                                , asciiNUL
-                                                , asciiNUMBERSIGN
-                                                , asciiPERCENTSIGN
-                                                , asciiRIGHTCURLYBRACKET
-                                                , asciiRIGHTPARENTHESIS
-                                                , asciiRIGHTSQUAREBRACKET
-                                                , asciiSOLIDUS
-                                                , asciiSPACE
-                                                )
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Util.Ascii
+    ( asciiCR
+    , asciiFF
+    , asciiGREATERTHANSIGN
+    , asciiHT
+    , asciiLEFTCURLYBRACKET
+    , asciiLEFTPARENTHESIS
+    , asciiLEFTSQUAREBRACKET
+    , asciiLESSTHANSIGN
+    , asciiLF
+    , asciiNUL
+    , asciiNUMBERSIGN
+    , asciiPERCENTSIGN
+    , asciiRIGHTCURLYBRACKET
+    , asciiRIGHTPARENTHESIS
+    , asciiRIGHTSQUAREBRACKET
+    , asciiSOLIDUS
+    , asciiSPACE
+    )
 
 escapeChar :: Word8 -> BS.ByteString
 escapeChar byte | byte == asciiNUL = error "NUL char not allowed in name"

@@ -25,12 +25,11 @@ module Codec.Filter.AsciiHex
   , decode
   ) where
 
-import qualified Data.ByteString               as BS
-import           Util.Ascii                     ( asciiGREATERTHANSIGN )
-import           Util.UnifiedError                    ( UnifiedError )
-import           Util.Hex                       ( fromHexDigits
-                                                , toHexDigits
-                                                )
+import Data.ByteString qualified as BS
+
+import Util.Ascii (asciiGREATERTHANSIGN)
+import Util.Hex (fromHexDigits, toHexDigits)
+import Util.UnifiedError (UnifiedError)
 
 {- |
 Decodes an hexadecimal bytestring.
@@ -40,13 +39,13 @@ Any character not included in `0123456789abcdefABCDEF` is simply ignored.
 If there is an odd number of hexadecimal digits, a `0` is appended to make it
 even.
 
->>> decode "AB"         
+>>> decode "AB"
 Right "\xAB"
 
->>> decode "1"          
+>>> decode "1"
 Right "\x10"
 
->>> decode "abcdefgh12" 
+>>> decode "abcdefgh12"
 Right "\xAB\xCD\xEF\x12"
 
 >>> decode "abcdefgh1yz"

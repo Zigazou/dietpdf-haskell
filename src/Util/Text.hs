@@ -3,7 +3,7 @@ module Util.Text
   ( txtNumberVersion
   ) where
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 
 txtNumberVersion :: Int -> Int -> T.Text
 txtNumberVersion number version =

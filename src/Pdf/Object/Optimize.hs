@@ -5,43 +5,28 @@ module Pdf.Object.Optimize
   ( optimize
   ) where
 
-import           Data.Kind                      ( Type )
-import           Codec.Compression.XML          ( optimizeXML )
-import           Pdf.Object.Container           ( deepMap
-                                                , Filter(fFilter)
-                                                , getFilters
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFName
-                                                  , PDFObjectStream
-                                                  , PDFTrailer, PDFXRefStream
-                                                  )
-                                                , hasStream
-                                                , hasKey
-                                                )
-import           Pdf.Object.State               ( getStream
-                                                , setStream
-                                                , getValue
-                                                )
-import           Pdf.Object.String              ( optimizeString )
-import           Pdf.Object.Format              ( txtObjectNumberVersion )
-import           Pdf.Object.Unfilter            ( unfilter )
-import           Pdf.Object.Filter              ( filterOptimize )
-import           Util.Logging                   ( sayF
-                                                , Logging
-                                                , sayComparisonF
-                                                , sayErrorF
-                                                )
-import           Pdf.Graphics.Parser.Stream     ( gfxParse )
-import           Pdf.Graphics.Object            ( separateGfx )
-import           Util.UnifiedError              ( FallibleT
-                                                , ifFail
-                                                , tryF
-                                                )
-import qualified Data.ByteString               as BS
-import qualified Data.Sequence                 as SQ
+import Codec.Compression.XML (optimizeXML)
+
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
+import Data.Sequence qualified as SQ
+
+import Pdf.Graphics.Object (separateGfx)
+import Pdf.Graphics.Parser.Stream (gfxParse)
+import Pdf.Object.Container (Filter (fFilter), deepMap, getFilters)
+import Pdf.Object.Filter (filterOptimize)
+import Pdf.Object.Format (txtObjectNumberVersion)
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
+    , hasKey
+    , hasStream
+    )
+import Pdf.Object.State (getStream, getValue, setStream)
+import Pdf.Object.String (optimizeString)
+import Pdf.Object.Unfilter (unfilter)
+
+import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
+import Util.UnifiedError (FallibleT, ifFail, tryF)
 
 type OptimizationType :: Type
 data OptimizationType = XMLOptimization
@@ -85,7 +70,7 @@ streamOptimize object = whatOptimizationFor object >>= \case
         sayComparisonF "GFX objects optimization"
                        (BS.length stream)
                        (BS.length optimizedStream)
-        setStream optimizedStream object 
+        setStream optimizedStream object
       _error -> do
         sayF "  - No stream content to optimize"
         return object

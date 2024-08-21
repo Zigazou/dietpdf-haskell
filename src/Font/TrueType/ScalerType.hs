@@ -10,8 +10,8 @@ module Font.TrueType.ScalerType
   , isUnknown
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
 
 type ScalerType :: Type
 data ScalerType

@@ -5,34 +5,30 @@ module Pdf.Object.Unfilter
   ( unfilter
   ) where
 
-import qualified Codec.Compression.Flate       as FL
-import qualified Codec.Compression.LZW         as LZ
-import qualified Codec.Compression.RunLength   as RL
-import qualified Codec.Filter.Ascii85          as A8
-import qualified Codec.Filter.AsciiHex         as AH
-import qualified Data.ByteString               as BS
-import           Data.Sequence                 as SQ
-                                                ( Seq((:<|)) )
-import           Pdf.Object.Container           ( Filter(fFilter)
-                                                , getFilters
-                                                , setFilters
-                                                , FilterList
-                                                )
-import           Pdf.Object.Object              ( PDFObject(PDFName)
-                                                , hasStream
-                                                )
-import           Pdf.Object.State               ( getStream
-                                                , setStream
-                                                )
-import           Util.UnifiedError              ( UnifiedError
-                                                , FallibleT
-                                                )
-import           Util.Logging                   ( Logging
-                                                , sayF
-                                                )
-import           Control.Monad.Trans.Except     ( throwE )
-import           Pdf.Object.Format              ( txtObjectNumberVersion )
-import qualified Data.Text                     as T
+import Codec.Compression.Flate qualified as FL
+import Codec.Compression.LZW qualified as LZ
+import Codec.Compression.RunLength qualified as RL
+import Codec.Filter.Ascii85 qualified as A8
+import Codec.Filter.AsciiHex qualified as AH
+
+import Control.Monad.Trans.Except (throwE)
+
+import Data.ByteString qualified as BS
+import Data.Sequence as SQ (Seq ((:<|)))
+import Data.Text qualified as T
+
+import Pdf.Object.Container
+    ( Filter (fFilter)
+    , FilterList
+    , getFilters
+    , setFilters
+    )
+import Pdf.Object.Format (txtObjectNumberVersion)
+import Pdf.Object.Object (PDFObject (PDFName), hasStream)
+import Pdf.Object.State (getStream, setStream)
+
+import Util.Logging (Logging, sayF)
+import Util.UnifiedError (FallibleT, UnifiedError)
 
 unfilterStream
   :: (FilterList, BS.ByteString)

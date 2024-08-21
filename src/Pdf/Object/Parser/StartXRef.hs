@@ -13,17 +13,12 @@ module Pdf.Object.Parser.StartXRef
   ( startXRefP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , isDigit
-                                                , label
-                                                , satisfy
-                                                , some'
-                                                , string
-                                                )
-import           Pdf.Object.Parser.LooseEndOfLine
-                                                ( looseEndOfLineP )
-import           Pdf.Object.Object              ( PDFObject(PDFStartXRef) )
-import           Util.Number                    ( toNumber )
+import Data.Binary.Parser (Get, isDigit, label, satisfy, some', string)
+
+import Pdf.Object.Object (PDFObject (PDFStartXRef))
+import Pdf.Object.Parser.LooseEndOfLine (looseEndOfLineP)
+
+import Util.Number (toNumber)
 
 {- |
 Parse a `PDFXRef` object.

@@ -9,34 +9,21 @@ module Pdf.Document.Partition
   , removeUnused
   ) where
 
-import           Data.Kind                      ( Type )
-import           Data.Foldable                  ( find )
-import           Data.Maybe                     ( fromMaybe )
-import           Pdf.Document.Document          ( PDFDocument
-                                                , deepFind
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFNull
-                                                  , PDFTrailer
-                                                  , PDFVersion
-                                                  , PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFObjectStream
-                                                  , PDFReference
-                                                  )
-                                                , hasKey
-                                                )
-import           Util.Logging                   ( Logging
-                                                , sayF
-                                                )
-import           Util.UnifiedError              ( FallibleT )
-import           Pdf.Document.Uncompress        ( uncompressObjects
-                                                , uncompressDocument
-                                                )
-import           Pdf.Document.Collection        ( PDFObjects
-                                                , toPDFDocument
-                                                )
-import qualified Data.IntMap                   as IM
+import Data.Foldable (find)
+import Data.IntMap qualified as IM
+import Data.Kind (Type)
+import Data.Maybe (fromMaybe)
+
+import Pdf.Document.Collection (PDFObjects, toPDFDocument)
+import Pdf.Document.Document (PDFDocument, deepFind)
+import Pdf.Document.Uncompress (uncompressDocument, uncompressObjects)
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFReference, PDFTrailer, PDFVersion)
+    , hasKey
+    )
+
+import Util.Logging (Logging, sayF)
+import Util.UnifiedError (FallibleT)
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 type PDFPartition :: Type

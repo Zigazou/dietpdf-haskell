@@ -6,72 +6,47 @@ module Pdf.Document.Encode
   , encodeObject
   ) where
 
-import qualified Data.ByteString               as BS
-import qualified Data.Map.Strict               as Map
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFEndOfFile
-                                                  , PDFNumber
-                                                  , PDFStartXRef
-                                                  , PDFTrailer
-                                                  , PDFNull
-                                                  , PDFIndirectObject
-                                                  , PDFDictionary
-                                                  , PDFReference
-                                                  , PDFName
-                                                  , PDFXRefStream
-                                                  )
-                                                , fromPDFObject
-                                                , xrefCount
-                                                , hasKey
-                                                , isIndirect
-                                                , isHeader
-                                                , isTrailer
-                                                )
-import           Pdf.Document.Document          ( PDFDocument
-                                                , cFilter
-                                                , singleton
-                                                )
-import           Pdf.Document.Partition         ( PDFPartition
-                                                  ( ppHeads
-                                                  , ppIndirectObjects
-                                                  , ppTrailers
-                                                  , PDFPartition
-                                                  )
-                                                , firstVersion
-                                                , lastTrailer
-                                                , removeUnused
-                                                )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( EncodeNoIndirectObject
-                                                  , EncodeNoVersion
-                                                  , EncodeNoTrailer
-                                                  )
-                                                , FallibleT
-                                                , tryF
-                                                )
-import           Pdf.Object.Optimize            ( optimize )
-import           Pdf.Document.XRef              ( calcOffsets
-                                                , xrefStreamTable
-                                                )
-import           Util.Logging                   ( Logging
-                                                , sayF
-                                                , sayComparisonF
-                                                , sayErrorF
-                                                )
-import           Pdf.Document.Collection        ( encodeObject
-                                                , eoBinaryData
-                                                , findLast, fromPDFDocument
-                                                )
-import           Pdf.Object.State               ( setValue
-                                                , getValue
-                                                )
-import           Control.Monad.Trans.Except     ( throwE
-                                                , runExcept
-                                                )
-import           Control.Monad                  ( when )
-import           Pdf.Document.ObjectStream      ( explodeDocument )
-import           Util.Dictionary                ( mkDictionary )
-import qualified Data.IntMap as IM
+import Control.Monad (when)
+import Control.Monad.Trans.Except (runExcept, throwE)
+
+import Data.ByteString qualified as BS
+import Data.IntMap qualified as IM
+import Data.Map.Strict qualified as Map
+
+import Pdf.Document.Collection
+    ( encodeObject
+    , eoBinaryData
+    , findLast
+    , fromPDFDocument
+    )
+import Pdf.Document.Document (PDFDocument, cFilter, singleton)
+import Pdf.Document.ObjectStream (explodeDocument)
+import Pdf.Document.Partition
+    ( PDFPartition (PDFPartition, ppHeads, ppIndirectObjects, ppTrailers)
+    , firstVersion
+    , lastTrailer
+    , removeUnused
+    )
+import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
+import Pdf.Object.Object
+    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFReference, PDFStartXRef, PDFTrailer, PDFXRefStream)
+    , fromPDFObject
+    , hasKey
+    , isHeader
+    , isIndirect
+    , isTrailer
+    , xrefCount
+    )
+import Pdf.Object.Optimize (optimize)
+import Pdf.Object.State (getValue, setValue)
+
+import Util.Dictionary (mkDictionary)
+import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
+import Util.UnifiedError
+    ( FallibleT
+    , UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
+    , tryF
+    )
 
 updateTrailer :: Logging m => Int -> PDFObject -> FallibleT m PDFObject
 updateTrailer entriesCount =

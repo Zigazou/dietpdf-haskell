@@ -2,25 +2,18 @@ module Command.Hash
   ( objectHashes
   ) where
 
-import           Data.Kind                      ( Type )
-import           Pdf.Document.Document          ( PDFDocument
-                                                , toList
-                                                )
-import           Util.UnifiedError              ( FallibleT )
-import qualified Data.Text                     as T
-import           Pdf.Object.Signature           ( streamHash )
-import           Util.Logging                   ( sayF )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObjectWithStream
-                                                  )
-                                                )
-import           Data.Set                       ( Set
-                                                , empty
-                                                , insert
-                                                , member
-                                                )
-import           Data.Foldable                  ( foldrM )
-import           Data.Maybe                     ( catMaybes )
+import Data.Foldable (foldrM)
+import Data.Kind (Type)
+import Data.Maybe (catMaybes)
+import Data.Set (Set, empty, insert, member)
+import Data.Text qualified as T
+
+import Pdf.Document.Document (PDFDocument, toList)
+import Pdf.Object.Object (PDFObject (PDFIndirectObjectWithStream))
+import Pdf.Object.Signature (streamHash)
+
+import Util.Logging (sayF)
+import Util.UnifiedError (FallibleT)
 
 type ObjectHash :: Type
 data ObjectHash = ObjectHash !Int !T.Text

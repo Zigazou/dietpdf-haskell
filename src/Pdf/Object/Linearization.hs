@@ -19,20 +19,16 @@ module Pdf.Object.Linearization
   , getLinearization
   ) where
 
-import           Data.Kind                      ( Type )
-import           Control.Monad                  ( msum )
-import qualified Data.Map.Strict               as Map
-import qualified Data.Sequence                 as SQ
-import           Pdf.Document.Document          ( PDFDocument
-                                                , lMap
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFDictionary
-                                                  , PDFIndirectObject
-                                                  , PDFNumber
-                                                  )
-                                                )
+import Control.Monad (msum)
+
+import Data.Kind (Type)
+import Data.Map.Strict qualified as Map
+import Data.Sequence qualified as SQ
+
+import Pdf.Document.Document (PDFDocument, lMap)
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFNumber)
+    )
 
 type Linearization :: Type
 data Linearization = Linearization

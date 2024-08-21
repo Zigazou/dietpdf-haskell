@@ -2,40 +2,29 @@ module Pdf.Document.Parser
   ( pdfParse
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , many'
-                                                , parseDetail
-                                                , satisfy
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Pdf.Document.Document          ( PDFDocument
-                                                , dSepBy
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                , isWhiteSpace
-                                                )
-import           Pdf.Object.Parser.Comment      ( commentP )
-import           Pdf.Object.Parser.IndirectObject
-                                                ( indirectObjectP )
-import           Pdf.Object.Parser.StartXRef    ( startXRefP )
-import           Pdf.Object.Parser.Trailer      ( trailerP )
-import           Pdf.Object.Parser.XRef         ( xrefP )
-import           Util.UnifiedError              ( UnifiedError(ParseError)
-                                                , FallibleT
-                                                )
-import           Util.Logging                   ( Logging
-                                                , sayF
-                                                )
-import           Control.Monad.Trans.Except     ( throwE )
+import Control.Applicative ((<|>))
+import Control.Monad.Trans.Except (throwE)
+
+import Data.Binary.Parser (Get, label, many', parseDetail, satisfy)
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Pdf.Document.Document (PDFDocument, dSepBy)
+import Pdf.Object.Object (PDFObject, isWhiteSpace)
+import Pdf.Object.Parser.Comment (commentP)
+import Pdf.Object.Parser.IndirectObject (indirectObjectP)
+import Pdf.Object.Parser.StartXRef (startXRefP)
+import Pdf.Object.Parser.Trailer (trailerP)
+import Pdf.Object.Parser.XRef (xrefP)
+
+import Util.Logging (Logging, sayF)
+import Util.UnifiedError (FallibleT, UnifiedError (ParseError))
 
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)
 
 topObjectP :: Get PDFObject
-topObjectP = commentP <|> indirectObjectP <|> trailerP <|> xrefP <|> startXRefP 
+topObjectP = commentP <|> indirectObjectP <|> trailerP <|> xrefP <|> startXRefP
 
 pdfRawP :: Get PDFDocument
 pdfRawP = label "pdf" $ topObjectP `dSepBy` whiteSpaces

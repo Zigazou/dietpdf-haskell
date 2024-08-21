@@ -2,13 +2,14 @@ module Command.Unpredict
   ( unpredictByteString
   ) where
 
-import           Util.UnifiedError              ( FallibleT )
-import qualified Data.ByteString               as BS
-import           Codec.Compression.Predictor    ( unpredict
-                                                , Predictor
-                                                )
-import           Control.Monad.Trans.Except     ( throwE )
-import           Control.Monad.Trans.Class      ( lift )
+import Codec.Compression.Predictor (Predictor, unpredict)
+
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (throwE)
+
+import Data.ByteString qualified as BS
+
+import Util.UnifiedError (FallibleT)
 
 unpredictByteString
   :: Predictor -> Int -> Int -> BS.ByteString -> FallibleT IO ()

@@ -15,14 +15,14 @@ module Codec.Compression.Flate
   , entropyCompress
   ) where
 
-import qualified Codec.Compression.Hopfli      as HL
-import qualified Codec.Compression.Zlib        as ZL
-import qualified Codec.Compression.Zlib.Internal
-                                               as ZLI
-import           Util.UnifiedError              ( UnifiedError(FlateDecodeError)
-                                                )
-import qualified Data.ByteString               as BS
-import qualified Data.ByteString.Lazy          as BL
+import Codec.Compression.Hopfli qualified as HL
+import Codec.Compression.Zlib qualified as ZL
+import Codec.Compression.Zlib.Internal qualified as ZLI
+
+import Data.ByteString qualified as BS
+import Data.ByteString.Lazy qualified as BL
+
+import Util.UnifiedError (UnifiedError (FlateDecodeError))
 
 zopfliCompressOptions :: HL.CompressOptions
 zopfliCompressOptions = HL.CompressOptions { HL.verbose            = HL.NONE

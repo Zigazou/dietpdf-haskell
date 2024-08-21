@@ -8,17 +8,15 @@ module Util.Number
   , encodeIntToBytes
   ) where
 
-import qualified Data.ByteString               as BS
-import           Data.ByteString.UTF8           ( fromString )
-import           Data.List                      ( foldl' )
-import           Data.Word                      ( Word8 )
-import           Util.Ascii                     ( asciiDIGITZERO
-                                                , asciiHYPHENMINUS
-                                                )
-import           Data.Double.Conversion.ByteString
-                                                ( toShortest )
-import           Util.String                    ( startsWith )
-import           Data.Bits                      ( shiftR )
+import Data.Bits (shiftR)
+import Data.ByteString qualified as BS
+import Data.ByteString.UTF8 (fromString)
+import Data.Double.Conversion.ByteString (toShortest)
+import Data.List (foldl')
+import Data.Word (Word8)
+
+import Util.Ascii (asciiDIGITZERO, asciiHYPHENMINUS)
+import Util.String (startsWith)
 
 round' :: Int -> Double -> Double
 round' limit x = fromIntegral (round (x * t) :: Int) / t

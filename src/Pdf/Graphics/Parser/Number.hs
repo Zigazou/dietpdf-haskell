@@ -35,24 +35,15 @@ module Pdf.Graphics.Parser.Number
   ( numberP
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , isDigit
-                                                , label
-                                                , option
-                                                , satisfy
-                                                , some'
-                                                , word8
-                                                )
-import           Data.List                      ( foldl' )
-import           Data.Word                      ( Word8 )
-import           Pdf.Graphics.Object            ( GFXObject(GFXNumber)
-                                                , isPlusMinus
-                                                )
-import           Util.Ascii                     ( asciiDIGITZERO
-                                                , asciiFULLSTOP
-                                                , asciiHYPHENMINUS
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, isDigit, label, option, satisfy, some', word8)
+import Data.List (foldl')
+import Data.Word (Word8)
+
+import Pdf.Graphics.Object (GFXObject (GFXNumber), isPlusMinus)
+
+import Util.Ascii (asciiDIGITZERO, asciiFULLSTOP, asciiHYPHENMINUS)
 
 plusMinus :: Num a => Get (a -> a)
 plusMinus = do
@@ -97,37 +88,37 @@ Parse a `GFXNumber`.
 
 Internally, all numbers (either integer or real) are stored as `Double`.
 
->>> parseOnly numberP "123"   
+>>> parseOnly numberP "123"
 Right (GFXNumber 123.0)
 
->>> parseOnly numberP "43445" 
+>>> parseOnly numberP "43445"
 Right (GFXNumber 43445.0)
 
->>> parseOnly numberP "+17"   
+>>> parseOnly numberP "+17"
 Right (GFXNumber 17.0)
 
->>> parseOnly numberP "-98"   
+>>> parseOnly numberP "-98"
 Right (GFXNumber (-98.0))
 
->>> parseOnly numberP "0"     
+>>> parseOnly numberP "0"
 Right (GFXNumber 0.0)
 
->>> parseOnly numberP "34.5"  
+>>> parseOnly numberP "34.5"
 Right (GFXNumber 34.5)
 
->>> parseOnly numberP "-3.62" 
+>>> parseOnly numberP "-3.62"
 Right (GFXNumber (-3.62))
 
 >>> parseOnly numberP "+123.6"
 Right (GFXNumber 123.6)
 
->>> parseOnly numberP "4."    
+>>> parseOnly numberP "4."
 Right (GFXNumber 4.0)
 
->>> parseOnly numberP "-.002" 
+>>> parseOnly numberP "-.002"
 Right (GFXNumber (-0.002))
 
->>> parseOnly numberP "0.0"   
+>>> parseOnly numberP "0.0"
 Right (GFXNumber 0.0)
 -}
 numberP :: Get GFXObject

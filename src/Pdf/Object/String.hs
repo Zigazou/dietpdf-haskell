@@ -2,19 +2,15 @@ module Pdf.Object.String
   ( optimizeString
   ) where
 
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFHexString
-                                                  , PDFString
-                                                  )
-                                                )
-import           Util.String                    ( hexStringToString )
-import           Util.Ascii                     ( asciiNUL )
-import           Util.UnifiedError              ( FallibleT )
-import           Util.Logging                   ( Logging
-                                                , sayComparisonF
-                                                )
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Pdf.Object.Object (PDFObject (PDFHexString, PDFString))
+
+import Util.Ascii (asciiNUL)
+import Util.Logging (Logging, sayComparisonF)
+import Util.String (hexStringToString)
+import Util.UnifiedError (FallibleT)
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"

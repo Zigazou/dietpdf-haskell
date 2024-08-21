@@ -52,41 +52,42 @@ module Pdf.Object.Parser.XRef
   ( xrefP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , anyWord8
-                                                , isDigit
-                                                , label
-                                                , satisfy
-                                                , scan
-                                                , some'
-                                                , string
-                                                , word8
-                                                , skipWhile
-                                                )
-import           Pdf.Object.Parser.LooseEndOfLine
-                                                ( looseEndOfLineP )
-import           Data.Word                      ( Word8 )
-import qualified Data.ByteString               as BS
-import           Data.Ix                        ( inRange )
-import           Pdf.Object.Object              ( PDFObject(PDFXRef)
-                                                , XRefEntry(XRefEntry)
-                                                , XRefState
-                                                  ( FreeEntry
-                                                  , InUseEntry
-                                                  )
-                                                , XRefSubsection(XRefSubsection)
-                                                , isSpace
-                                                )
-import           Util.Ascii                     ( asciiCR
-                                                , asciiDIGITNINE
-                                                , asciiDIGITZERO
-                                                , asciiLF
-                                                , asciiLOWERF
-                                                , asciiLOWERN
-                                                , asciiSPACE
-                                                )
-import           Util.Number                    ( toNumber )
-import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
+import Data.Binary.Parser
+    ( Get
+    , anyWord8
+    , isDigit
+    , label
+    , satisfy
+    , scan
+    , skipWhile
+    , some'
+    , string
+    , word8
+    )
+import Data.ByteString qualified as BS
+import Data.Ix (inRange)
+import Data.Word (Word8)
+
+import Pdf.Object.Object
+    ( PDFObject (PDFXRef)
+    , XRefEntry (XRefEntry)
+    , XRefState (FreeEntry, InUseEntry)
+    , XRefSubsection (XRefSubsection)
+    , isSpace
+    )
+import Pdf.Object.Parser.EmptyContent (emptyContentP)
+import Pdf.Object.Parser.LooseEndOfLine (looseEndOfLineP)
+
+import Util.Ascii
+    ( asciiCR
+    , asciiDIGITNINE
+    , asciiDIGITZERO
+    , asciiLF
+    , asciiLOWERF
+    , asciiLOWERN
+    , asciiSPACE
+    )
+import Util.Number (toNumber)
 
 integerP :: Get Int
 integerP = toNumber <$> some' (satisfy isDigit)

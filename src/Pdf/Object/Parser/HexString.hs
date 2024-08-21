@@ -24,19 +24,12 @@ module Pdf.Object.Parser.HexString
   ( hexStringP
   ) where
 
-import           Data.Binary.Parser             ( Get
-                                                , isHexDigit
-                                                , label
-                                                , takeWhile1
-                                                , word8
-                                                )
-import           Pdf.Object.Object              ( PDFObject(PDFHexString)
-                                                , isWhiteSpace
-                                                )
-import           Util.Ascii                     ( asciiGREATERTHANSIGN
-                                                , asciiLESSTHANSIGN
-                                                )
-import           Util.String                    ( normalizeHexString )
+import Data.Binary.Parser (Get, isHexDigit, label, takeWhile1, word8)
+
+import Pdf.Object.Object (PDFObject (PDFHexString), isWhiteSpace)
+
+import Util.Ascii (asciiGREATERTHANSIGN, asciiLESSTHANSIGN)
+import Util.String (normalizeHexString)
 
 {- |
 A binary parser for a PDF hexstring.

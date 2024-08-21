@@ -1,3 +1,11 @@
 {
-    "haskell.formattingProvider": "stylish-haskell"
+    "externalFormatters.languages": {
+        "haskell": {
+            "command": "stylish-haskell",
+            "arguments": [
+                "--config",
+                "/home/fred/Programmation/dietpdf-haskell/stylish-haskell.yaml"
+            ]
+        }
+    }
 }

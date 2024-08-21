@@ -7,18 +7,20 @@ module Util.String
   , startsWith
   ) where
 
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Util.Ascii                     ( asciiCR
-                                                , asciiDIGITNINE
-                                                , asciiDIGITZERO
-                                                , asciiLEFTPARENTHESIS
-                                                , asciiLOWERA
-                                                , asciiLOWERF
-                                                , asciiRIGHTPARENTHESIS
-                                                , asciiUPPERA
-                                                , asciiUPPERF
-                                                )
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Util.Ascii
+    ( asciiCR
+    , asciiDIGITNINE
+    , asciiDIGITZERO
+    , asciiLEFTPARENTHESIS
+    , asciiLOWERA
+    , asciiLOWERF
+    , asciiRIGHTPARENTHESIS
+    , asciiUPPERA
+    , asciiUPPERF
+    )
 
 escapeChar :: Word8 -> BS.ByteString
 escapeChar byte | byte == asciiCR               = "\\r"

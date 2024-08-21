@@ -13,22 +13,25 @@ module AppOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
   ) where
 
-import           Data.Kind                      ( Type )
-import           Options.Applicative            ( Parser
-                                                , argument
-                                                , command
-                                                , help
-                                                , info
-                                                , metavar
-                                                , progDesc
-                                                , str
-                                                , auto
-                                                , subparser
-                                                , optional
-                                                , Mod
-                                                , CommandFields
-                                                )
-import           Codec.Compression.Predictor    ( Predictor )
+import Codec.Compression.Predictor (Predictor)
+
+import Data.Kind (Type)
+
+import Options.Applicative
+    ( CommandFields
+    , Mod
+    , Parser
+    , argument
+    , auto
+    , command
+    , help
+    , info
+    , metavar
+    , optional
+    , progDesc
+    , str
+    , subparser
+    )
 
 type Codec :: Type
 data Codec = LZW

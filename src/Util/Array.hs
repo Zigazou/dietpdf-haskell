@@ -7,8 +7,8 @@ module Util.Array
   , mkEmptyArray
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.Sequence                 as SQ
+import Data.Kind (Type)
+import Data.Sequence qualified as SQ
 
 {-|
 An `Array` is a `Sequence` of object.

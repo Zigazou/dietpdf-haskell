@@ -4,32 +4,27 @@ module Pdf.Object.Parser.Container
   , dictionaryP
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , sepBy
-                                                , word8
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Map.Strict                ( fromList )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFName
-                                                  )
-                                                , mkPDFArray
-                                                )
-import           Pdf.Object.Parser.HexString    ( hexStringP )
-import           Pdf.Object.Parser.Keyword      ( keywordP )
-import           Pdf.Object.Parser.Name         ( nameP )
-import           Pdf.Object.Parser.Number       ( numberP )
-import           Pdf.Object.Parser.Reference    ( referenceP )
-import           Pdf.Object.Parser.String       ( stringP )
-import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
-import           Util.Ascii                     ( asciiGREATERTHANSIGN
-                                                , asciiLEFTSQUAREBRACKET
-                                                , asciiLESSTHANSIGN
-                                                , asciiRIGHTSQUAREBRACKET
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, label, sepBy, word8)
+import Data.ByteString qualified as BS
+import Data.Map.Strict (fromList)
+
+import Pdf.Object.Object (PDFObject (PDFDictionary, PDFName), mkPDFArray)
+import Pdf.Object.Parser.EmptyContent (emptyContentP)
+import Pdf.Object.Parser.HexString (hexStringP)
+import Pdf.Object.Parser.Keyword (keywordP)
+import Pdf.Object.Parser.Name (nameP)
+import Pdf.Object.Parser.Number (numberP)
+import Pdf.Object.Parser.Reference (referenceP)
+import Pdf.Object.Parser.String (stringP)
+
+import Util.Ascii
+    ( asciiGREATERTHANSIGN
+    , asciiLEFTSQUAREBRACKET
+    , asciiLESSTHANSIGN
+    , asciiRIGHTSQUAREBRACKET
+    )
 
 itemP :: Get PDFObject
 itemP =

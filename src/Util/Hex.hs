@@ -6,17 +6,19 @@ module Util.Hex
   , toHexDigits
   ) where
 
-import qualified Data.ByteString               as BS
-import           Data.List.Split                ( chunksOf )
-import           Data.Word                      ( Word8 )
-import           Util.Ascii                     ( asciiDIGITNINE
-                                                , asciiDIGITZERO
-                                                , asciiLOWERA
-                                                , asciiLOWERF
-                                                , asciiSPACE
-                                                , asciiUPPERA
-                                                , asciiUPPERF
-                                                )
+import Data.ByteString qualified as BS
+import Data.List.Split (chunksOf)
+import Data.Word (Word8)
+
+import Util.Ascii
+    ( asciiDIGITNINE
+    , asciiDIGITZERO
+    , asciiLOWERA
+    , asciiLOWERF
+    , asciiSPACE
+    , asciiUPPERA
+    , asciiUPPERF
+    )
 infixl 9 ><
 (><) :: Word8 -> (Word8, Word8) -> Bool
 (><) byte (lower, upper) = byte >= lower && byte <= upper

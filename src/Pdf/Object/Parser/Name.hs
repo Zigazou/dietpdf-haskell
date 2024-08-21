@@ -29,27 +29,23 @@ module Pdf.Object.Parser.Name
   ( nameP
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , isHexDigit
-                                                , label
-                                                , satisfy
-                                                , some'
-                                                , word8
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( PDFObject(PDFName)
-                                                , isNameRegularChar
-                                                )
-import           Util.Ascii                     ( asciiDIGITNINE
-                                                , asciiDIGITZERO
-                                                , asciiLOWERA
-                                                , asciiLOWERF
-                                                , asciiNUMBERSIGN
-                                                , asciiSOLIDUS
-                                                , asciiUPPERA
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, isHexDigit, label, satisfy, some', word8)
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Pdf.Object.Object (PDFObject (PDFName), isNameRegularChar)
+
+import Util.Ascii
+    ( asciiDIGITNINE
+    , asciiDIGITZERO
+    , asciiLOWERA
+    , asciiLOWERF
+    , asciiNUMBERSIGN
+    , asciiSOLIDUS
+    , asciiUPPERA
+    )
 
 hexadecimalCodeP :: Get Word8
 hexadecimalCodeP = do

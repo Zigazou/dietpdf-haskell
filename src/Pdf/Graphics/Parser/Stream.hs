@@ -2,36 +2,25 @@ module Pdf.Graphics.Parser.Stream
   ( gfxParse
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , many'
-                                                , parseDetail
-                                                , satisfy
-                                                , sepBy
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Pdf.Graphics.Object            ( GFXObject
-                                                , isWhiteSpace
-                                                )
-import           Pdf.Graphics.Parser.Comment    ( commentP )
-import           Pdf.Graphics.Parser.Container  ( dictionaryP
-                                                , arrayP
-                                                )
-import           Util.UnifiedError                    ( UnifiedError(ParseError) )
-import           Pdf.Graphics.Parser.HexString  ( hexStringP )
-import           Pdf.Graphics.Parser.Keyword    ( keywordP )
-import           Pdf.Graphics.Parser.Name       ( nameP )
-import           Pdf.Graphics.Parser.Number     ( numberP )
-import           Pdf.Graphics.Parser.String     ( stringP )
-import           Pdf.Graphics.Parser.InlineImage
-                                                ( inlineImageP )
-import           Pdf.Graphics.Parser.EmptyContent
-                                                ( emptyContentP )
-import           Util.Array                     ( Array
-                                                , mkArray
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, label, many', parseDetail, satisfy, sepBy)
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Pdf.Graphics.Object (GFXObject, isWhiteSpace)
+import Pdf.Graphics.Parser.Comment (commentP)
+import Pdf.Graphics.Parser.Container (arrayP, dictionaryP)
+import Pdf.Graphics.Parser.EmptyContent (emptyContentP)
+import Pdf.Graphics.Parser.HexString (hexStringP)
+import Pdf.Graphics.Parser.InlineImage (inlineImageP)
+import Pdf.Graphics.Parser.Keyword (keywordP)
+import Pdf.Graphics.Parser.Name (nameP)
+import Pdf.Graphics.Parser.Number (numberP)
+import Pdf.Graphics.Parser.String (stringP)
+
+import Util.Array (Array, mkArray)
+import Util.UnifiedError (UnifiedError (ParseError))
 
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)

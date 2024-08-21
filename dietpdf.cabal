@@ -122,7 +122,8 @@ library
       MultiWayIf
       TupleSections
       StandaloneKindSignatures
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
+      ImportQualifiedPost
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
     , binary
@@ -175,7 +176,8 @@ executable dietpdf
       MultiWayIf
       TupleSections
       StandaloneKindSignatures
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
+      ImportQualifiedPost
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -258,7 +260,7 @@ test-suite dietpdf-test
       FlexibleContexts
       MultiWayIf
       TupleSections
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-prepositive-qualified-module -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns
   build-depends:
       QuickCheck
     , base >=4.7 && <5

@@ -2,28 +2,20 @@ module Command.Decode
   ( decodeByteString
   ) where
 
-import           Util.UnifiedError              ( FallibleT
-                                                , UnifiedError
-                                                )
-import qualified Data.ByteString               as BS
-import           AppOptions                     ( Codec
-                                                  ( LZW
-                                                  , RLE
-                                                  , Deflate
-                                                  , Zopfli
-                                                  , NoCompress
-                                                  , Ascii85
-                                                  , Hex
-                                                  )
-                                                )
-import qualified Codec.Compression.Flate       as FL
-import qualified Codec.Compression.RunLength   as RL
-import qualified Codec.Compression.LZW         as LZ
-import qualified Codec.Filter.Ascii85          as A8
-import qualified Codec.Filter.AsciiHex         as AH
-import           Control.Monad.Trans.Except     ( throwE )
-import           Control.Monad.Trans.Class      ( lift )
+import AppOptions (Codec (Ascii85, Deflate, Hex, LZW, NoCompress, RLE, Zopfli))
 
+import Codec.Compression.Flate qualified as FL
+import Codec.Compression.LZW qualified as LZ
+import Codec.Compression.RunLength qualified as RL
+import Codec.Filter.Ascii85 qualified as A8
+import Codec.Filter.AsciiHex qualified as AH
+
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (throwE)
+
+import Data.ByteString qualified as BS
+
+import Util.UnifiedError (FallibleT, UnifiedError)
 
 manage :: Either UnifiedError BS.ByteString -> FallibleT IO ()
 manage (Right compressed) = lift $ BS.putStr compressed

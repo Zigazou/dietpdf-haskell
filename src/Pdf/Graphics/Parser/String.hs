@@ -18,39 +18,37 @@ module Pdf.Graphics.Parser.String
   ( stringP
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , label
-                                                , many'
-                                                , satisfy
-                                                , some'
-                                                , word8
-                                                )
-import           Pdf.Graphics.Parser.LooseEndOfLine
-                                                ( looseEndOfLineP )
-import qualified Data.ByteString               as BS
-import           Data.Maybe                     ( catMaybes )
-import           Data.Word                      ( Word8 )
-import           Pdf.Graphics.Object            ( GFXObject(GFXString)
-                                                , isOctal
-                                                , isStringEscapeSequence
-                                                , isStringRegularChar
-                                                )
-import           Util.Ascii                     ( asciiBS
-                                                , asciiCR
-                                                , asciiDIGITZERO
-                                                , asciiFF
-                                                , asciiHT
-                                                , asciiLEFTPARENTHESIS
-                                                , asciiLF
-                                                , asciiLOWERB
-                                                , asciiLOWERF
-                                                , asciiLOWERN
-                                                , asciiLOWERR
-                                                , asciiLOWERT
-                                                , asciiREVERSESOLIDUS
-                                                , asciiRIGHTPARENTHESIS
-                                                )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser (Get, label, many', satisfy, some', word8)
+import Data.ByteString qualified as BS
+import Data.Maybe (catMaybes)
+import Data.Word (Word8)
+
+import Pdf.Graphics.Object
+    ( GFXObject (GFXString)
+    , isOctal
+    , isStringEscapeSequence
+    , isStringRegularChar
+    )
+import Pdf.Graphics.Parser.LooseEndOfLine (looseEndOfLineP)
+
+import Util.Ascii
+    ( asciiBS
+    , asciiCR
+    , asciiDIGITZERO
+    , asciiFF
+    , asciiHT
+    , asciiLEFTPARENTHESIS
+    , asciiLF
+    , asciiLOWERB
+    , asciiLOWERF
+    , asciiLOWERN
+    , asciiLOWERR
+    , asciiLOWERT
+    , asciiREVERSESOLIDUS
+    , asciiRIGHTPARENTHESIS
+    )
 
 escapedEndOfLineP :: Get (Maybe Word8)
 escapedEndOfLineP =

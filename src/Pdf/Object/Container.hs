@@ -13,32 +13,21 @@ module Pdf.Object.Container
   , getFilters
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.Map.Strict               as Map
-import qualified Data.Sequence                 as SQ
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFArray
-                                                  , PDFDictionary
-                                                  , PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFName
-                                                  , PDFNull
-                                                  , PDFObjectStream
-                                                  )
-                                                , hasDictionary
-                                                )
-import           Pdf.Object.State               ( embedObject
-                                                , getValue
-                                                , setMaybe
-                                                )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( InvalidFilterParm
-                                                  )
-                                                , FallibleT
-                                                )
-import           Util.Logging                   ( Logging )
-import           Data.Functor                   ( (<&>) )
-import           Control.Monad.Trans.Except     ( throwE )
+import Control.Monad.Trans.Except (throwE)
+
+import Data.Functor ((<&>))
+import Data.Kind (Type)
+import Data.Map.Strict qualified as Map
+import Data.Sequence qualified as SQ
+
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream)
+    , hasDictionary
+    )
+import Pdf.Object.State (embedObject, getValue, setMaybe)
+
+import Util.Logging (Logging)
+import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 {- |
 Apply a function to any object contained by an object at any level.

@@ -12,46 +12,36 @@ module Pdf.Document.XRef
   , ObjectOffsets
   ) where
 
-import           Data.Foldable                  ( foldl' )
-import qualified Data.IntMap.Strict            as IM
-import           Data.Ix                        ( range
-                                                , rangeSize
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFXRef
-                                                  , PDFXRefStream
-                                                  , PDFName
-                                                  , PDFArray
-                                                  , PDFNumber
-                                                  )
-                                                , XRefSubsection(XRefSubsection)
-                                                , freeEntry
-                                                , inUseEntry
-                                                , mkPDFArray
-                                                , ToPDFNumber(mkPDFNumber)
-                                                )
-import           Pdf.Document.Collection        ( PDFObjects
-                                                , EncodedObjects
-                                                , ObjectOffsets
-                                                , EncodedObject
-                                                  ( EncodedObject
-                                                  , eoBinaryData
-                                                  )
-                                                , encodeObject
-                                                )
-import           Util.Number                    ( encodeIntToBytes
-                                                , bytesNeededToEncode
-                                                )
-import           Util.Dictionary                ( mkDictionary )
-import qualified Data.ByteString               as BS
-import           Data.Maybe                     ( fromMaybe )
-import           Util.UnifiedError              ( FallibleT
-                                                , UnifiedError(XRefStreamNoW)
-                                                )
-import qualified Data.Sequence                 as SQ
-import           Pdf.Object.State               ( getValue )
-import           Control.Monad.Trans.Except     ( throwE )
-import           Util.Logging                   ( Logging )
+import Control.Monad.Trans.Except (throwE)
+
+import Data.ByteString qualified as BS
+import Data.Foldable (foldl')
+import Data.IntMap.Strict qualified as IM
+import Data.Ix (range, rangeSize)
+import Data.Maybe (fromMaybe)
+import Data.Sequence qualified as SQ
+
+import Pdf.Document.Collection
+    ( EncodedObject (EncodedObject, eoBinaryData)
+    , EncodedObjects
+    , ObjectOffsets
+    , PDFObjects
+    , encodeObject
+    )
+import Pdf.Object.Object
+    ( PDFObject (PDFArray, PDFName, PDFNumber, PDFXRef, PDFXRefStream)
+    , ToPDFNumber (mkPDFNumber)
+    , XRefSubsection (XRefSubsection)
+    , freeEntry
+    , inUseEntry
+    , mkPDFArray
+    )
+import Pdf.Object.State (getValue)
+
+import Util.Dictionary (mkDictionary)
+import Util.Logging (Logging)
+import Util.Number (bytesNeededToEncode, encodeIntToBytes)
+import Util.UnifiedError (FallibleT, UnifiedError (XRefStreamNoW))
 
 -- | Given a collection of encoded objects, calculates their offsets
 calcOffsets :: Int -> EncodedObjects -> ObjectOffsets
@@ -71,7 +61,7 @@ objectsNumberRange :: ObjectOffsets -> (Int, Int)
 objectsNumberRange offsets =
   case (IM.minViewWithKey offsets, IM.maxViewWithKey offsets) of
     (Just ((minKey, _), _), Just ((maxKey, _), _)) -> (minKey, maxKey)
-    _anyOtherCase -> (0, 0)
+    _anyOtherCase                                  -> (0, 0)
 
 {- |
 Given a collection of encoded objects, generates an old format XRef table

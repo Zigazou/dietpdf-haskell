@@ -21,68 +21,51 @@ module Pdf.Document.ObjectStream
   , isObjectStreamable
   ) where
 
-import           Data.Kind                      ( Type )
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , isDigit
-                                                , many'
-                                                , parseOnly
-                                                , skipWhile
-                                                , takeWhile1
-                                                )
-import qualified Data.ByteString               as BS
-import           Util.Number                    ( fromInt )
+import Control.Applicative ((<|>))
+import Control.Monad (forM)
+import Control.Monad.Trans.Except (throwE)
 
-import           Pdf.Document.Document          ( PDFDocument
-                                                , cFilter
-                                                )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFIndirectObject
-                                                  , PDFName
-                                                  , PDFNumber
-                                                  , PDFObjectStream
-                                                  , PDFIndirectObjectWithGraphics
-                                                  , PDFIndirectObjectWithStream
-                                                  )
-                                                , fromPDFObject
-                                                , isWhiteSpace
-                                                , mkPDFNumber
-                                                )
-import           Pdf.Object.State               ( getStream
-                                                , getValue
-                                                )
-import           Control.Monad                  ( forM )
-import           Data.Functor                   ( (<&>) )
-import           Pdf.Object.Unfilter            ( unfilter )
-import           Pdf.Object.Parser.Container    ( arrayP
-                                                , dictionaryP
-                                                )
-import           Pdf.Object.Parser.HexString    ( hexStringP )
-import           Pdf.Object.Parser.Keyword      ( keywordP )
-import           Pdf.Object.Parser.Name         ( nameP )
-import           Pdf.Object.Parser.Number       ( numberP )
-import           Pdf.Object.Parser.Reference    ( referenceP )
-import           Pdf.Object.Parser.String       ( stringP )
-import           Util.Ascii                     ( asciiDIGITZERO )
-import           Util.UnifiedError              ( UnifiedError
-                                                  ( NoObjectToEncode
-                                                  , ParseError
-                                                  , ObjectStreamNotFound
-                                                  )
-                                                , FallibleT
-                                                )
-import           Data.Foldable                  ( foldl' )
-import           Util.Dictionary                ( Dictionary
-                                                , mkDictionary
-                                                )
-import           Util.Logging                   ( Logging )
-import           Control.Monad.Trans.Except     ( throwE )
-import           Pdf.Document.Collection        ( PDFObjects )
-import           Data.IntMap                    ( union
-                                                , singleton
-                                                , fromList
-                                                )
-import qualified Pdf.Document.Document         as D
+import Data.Binary.Parser
+    ( Get
+    , isDigit
+    , many'
+    , parseOnly
+    , skipWhile
+    , takeWhile1
+    )
+import Data.ByteString qualified as BS
+import Data.Foldable (foldl')
+import Data.Functor ((<&>))
+import Data.IntMap (fromList, singleton, union)
+import Data.Kind (Type)
+
+import Pdf.Document.Collection (PDFObjects)
+import Pdf.Document.Document (PDFDocument, cFilter)
+import Pdf.Document.Document qualified as D
+import Pdf.Object.Object
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream)
+    , fromPDFObject
+    , isWhiteSpace
+    , mkPDFNumber
+    )
+import Pdf.Object.Parser.Container (arrayP, dictionaryP)
+import Pdf.Object.Parser.HexString (hexStringP)
+import Pdf.Object.Parser.Keyword (keywordP)
+import Pdf.Object.Parser.Name (nameP)
+import Pdf.Object.Parser.Number (numberP)
+import Pdf.Object.Parser.Reference (referenceP)
+import Pdf.Object.Parser.String (stringP)
+import Pdf.Object.State (getStream, getValue)
+import Pdf.Object.Unfilter (unfilter)
+
+import Util.Ascii (asciiDIGITZERO)
+import Util.Dictionary (Dictionary, mkDictionary)
+import Util.Logging (Logging)
+import Util.Number (fromInt)
+import Util.UnifiedError
+    ( FallibleT
+    , UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError)
+    )
 
 type ObjectStream :: Type
 data ObjectStream = ObjectStream

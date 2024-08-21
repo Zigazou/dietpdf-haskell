@@ -6,27 +6,18 @@ module Codec.Compression.LZW
   ( decompress
   ) where
 
-import           Data.Kind                      ( Type )
-import qualified Data.ByteString               as BS
-import           Data.Bits                      ( (.&.)
-                                                , shiftL
-                                                , shiftR
-                                                )
-import qualified Data.Sequence                 as SQ
-import           Util.UnifiedError                    ( UnifiedError
-                                                  ( ParseError
-                                                  , InternalError
-                                                  , NotEnoughBytes
-                                                  )
-                                                )
+import Control.Monad.Loops (whileM)
+import Control.Monad.State.Lazy (State, get, put, runState)
 
-import           Control.Monad.State.Lazy       ( State()
-                                                , get
-                                                , put
-                                                , runState
-                                                )
-import           Control.Monad.Loops            ( whileM )
-import           Data.Maybe                     ( isNothing )
+import Data.Bits (shiftL, shiftR, (.&.))
+import Data.ByteString qualified as BS
+import Data.Kind (Type)
+import Data.Maybe (isNothing)
+import Data.Sequence qualified as SQ
+
+import Util.UnifiedError
+    ( UnifiedError (InternalError, NotEnoughBytes, ParseError)
+    )
 
 type BitsSlice :: Type
 data BitsSlice = BitsSlice

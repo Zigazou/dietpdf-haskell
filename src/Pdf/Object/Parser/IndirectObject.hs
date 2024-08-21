@@ -28,50 +28,41 @@ module Pdf.Object.Parser.IndirectObject
   ( indirectObjectP
   ) where
 
-import           Control.Applicative            ( (<|>) )
-import           Data.Binary.Parser             ( Get
-                                                , isDigit
-                                                , label
-                                                , manyTill
-                                                , satisfy
-                                                , some'
-                                                , string
-                                                , word8
-                                                , option
-                                                , skipMany
-                                                , getByteString
-                                                )
-import qualified Data.ByteString               as BS
-import           Data.Word                      ( Word8 )
-import           Pdf.Object.Object              ( PDFObject
-                                                  ( PDFDictionary
-                                                  , PDFIndirectObject
-                                                  , PDFIndirectObjectWithStream
-                                                  , PDFName
-                                                  , PDFObjectStream
-                                                  , PDFXRefStream
-                                                  , PDFNumber
-                                                  )
-                                                , updateStream
-                                                , isWhiteSpace
-                                                )
-import           Pdf.Object.State               ( getValue
-                                                , maybeQuery
-                                                )
-import           Pdf.Object.Parser.Container    ( arrayP
-                                                , dictionaryP
-                                                )
-import           Pdf.Object.Parser.EmptyContent ( emptyContentP )
-import           Pdf.Object.Parser.HexString    ( hexStringP )
-import           Pdf.Object.Parser.Keyword      ( keywordP )
-import           Pdf.Object.Parser.Name         ( nameP )
-import           Pdf.Object.Parser.Number       ( numberP )
-import           Pdf.Object.Parser.Reference    ( referenceP )
-import           Pdf.Object.Parser.String       ( stringP )
-import           Util.Ascii                     ( asciiCR
-                                                , asciiLF
-                                                )
-import           Util.Number                    ( toNumber )
+import Control.Applicative ((<|>))
+
+import Data.Binary.Parser
+    ( Get
+    , getByteString
+    , isDigit
+    , label
+    , manyTill
+    , option
+    , satisfy
+    , skipMany
+    , some'
+    , string
+    , word8
+    )
+import Data.ByteString qualified as BS
+import Data.Word (Word8)
+
+import Pdf.Object.Object
+    ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream, PDFXRefStream)
+    , isWhiteSpace
+    , updateStream
+    )
+import Pdf.Object.Parser.Container (arrayP, dictionaryP)
+import Pdf.Object.Parser.EmptyContent (emptyContentP)
+import Pdf.Object.Parser.HexString (hexStringP)
+import Pdf.Object.Parser.Keyword (keywordP)
+import Pdf.Object.Parser.Name (nameP)
+import Pdf.Object.Parser.Number (numberP)
+import Pdf.Object.Parser.Reference (referenceP)
+import Pdf.Object.Parser.String (stringP)
+import Pdf.Object.State (getValue, maybeQuery)
+
+import Util.Ascii (asciiCR, asciiLF)
+import Util.Number (toNumber)
 
 digit :: Get Word8
 digit = satisfy isDigit
