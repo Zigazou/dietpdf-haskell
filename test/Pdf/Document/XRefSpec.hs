@@ -11,7 +11,6 @@ import Pdf.Document.Collection
     , EncodedObjects
     , ObjectOffsets
     )
-import Pdf.Document.Document (fromList)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable, xrefTable)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFXRef, PDFXRefStream)
@@ -28,10 +27,10 @@ import Util.Dictionary (mkDictionary)
 
 calcOffsetsExamples :: [(EncodedObjects, ObjectOffsets)]
 calcOffsetsExamples =
-  [ ( fromList
-      [ EncodedObject 0 9 "%PDF-1.4\n"
-      , EncodedObject 1 3 "abc"
-      , EncodedObject 2 3 "def"
+  [ ( IM.fromList
+      [ (0, EncodedObject 0 9 "%PDF-1.4\n")
+      , (1, EncodedObject 1 3 "abc")
+      , (2, EncodedObject 2 3 "def")
       ]
     , IM.fromList [(0, 0), (1, 9), (2, 12)]
     )
@@ -39,11 +38,11 @@ calcOffsetsExamples =
 
 xrefTableExamples :: [(EncodedObjects, PDFObject)]
 xrefTableExamples =
-  [ ( fromList
-      [ EncodedObject 0 9 "%PDF-1.4\n"
-      , EncodedObject 2 3 "def"
-      , EncodedObject 5 5 "ghijk"
-      , EncodedObject 1 3 "abc"
+  [ ( IM.fromList
+      [ (0, EncodedObject 0 9 "%PDF-1.4\n")
+      , (2, EncodedObject 2 3 "def")
+      , (5, EncodedObject 5 5 "ghijk")
+      , (1, EncodedObject 1 3 "abc")
       ]
     , PDFXRef
       [ XRefSubsection
@@ -62,10 +61,10 @@ xrefTableExamples =
 
 xrefStreamTableExamples :: [(EncodedObjects, PDFObject)]
 xrefStreamTableExamples =
-  [ ( fromList
-      [ EncodedObject 2 3 "def"
-      , EncodedObject 5 5 "ghijk"
-      , EncodedObject 1 3 "abc"
+  [ ( IM.fromList
+      [ (2, EncodedObject 2 3 "def")
+      , (5, EncodedObject 5 5 "ghijk")
+      , (1, EncodedObject 1 3 "abc")
       ]
     , PDFXRefStream
       10

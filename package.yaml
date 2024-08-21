@@ -134,6 +134,7 @@ tests:
     - FlexibleContexts
     - MultiWayIf
     - TupleSections
+    - StandaloneKindSignatures
     - ImportQualifiedPost
     dependencies:
     - dietpdf
