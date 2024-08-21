@@ -17,6 +17,7 @@ import Util.Ascii
     , asciiLEFTPARENTHESIS
     , asciiLOWERA
     , asciiLOWERF
+    , asciiREVERSESOLIDUS
     , asciiRIGHTPARENTHESIS
     , asciiUPPERA
     , asciiUPPERF
@@ -26,6 +27,7 @@ escapeChar :: Word8 -> BS.ByteString
 escapeChar byte | byte == asciiCR               = "\\r"
                 | byte == asciiLEFTPARENTHESIS  = "\\("
                 | byte == asciiRIGHTPARENTHESIS = "\\)"
+                | byte == asciiREVERSESOLIDUS   = "\\\\"
                 | otherwise                     = BS.singleton byte
 
 {-|
