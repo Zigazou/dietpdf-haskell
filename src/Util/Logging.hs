@@ -36,9 +36,11 @@ instance Logging (Writer [T.Text]) where
   say :: T.Text -> Writer [T.Text] ()
   say = void . tell . return
 
+{-# INLINE sayF #-}
 sayF :: (Logging m, MonadTrans t) => T.Text -> t m ()
 sayF = lift . say
 
+{-# INLINE sayComparisonF #-}
 sayComparisonF :: (Logging m, MonadTrans t) => T.Text -> Int -> Int -> t m ()
 sayComparisonF label sizeBefore sizeAfter = sayF
   (  "  - "
@@ -58,6 +60,7 @@ sayComparisonF label sizeBefore sizeAfter = sayF
       * (fromIntegral sizeAfter - fromIntegral sizeBefore)
       / fromIntegral sizeBefore
 
+{-# INLINE sayErrorF #-}
 sayErrorF :: (Logging m, MonadTrans t) => T.Text -> UnifiedError -> t m ()
 sayErrorF label theError =
   sayF ("  - " +| padRightF 32 ' ' label |+ " " +| T.pack (show theError) |+ "")

@@ -40,11 +40,13 @@ data PDFPartition = PDFPartition
   deriving stock (Eq, Show)
 
 instance Semigroup PDFPartition where
+  {-# INLINE (<>) #-}
   (<>) :: PDFPartition -> PDFPartition -> PDFPartition
   (<>) (PDFPartition n1 h1 t1) (PDFPartition n2 h2 t2) =
     PDFPartition (n1 <> n2) (h1 <> h2) (t2 <> t1)
 
 instance Monoid PDFPartition where
+  {-# INLINE mempty #-}
   mempty :: PDFPartition
   mempty = PDFPartition mempty mempty mempty
 
@@ -73,6 +75,7 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
   trailer (PDFTrailer _) = True
   trailer _              = False
 
+{-# INLINE removeUnused #-}
 removeUnused :: Logging m => PDFPartition -> FallibleT m PDFPartition
 removeUnused (PDFPartition indirectObjects heads trailers) = do
   sayF "  - Uncompressing indirect objects"

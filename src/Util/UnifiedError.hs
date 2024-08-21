@@ -118,6 +118,7 @@ errorType (UnknownScalerType _)      = ParsingError
 errorType ObjectStreamNotFound       = ParsingError
 errorType (UnsupportedFeature _)     = UnsupportedError
 
+{-# INLINE show' #-}
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
 
@@ -173,9 +174,11 @@ instance Show UnifiedError where
   show err@(UnsupportedFeature msg) =
     show' err ("Unsupported feature: " ++ msg)
 
+{-# INLINE tryF #-}
 tryF :: Monad m => FallibleT m a -> FallibleT m (Either UnifiedError a)
 tryF = lift . runExceptT
 
+{-# INLINE ifFail #-}
 ifFail
   :: Monad m
   => FallibleT m a

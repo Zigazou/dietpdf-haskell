@@ -23,6 +23,7 @@ If a `PDFObject` cannot be uncompressed (meaning its processing generated an
 error), the object is left as is. Thus this function may leave object
 uncompressed.
 -}
+{-# INLINE uncompressObjects #-}
 uncompressObjects :: Logging m => PDFObjects -> FallibleT m PDFObjects
 uncompressObjects pdf = do
   sayF "  - Extracting objects from object streams"
@@ -41,6 +42,7 @@ If a `PDFObject` cannot be uncompressed (meaning its processing generated an
 error), the object is left as is. Thus this function may leave object
 uncompressed.
 -}
+{-# INLINE uncompressDocument #-}
 uncompressDocument :: Logging m => PDFDocument -> FallibleT m PDFDocument
 uncompressDocument pdf = do
   sayF "  - Extracting objects from object streams"

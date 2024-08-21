@@ -48,6 +48,7 @@ import Util.UnifiedError
     , tryF
     )
 
+{-# INLINE updateTrailer #-}
 updateTrailer :: Logging m => Int -> PDFObject -> FallibleT m PDFObject
 updateTrailer entriesCount =
   setValue "Size" (PDFNumber $ fromIntegral entriesCount)
@@ -106,6 +107,7 @@ An error is signaled in the following cases:
 - no PDF version in the list of PDF objects
 - no trailer in the list of PDF objects
 -}
+{-# INLINE pdfEncode #-}
 pdfEncode
   :: Logging m
   => PDFDocument -- ^ A collection of PDF objects (order matters)
