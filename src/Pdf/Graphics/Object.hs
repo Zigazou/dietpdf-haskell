@@ -45,6 +45,7 @@ module Pdf.Graphics.Object
   ) where
 
 import Data.ByteString qualified as BS
+import Data.Foldable (toList)
 import Data.Ix (inRange)
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
@@ -693,13 +694,14 @@ Takes an `Array` of `GFXObject`, converts them to the `ByteString`
 representation and inserts spaces between them if necessary.
 -}
 separateGfx :: Array GFXObject -> BS.ByteString
-separateGfx SQ.Empty = ""
-separateGfx (object1 SQ.:<| SQ.Empty) = fromGFXObject object1
-separateGfx (object1 SQ.:<| object2 SQ.:<| others) = BS.concat
-  [ fromGFXObject object1
-  , spaceIfNeeded object1 object2
-  , separateGfx (object2 SQ.:<| others)
-  ]
+separateGfx objects = BS.concat $ buildBS (toList objects)
+  where
+    buildBS :: [GFXObject] -> [BS.ByteString]
+    buildBS [] = []
+    buildBS [object1] = [fromGFXObject object1]
+    buildBS (object1:object2:others) = fromGFXObject object1
+                                     : spaceIfNeeded object1 object2
+                                     : buildBS (object2:others)
 
 fromArray :: Array GFXObject -> BS.ByteString
 fromArray items = BS.concat ["[", separateGfx items, "]"]
