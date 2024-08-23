@@ -38,7 +38,7 @@ import Pdf.Object.Object
     , xrefCount
     )
 import Pdf.Object.Optimize (optimize)
-import Pdf.Object.State (getValue, setValue)
+import Pdf.Object.State (getValue, setMaybe, setValue)
 
 import Util.Dictionary (mkDictionary)
 import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
@@ -48,10 +48,12 @@ import Util.UnifiedError
     , tryF
     )
 
-{-# INLINE updateTrailer #-}
-updateTrailer :: Logging m => Int -> PDFObject -> FallibleT m PDFObject
-updateTrailer entriesCount =
-  setValue "Size" (PDFNumber $ fromIntegral entriesCount)
+updateXRefStm :: Logging m => PDFObject -> PDFObject -> FallibleT m PDFObject
+updateXRefStm xRefStm trailer = do
+  mRoot <- getValue "Root" trailer
+  mInfo <- getValue "Info" trailer
+  mID <- getValue "ID" trailer
+  setMaybe "Root" mRoot xRefStm >>= setMaybe "Info" mInfo >>= setMaybe "ID" mID
 
 isCatalog :: PDFObject -> Bool
 isCatalog object@PDFIndirectObject{} =
@@ -172,16 +174,13 @@ pdfEncode objects = do
     xrefObjectNumber = fst . IM.findMax $ encodeds
 
   sayF "Optimize XRef stream table"
-  xref <- optimize $
-    xrefStreamTable (xrefObjectNumber + 1) (BS.length pdfHead) encodeds
+  xref <- (optimize $ xrefStreamTable (xrefObjectNumber + 1) (BS.length pdfHead) encodeds) >>= updateXRefStm pdfTrailer
 
   let
     encodedXRef = fromPDFObject xref
-    startxref =
-      fromPDFObject (PDFStartXRef (BS.length pdfHead + BS.length body))
-
-  trailer <- fromPDFObject <$> updateTrailer (xrefCount xref) pdfTrailer
+    xRefStmOffset = BS.length pdfHead + BS.length body
+    startxref = fromPDFObject (PDFStartXRef xRefStmOffset)
 
   sayF "PDF has been optimized!"
 
-  return $ BS.concat [pdfHead, body, encodedXRef, trailer, startxref, pdfEnd]
+  return $ BS.concat [pdfHead, body, encodedXRef, startxref, pdfEnd]
