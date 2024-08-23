@@ -27,15 +27,15 @@ whiteSpaces = many' (satisfy isWhiteSpace)
 
 gfxObjectP :: Get GFXObject
 gfxObjectP =
-  commentP
-    <|> inlineImageP
+        inlineImageP
+    <|> keywordP
+    <|> numberP
+    <|> nameP
     <|> dictionaryP
     <|> arrayP
     <|> stringP
     <|> hexStringP
-    <|> nameP
-    <|> numberP
-    <|> keywordP
+    <|> commentP
 
 gfxRawP :: Get [GFXObject]
 gfxRawP = label "gfxG" $ do

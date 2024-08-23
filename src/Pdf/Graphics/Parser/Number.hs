@@ -37,7 +37,15 @@ module Pdf.Graphics.Parser.Number
 
 import Control.Applicative ((<|>))
 
-import Data.Binary.Parser (Get, isDigit, label, option, satisfy, some', word8)
+import Data.Binary.Parser
+    ( Get
+    , isDigit
+    , label
+    , option
+    , satisfy
+    , some'
+    , word8
+    )
 import Data.List (foldl')
 import Data.Word (Word8)
 
@@ -71,16 +79,13 @@ toNumber :: [Word8] -> [Word8] -> Double
 toNumber leftPart rightPart =
   integerPart leftPart 0.0 + decimalPart rightPart 0.0 1.0
 
-integerP :: Get ([Word8], [Word8])
-integerP = some' digit >>= \leftPart -> return (leftPart, [])
-
 decimalP :: Get ([Word8], [Word8])
 decimalP = dot >> some' digit >>= \rightPart -> return ([], rightPart)
 
 integerDecimalP :: Get ([Word8], [Word8])
 integerDecimalP = do
   leftPart  <- some' digit
-  rightPart <- (dot >> some' digit) <|> (dot >> return [])
+  rightPart <- (dot >> some' digit) <|> (dot >> return []) <|> return []
   return (leftPart, rightPart)
 
 {- |
@@ -124,6 +129,6 @@ Right (GFXNumber 0.0)
 numberP :: Get GFXObject
 numberP = label "numberG" $ do
   sign                  <- option id plusMinus
-  (leftPart, rightPart) <- integerDecimalP <|> integerP <|> decimalP
+  (leftPart, rightPart) <- integerDecimalP <|> decimalP
   let number = toNumber leftPart rightPart
   return $ GFXNumber (sign number)

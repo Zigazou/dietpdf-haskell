@@ -42,8 +42,8 @@ import Util.UnifiedError (UnifiedError (RLEDecodeError, RLEEncodeError))
 
 type RLEAction :: Type
 data RLEAction
-  = RLERepeat Int Word8
-  | RLECopy BS.ByteString
+  = RLERepeat !Int !Word8
+  | RLECopy !BS.ByteString
   | RLEEndOfData
 
 rleEndOfData :: Word8
@@ -82,27 +82,36 @@ decompress stream =
       Left  msg     -> Left (RLEDecodeError msg)
       Right decoded -> Right decoded
 
-upToN :: (Int, Word8) -> (Word8 -> Word8 -> Bool) -> Get BS.ByteString
-upToN state predicate = scan state updateState
+upToNEqual :: (Int, Word8) -> Get BS.ByteString
+upToNEqual state = scan state updateState
  where
   updateState :: (Int, Word8) -> Word8 -> Maybe (Int, Word8)
   updateState (0, _) _ = Nothing
   updateState (count, previous) byte =
-    if predicate previous byte then Just (count - 1, byte) else Nothing
+    if previous == byte then Just (count - 1, byte) else Nothing
+
+upToNNotEqual :: (Int, Word8) -> Get BS.ByteString
+upToNNotEqual state = scan state updateState
+ where
+  updateState :: (Int, Word8) -> Word8 -> Maybe (Int, Word8)
+  updateState (0, _) _ = Nothing
+  updateState (count, previous) byte =
+    if previous /= byte then Just (count - 1, byte) else Nothing
+
 
 rleEncodeP :: Get RLEAction
 rleEncodeP = do
   currentByte <- anyWord8
   nextByteM   <- peekMaybe
   case nextByteM of
-    Nothing       -> return $ RLECopy (BS.singleton currentByte)
     Just nextByte -> if nextByte == currentByte
       then do
-        bytes <- upToN (127, currentByte) (==)
+        bytes <- upToNEqual (127, currentByte)
         return $! RLERepeat (1 + BS.length bytes) currentByte
       else do
-        bytes <- upToN (127, currentByte) (/=)
+        bytes <- upToNNotEqual (127, currentByte)
         return $! RLECopy (BS.cons currentByte bytes)
+    Nothing       -> return $ RLECopy (BS.singleton currentByte)
 
 {-|
 Encode a bytestring into an RLE bytestring.

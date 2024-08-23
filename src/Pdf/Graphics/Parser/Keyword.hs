@@ -26,9 +26,8 @@ It returns a `GFXBool`, a `GFXNull` or a `GFXKeyword`.
 -}
 keywordP :: Get GFXObject
 keywordP = label "keywordG" $ do
-  keyword <- takeWhile1 isKeywordCharacter
-  return $ case keyword of
-    "true"  -> GFXBool True
-    "false" -> GFXBool False
-    "null"  -> GFXNull
-    value   -> GFXOperator (toGSOperator value)
+  takeWhile1 isKeywordCharacter >>= \case
+    "true"  -> return (GFXBool True)
+    "false" -> return (GFXBool False)
+    "null"  -> return GFXNull
+    value   -> return (GFXOperator (toGSOperator value))

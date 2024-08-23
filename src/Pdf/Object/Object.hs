@@ -100,6 +100,11 @@ import Util.Ascii
     , asciiNUMBERSIGN
     , asciiUPPERA
     , asciiUPPERZ
+    , asciiSPACE
+    , asciiHT
+    , asciiLF
+    , asciiCR
+    , asciiFF
     )
 import Util.Dictionary (Dictionary, dictHasKey, mkDictionary, mkEmptyDictionary)
 import Util.Name (fromName)
@@ -131,7 +136,12 @@ The following characters are considered white spaces:
 - `asciiSPACE`
 -}
 isWhiteSpace :: Word8 -> Bool
-isWhiteSpace = isJust . flip BS.elemIndex "\0\t\n\f\r "
+isWhiteSpace byte = byte == asciiSPACE
+                 || byte == asciiLF
+                 || byte == asciiCR
+                 || byte == asciiHT
+                 || byte == asciiNUL
+                 || byte == asciiFF
 
 {-|
 Test if a byte is a space.

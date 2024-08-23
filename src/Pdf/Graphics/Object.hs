@@ -61,13 +61,18 @@ import Util.Array (Array, mkArray, mkEmptyArray)
 import Util.Ascii
     ( asciiAPOSTROPHE
     , asciiASTERISK
+    , asciiCR
     , asciiDIGITSEVEN
     , asciiDIGITZERO
+    , asciiFF
+    , asciiHT
+    , asciiLF
     , asciiLOWERA
     , asciiLOWERZ
     , asciiNUL
     , asciiNUMBERSIGN
     , asciiQUOTATIONMARK
+    , asciiSPACE
     , asciiUPPERA
     , asciiUPPERZ
     )
@@ -101,7 +106,12 @@ The following characters are considered white spaces:
 - `asciiSPACE`
 -}
 isWhiteSpace :: Word8 -> Bool
-isWhiteSpace = isJust . flip BS.elemIndex "\0\t\n\f\r "
+isWhiteSpace byte = byte == asciiSPACE
+                 || byte == asciiLF
+                 || byte == asciiCR
+                 || byte == asciiHT
+                 || byte == asciiNUL
+                 || byte == asciiFF
 
 {-|
 Test if a byte is a keyword character.
