@@ -18,7 +18,8 @@ gsOptimize inputPdf outputPdf = do
 
   (rc, _, _) <- lift $ readProcessWithExitCode "gs"
                   [ "-sDEVICE=pdfwrite"
-                  , "-dDetectDuplicateImages=true"
+                  , "-dDetectDuplicateImages=true" -- group identical images
+                  , "-dAutoRotatePages=/None"      -- don't rotate pages
                   , "-dQUIET"
                   , "-dNOPAUSE"
                   , "-dBATCH"
