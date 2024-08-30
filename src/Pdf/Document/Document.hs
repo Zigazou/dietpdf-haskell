@@ -33,6 +33,7 @@ import Util.UnifiedError (FallibleT)
 This is a simple trick to allow `PDFDocument` to be foldable because it is not
 of kind '* -> *' as required by the Foldable class.
 -}
+type role CollectionOf nominal
 type CollectionOf :: Type -> Type
 newtype CollectionOf a = CollectionOf (OS.OSet a) deriving stock (Eq, Show)
 

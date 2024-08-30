@@ -10,7 +10,9 @@ module Pdf.Object.State
 
     -- * Modify
   , setValue
+  , removeValue
   , setMaybe
+  , updateValue
   , setStream
   , embedObject
   ) where
@@ -117,6 +119,28 @@ setValue name value object = case object of
   _anyOtherObject -> return object
 
 {- |
+Remove a value in a dictionary contained in a `PDFObject`.
+-}
+removeValue
+  :: Logging m
+  => BS.ByteString -- ^ The key in a dictionary to remove
+  -> PDFObject -- ^ The PDFObject to modify
+  -> FallibleT m PDFObject
+removeValue name object = case object of
+  (PDFDictionary dict) -> return $ PDFDictionary (Map.delete name dict)
+  (PDFIndirectObjectWithStream num gen dict stream) ->
+    return $ PDFIndirectObjectWithStream num gen (Map.delete name dict) stream
+  (PDFObjectStream num gen dict stream) ->
+    return $ PDFObjectStream num gen (Map.delete name dict) stream
+  (PDFIndirectObject num gen (PDFDictionary dict)) ->
+    return $ PDFIndirectObject num gen (PDFDictionary (Map.delete name dict))
+  (PDFTrailer (PDFDictionary dict)) ->
+    return $ PDFTrailer (PDFDictionary (Map.delete name dict))
+  (PDFXRefStream num gen dict stream) ->
+    return $ PDFXRefStream num gen (Map.delete name dict) stream
+  _anyOtherObject -> return object
+
+{- |
 Set value (maybe) in a dictionary contained in a `PDFObject`.
 
 When the value is `Nothing`, this function does nothing.
@@ -133,6 +157,22 @@ setMaybe _    Nothing      object = return object
 setMaybe name (Just value) object = setValue name value object
 
 {- |
+Set value (maybe) in a dictionary contained in a `PDFObject`.
+
+When the value is `Nothing`, this function does nothing.
+When the value is `Just` something, the entry is set in the dictionary using
+the `setValue` functin.
+-}
+updateValue
+  :: Logging m
+  => BS.ByteString -- ^ The key in a dictionary
+  -> Maybe PDFObject -- ^ The `Maybe` value
+  -> PDFObject
+  -> FallibleT m PDFObject
+updateValue name Nothing      object = removeValue name object
+updateValue name (Just value) object = setValue name value object
+
+{- |
 Define the stream part of a `PDFObject` if it has one.
 
 It also updates the Length entry in the associated `Dictionary`.
@@ -144,14 +184,12 @@ It has no effect on any other `PDFObject`.
 setStream :: Logging m => BS.ByteString -> PDFObject -> FallibleT m PDFObject
 setStream newStream object = case object of
   (PDFIndirectObjectWithStream number revision dict _) ->
-    pure (PDFIndirectObjectWithStream number revision dict newStream)
-      >>= setValue "Length" newLength
+    setValue "Length" newLength
+             (PDFIndirectObjectWithStream number revision dict newStream)
   (PDFObjectStream number revision dict _) -> do
-    pure (PDFObjectStream number revision dict newStream)
-      >>= setValue "Length" newLength
+    setValue "Length" newLength (PDFObjectStream number revision dict newStream)
   (PDFXRefStream number revision dict _) -> do
-    pure (PDFXRefStream number revision dict newStream)
-      >>= setValue "Length" newLength
+    setValue "Length" newLength (PDFXRefStream number revision dict newStream)
   _anyOtherObject -> return object
  where
   newLength :: PDFObject

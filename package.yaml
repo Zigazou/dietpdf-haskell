@@ -49,6 +49,7 @@ library:
   - TupleSections
   - StandaloneKindSignatures  
   - ImportQualifiedPost
+  - RoleAnnotations
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16
@@ -78,6 +79,7 @@ library:
   - double-conversion
   - fmt
   - cryptonite
+  - process
 
 executables:
   dietpdf:
@@ -116,6 +118,7 @@ executables:
     - transformers
     - pretty-hex
     - containers
+    - temporary
 
 tests:
   dietpdf-test:

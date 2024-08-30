@@ -19,6 +19,7 @@ import Pdf.Object.FilterCombine.PredZopfli (predZopfli)
 import Pdf.Object.FilterCombine.Rle (rle)
 import Pdf.Object.FilterCombine.RleZopfli (rleZopfli)
 import Pdf.Object.FilterCombine.Zopfli (zopfli)
+import Pdf.Object.FilterCombine.ZopfliRle (zopfliRle)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
     , hasStream
@@ -58,10 +59,13 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rRleZopfli <- except $ rleZopfli widthComponents stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
+      rZopfliRle <- except $ zopfliRle widthComponents stream
+      filterInfo "Zopfli+RLE" stream (snd rZopfliRle)
+
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
 
-      return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
+      return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rZopfliRle, rPredZopfli]
     else do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
@@ -79,18 +83,17 @@ applyEveryFilter Nothing stream = do
   rZopfli <- except $ zopfli Nothing stream
   filterInfo "Zopfli" stream (snd rZopfli)
 
+  rZopfliRle <- except $ zopfliRle Nothing stream
+  filterInfo "Zopfli+RLE" stream (snd rZopfliRle)
+
   if (BS.length . snd $ rRle) < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
-      return
-        [ rRle
-        , rZopfli
-        , rRleZopfli{-, rDeflate-}
-        ]
-    else return [rZopfli{-, rDeflate -}
-                        ]
+      return [rRle, rZopfli, rRleZopfli, rZopfliRle]
+    else
+      return [rZopfli, rZopfliRle]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object@PDFXRefStream{} =

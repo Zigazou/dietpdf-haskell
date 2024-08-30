@@ -39,8 +39,12 @@ import Options.Applicative
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Parser (pdfParse)
 
+import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
+import System.IO.Temp (withSystemTempFile)
 
+import Util.GSOptimize (gsOptimize)
+import Util.PDFTKClean (pdftkClean)
 import Util.UnifiedError
     ( FallibleT
     , UnifiedError (ParseError, UnableToOpenFile)
@@ -77,12 +81,25 @@ runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 runApp (OptimizeOptions inputPDF outputPDF) = do
-  tryF (readPDF inputPDF) >>= \case
-    Right document                            -> optimize outputPDF document
-    Left  anError@(ParseError (_, offset, _)) -> do
-      lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
-      throwE anError
-    Left anError -> throwE anError
+  withSystemTempFile (inputPDF <> ".pdftk") $ \pdftkPDF pdftkHandle -> do
+    withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
+      -- Close the handles so external programs can use the files.
+      lift $ hClose pdftkHandle
+      lift $ hClose ghostscriptHandle
+
+      -- Clean PDF with PDFTK because GhostScript might complain on some PDFs.
+      pdftkClean inputPDF pdftkPDF
+
+      -- Optimize PDF with GhostScript.
+      gsOptimize pdftkPDF ghostscriptPDF
+
+      -- Read the optimized PDF and optimize it further.
+      tryF (readPDF ghostscriptPDF) >>= \case
+        Right document                            -> optimize outputPDF document
+        Left  anError@(ParseError (_, offset, _)) -> do
+          lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
+          throwE anError
+        Left anError -> throwE anError
 runApp (HashOptions inputPDF) = readPDF inputPDF >>= objectHashes
 runApp (EncodeOptions codec inputFile) =
   readByteString inputFile >>= encodeByteString codec

@@ -115,7 +115,7 @@ streamP mCount = do
   case mCount of
     Nothing -> do
       bytes <- manyTill (satisfy (const True))
-                        (streamEndOfLineP >> string "endstream")
+                        (string "endstream")
       whiteSpaceP
       return $! BS.pack bytes
     Just count -> do

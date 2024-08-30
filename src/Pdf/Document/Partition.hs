@@ -3,7 +3,7 @@
 --
 -- Partitioning is used when encoded a whole PDF file from PDF objects.
 module Pdf.Document.Partition
-  ( PDFPartition(PDFPartition, ppHeads, ppIndirectObjects, ppTrailers)
+  ( PDFPartition(PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
   , firstVersion
   , lastTrailer
   , removeUnused
@@ -28,27 +28,30 @@ import Util.UnifiedError (FallibleT)
 -- | A partition separates numbered objects from PDF versions and trailers.
 type PDFPartition :: Type
 data PDFPartition = PDFPartition
-  { -- | Numbered objects
-    ppIndirectObjects :: !PDFObjects
+  { -- | Numbered objects with stream
+    ppObjectsWithStream    :: !PDFObjects
+  ,
+    -- | Numbered objects without stream
+    ppObjectsWithoutStream :: !PDFObjects
   ,
     -- | PDF versions in order of appearance
-    ppHeads           :: !PDFDocument
+    ppHeads                :: !PDFDocument
   ,
     -- | Trailers in reverse order of appearance
-    ppTrailers        :: !PDFDocument
+    ppTrailers             :: !PDFDocument
   }
   deriving stock (Eq, Show)
 
 instance Semigroup PDFPartition where
   {-# INLINE (<>) #-}
   (<>) :: PDFPartition -> PDFPartition -> PDFPartition
-  (<>) (PDFPartition n1 h1 t1) (PDFPartition n2 h2 t2) =
-    PDFPartition (n1 <> n2) (h1 <> h2) (t2 <> t1)
+  (<>) (PDFPartition m1 n1 h1 t1) (PDFPartition m2 n2 h2 t2) =
+    PDFPartition (m1 <> m2) (n1 <> n2) (h1 <> h2) (t2 <> t1)
 
 instance Monoid PDFPartition where
   {-# INLINE mempty #-}
   mempty :: PDFPartition
-  mempty = PDFPartition mempty mempty mempty
+  mempty = PDFPartition mempty mempty mempty mempty
 
 {-|
 Return the first PDF version if any.
@@ -77,9 +80,11 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
 
 {-# INLINE removeUnused #-}
 removeUnused :: Logging m => PDFPartition -> FallibleT m PDFPartition
-removeUnused (PDFPartition indirectObjects heads trailers) = do
-  sayF "  - Uncompressing indirect objects"
-  uIndirectObjects <- uncompressObjects indirectObjects
+removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers) = do
+  sayF "  - Uncompressing objects with stream"
+  uObjectsWithStream <- uncompressObjects objectsWithStream
+  sayF "  - Uncompressing objects without stream"
+  uObjectsWithoutStream <- uncompressObjects objectsWithoutStream
   sayF "  - Uncompressing head objects"
   uHeads <- uncompressDocument heads
   sayF "  - Uncompressing trailer objects"
@@ -89,14 +94,16 @@ removeUnused (PDFPartition indirectObjects heads trailers) = do
   let references =
         deepFind isReference uHeads
           <> deepFind isReference uTrailers
-          <> deepFind isReference (toPDFDocument uIndirectObjects)
+          <> deepFind isReference (toPDFDocument uObjectsWithStream)
+          <> deepFind isReference (toPDFDocument uObjectsWithoutStream)
 
   sayF "  - Removing unused objects"
 
   return $ PDFPartition
-    { ppIndirectObjects = IM.filter (used references) indirectObjects
-    , ppHeads           = heads
-    , ppTrailers        = trailers
+    { ppObjectsWithStream    = IM.filter (used references) objectsWithStream
+    , ppObjectsWithoutStream = IM.filter (used references) objectsWithoutStream
+    , ppHeads                = heads
+    , ppTrailers             = trailers
     }
  where
   {-# INLINE isNotLinearized #-}

@@ -12,33 +12,34 @@ import Control.Monad.Trans.Except (runExcept, throwE)
 import Data.ByteString qualified as BS
 import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as Map
+import Data.Maybe (mapMaybe)
+import Data.Text qualified as T
 
-import Pdf.Document.Collection
-    ( encodeObject
-    , eoBinaryData
-    , findLast
-    , fromPDFDocument
-    )
-import Pdf.Document.Document (PDFDocument, cFilter, singleton)
-import Pdf.Document.ObjectStream (explodeDocument)
+import Pdf.Document.Collection (findLast, fromPDFDocument)
+import Pdf.Document.Document (PDFDocument, cFilter, fromList, singleton)
+import Pdf.Document.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
+import Pdf.Document.ObjectStream (explodeDocument, explodeList, insert)
 import Pdf.Document.Partition
-    ( PDFPartition (PDFPartition, ppHeads, ppIndirectObjects, ppTrailers)
+    ( PDFPartition (PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
     , firstVersion
     , lastTrailer
     , removeUnused
     )
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
-import Pdf.Object.Object
-    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFReference, PDFStartXRef, PDFTrailer, PDFXRefStream)
-    , fromPDFObject
+import Pdf.Object.Object.FromPDFObject (fromPDFObject)
+import Pdf.Object.Object.PDFObject
+    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFXRefStream)
+    )
+import Pdf.Object.Object.Properties
+    ( getObjectNumber
     , hasKey
+    , hasStream
     , isHeader
     , isIndirect
     , isTrailer
-    , xrefCount
     )
 import Pdf.Object.Optimize (optimize)
-import Pdf.Object.State (getValue, setMaybe, setValue)
+import Pdf.Object.State (getValue, setMaybe)
 
 import Util.Dictionary (mkDictionary)
 import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
@@ -48,8 +49,27 @@ import Util.UnifiedError
     , tryF
     )
 
+-- | Encodes a PDF object and keep track of its number and length.
+encodeObject :: Logging m => PDFObject -> FallibleT m EncodedObject
+encodeObject object@(PDFIndirectObject number _ _) = return $
+    EncodedObject number (BS.length bytes) bytes []
+  where bytes = fromPDFObject object
+encodeObject object@(PDFIndirectObjectWithStream number _ _ _) = return $
+    EncodedObject number (BS.length bytes) bytes []
+  where bytes = fromPDFObject object
+encodeObject object@(PDFObjectStream number _ _ _) = do
+  let bytes = fromPDFObject object
+  embeddedObjects <- explodeList [object]
+  return $ EncodedObject number
+                         (BS.length bytes)
+                         bytes
+                         (mapMaybe getObjectNumber embeddedObjects)
+
+encodeObject object = return $ EncodedObject 0 (BS.length bytes) bytes []
+  where bytes = fromPDFObject object
+
 updateXRefStm :: Logging m => PDFObject -> PDFObject -> FallibleT m PDFObject
-updateXRefStm xRefStm trailer = do
+updateXRefStm trailer xRefStm = do
   mRoot <- getValue "Root" trailer
   mInfo <- getValue "Info" trailer
   mID <- getValue "ID" trailer
@@ -70,8 +90,8 @@ getTrailer :: PDFPartition -> PDFObject
 getTrailer partition = case lastTrailer partition of
   (PDFTrailer PDFNull) ->
     let
-      catalog = findLast isCatalog (ppIndirectObjects partition)
-      info    = findLast isInfo (ppIndirectObjects partition)
+      catalog = findLast isCatalog (ppObjectsWithoutStream partition)
+      info    = findLast isInfo (ppObjectsWithoutStream partition)
     in
       case (catalog, info) of
         (Just (PDFIndirectObject cNumber cRevision _), Just (PDFIndirectObject iNumber iRevision _))
@@ -116,12 +136,13 @@ pdfEncode
   -> FallibleT m BS.ByteString -- ^ A unified error or a bytestring
 pdfEncode objects = do
   -- Extract objects embedded in object streams
-  exploded <- explodeDocument objects
+  allObjects <- explodeDocument objects
 
   let partition = PDFPartition
-        { ppIndirectObjects = fromPDFDocument $ cFilter isIndirect exploded
-        , ppHeads           = cFilter isHeader exploded
-        , ppTrailers        = cFilter isTrailer exploded
+        { ppObjectsWithStream    = fromPDFDocument $ cFilter hasStream allObjects
+        , ppObjectsWithoutStream = fromPDFDocument $ cFilter (\o -> isIndirect o && (not . hasStream) o) allObjects
+        , ppHeads                = cFilter isHeader allObjects
+        , ppTrailers             = cFilter isTrailer allObjects
         }
 
       pdfHead = (fromPDFObject . firstVersion) partition
@@ -129,11 +150,15 @@ pdfEncode objects = do
 
   sayF "Starting discovery"
 
-  when (null $ ppIndirectObjects partition) $ do
+  when (null (ppObjectsWithStream partition) && null (ppObjectsWithoutStream partition)) $ do
     sayF "Indirect objects not found"
     throwE EncodeNoIndirectObject
 
-  sayF "Indirect objects found"
+  let withStreamCount = IM.size (ppObjectsWithStream partition)
+      withoutStreamCount = IM.size (ppObjectsWithoutStream partition)
+
+  sayF $ T.concat ["Indirect object with stream: ", T.pack (show withStreamCount)]
+  sayF $ T.concat ["Indirect object without stream: ", T.pack (show withoutStreamCount)]
 
   when (null $ ppHeads partition) $ do
     sayF "Version not found"
@@ -151,30 +176,50 @@ pdfEncode objects = do
 
   sayF "Optimizing PDF"
 
-  oIndirectObjects <- mapM optimize (ppIndirectObjects partition)
-  let oPartition = partition { ppIndirectObjects = oIndirectObjects
-                             , ppTrailers        = singleton pdfTrailer
+  oObjectsWithStream <- mapM optimize (ppObjectsWithStream partition)
+  oObjectsWithoutStream <- mapM optimize (ppObjectsWithoutStream partition)
+  let oPartition = partition { ppObjectsWithStream    = oObjectsWithStream
+                             , ppObjectsWithoutStream = oObjectsWithoutStream
+                             , ppTrailers             = singleton pdfTrailer
                              }
 
   sayF "Last cleaning"
   cleaned <- tryF (removeUnused oPartition) >>= \case
     Right unusedRemoved -> do
-      sayComparisonF "Unused objects removal"
-                     (IM.size (ppIndirectObjects partition))
-                     (IM.size (ppIndirectObjects unusedRemoved))
+      let allCount = IM.size (ppObjectsWithStream partition)
+                   + IM.size (ppObjectsWithoutStream partition)
+          usedCount = IM.size (ppObjectsWithStream unusedRemoved)
+                    + IM.size (ppObjectsWithoutStream unusedRemoved)
+      sayComparisonF "Unused objects removal" allCount usedCount
       return unusedRemoved
     Left theError -> do
       sayErrorF "Unable to remove unused objects" theError
       return oPartition
 
-  sayF "Encoding PDF"
+  sayF "Calculating last object number"
   let
-    encodeds    = encodeObject <$> ppIndirectObjects cleaned
-    body        = BS.concat $ eoBinaryData . snd <$> IM.toAscList encodeds
-    xrefObjectNumber = fst . IM.findMax $ encodeds
+    lastObjectNumber = max (fst . IM.findMax $ ppObjectsWithStream cleaned)
+                           (fst . IM.findMax $ ppObjectsWithoutStream cleaned)
+
+  sayF "Grouping objects without stream"
+  let objectsWithoutStream = fromList $ snd <$> IM.toList (ppObjectsWithoutStream cleaned)
+  objectStream <- insert objectsWithoutStream (lastObjectNumber + 1)
+
+  sayF "Encoding PDF"
+  encodedObjStm <- optimize objectStream >>= encodeObject
+  encodedStreams <- mapM encodeObject (ppObjectsWithStream cleaned)
+  let
+    encodedAll = IM.insert (lastObjectNumber + 1) encodedObjStm encodedStreams
+    body = BS.concat $ eoBinaryData . snd <$> IM.toAscList encodedAll
 
   sayF "Optimize XRef stream table"
-  xref <- (optimize $ xrefStreamTable (xrefObjectNumber + 1) (BS.length pdfHead) encodeds) >>= updateXRefStm pdfTrailer
+  xref <- do
+    let
+      xrefst = xrefStreamTable (lastObjectNumber + 2)
+                               (BS.length pdfHead)
+                               encodedAll
+
+    optimize xrefst >>= updateXRefStm pdfTrailer
 
   let
     encodedXRef = fromPDFObject xref

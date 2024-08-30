@@ -105,10 +105,9 @@ integerP :: Get Int
 integerP = takeWhile1 isDigit <&> toInt
  where
   toInt :: BS.ByteString -> Int
-  toInt bs = BS.foldl'
+  toInt = BS.foldl'
     (\num digit -> num * 10 + fromIntegral (digit - asciiDIGITZERO))
     0
-    bs
 
 objectNumberOffsetP :: Get NumberOffset
 objectNumberOffsetP = do

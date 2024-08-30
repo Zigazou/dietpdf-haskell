@@ -6,11 +6,10 @@ import Control.Monad (forM_)
 
 import Data.IntMap.Strict qualified as IM
 
-import Pdf.Document.Collection
-    ( EncodedObject (EncodedObject)
-    , EncodedObjects
-    , ObjectOffsets
-    )
+import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))
+import Pdf.Document.EncodedObjects (EncodedObjects)
+import Pdf.Document.ObjectOffset (ObjectOffset (DirectOffset))
+import Pdf.Document.ObjectOffsets (ObjectOffsets)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable, xrefTable)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFXRef, PDFXRefStream)
@@ -28,21 +27,21 @@ import Util.Dictionary (mkDictionary)
 calcOffsetsExamples :: [(EncodedObjects, ObjectOffsets)]
 calcOffsetsExamples =
   [ ( IM.fromList
-      [ (0, EncodedObject 0 9 "%PDF-1.4\n")
-      , (1, EncodedObject 1 3 "abc")
-      , (2, EncodedObject 2 3 "def")
+      [ (0, EncodedObject 0 9 "%PDF-1.4\n" [])
+      , (1, EncodedObject 1 3 "abc" [])
+      , (2, EncodedObject 2 3 "def" [])
       ]
-    , IM.fromList [(0, 0), (1, 9), (2, 12)]
+    , IM.fromList [(0, DirectOffset 0 0), (1, DirectOffset 1 9), (2, DirectOffset 2 12)]
     )
   ]
 
 xrefTableExamples :: [(EncodedObjects, PDFObject)]
 xrefTableExamples =
   [ ( IM.fromList
-      [ (0, EncodedObject 0 9 "%PDF-1.4\n")
-      , (2, EncodedObject 2 3 "def")
-      , (5, EncodedObject 5 5 "ghijk")
-      , (1, EncodedObject 1 3 "abc")
+      [ (0, EncodedObject 0 9 "%PDF-1.4\n" [])
+      , (2, EncodedObject 2 3 "def" [])
+      , (5, EncodedObject 5 5 "ghijk" [])
+      , (1, EncodedObject 1 3 "abc" [])
       ]
     , PDFXRef
       [ XRefSubsection
@@ -62,9 +61,9 @@ xrefTableExamples =
 xrefStreamTableExamples :: [(EncodedObjects, PDFObject)]
 xrefStreamTableExamples =
   [ ( IM.fromList
-      [ (2, EncodedObject 2 3 "def")
-      , (5, EncodedObject 5 5 "ghijk")
-      , (1, EncodedObject 1 3 "abc")
+      [ (2, EncodedObject 2 3 "def" [])
+      , (5, EncodedObject 5 5 "ghijk" [8, 10, 12])
+      , (1, EncodedObject 1 3 "abc" [])
       ]
     , PDFXRefStream
       10
@@ -79,14 +78,54 @@ xrefStreamTableExamples =
             ]
           )
         , ( "Index"
-          , mkPDFArray [mkPDFNumber (1 :: Double), mkPDFNumber (3 :: Double)]
+          , mkPDFArray [mkPDFNumber (1 :: Double), mkPDFNumber (12 :: Double)]
           )
-        , ("Size", mkPDFNumber (9 :: Double))
+        , ("Size", mkPDFNumber (13 :: Double))
         ]
       )
-      "\x01\x00\x01\
-      \\x01\x03\x02\
-      \\x01\x06\x05"
+      "\x01\x00\x00\
+      \\x01\x03\x00\
+      \\x00\x00\x00\
+      \\x00\x00\x00\
+      \\x01\x06\x00\
+      \\x00\x00\x00\
+      \\x00\x00\x00\
+      \\x02\x05\x00\
+      \\x00\x00\x00\
+      \\x02\x05\x01\
+      \\x00\x00\x00\
+      \\x02\x05\x02"
+    )
+  , ( IM.fromList
+      [ (4, EncodedObject 4 3 "def" [])
+      , (6, EncodedObject 6 5 "ghijk" [1, 3, 5, 7])
+      , (2, EncodedObject 2 3 "abc" [])
+      ]
+    , PDFXRefStream
+      10
+      0
+      (mkDictionary
+        [ ("Type", PDFName "XRef")
+        , ( "W"
+          , mkPDFArray
+            [ mkPDFNumber (1 :: Double)
+            , mkPDFNumber (1 :: Double)
+            , mkPDFNumber (1 :: Double)
+            ]
+          )
+        , ( "Index"
+          , mkPDFArray [mkPDFNumber (1 :: Double), mkPDFNumber (7 :: Double)]
+          )
+        , ("Size", mkPDFNumber (8 :: Double))
+        ]
+      )
+      "\x02\x06\x00\
+      \\x01\x00\x00\
+      \\x02\x06\x01\
+      \\x01\x03\x00\
+      \\x02\x06\x02\
+      \\x01\x06\x00\
+      \\x02\x06\x03"
     )
   ]
 

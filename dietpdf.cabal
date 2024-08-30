@@ -44,6 +44,10 @@ library
       Pdf.Document.Collection
       Pdf.Document.Document
       Pdf.Document.Encode
+      Pdf.Document.EncodedObject
+      Pdf.Document.EncodedObjects
+      Pdf.Document.ObjectOffset
+      Pdf.Document.ObjectOffsets
       Pdf.Document.ObjectStream
       Pdf.Document.Parser
       Pdf.Document.Partition
@@ -71,9 +75,21 @@ library
       Pdf.Object.FilterCombine.Rle
       Pdf.Object.FilterCombine.RleZopfli
       Pdf.Object.FilterCombine.Zopfli
+      Pdf.Object.FilterCombine.ZopfliRle
       Pdf.Object.Format
       Pdf.Object.Linearization
       Pdf.Object.Object
+      Pdf.Object.Object.Delimiter
+      Pdf.Object.Object.FromPDFObject
+      Pdf.Object.Object.FromXRef
+      Pdf.Object.Object.ObjectInfo
+      Pdf.Object.Object.PDFCharacter
+      Pdf.Object.Object.PDFObject
+      Pdf.Object.Object.Properties
+      Pdf.Object.Object.ToPDFNumber
+      Pdf.Object.Object.XRefEntry
+      Pdf.Object.Object.XRefState
+      Pdf.Object.Object.XRefSubsection
       Pdf.Object.Optimize
       Pdf.Object.Parser.Comment
       Pdf.Object.Parser.Container
@@ -97,10 +113,12 @@ library
       Util.Ascii
       Util.ByteString
       Util.Dictionary
+      Util.GSOptimize
       Util.Hex
       Util.Logging
       Util.Name
       Util.Number
+      Util.PDFTKClean
       Util.String
       Util.Text
       Util.UnifiedError
@@ -123,6 +141,7 @@ library
       TupleSections
       StandaloneKindSignatures
       ImportQualifiedPost
+      RoleAnnotations
   ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
   build-depends:
       base >=4.7 && <5
@@ -138,6 +157,7 @@ library
     , monad-loops
     , mtl
     , ordered-containers
+    , process
     , split
     , stringsearch
     , text
@@ -186,6 +206,7 @@ executable dietpdf
     , formatting
     , optparse-applicative
     , pretty-hex
+    , temporary
     , text
     , transformers
   default-language: Haskell2010
@@ -203,6 +224,7 @@ test-suite dietpdf-test
       Font.TrueType.Parser.FontSpec
       Font.TrueType.Parser.HeadSpec
       Pdf.Document.DocumentSpec
+      Pdf.Document.EncodeSpec
       Pdf.Document.ObjectStreamSpec
       Pdf.Document.XRefSpec
       Pdf.Graphics.Parser.ArraySpec

@@ -24,7 +24,7 @@ import Pdf.Object.Object
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream)
     , hasDictionary
     )
-import Pdf.Object.State (embedObject, getValue, setMaybe)
+import Pdf.Object.State (embedObject, getValue, updateValue)
 
 import Util.Logging (Logging)
 import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
@@ -48,7 +48,7 @@ deepMap fn container = case container of
     sequence (Map.map (deepMap fn) dict)
       >>= flip embedObject container
       .   PDFDictionary
-  PDFArray items -> sequence (deepMap fn <$> items) <&> PDFArray
+  PDFArray items -> mapM (deepMap fn) items <&> PDFArray
   object         -> fn object
 
 {- |
@@ -148,6 +148,6 @@ It does nothing on any other object.
 -}
 setFilters :: Logging m => FilterList -> PDFObject -> FallibleT m PDFObject
 setFilters filters object = if hasDictionary object
-  then setMaybe "Filter" (filtersFilter filters) object
-    >>= setMaybe "DecodeParms" (filtersParms filters)
+  then updateValue "Filter" (filtersFilter filters) object
+          >>= updateValue "DecodeParms" (filtersParms filters)
   else return object
