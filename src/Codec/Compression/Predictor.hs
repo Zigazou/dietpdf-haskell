@@ -292,10 +292,8 @@ applyPredictor entropy PNGOptimum scanlines =
 applyPredictor _ predictor (Scanline _ prior, Scanline _ current) = Scanline
   { slPredictor = Just predictor
   , slStream    = BS.pack
-                    <$> (   applyPredictor' (predictF predictor) (0, 0)
-                        .   uncurry BS.zip
-                        <$> zip prior current
-                        )
+                . applyPredictor' (predictF predictor) (0, 0) . uncurry BS.zip
+                <$> zip prior current
   }
  where
   applyPredictor'
@@ -327,13 +325,11 @@ applyUnpredictor predictor (Scanline _ prior, Scanline linePredictor current) =
   Scanline
     { slPredictor = Nothing
     , slStream    =
-      BS.pack
-        <$> (   applyUnpredictor'
-                (unpredictF (fromMaybe predictor linePredictor))
-                (0, 0)
-            .   uncurry BS.zip
-            <$> zip prior current
-            )
+        BS.pack
+          . applyUnpredictor'
+              (unpredictF (fromMaybe predictor linePredictor)) (0, 0)
+              . uncurry BS.zip
+          <$> zip prior current
     }
  where
   applyUnpredictor'
@@ -469,7 +465,7 @@ entropyShannon =
   sum' = foldr (+) 0.0
 
   ponderate :: Double -> Double
-  ponderate value = -value * logBase 2 value
+  ponderate value = -(value * logBase 2 value)
 
   frequency :: [Double] -> [Double]
   frequency values = let valuesSum = sum' values in map (/ valuesSum) values

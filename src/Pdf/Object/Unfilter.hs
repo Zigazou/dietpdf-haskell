@@ -7,35 +7,57 @@ module Pdf.Object.Unfilter
 
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.LZW qualified as LZ
+import Codec.Compression.Predictor (Predictor, toPredictor, unpredict)
 import Codec.Compression.RunLength qualified as RL
 import Codec.Filter.Ascii85 qualified as A8
 import Codec.Filter.AsciiHex qualified as AH
 
-import Control.Monad.Trans.Except (throwE)
+import Control.Monad.Trans.Except (runExcept, throwE)
 
 import Data.ByteString qualified as BS
 import Data.Sequence as SQ (Seq ((:<|)))
 import Data.Text qualified as T
 
 import Pdf.Object.Container
-    ( Filter (fFilter)
+    ( Filter (fDecodeParms, fFilter)
     , FilterList
     , getFilters
     , setFilters
     )
 import Pdf.Object.Format (txtObjectNumberVersion)
-import Pdf.Object.Object (PDFObject (PDFName), hasStream)
-import Pdf.Object.State (getStream, setStream)
+import Pdf.Object.Object (PDFObject (PDFName, PDFNumber), hasKey, hasStream)
+import Pdf.Object.State (getStream, getValue, setStream)
 
 import Util.Logging (Logging, sayF)
-import Util.UnifiedError (FallibleT, UnifiedError)
+import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
+
+getPredictor :: PDFObject -> Either UnifiedError Predictor
+getPredictor params = case runExcept (getValue "Type" params) of
+  Right (Just (PDFNumber value)) -> toPredictor . round $ value
+  _anythingElse                  -> Left InvalidFilterParm
+
+getColumns :: PDFObject -> Either UnifiedError Int
+getColumns params = case runExcept (getValue "Columns" params) of
+  Right (Just (PDFNumber value)) -> return . round $ value
+  _anythingElse                  -> Left InvalidFilterParm
+
+unpredictStream :: Filter -> BS.ByteString -> Either UnifiedError BS.ByteString
+unpredictStream pdfFilter stream =
+  let params = fDecodeParms pdfFilter in
+  if hasKey "Predictor" params
+  then do
+    predictor <- getPredictor params
+    columns <- getColumns params
+    let height = BS.length stream `div` columns
+    unpredict predictor columns height stream
+  else return stream
 
 unfilterStream
   :: (FilterList, BS.ByteString)
   -> Either UnifiedError (FilterList, BS.ByteString)
 unfilterStream (filters@(pdfFilter :<| otherFilters), stream)
   | fFilter pdfFilter == PDFName "FlateDecode"
-  = FL.decompress stream >>= unfilterStream . (otherFilters, )
+  = FL.decompress stream >>= unpredictStream pdfFilter >>= unfilterStream . (otherFilters, )
   | fFilter pdfFilter == PDFName "RunLengthDecode"
   = RL.decompress stream >>= unfilterStream . (otherFilters, )
   | fFilter pdfFilter == PDFName "LZWDecode"
