@@ -37,8 +37,9 @@ data OptimizationType = XMLOptimization
 
 whatOptimizationFor :: Logging m => PDFObject -> FallibleT m OptimizationType
 whatOptimizationFor object = do
-  getValue "SubType" object >>= \case
+  getValue "Subtype" object >>= \case
     Just (PDFName "XML") -> return XMLOptimization
+    Just (PDFName "Image") -> return NoOptimization
     _notXML              -> getValue "Type" object >>= \case
       Just (PDFName "ObjStm") -> return ObjectStreamOptimization
       _notObjectStream        -> if hasKey "Type" object

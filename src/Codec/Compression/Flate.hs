@@ -26,7 +26,7 @@ import Util.UnifiedError (UnifiedError (FlateDecodeError))
 
 zopfliCompressOptions :: HL.CompressOptions
 zopfliCompressOptions = HL.CompressOptions { HL.verbose            = HL.NONE
-                                           , HL.numIterations      = 3
+                                           , HL.numIterations      = 127
                                            , HL.blockSplitting     = True
                                            , HL.blockSplittingLast = False
                                            , HL.blockSplittingMax  = 15

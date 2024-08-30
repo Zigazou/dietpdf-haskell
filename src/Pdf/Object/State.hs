@@ -4,6 +4,7 @@ This module defines functions working on `StateT` monad with `PDFObject`.
 module Pdf.Object.State
   ( -- * Query
     getValue
+  , getValueDefault
   , getStream
   , getDictionary
   , maybeQuery
@@ -87,6 +88,23 @@ getValue name object = case object of
   (PDFTrailer (PDFDictionary dict)           ) -> return $ dict Map.!? name
   (PDFXRefStream _ _ dict _                  ) -> return $ dict Map.!? name
   _anyOtherObject                              -> return Nothing
+
+{- |
+Get value in a dictionary from a `PDFObject`.
+
+It works transparently for any `PDFObject` containing a dictionary:
+`PDFDictionary`, `PDFIndirectObjectWithStream`, `PDFObjectStream`,
+`PDFIndirectObject` (when embedding a `Dictionary`) and `PDFTrailer`.
+-}
+getValueDefault
+  :: Logging m
+  => BS.ByteString -- ^ Key of the value to retrieve
+  -> PDFObject
+  -> PDFObject
+  -> FallibleT m (Maybe PDFObject)
+getValueDefault name defaultValue object = getValue name object >>= \case
+  Just value -> return $ Just value
+  Nothing    -> return $ Just defaultValue
 
 {- |
 Set value in a dictionary contained in a `PDFObject`.

@@ -26,18 +26,23 @@ import Pdf.Object.Container
     )
 import Pdf.Object.Format (txtObjectNumberVersion)
 import Pdf.Object.Object (PDFObject (PDFName, PDFNumber), hasKey, hasStream)
-import Pdf.Object.State (getStream, getValue, setStream)
+import Pdf.Object.State (getStream, getValue, getValueDefault, setStream)
 
 import Util.Logging (Logging, sayF)
 import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 getPredictor :: PDFObject -> Either UnifiedError Predictor
-getPredictor params = case runExcept (getValue "Type" params) of
+getPredictor params = case runExcept (getValue "Predictor" params) of
   Right (Just (PDFNumber value)) -> toPredictor . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
 getColumns :: PDFObject -> Either UnifiedError Int
-getColumns params = case runExcept (getValue "Columns" params) of
+getColumns params = case runExcept (getValueDefault "Columns" (PDFNumber 1) params) of
+  Right (Just (PDFNumber value)) -> return . round $ value
+  _anythingElse                  -> Left InvalidFilterParm
+
+getComponents :: PDFObject -> Either UnifiedError Int
+getComponents params = case runExcept (getValueDefault "BitsPerComponent" (PDFNumber 8) params) of
   Right (Just (PDFNumber value)) -> return . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
@@ -48,8 +53,8 @@ unpredictStream pdfFilter stream =
   then do
     predictor <- getPredictor params
     columns <- getColumns params
-    let height = BS.length stream `div` columns
-    unpredict predictor columns height stream
+    components <- getComponents params
+    unpredict predictor columns (components `div` 8) stream
   else return stream
 
 unfilterStream
@@ -61,7 +66,7 @@ unfilterStream (filters@(pdfFilter :<| otherFilters), stream)
   | fFilter pdfFilter == PDFName "RunLengthDecode"
   = RL.decompress stream >>= unfilterStream . (otherFilters, )
   | fFilter pdfFilter == PDFName "LZWDecode"
-  = LZ.decompress stream >>= unfilterStream . (otherFilters, )
+  = LZ.decompress stream >>= unpredictStream pdfFilter  >>= unfilterStream . (otherFilters, )
   | fFilter pdfFilter == PDFName "ASCII85Decode"
   = A8.decode stream >>= unfilterStream . (otherFilters, )
   | fFilter pdfFilter == PDFName "ASCIIHexDecode"
