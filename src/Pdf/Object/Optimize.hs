@@ -36,19 +36,20 @@ data OptimizationType = XMLOptimization
                       deriving stock (Eq)
 
 whatOptimizationFor :: Logging m => PDFObject -> FallibleT m OptimizationType
-whatOptimizationFor object = do
+whatOptimizationFor object =
   getValue "Subtype" object >>= \case
     Just (PDFName "XML") -> return XMLOptimization
     Just (PDFName "Image") -> return NoOptimization
-    _notXML              -> getValue "Type" object >>= \case
+    _notXMLorImage         -> getValue "Type" object >>= \case
       Just (PDFName "ObjStm") -> return ObjectStreamOptimization
       _notObjectStream        -> if hasKey "Type" object
         then return NoOptimization
         else do
           tryF (getStream object) >>= \case
             Right stream -> case gfxParse stream of
-              Right _ -> return GfxOptimization
-              _notGfx -> return NoOptimization
+              Right SQ.Empty -> return NoOptimization
+              Right _        -> return GfxOptimization
+              _notGfx        -> return NoOptimization
             _noStream -> return NoOptimization
 
 streamOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
