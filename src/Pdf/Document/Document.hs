@@ -13,7 +13,7 @@ module Pdf.Document.Document
   , dSepBy1
   , dSepBy
   , deepFind
-  , findLast
+  , dFindLast
   , member
   ) where
 
@@ -151,8 +151,8 @@ Find last value in a `CollectionOf` satisfying a predicate.
 
 If the predicate is never satisfied, the function returns `Nothing`.
 -}
-findLast :: (a -> Bool) -> CollectionOf a -> Maybe a
-findLast p =
+dFindLast :: (a -> Bool) -> CollectionOf a -> Maybe a
+dFindLast p =
   foldr (\object found -> if p object then Just $! object else found) Nothing
 
 {- |

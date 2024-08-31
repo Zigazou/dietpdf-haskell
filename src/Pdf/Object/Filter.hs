@@ -10,16 +10,16 @@ import Control.Monad.Trans.Except (except)
 import Data.ByteString qualified as BS
 import Data.Foldable (minimumBy)
 import Data.Functor ((<&>))
+import Data.Sequence ((><))
 import Data.Text qualified as T
 
 import Pdf.Document.XRef (xrefStreamWidth)
-import Pdf.Object.Container (FilterList, setFilters)
+import Pdf.Object.Container (FilterList, getFilters, setFilters)
 import Pdf.Object.FilterCombine.PredRleZopfli (predRleZopfli)
 import Pdf.Object.FilterCombine.PredZopfli (predZopfli)
 import Pdf.Object.FilterCombine.Rle (rle)
 import Pdf.Object.FilterCombine.RleZopfli (rleZopfli)
 import Pdf.Object.FilterCombine.Zopfli (zopfli)
-import Pdf.Object.FilterCombine.ZopfliRle (zopfliRle)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
     , hasStream
@@ -59,13 +59,10 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rRleZopfli <- except $ rleZopfli widthComponents stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
-      rZopfliRle <- except $ zopfliRle widthComponents stream
-      filterInfo "Zopfli+RLE" stream (snd rZopfliRle)
-
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
 
-      return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rZopfliRle, rPredZopfli]
+      return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
     else do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
@@ -83,17 +80,14 @@ applyEveryFilter Nothing stream = do
   rZopfli <- except $ zopfli Nothing stream
   filterInfo "Zopfli" stream (snd rZopfli)
 
-  rZopfliRle <- except $ zopfliRle Nothing stream
-  filterInfo "Zopfli+RLE" stream (snd rZopfliRle)
-
   if (BS.length . snd $ rRle) < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
-      return [rRle, rZopfli, rRleZopfli, rZopfliRle]
+      return [rRle, rZopfli, rRleZopfli]
     else
-      return [rZopfli, rZopfliRle]
+      return [rZopfli]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object@PDFXRefStream{} =
@@ -117,10 +111,11 @@ filterOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
 filterOptimize object = if hasStream object
   then do
     stream          <- getStream object
+    filters         <- getFilters object
     widthComponents <- getWidthComponents object
 
     candidates      <- applyEveryFilter widthComponents stream <&> mkArray
     let (bestFilters, bestStream) = minimumBy sndLengthCompare candidates
 
-    setStream bestStream object >>= setFilters bestFilters
+    setStream bestStream object >>= setFilters (bestFilters >< filters)
   else return object

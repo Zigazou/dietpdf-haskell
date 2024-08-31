@@ -25,7 +25,7 @@ import Pdf.Object.Container
     , setFilters
     )
 import Pdf.Object.Format (txtObjectNumberVersion)
-import Pdf.Object.Object (PDFObject (PDFName, PDFNumber), hasKey, hasStream)
+import Pdf.Object.Object (PDFObject (PDFName, PDFNumber), hasKey, hasStream, ToPDFNumber (mkPDFNumber))
 import Pdf.Object.State (getStream, getValue, getValueDefault, setStream)
 
 import Util.Logging (Logging, sayF)
@@ -46,45 +46,63 @@ getComponents params = case runExcept (getValueDefault "BitsPerComponent" (PDFNu
   Right (Just (PDFNumber value)) -> return . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
-unpredictStream :: Filter -> BS.ByteString -> Either UnifiedError BS.ByteString
-unpredictStream pdfFilter stream =
+getColors :: Int -> PDFObject -> Either UnifiedError Int
+getColors defaultColors params = case runExcept (getValueDefault "Colors" (mkPDFNumber defaultColors) params) of
+  Right (Just (PDFNumber value)) -> return . round $ value
+  _anythingElse                  -> Left InvalidFilterParm
+
+unpredictStream :: Int -> Filter -> BS.ByteString -> Either UnifiedError BS.ByteString
+unpredictStream defaultColors pdfFilter stream =
   let params = fDecodeParms pdfFilter in
   if hasKey "Predictor" params
   then do
-    predictor <- getPredictor params
-    columns <- getColumns params
+    predictor  <- getPredictor params
+    columns    <- getColumns params
     components <- getComponents params
-    unpredict predictor columns (components `div` 8) stream
+    colors     <- getColors defaultColors params
+    unpredict predictor columns (colors * components `div` 8) stream
   else return stream
 
 unfilterStream
-  :: (FilterList, BS.ByteString)
+  :: Int
+  -> (FilterList, BS.ByteString)
   -> Either UnifiedError (FilterList, BS.ByteString)
-unfilterStream (filters@(pdfFilter :<| otherFilters), stream)
+unfilterStream colors (filters@(pdfFilter :<| otherFilters), stream)
   | fFilter pdfFilter == PDFName "FlateDecode"
-  = FL.decompress stream >>= unpredictStream pdfFilter >>= unfilterStream . (otherFilters, )
+  = FL.decompress stream >>= unpredictStream colors pdfFilter
+                         >>= unfilterStream colors . (otherFilters, )
   | fFilter pdfFilter == PDFName "RunLengthDecode"
-  = RL.decompress stream >>= unfilterStream . (otherFilters, )
+  = RL.decompress stream >>= unfilterStream colors . (otherFilters, )
   | fFilter pdfFilter == PDFName "LZWDecode"
-  = LZ.decompress stream >>= unpredictStream pdfFilter  >>= unfilterStream . (otherFilters, )
+  = LZ.decompress stream >>= unpredictStream colors pdfFilter
+                         >>= unfilterStream colors . (otherFilters, )
   | fFilter pdfFilter == PDFName "ASCII85Decode"
-  = A8.decode stream >>= unfilterStream . (otherFilters, )
+  = A8.decode stream >>= unfilterStream colors . (otherFilters, )
   | fFilter pdfFilter == PDFName "ASCIIHexDecode"
-  = AH.decode stream >>= unfilterStream . (otherFilters, )
+  = AH.decode stream >>= unfilterStream colors . (otherFilters, )
   | otherwise
   = Right (filters, stream)
-unfilterStream (filters, stream) = Right (filters, stream)
+unfilterStream _colors (filters, stream) = Right (filters, stream)
+
+getColorSpace :: Logging m => PDFObject -> FallibleT m Int
+getColorSpace params = case runExcept (getValueDefault "ColorSpace" (PDFName "DeviceRGB") params) of
+  Right (Just (PDFName "DeviceGray")) -> return 1
+  Right (Just (PDFName "DeviceRGB"))  -> return 3
+  Right (Just (PDFName "DeviceCMYK")) -> return 4
+  _anythingElse                       -> throwE InvalidFilterParm
 
 unfiltered :: Logging m => PDFObject -> FallibleT m (FilterList, BS.ByteString)
 unfiltered object = do
   stream  <- getStream object
   filters <- getFilters object
-  case unfilterStream (filters, stream) of
+  colorSpace <- getColorSpace object
+  case unfilterStream colorSpace (filters, stream) of
     Right unfilteredData  -> return unfilteredData
     Left  unfilteredError -> throwE unfilteredError
 
 {- |
-Tries to decode every filter of an object with a stream.
+Tries to decode every filter of an object with a stream. Some filters will not
+be decoded because (like `DCTDecode`).
 
 It usually decompresses the stream.
 -}

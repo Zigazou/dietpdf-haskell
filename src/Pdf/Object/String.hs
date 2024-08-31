@@ -52,16 +52,20 @@ optimizeString object = case object of
                      (BS.length values)
                      (BS.length encoded)
       return $ PDFString encoded
-    |
-      -- If the PDFHexString is UTF-16 but only contains ASCII characters,
-      -- converts it to a PDFString which will be four times shorter.
-      isUTF16Encoded encoded -> case utf16beToLatin1 encoded of
-      Just asciiEncoded -> do
-        sayComparisonF "Hex string optimization"
-                       (BS.length values)
-                       (BS.length asciiEncoded)
-        return $ PDFString asciiEncoded
-      Nothing -> return object
+    | isUTF16Encoded encoded -> case utf16beToLatin1 encoded of
+        -- If the PDFHexString is UTF-16 but only contains ASCII characters,
+        -- converts it to a PDFString which will be four times shorter.
+        Just asciiEncoded -> do
+          sayComparisonF "Hex string optimization (ASCII)"
+                        (BS.length values)
+                        (BS.length asciiEncoded)
+          return $ PDFString asciiEncoded
+        Nothing -> do
+          let utf16beEncoded = hexStringToString values
+          sayComparisonF "Hex string optimization (UTF-16)"
+                        (BS.length values)
+                        (BS.length utf16beEncoded)
+          return $ PDFString utf16beEncoded
     | otherwise -> return object
     where encoded = hexStringToString values
   _anyOtherObject -> return object

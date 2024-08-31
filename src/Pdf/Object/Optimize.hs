@@ -35,6 +35,9 @@ data OptimizationType = XMLOptimization
                       | NoOptimization
                       deriving stock (Eq)
 
+{- |
+Determine the optimization type that can be applied to a `PDFObject`.
+-}
 whatOptimizationFor :: Logging m => PDFObject -> FallibleT m OptimizationType
 whatOptimizationFor object =
   getValue "Subtype" object >>= \case
@@ -61,23 +64,31 @@ streamOptimize object = whatOptimizationFor object >>= \case
                    (BS.length stream)
                    (BS.length optimizedStream)
     setStream optimizedStream object
+
   ObjectStreamOptimization -> do
     sayF "  - No optimization for object stream"
     return object
+
   GfxOptimization -> do
     stream <- getStream object
     case gfxParse stream of
+      Right SQ.Empty -> do
+        sayF "  - No optimization trick for this object"
+        return object
+
       Right objects -> do
         let optimizedStream = separateGfx objects
         sayComparisonF "GFX objects optimization"
                        (BS.length stream)
                        (BS.length optimizedStream)
         setStream optimizedStream object
+
       _error -> do
-        sayF "  - No stream content to optimize"
+        sayF "  - No optimization trick for this object"
         return object
+
   NoOptimization -> do
-    sayF "  - No stream content to optimize"
+    sayF "  - No optimization trick for this object"
     return object
 
 {- |
@@ -100,6 +111,8 @@ isFilterOK f = case fFilter f of
   (PDFName "LZWDecode"     ) -> True
   (PDFName "ASCII85Decode" ) -> True
   (PDFName "ASCIIHexDecode") -> True
+  (PDFName "DCTDecode"     ) -> True
+  (PDFName "JPXDecode"     ) -> True
   _anyOtherCase              -> False
 
 {- |

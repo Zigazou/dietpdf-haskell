@@ -361,15 +361,17 @@ Convert a `ByteString` to a `Scanline` according to a `Predictor`.
 -}
 fromPredictedLine
   :: Predictor -> Int -> BS.ByteString -> Either UnifiedError Scanline
-fromPredictedLine predictor width raw
+fromPredictedLine predictor components raw
   | isPNGGroup predictor = do
     let (predictCode, bytes) = BS.splitAt 1 raw
     linePredictor <- toRowPredictor (BS.head predictCode)
     return $ Scanline { slPredictor = Just linePredictor
-                      , slStream    = splitRaw width bytes
+                      , slStream    = separateComponents components bytes
                       }
-  | otherwise = return
-  $ Scanline { slPredictor = Just predictor, slStream = splitRaw width raw }
+  | otherwise =
+    return $ Scanline { slPredictor = Just predictor
+                      , slStream = separateComponents components raw
+                      }
 
 {- |
 Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
@@ -379,7 +381,7 @@ fromPredictedStream
   :: Predictor -> Int -> Int -> BS.ByteString -> Either UnifiedError ImageStream
 fromPredictedStream predictor width components raw = do
   let rawWidth = components * width + if isPNGGroup predictor then 1 else 0
-  scanlines <- mapM (fromPredictedLine predictor width) (splitRaw rawWidth raw)
+  scanlines <- mapM (fromPredictedLine predictor components) (splitRaw rawWidth raw)
   return ImageStream { iWidth            = width
                      , iComponents       = components
                      , iBitsPerComponent = 8

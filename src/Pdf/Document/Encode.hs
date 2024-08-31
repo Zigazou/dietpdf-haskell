@@ -118,6 +118,11 @@ getTrailer partition = case lastTrailer partition of
           _anyOtherCase -> PDFTrailer PDFNull
   validTrailer -> validTrailer
 
+objectToEmbed :: PDFObject -> Bool
+objectToEmbed object = isIndirect object
+                    && (not . hasStream) object
+                    -- && (not . isInfo) object
+
 {-|
 Given a list of PDF objects, generate the PDF file content.
 
@@ -140,7 +145,7 @@ pdfEncode objects = do
 
   let partition = PDFPartition
         { ppObjectsWithStream    = fromPDFDocument $ cFilter hasStream allObjects
-        , ppObjectsWithoutStream = fromPDFDocument $ cFilter (\o -> isIndirect o && (not . hasStream) o) allObjects
+        , ppObjectsWithoutStream = fromPDFDocument $ cFilter objectToEmbed allObjects
         , ppHeads                = cFilter isHeader allObjects
         , ppTrailers             = cFilter isTrailer allObjects
         }
