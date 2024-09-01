@@ -47,7 +47,7 @@ sayComparisonF label sizeBefore sizeAfter = sayF
   +| padRightF 36 ' ' label
   |+ " "
   +| padLeftF 12 ' ' (commaizeF sizeBefore)
-  |+ "/"
+  |+ " -> "
   +| padLeftF 12 ' ' (commaizeF sizeAfter)
   |+ " ("
   +| padLeftF 8 ' ' (fixedF 2 ratio)

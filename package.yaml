@@ -119,6 +119,7 @@ executables:
     - pretty-hex
     - containers
     - temporary
+    - unix
 
 tests:
   dietpdf-test:

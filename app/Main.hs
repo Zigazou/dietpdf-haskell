@@ -42,8 +42,10 @@ import Pdf.Document.Parser (pdfParse)
 import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
 import System.IO.Temp (withSystemTempFile)
+import System.Posix (fileSize, getFileStatus)
 
 import Util.GSOptimize (gsOptimize)
+import Util.Logging (sayComparisonF)
 import Util.UnifiedError
     ( FallibleT
     , UnifiedError (ParseError, UnableToOpenFile)
@@ -66,6 +68,11 @@ readByteString Nothing =
     Right bytes -> return bytes
     Left  _     -> throwE UnableToOpenFile
 
+getFileSize :: String -> IO Int
+getFileSize path = do
+    stat <- getFileStatus path
+    return $ fromIntegral (fileSize stat)
+
 hexCfg :: Int -> Cfg
 hexCfg offset = defaultCfg { startByte = offset }
 
@@ -77,8 +84,10 @@ hexDump offset bytes = do
 
 runApp :: AppOptions -> FallibleT IO ()
 runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
+
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
+
 runApp (OptimizeOptions inputPDF outputPDF) = do
   withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
     -- Close the handles so external programs can use the files.
@@ -87,20 +96,34 @@ runApp (OptimizeOptions inputPDF outputPDF) = do
     -- Optimize PDF with GhostScript.
     gsOptimize inputPDF ghostscriptPDF
 
+    -- Compare the sizes of the original and GhostScript PDFs.
+    originalSize <- lift $ getFileSize inputPDF
+    ghostScriptSize <- lift $ getFileSize ghostscriptPDF
+
+    sayComparisonF "GhostScripted PDF" originalSize ghostScriptSize
+
+    let pdfToOptimize = if ghostScriptSize < originalSize then ghostscriptPDF
+                                                          else inputPDF
+
     -- Read the optimized PDF and optimize it further.
-    tryF (readPDF ghostscriptPDF) >>= \case
+    tryF (readPDF pdfToOptimize) >>= \case
       Right document                            -> optimize outputPDF document
       Left  anError@(ParseError (_, offset, _)) -> do
         lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
         throwE anError
       Left anError -> throwE anError
+
 runApp (HashOptions inputPDF) = readPDF inputPDF >>= objectHashes
+
 runApp (EncodeOptions codec inputFile) =
   readByteString inputFile >>= encodeByteString codec
+
 runApp (DecodeOptions codec inputFile) =
   readByteString inputFile >>= decodeByteString codec
+
 runApp (PredictOptions predictor width components inputFile) =
   readByteString inputFile >>= predictByteString predictor width components
+
 runApp (UnpredictOptions predictor width components inputFile) =
   readByteString inputFile >>= unpredictByteString predictor width components
 

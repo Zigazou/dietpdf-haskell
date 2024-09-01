@@ -11,36 +11,44 @@ import System.Process (readProcessWithExitCode)
 
 import Util.Logging (sayF)
 import Util.UnifiedError (FallibleT, UnifiedError (GhostScriptError))
+gsOptions :: [(String, String)]
+gsOptions =
+  [ ("DetectDuplicateImages", "true")        -- group identical images
+  , ("AutoRotatePages", "/None")             -- don't rotate pages
+  , ("CompressFonts", "true")                -- compress fonts
+  , ("DownsampleColorImages", "true")        -- downsample color images
+  , ("DownsampleGrayImages", "true")         -- downsample gray images
+  , ("DownsampleMonoImages", "true")         -- downsample monochrome images
+  , ("ColorImageResolution", "300")          -- color image resolution
+  , ("GrayImageResolution", "300")           -- gray image resolution
+  , ("MonoImageResolution", "300")           -- monochrome image resolution
+  , ("ColorImageDownsampleThreshold", "1.0") -- color image downsample threshold
+  , ("GrayImageDownsampleThreshold", "1.0")  -- gray image downsample threshold
+  , ("MonoImageDownsampleThreshold", "1.0")  -- b&w downsample threshold
+  , ("ColorImageDownsampleType", "/Bicubic") -- color image downsample type
+  , ("GrayImageDownsampleType", "/Bicubic")  -- gray image downsample type
+  , ("MonoImageDownsampleType", "/Bicubic")  -- b&w image downsample type
+  , ("ColorImageFilter", "/FlateEncode")     -- color image filter
+  , ("CompatibilityLevel", "1.7")            -- PDF compatibility level
+  ]
+
+generateOptions :: [(String, String)] -> [String]
+generateOptions = fmap (\(option, value) -> concat ["-d", option, "=", value])
 
 gsOptimize :: FilePath -> FilePath -> FallibleT IO ()
 gsOptimize inputPdf outputPdf = do
   sayF $ T.concat ["Running GhostScript on ", T.pack inputPdf]
 
   (rc, _, _) <- lift $ readProcessWithExitCode "gs"
-                  [ "-sDEVICE=pdfwrite"
-                  , "-dDetectDuplicateImages=true" -- group identical images
-                  , "-dAutoRotatePages=/None"      -- don't rotate pages
-                  , "-dCompressFonts=true"         -- compress fonts
-                  , "-dDownsampleColorImages=true" -- downsample color images
-                  , "-dDownsampleGrayImages=true"  -- downsample gray images
-                  , "-dDownsampleMonoImages=true"  -- downsample monochrome images
-                  , "-dColorImageResolution=300"   -- color image resolution
-                  , "-dGrayImageResolution=300"    -- gray image resolution
-                  , "-dMonoImageResolution=300"    -- monochrome image resolution
-                  , "-dColorImageDownsampleThreshold=1.0" -- color image downsample threshold
-                  , "-dGrayImageDownsampleThreshold=1.0"  -- gray image downsample threshold
-                  , "-dMonoImageDownsampleThreshold=1.0"  -- monochrome image downsample threshold
-                  , "-dColorImageDownsampleType=/Bicubic" -- color image downsample type
-                  , "-dGrayImageDownsampleType=/Bicubic"  -- gray image downsample type
-                  , "-dMonoImageDownsampleType=/Bicubic"  -- monochrome image downsample type
-                  , "-dColorImageFilter=/FlateEncode" -- color image filter
-                  , "-dCompatibilityLevel=1.7"
-                  , "-dQUIET"
-                  , "-dNOPAUSE"
-                  , "-dBATCH"
-                  , "-o", outputPdf
-                  , inputPdf
-                  ] ""
+                  ( ["-sDEVICE=pdfwrite"]
+                  ++ generateOptions gsOptions
+                  ++ [ "-dQUIET"
+                     , "-dNOPAUSE"
+                     , "-dBATCH"
+                     , "-o", outputPdf
+                     , inputPdf
+                     ]
+                  ) ""
 
   case rc of
     ExitSuccess -> return ()
