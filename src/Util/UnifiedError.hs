@@ -82,7 +82,7 @@ data UnifiedError
   | ObjectStreamNotFound
   | ObjectNotFound
   | XRefStreamNoW !String
-  | GhostScriptError !String
+  | ExternalCommandError !String !Int
   | PDFTKError !String
   | UnsupportedFeature !String
   deriving stock (Eq)
@@ -97,7 +97,7 @@ errorType :: UnifiedError -> ErrorType
 errorType (ParseError _)             = ParsingError
 errorType UnableToOpenFile           = ReadingError
 errorType ObjectNotFound             = ReadingError
-errorType (GhostScriptError _)       = ReadingError
+errorType (ExternalCommandError _ _) = ReadingError
 errorType (PDFTKError _)             = ReadingError
 errorType EncodeNoIndirectObject     = EncodingError
 errorType EncodeNoVersion            = EncodingError
@@ -175,7 +175,8 @@ instance Show UnifiedError where
   show err@ObjectStreamNotFound    = show' err "Object stream not found"
   show err@(XRefStreamNoW msg) =
     show' err ("XRef stream with invalid or no W field: " ++ msg)
-  show err@(GhostScriptError msg) = show' err ("GhostScript error: " ++ msg)
+  show err@(ExternalCommandError msg rc) =
+    show' err ("External command error for " ++ msg ++ " (" ++ show rc ++ ")")
   show err@(PDFTKError msg) = show' err ("PDFTK error: " ++ msg)
   show err@(UnsupportedFeature msg) =
     show' err ("Unsupported feature: " ++ msg)

@@ -6,11 +6,11 @@ import Control.Monad.Trans.Except (throwE)
 
 import Data.Text qualified as T
 
-import System.Exit (ExitCode (ExitSuccess))
+import System.Exit (ExitCode (ExitFailure, ExitSuccess))
 import System.Process (readProcessWithExitCode)
 
 import Util.Logging (sayF)
-import Util.UnifiedError (FallibleT, UnifiedError (GhostScriptError))
+import Util.UnifiedError (FallibleT, UnifiedError (ExternalCommandError))
 gsOptions :: [(String, String)]
 gsOptions =
   [ ("DetectDuplicateImages", "true")        -- group identical images
@@ -39,17 +39,17 @@ gsOptimize :: FilePath -> FilePath -> FallibleT IO ()
 gsOptimize inputPdf outputPdf = do
   sayF $ T.concat ["Running GhostScript on ", T.pack inputPdf]
 
-  (rc, _, _) <- lift $ readProcessWithExitCode "gs"
-                  ( ["-sDEVICE=pdfwrite"]
-                  ++ generateOptions gsOptions
-                  ++ [ "-dQUIET"
-                     , "-dNOPAUSE"
-                     , "-dBATCH"
-                     , "-o", outputPdf
-                     , inputPdf
-                     ]
-                  ) ""
+  (exitCode, _, _) <- lift $ readProcessWithExitCode "gs"
+                              ( ["-sDEVICE=pdfwrite"]
+                              ++ generateOptions gsOptions
+                              ++ [ "-dQUIET"
+                                , "-dNOPAUSE"
+                                , "-dBATCH"
+                                , "-o", outputPdf
+                                , inputPdf
+                                ]
+                              ) ""
 
-  case rc of
-    ExitSuccess -> return ()
-    _           -> throwE (GhostScriptError "GhostScript failed")
+  case exitCode of
+    ExitSuccess    -> return ()
+    ExitFailure rc -> throwE (ExternalCommandError "GhostScript" rc)
