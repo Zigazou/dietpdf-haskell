@@ -26,13 +26,15 @@ import Options.Applicative
     , command
     , help
     , info
+    , long
     , metavar
     , optional
     , progDesc
+    , short
     , str
     , subparser
+    , switch
     )
-
 type Codec :: Type
 data Codec = LZW
            | Deflate
@@ -54,7 +56,7 @@ predictorsHelp =
 
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !FilePath
+  = OptimizeOptions !FilePath !FilePath !Bool
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -67,7 +69,7 @@ commandInfo :: Mod CommandFields AppOptions
 commandInfo = command
   "info"
   (info
-    (InfoOptions <$> argument str (metavar "IN" <> help "PDF file to analyze"))
+    (InfoOptions <$> argument str (metavar "input_pdf_file" <> help "PDF file to analyze"))
     (progDesc "Print information about a PDF file")
   )
 
@@ -76,8 +78,8 @@ commandExtract = command
   "extract"
   (info
     (   ExtractOptions
-    <$> argument auto (metavar "NUM" <> help "Object number")
-    <*> argument str  (metavar "IN" <> help "PDF file to analyze")
+    <$> argument auto (metavar "<object_number>" <> help "Object number")
+    <*> argument str  (metavar "<input_pdf_file>" <> help "PDF file to analyze")
     )
     (progDesc
       "Extract the stream of a specific object from a PDF file \
@@ -90,8 +92,9 @@ commandOptimize = command
   "optimize"
   (info
     (   OptimizeOptions
-    <$> argument str (metavar "IN" <> help "PDF file to process")
-    <*> argument str (metavar "OUT" <> help "PDF file to create")
+    <$> argument str (metavar "<input_pdf_file>" <> help "PDF file to process")
+    <*> argument str (metavar "<output_pdf_file>" <> help "PDF file to create")
+    <*> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing")
     )
     (progDesc "Optimize a PDF file")
   )
@@ -99,7 +102,7 @@ commandHash :: Mod CommandFields AppOptions
 commandHash = command
   "hash"
   (info
-    (HashOptions <$> argument str (metavar "IN" <> help "PDF file to process"))
+    (HashOptions <$> argument str (metavar "<input_pdf_file>" <> help "PDF file to process"))
     (progDesc "Hash of each stream in a PDF file")
   )
 
@@ -108,8 +111,8 @@ commandEncode = command
   "encode"
   (info
     (   EncodeOptions
-    <$> argument auto (metavar "CODEC" <> help codecsHelp)
-    <*> optional (argument str (metavar "IN" <> help "File to encode"))
+    <$> argument auto (metavar "<codec>" <> help codecsHelp)
+    <*> optional (argument str (metavar "[input_pdf_file]" <> help "File to encode"))
     )
     (progDesc "Encode a file as it would be in a stream")
   )
@@ -119,8 +122,8 @@ commandDecode = command
   "decode"
   (info
     (   DecodeOptions
-    <$> argument auto (metavar "CODEC" <> help codecsHelp)
-    <*> optional (argument str (metavar "OUT" <> help "File to decode"))
+    <$> argument auto (metavar "<codec>" <> help codecsHelp)
+    <*> optional (argument str (metavar "[output_pdf_file]" <> help "File to decode"))
     )
     (progDesc "Decode a file as it would be in a stream")
   )
@@ -130,10 +133,10 @@ commandPredict = command
   "predict"
   (info
     (   PredictOptions
-    <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
-    <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
-    <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
-    <*> optional (argument str (metavar "IN" <> help "File to predict"))
+    <$> argument auto (metavar "<predictor>" <> help predictorsHelp)
+    <*> argument auto (metavar "<columns>" <> help "Width in pixels")
+    <*> argument auto (metavar "<components>" <> help "Number of components")
+    <*> optional (argument str (metavar "<input_pdf_file>" <> help "File to predict"))
     )
     (progDesc "Predict a file as it would be in a stream")
   )
@@ -143,10 +146,10 @@ commandUnpredict = command
   "unpredict"
   (info
     (   UnpredictOptions
-    <$> argument auto (metavar "PREDICTOR" <> help predictorsHelp)
-    <*> argument auto (metavar "COLUMNS" <> help "Width in pixels")
-    <*> argument auto (metavar "COMPONENTS" <> help "Number of components")
-    <*> optional (argument str (metavar "IN" <> help "File to unpredict"))
+    <$> argument auto (metavar "<predictor>" <> help predictorsHelp)
+    <*> argument auto (metavar "<columns>" <> help "Width in pixels")
+    <*> argument auto (metavar "<components>" <> help "Number of components")
+    <*> optional (argument str (metavar "<input_pdf_file>" <> help "File to unpredict"))
     )
     (progDesc "Unpredict a file as it would be in a stream")
   )

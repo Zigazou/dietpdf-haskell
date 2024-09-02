@@ -88,23 +88,28 @@ runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 
-runApp (OptimizeOptions inputPDF outputPDF) = do
-  withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
-    -- Close the handles so external programs can use the files.
-    lift $ hClose ghostscriptHandle
+runApp (OptimizeOptions inputPDF outputPDF useGS) = do
+  if useGS
+    then withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
+      -- Close the handles so external programs can use the files.
+      lift $ hClose ghostscriptHandle
 
-    -- Optimize PDF with GhostScript.
-    gsOptimize inputPDF ghostscriptPDF
+      -- Optimize PDF with GhostScript.
+      gsOptimize inputPDF ghostscriptPDF
 
-    -- Compare the sizes of the original and GhostScript PDFs.
-    originalSize <- lift $ getFileSize inputPDF
-    ghostScriptSize <- lift $ getFileSize ghostscriptPDF
+      -- Compare the sizes of the original and GhostScript PDFs.
+      originalSize <- lift $ getFileSize inputPDF
+      ghostScriptSize <- lift $ getFileSize ghostscriptPDF
 
-    sayComparisonF "GhostScripted PDF" originalSize ghostScriptSize
+      sayComparisonF "GhostScripted PDF" originalSize ghostScriptSize
 
-    let pdfToOptimize = if ghostScriptSize < originalSize then ghostscriptPDF
-                                                          else inputPDF
-
+      if ghostScriptSize < originalSize then go ghostscriptPDF
+                                        else go inputPDF
+    else
+      go inputPDF
+ where
+  go :: FilePath -> FallibleT IO ()
+  go pdfToOptimize = do
     -- Read the optimized PDF and optimize it further.
     tryF (readPDF pdfToOptimize) >>= \case
       Right document                            -> optimize outputPDF document
