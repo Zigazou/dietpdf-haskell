@@ -21,14 +21,13 @@ import Pdf.Document.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Pdf.Document.ObjectStream (explodeDocument, explodeList, insert)
 import Pdf.Document.Partition
     ( PDFPartition (PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
-    , firstVersion
     , lastTrailer
     , removeUnused
     )
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)
 import Pdf.Object.Object.PDFObject
-    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFXRefStream)
+    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion, PDFXRefStream)
     )
 import Pdf.Object.Object.Properties
     ( getObjectNumber
@@ -150,7 +149,7 @@ pdfEncode objects = do
         , ppTrailers             = cFilter isTrailer allObjects
         }
 
-      pdfHead = (fromPDFObject . firstVersion) partition
+      pdfHead = fromPDFObject (PDFVersion "1.7")
       pdfEnd  = fromPDFObject PDFEndOfFile
 
   sayF "Starting discovery"
