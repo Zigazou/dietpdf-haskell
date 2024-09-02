@@ -73,22 +73,22 @@ streamOptimize object = whatOptimizationFor object >>= \case
     stream <- getStream object
     case gfxParse stream of
       Right SQ.Empty -> do
-        sayF "  - No optimization trick for this object"
+        sayF "  - No GFX optimization for this object"
         return object
 
       Right objects -> do
         let optimizedStream = separateGfx objects
-        sayComparisonF "GFX objects optimization"
+        sayComparisonF "GFX stream optimization"
                        (BS.length stream)
                        (BS.length optimizedStream)
         setStream optimizedStream object
 
       _error -> do
-        sayF "  - No optimization trick for this object"
+        sayF "  - GFX stream could not be parsed"
         return object
 
   NoOptimization -> do
-    sayF "  - No optimization trick for this object"
+    sayF "  - No optimization for generic stream"
     return object
 
 {- |
@@ -152,11 +152,8 @@ optimize :: Logging m => PDFObject -> FallibleT m PDFObject
 optimize object = optimizable object >>= \case
   True -> do
     sayF (txtObjectNumberVersion object)
-    refilter object
-      `ifFail` (\theError -> do
-                 sayErrorF "Cannot optimize" theError
-                 return object
-               )
+    ifFail (refilter object)
+           (\theError -> sayErrorF "Cannot optimize" theError >> return object)
   False -> do
     sayF (txtObjectNumberVersion object <> ": ignored")
     return object
