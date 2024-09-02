@@ -3,14 +3,14 @@ module Pdf.Object.String
   ) where
 
 import Data.ByteString qualified as BS
-import Data.Word (Word8)
 
 import Pdf.Object.Object (PDFObject (PDFHexString, PDFString))
 
-import Util.Ascii (asciiNUL)
 import Util.Logging (Logging, sayComparisonF)
 import Util.String (hexStringToString)
 import Util.UnifiedError (FallibleT)
+import Data.Binary (Word8)
+import Util.Ascii (asciiNUL)
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"
@@ -44,14 +44,13 @@ Optimize `PDFHexString` into `PDFString`.
 optimizeString :: Logging m => PDFObject -> FallibleT m PDFObject
 optimizeString object = case object of
   (PDFHexString values)
-    |
-      -- If the hex string contains only ASCII characters, converts it to a
-      -- PDFString which will be twice shorter.
-      isLatin1Encoded encoded -> do
-      sayComparisonF "Hex string optimization"
-                     (BS.length values)
-                     (BS.length encoded)
-      return $ PDFString encoded
+    | isLatin1Encoded encoded -> do
+        -- If the hex string contains only ASCII characters, converts it to a
+        -- PDFString which will be twice shorter.
+        sayComparisonF "Hex string optimization (Latin1)"
+                      (BS.length values)
+                      (BS.length encoded)
+        return $ PDFString encoded
     | isUTF16Encoded encoded -> case utf16beToLatin1 encoded of
         -- If the PDFHexString is UTF-16 but only contains ASCII characters,
         -- converts it to a PDFString which will be four times shorter.
@@ -68,4 +67,15 @@ optimizeString object = case object of
           return $ PDFString utf16beEncoded
     | otherwise -> return object
     where encoded = hexStringToString values
+  (PDFString encoded)
+    | isUTF16Encoded encoded -> case utf16beToLatin1 encoded of
+        -- If the PDFHexString is UTF-16 but only contains ASCII characters,
+        -- converts it to a PDFString which will be four times shorter.
+        Just asciiEncoded -> do
+          sayComparisonF "Hex string optimization (ASCII)"
+                        (BS.length encoded)
+                        (BS.length asciiEncoded)
+          return $ PDFString asciiEncoded
+        Nothing -> return object
+    | otherwise -> return object
   _anyOtherObject -> return object

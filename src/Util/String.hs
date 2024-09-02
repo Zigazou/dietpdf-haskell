@@ -96,7 +96,7 @@ If the number of hexadecimal digit is odd, a trailing zero is appended.
 -}
 hexStringToString :: BS.ByteString -> BS.ByteString
 hexStringToString hexString = BS.concat
-  [BS.concatMap escapeChar (convert . normalizeHexString $ hexString)]
+  [convert . normalizeHexString $ hexString]
  where
   convertHexByte h l = digitToNumber h * 16 + digitToNumber l
   convert hs

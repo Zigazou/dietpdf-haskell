@@ -25,7 +25,12 @@ import Pdf.Object.Container
     , setFilters
     )
 import Pdf.Object.Format (txtObjectNumberVersion)
-import Pdf.Object.Object (PDFObject (PDFName, PDFNumber), hasKey, hasStream, ToPDFNumber (mkPDFNumber))
+import Pdf.Object.Object
+    ( PDFObject (PDFName, PDFNumber)
+    , ToPDFNumber (mkPDFNumber)
+    , hasKey
+    , hasStream
+    )
 import Pdf.Object.State (getStream, getValue, getValueDefault, setStream)
 
 import Util.Logging (Logging, sayF)
@@ -89,6 +94,7 @@ getColorSpace params = case runExcept (getValueDefault "ColorSpace" (PDFName "De
   Right (Just (PDFName "DeviceGray")) -> return 1
   Right (Just (PDFName "DeviceRGB"))  -> return 3
   Right (Just (PDFName "DeviceCMYK")) -> return 4
+  Right _anyOtherColorSpace           -> return 1
   _anythingElse                       -> throwE InvalidFilterParm
 
 unfiltered :: Logging m => PDFObject -> FallibleT m (FilterList, BS.ByteString)

@@ -20,9 +20,8 @@ module Pdf.Graphics.Parser.String
 
 import Control.Applicative ((<|>))
 
-import Data.Binary.Parser (Get, anyWord8, label, many', satisfy, some', word8)
+import Data.Binary.Parser (Get, label, many', satisfy, some', word8)
 import Data.ByteString qualified as BS
-import Data.Functor ((<&>))
 import Data.Maybe (catMaybes)
 import Data.Word (Word8)
 
@@ -47,7 +46,6 @@ import Util.Ascii
     , asciiLOWERN
     , asciiLOWERR
     , asciiLOWERT
-    , asciiNUL
     , asciiREVERSESOLIDUS
     , asciiRIGHTPARENTHESIS
     )
@@ -113,42 +111,8 @@ rawStringP = label "rawStringG" $ do
   word8 asciiRIGHTPARENTHESIS
   return $ BS.concat ["(", BS.concat content, ")"]
 
-escapedUtf16CharP :: Get BS.ByteString
-escapedUtf16CharP = do
-  word8 asciiNUL
-  word8 asciiREVERSESOLIDUS
-  (satisfy isStringEscapeSequence >>= convert) <&> BS.pack
- where
-  convert :: Word8 -> Get [Word8]
-  convert byte
-    | byte == asciiLOWERN           = return [asciiNUL, asciiLF]
-    | byte == asciiLOWERR           = return [asciiNUL, asciiCR]
-    | byte == asciiLOWERT           = return [asciiNUL, asciiHT]
-    | byte == asciiLOWERB           = return [asciiNUL, asciiBS]
-    | byte == asciiLOWERF           = return [asciiNUL, asciiFF]
-    | byte == asciiLEFTPARENTHESIS  = return [asciiNUL, asciiLEFTPARENTHESIS]
-    | byte == asciiRIGHTPARENTHESIS = return [asciiNUL, asciiRIGHTPARENTHESIS]
-    | byte == asciiREVERSESOLIDUS   = return [asciiNUL, asciiREVERSESOLIDUS]
-    | otherwise                     = fail "escapedChar"
-
-utf16beCharP :: Get BS.ByteString
-utf16beCharP = do
-  first  <- satisfy (/= asciiRIGHTPARENTHESIS)
-  second <- anyWord8
-  return $ BS.pack [first, second]
-
-utf16beStringP :: Get BS.ByteString
-utf16beStringP = do
-  word8 asciiLEFTPARENTHESIS
-  word8 0xfe
-  word8 0xff
-  content <- some' (escapedUtf16CharP <|> utf16beCharP)
-  word8 asciiRIGHTPARENTHESIS
-  return $ BS.concat (BS.pack [0xfe, 0xff]:content)
-
 {- |
 Parse a `GFXString`
 -}
 stringP :: Get GFXObject
-stringP = label "stringG" $ (GFXString <$> utf16beStringP)
-                         <|> (GFXString . BS.drop 1 . dropEnd 1 <$> rawStringP)
+stringP = label "stringG" (GFXString . BS.drop 1 . dropEnd 1 <$> rawStringP)
