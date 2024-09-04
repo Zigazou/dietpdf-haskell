@@ -4,7 +4,7 @@ module Pdf.Object.FilterCombine.PredRleZopfli
 
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predictor
-    ( EntropyType (EntropyDeflate, EntropyShannon)
+    ( EntropyType (EntropyRLE)
     , Predictor (PNGOptimum)
     , predict
     )
@@ -27,23 +27,12 @@ predRleZopfli
   -> BS.ByteString
   -> Either UnifiedError (FilterList, BS.ByteString)
 predRleZopfli (Just (width, components)) stream = do
-  -- Try finding optimal predictors with Shannon entropy function
-  predictedS <-
-    predict EntropyShannon PNGOptimum width components stream
-    >>= FL.noCompress
-    >>= RL.compress
-    >>= FL.compress
-
   -- Try finding optimal predictors with Deflate "entropy" function
-  predictedD <-
-    predict EntropyDeflate PNGOptimum width components stream
+  predicted <-
+    predict EntropyRLE PNGOptimum width components stream
     >>= FL.noCompress
     >>= RL.compress
     >>= FL.compress
-
-  let predicted = if BS.length predictedD < BS.length predictedS
-        then predictedD
-        else predictedS
 
   return
     ( mkArray

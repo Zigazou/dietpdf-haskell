@@ -14,7 +14,7 @@ import Data.Sequence ((><))
 import Data.Text qualified as T
 
 import Pdf.Document.XRef (xrefStreamWidth)
-import Pdf.Object.Container (FilterList, getFilters, setFilters)
+import Pdf.Object.Container (FilterList, getFilters, setFilters, Filter (Filter))
 import Pdf.Object.FilterCombine.PredRleZopfli (predRleZopfli)
 import Pdf.Object.FilterCombine.PredZopfli (predZopfli)
 import Pdf.Object.FilterCombine.Rle (rle)
@@ -22,12 +22,11 @@ import Pdf.Object.FilterCombine.RleZopfli (rleZopfli)
 import Pdf.Object.FilterCombine.Zopfli (zopfli)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
-    , hasStream
+    , hasStream, fromPDFObject
     )
 import Pdf.Object.State (getStream, getValue, setStream)
 
 import Util.Array (mkArray)
-import Util.ByteString (sndLengthCompare)
 import Util.Logging (Logging, sayComparisonF)
 import Util.UnifiedError (FallibleT)
 
@@ -115,7 +114,18 @@ filterOptimize object = if hasStream object
     widthComponents <- getWidthComponents object
 
     candidates      <- applyEveryFilter widthComponents stream <&> mkArray
-    let (bestFilters, bestStream) = minimumBy sndLengthCompare candidates
+    let (bestFilters, bestStream) = minimumBy resultCompare candidates
 
     setStream bestStream object >>= setFilters (bestFilters >< filters)
   else return object
+ where
+  resultCompare :: (FilterList, BS.ByteString) -> (FilterList, BS.ByteString) -> Ordering
+  resultCompare load1 load2 = compare (resultLoad load1) (resultLoad load2)
+
+  resultLoad :: (FilterList, BS.ByteString) -> Int
+  resultLoad (filterList, stream) = BS.length stream
+                                  + foldr ((+) . filterLoad) 0 filterList
+
+  filterLoad :: Filter -> Int
+  filterLoad (Filter f p) = BS.length (fromPDFObject f)
+                          + BS.length (fromPDFObject p)
