@@ -44,7 +44,7 @@ import System.IO.Error (isDoesNotExistError)
 import System.IO.Temp (withSystemTempFile)
 import System.Posix (fileSize, getFileStatus)
 
-import Util.GSOptimize (gsOptimize)
+import External.GSOptimize (gsOptimize)
 import Util.Logging (sayComparisonF)
 import Util.UnifiedError
     ( FallibleT
