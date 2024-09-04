@@ -36,10 +36,11 @@ module Codec.Compression.Predictor
   , isPNGGroup
   , isTIFFGroup
   , entropyShannon
-  , EntropyType(EntropyDeflate, EntropyShannon)
+  , EntropyType(EntropyDeflate, EntropyShannon, EntropyRLE)
   ) where
 
 import Codec.Compression.Flate qualified as FL
+import Codec.Compression.RunLength qualified as RLE
 
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
@@ -269,12 +270,13 @@ unpredictF PNGPaeth =
 unpredictF _anyOtherPredictor = sCurrent
 
 type EntropyType :: Type
-data EntropyType = EntropyShannon | EntropyDeflate deriving stock Eq
+data EntropyType = EntropyShannon | EntropyDeflate | EntropyRLE deriving stock Eq
 
 scanlineEntropy :: EntropyType -> Scanline -> Double
 scanlineEntropy EntropyShannon = entropyShannon . groupComponents . slStream
 scanlineEntropy EntropyDeflate =
   FL.entropyCompress . groupComponents . slStream
+scanlineEntropy EntropyRLE = RLE.entropyCompress . groupComponents . slStream
 
 {- |
 Given a `Predictor` and 2 consecutive `Scanline`, encode the last `Scanline`.

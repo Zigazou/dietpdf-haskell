@@ -21,8 +21,13 @@ From Adobe PDF 32000-1:2008:
 -}
 module Codec.Compression.RunLength
   ( compress
+  , entropyCompress
   , decompress
   ) where
+
+import Codec.Compression.Flate (fastCompress)
+
+import Control.Monad ((<=<))
 
 import Data.Binary.Parser
     ( Get
@@ -37,6 +42,8 @@ import Data.Binary.Parser
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.Word (Word8)
+
+import GHC.Base (maxInt)
 
 import Util.UnifiedError (UnifiedError (RLEDecodeError, RLEEncodeError))
 
@@ -125,3 +132,15 @@ compress stream =
     of
       Left  msg     -> Left (RLEEncodeError msg)
       Right encoded -> Right encoded
+
+{-|
+Gives a number showing the "entropy" of a `ByteString`.
+
+The lower the number, the more compressible the `ByteString`.
+-}
+entropyCompress
+  :: BS.ByteString -- ^ A strict bytestring
+  -> Double
+entropyCompress = fromIntegral
+                . either (const maxInt) BS.length
+                . (fastCompress <=< compress)
