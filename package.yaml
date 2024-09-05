@@ -22,6 +22,8 @@ dependencies:
 ghc-options:
 - -fwrite-ide-info
 - -funbox-strict-fields
+- -fspecialise-aggressively
+- -fexpose-all-unfoldings
 - -hiedir=.hie
 - -Weverything
 - -Wno-missing-safe-haskell-mode
@@ -31,7 +33,6 @@ ghc-options:
 - -Wno-unsafe
 - -Wno-safe
 - -Wno-redundant-bang-patterns
-
 library:
   source-dirs: src
   default-extensions:
