@@ -3,40 +3,48 @@ module Pdf.Object.String
   ) where
 
 import Data.ByteString qualified as BS
+import Data.Map qualified as Map
 
 import Pdf.Object.Object (PDFObject (PDFHexString, PDFString))
 
+import Util.Ascii (asciiDELETE)
 import Util.Logging (Logging, sayComparisonF)
+import Util.PdfDocEncoding (unicodeToPdfDocEncoding)
 import Util.String (hexStringToString)
 import Util.UnifiedError (FallibleT)
-import Data.Binary (Word8)
-import Util.Ascii (asciiNUL)
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"
 
-utf16beToLatin1 :: BS.ByteString -> Maybe BS.ByteString
-utf16beToLatin1 utf16beString =
-  snd <$> BS.foldl' convert (Just (0, "")) utf16beString
+utf16beToPdfDocEncoding :: BS.ByteString -> Maybe BS.ByteString
+utf16beToPdfDocEncoding utf16beString
+  | BS.length utf16beString < 2           = Nothing
+  | odd (BS.length utf16beString)         = Nothing
+  | BS.take 2 utf16beString /= utf16beBOM = Nothing
+  | otherwise                             = convert (BS.drop 2 utf16beString)
  where
-  convert :: Maybe (Int, BS.ByteString) -> Word8 -> Maybe (Int, BS.ByteString)
-  convert Nothing       _    = Nothing
-  convert (Just (0, _)) 0xFE = Just (1, "")
-  convert (Just (0, _)) _    = Nothing
-  convert (Just (1, _)) 0xFF = Just (2, "")
-  convert (Just (1, _)) _    = Nothing
-  convert (Just (offset, current)) byte
-    | even offset && byte == asciiNUL = Just (offset + 1, current)
-    | odd offset && byte > asciiNUL   = Just (offset + 1, BS.snoc current byte)
-    | otherwise                       = Nothing
+  convert :: BS.ByteString -> Maybe BS.ByteString
+  convert bytes =
+    case BS.length bytes of
+      0               -> Just ""
+      1               -> Nothing
+      _anyOtherLength -> do
+        byte <- Map.lookup (codepoint (BS.take 2 bytes)) unicodeToPdfDocEncoding
+        remains <- convert (BS.drop 2 bytes)
+        return $ BS.cons byte remains
+
+  codepoint :: BS.ByteString -> Int
+  codepoint twoBytes = case BS.unpack (BS.take 2 twoBytes) of
+    [first, second] -> fromIntegral first * 256 + fromIntegral second
+    _anythingElse   -> 0
 
 isUTF16Encoded :: BS.ByteString -> Bool
 isUTF16Encoded string | BS.length string < 2           = False
                       | BS.take 2 string /= utf16beBOM = False
                       | otherwise                      = True
 
-isLatin1Encoded :: BS.ByteString -> Bool
-isLatin1Encoded = BS.all (> asciiNUL)
+isASCIIEncoded :: BS.ByteString -> Bool
+isASCIIEncoded = BS.all (<= asciiDELETE)
 
 {- |
 Optimize `PDFHexString` into `PDFString`.
@@ -44,38 +52,39 @@ Optimize `PDFHexString` into `PDFString`.
 optimizeString :: Logging m => PDFObject -> FallibleT m PDFObject
 optimizeString object = case object of
   (PDFHexString values)
-    | isLatin1Encoded encoded -> do
+    | isASCIIEncoded encoded -> do
         -- If the hex string contains only ASCII characters, converts it to a
         -- PDFString which will be twice shorter.
-        sayComparisonF "Hex string optimization (Latin1)"
+        sayComparisonF "Hex string optimization (ASCII)"
                       (BS.length values)
                       (BS.length encoded)
         return $ PDFString encoded
-    | isUTF16Encoded encoded -> case utf16beToLatin1 encoded of
-        -- If the PDFHexString is UTF-16 but only contains ASCII characters,
-        -- converts it to a PDFString which will be four times shorter.
-        Just asciiEncoded -> do
-          sayComparisonF "Hex string optimization (ASCII)"
+    | isUTF16Encoded encoded -> case utf16beToPdfDocEncoding encoded of
+        -- If the PDFHexString is UTF-16 but only contains PDFDocEncoding
+        -- characters, converts it to a PDFString which will be four times
+        -- shorter.
+        Just pdfDocEncoded -> do
+          sayComparisonF "Hex string optimization (PDFDocEncoding)"
                         (BS.length values)
-                        (BS.length asciiEncoded)
-          return $ PDFString asciiEncoded
+                        (BS.length pdfDocEncoded)
+          return $ PDFString pdfDocEncoded
         Nothing -> do
           let utf16beEncoded = hexStringToString values
-          sayComparisonF "Hex string optimization (UTF-16)"
+          sayComparisonF "Hex string optimization (UTF-16BE)"
                         (BS.length values)
                         (BS.length utf16beEncoded)
           return $ PDFString utf16beEncoded
     | otherwise -> return object
     where encoded = hexStringToString values
   (PDFString encoded)
-    | isUTF16Encoded encoded -> case utf16beToLatin1 encoded of
+    | isUTF16Encoded encoded -> case utf16beToPdfDocEncoding encoded of
         -- If the PDFHexString is UTF-16 but only contains ASCII characters,
         -- converts it to a PDFString which will be four times shorter.
-        Just asciiEncoded -> do
-          sayComparisonF "Hex string optimization (ASCII)"
+        Just pdfDocEncoded -> do
+          sayComparisonF "Hex string optimization (PDFDocEncoding)"
                         (BS.length encoded)
-                        (BS.length asciiEncoded)
-          return $ PDFString asciiEncoded
+                        (BS.length pdfDocEncoded)
+          return $ PDFString pdfDocEncoded
         Nothing -> return object
     | otherwise -> return object
   _anyOtherObject -> return object
