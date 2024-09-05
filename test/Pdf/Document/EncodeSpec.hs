@@ -5,6 +5,8 @@ module Pdf.Document.EncodeSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
+import Data.Sequence (Seq (Empty), fromList)
+
 import Pdf.Document.Encode (encodeObject)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))
 import Pdf.Object.Object
@@ -20,10 +22,10 @@ import Util.UnifiedError (Fallible)
 encodeObjectExamples :: [(PDFObject, Fallible EncodedObject)]
 encodeObjectExamples =
   [ ( PDFIndirectObject 1 0 (PDFString "Hello, World!")
-    , Right $ EncodedObject 1 13 "Hello, World!" []
+    , Right $ EncodedObject 1 13 "Hello, World!" Empty
     )
   , ( PDFIndirectObjectWithStream 1 0 mkEmptyDictionary "Hello, World!"
-    , Right $ EncodedObject 1 13 "Hello, World!" []
+    , Right $ EncodedObject 1 13 "Hello, World!" Empty
     )
   , ( PDFObjectStream
         1
@@ -94,7 +96,7 @@ encodeObjectExamples =
         \00072006F0074006F006E006D00610069006C002E0063006F006D>\n/A <<\n/Type \
         \/Action\n/S /URI\n/URI (mailto:zigazou@protonmail.com)\n>>\n>>\n\n\
         \endstream endobj\n"
-        [92, 94, 95]
+        (fromList [92, 94, 95])
     )
   ]
 

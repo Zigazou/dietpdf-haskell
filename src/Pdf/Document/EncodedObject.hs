@@ -7,6 +7,7 @@ where
 
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
+import Data.Sequence (Seq ((:<|)))
 
 -- | An object that has been encoded
 type EncodedObject :: Type
@@ -14,7 +15,7 @@ data EncodedObject = EncodedObject
   { eoObjectNumber    :: !Int -- ^ Object number
   , eoObjectLength    :: !Int -- ^ Object length (in bytes)
   , eoBinaryData      :: !BS.ByteString   -- ^ Encoded object
-  , eoEmbeddedObjects :: ![Int] -- ^ Object numbers embedded in this object
+  , eoEmbeddedObjects :: !(Seq Int) -- ^ Object numbers embedded in this object
   }
   deriving stock (Show)
 
@@ -41,5 +42,5 @@ and any embedded objects.
 
 Objects are returned in the order they are encountered in the encoded object.
 -}
-objectNumbers :: EncodedObject -> [Int]
-objectNumbers object = eoObjectNumber object : eoEmbeddedObjects object
+objectNumbers :: EncodedObject -> Seq Int
+objectNumbers object = eoObjectNumber object :<| eoEmbeddedObjects object

@@ -12,7 +12,7 @@ import Control.Monad.Trans.Except (runExcept, throwE)
 import Data.ByteString qualified as BS
 import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as Map
-import Data.Maybe (mapMaybe)
+import Util.Sequence (mapMaybe)
 import Data.Text qualified as T
 
 import Pdf.Document.Collection (findLast, fromPDFDocument)
@@ -47,24 +47,26 @@ import Util.UnifiedError
     , UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
     , tryF
     )
+import Data.Sequence qualified as SQ
 
 -- | Encodes a PDF object and keep track of its number and length.
 encodeObject :: Logging m => PDFObject -> FallibleT m EncodedObject
 encodeObject object@(PDFIndirectObject number _ _) = return $
-    EncodedObject number (BS.length bytes) bytes []
+    EncodedObject number (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
 encodeObject object@(PDFIndirectObjectWithStream number _ _ _) = return $
-    EncodedObject number (BS.length bytes) bytes []
+    EncodedObject number (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
 encodeObject object@(PDFObjectStream number _ _ _) = do
   let bytes = fromPDFObject object
   embeddedObjects <- explodeList [object]
-  return $ EncodedObject number
-                         (BS.length bytes)
-                         bytes
-                         (mapMaybe getObjectNumber embeddedObjects)
+  return $ EncodedObject 
+            number
+            (BS.length bytes)
+            bytes
+            (mapMaybe getObjectNumber (SQ.fromList embeddedObjects))
 
-encodeObject object = return $ EncodedObject 0 (BS.length bytes) bytes []
+encodeObject object = return $ EncodedObject 0 (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
 
 updateXRefStm :: Logging m => PDFObject -> PDFObject -> FallibleT m PDFObject
@@ -93,7 +95,8 @@ getTrailer partition = case lastTrailer partition of
       info    = findLast isInfo (ppObjectsWithoutStream partition)
     in
       case (catalog, info) of
-        (Just (PDFIndirectObject cNumber cRevision _), Just (PDFIndirectObject iNumber iRevision _))
+        ( Just (PDFIndirectObject cNumber cRevision _),
+          Just (PDFIndirectObject iNumber iRevision _))
           -> PDFTrailer
             (PDFDictionary $ mkDictionary
               [ ("Root", PDFReference cNumber cRevision)

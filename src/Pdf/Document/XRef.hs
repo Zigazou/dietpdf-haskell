@@ -15,11 +15,11 @@ where
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
-import Data.Foldable (foldl')
+import Data.Foldable (foldl', toList)
 import Data.IntMap.Strict qualified as IM
 import Data.Ix (range, rangeSize)
-import Data.List (sort)
 import Data.Maybe (fromMaybe)
+import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as SQ
 
 import Pdf.Document.Collection (PDFObjects)
@@ -51,12 +51,13 @@ Given an encoded object, returns a list of tuples where the first element is the
 object number and the second element is the index of the object in the object
 stream.
 -}
-indexedObjects :: EncodedObject -> [(Int, ObjectOffset)]
-indexedObjects (EncodedObject number _len _bin embedded) = sort (go 0 embedded)
-  where
-    go _index []              = []
-    go index (item : remains) = (item, InObjectStream item number index)
-                              : go (index + 1) remains
+indexedObjects :: EncodedObject -> Seq (Int, ObjectOffset)
+indexedObjects (EncodedObject number _len _bin embedded) =
+  SQ.sort (go 0 embedded)
+ where
+  go _index SQ.Empty          = SQ.Empty
+  go index (item :<| remains) = (item, InObjectStream item number index)
+                              :<| go (index + 1) remains
 
 {- |
 Given an encoded object, calculates the offset of the object and the offsets of
@@ -66,7 +67,7 @@ calcOffset :: Int -> EncodedObject -> (Int, ObjectOffsets)
 calcOffset startOffset object =
   ( startOffset + eoObjectLength object
   , IM.insert number (DirectOffset number startOffset)
-    $ IM.fromAscList (indexedObjects object)
+    $ IM.fromAscList (toList $ indexedObjects object)
   )
  where
   number = eoObjectNumber object

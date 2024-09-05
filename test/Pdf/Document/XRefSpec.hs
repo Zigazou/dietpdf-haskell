@@ -5,6 +5,7 @@ module Pdf.Document.XRefSpec
 import Control.Monad (forM_)
 
 import Data.IntMap.Strict qualified as IM
+import Data.Sequence (Seq (Empty), fromList)
 
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))
 import Pdf.Document.EncodedObjects (EncodedObjects)
@@ -27,9 +28,9 @@ import Util.Dictionary (mkDictionary)
 calcOffsetsExamples :: [(EncodedObjects, ObjectOffsets)]
 calcOffsetsExamples =
   [ ( IM.fromList
-      [ (0, EncodedObject 0 9 "%PDF-1.4\n" [])
-      , (1, EncodedObject 1 3 "abc" [])
-      , (2, EncodedObject 2 3 "def" [])
+      [ (0, EncodedObject 0 9 "%PDF-1.4\n" Empty)
+      , (1, EncodedObject 1 3 "abc" Empty)
+      , (2, EncodedObject 2 3 "def" Empty)
       ]
     , IM.fromList [(0, DirectOffset 0 0), (1, DirectOffset 1 9), (2, DirectOffset 2 12)]
     )
@@ -38,10 +39,10 @@ calcOffsetsExamples =
 xrefTableExamples :: [(EncodedObjects, PDFObject)]
 xrefTableExamples =
   [ ( IM.fromList
-      [ (0, EncodedObject 0 9 "%PDF-1.4\n" [])
-      , (2, EncodedObject 2 3 "def" [])
-      , (5, EncodedObject 5 5 "ghijk" [])
-      , (1, EncodedObject 1 3 "abc" [])
+      [ (0, EncodedObject 0 9 "%PDF-1.4\n" Empty)
+      , (2, EncodedObject 2 3 "def" Empty)
+      , (5, EncodedObject 5 5 "ghijk" Empty)
+      , (1, EncodedObject 1 3 "abc" Empty)
       ]
     , PDFXRef
       [ XRefSubsection
@@ -61,9 +62,9 @@ xrefTableExamples =
 xrefStreamTableExamples :: [(EncodedObjects, PDFObject)]
 xrefStreamTableExamples =
   [ ( IM.fromList
-      [ (2, EncodedObject 2 3 "def" [])
-      , (5, EncodedObject 5 5 "ghijk" [8, 10, 12])
-      , (1, EncodedObject 1 3 "abc" [])
+      [ (2, EncodedObject 2 3 "def" Empty)
+      , (5, EncodedObject 5 5 "ghijk" (fromList [8, 10, 12]))
+      , (1, EncodedObject 1 3 "abc" Empty)
       ]
     , PDFXRefStream
       10
@@ -97,9 +98,9 @@ xrefStreamTableExamples =
       \\x02\x05\x02"
     )
   , ( IM.fromList
-      [ (4, EncodedObject 4 3 "def" [])
-      , (6, EncodedObject 6 5 "ghijk" [1, 3, 5, 7])
-      , (2, EncodedObject 2 3 "abc" [])
+      [ (4, EncodedObject 4 3 "def" Empty)
+      , (6, EncodedObject 6 5 "ghijk" (fromList [1,3,5, 7]))
+      , (2, EncodedObject 2 3 "abc" Empty)
       ]
     , PDFXRefStream
       10
