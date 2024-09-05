@@ -106,7 +106,7 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   , spaceIfNeeded mkEmptyPDFDictionary (PDFKeyword "stream")
   , "stream\n"
   , stream
-  , "\nendstream"
+  , "endstream"
   , " endobj\n"
   ]
 
@@ -122,6 +122,6 @@ fromIndirectObjectWithGraphics number revision dict gfx = BS.concat
   , spaceIfNeeded mkEmptyPDFDictionary (PDFKeyword "stream")
   , "stream\n"
   , separateGfx gfx
-  , "\nendstream"
+  , "endstream"
   , " endobj\n"
   ]
