@@ -116,7 +116,10 @@ filterOptimize object = if hasStream object
     candidates      <- applyEveryFilter widthComponents stream <&> mkArray
     let (bestFilters, bestStream) = minimumBy resultCompare candidates
 
-    setStream bestStream object >>= setFilters (bestFilters >< filters)
+    -- Do nothing if the best result is worse than the original stream.
+    if resultLoad (bestFilters, bestStream) < resultLoad (filters, stream)
+      then setStream bestStream object >>= setFilters (bestFilters >< filters)
+      else return object
   else return object
  where
   resultCompare :: (FilterList, BS.ByteString) -> (FilterList, BS.ByteString) -> Ordering
