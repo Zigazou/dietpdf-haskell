@@ -33,6 +33,7 @@ ghc-options:
 - -Wno-unsafe
 - -Wno-safe
 - -Wno-redundant-bang-patterns
+- -j
 library:
   source-dirs: src
   default-extensions:
@@ -51,6 +52,9 @@ library:
   - StandaloneKindSignatures  
   - ImportQualifiedPost
   - RoleAnnotations
+  - NumericUnderscores
+  - BinaryLiterals
+  - ViewPatterns
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16
@@ -81,6 +85,8 @@ library:
   - fmt
   - cryptonite
   - process
+  - vector
+  - spool
 
 executables:
   dietpdf:
@@ -141,6 +147,8 @@ tests:
     - TupleSections
     - StandaloneKindSignatures
     - ImportQualifiedPost
+    - NumericUnderscores
+    - BinaryLiterals
     dependencies:
     - dietpdf
     - hspec
@@ -153,3 +161,4 @@ tests:
     - zlib
     - extra
     - mtl
+    - vector

@@ -42,6 +42,7 @@ packages:
 #
 extra-deps:
 - binary-parsers-0.2.4.0@sha256:8c3a436df2d721cb3268c3c56f9ce982bc5dbcd6e6db4cce24e96d1d48078678,3595
+- spool-0.1@sha256:77780cbfc2c0be23ff2ea9e474062f3df97fcd9db946ee0b3508280a923b83e2,1461
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

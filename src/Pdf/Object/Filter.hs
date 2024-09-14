@@ -79,14 +79,17 @@ applyEveryFilter Nothing stream = do
   rZopfli <- except $ zopfli Nothing stream
   filterInfo "Zopfli" stream (snd rZopfli)
 
+  rPredZopfli <- except $ predZopfli Nothing stream
+  filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
+
   if (BS.length . snd $ rRle) < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
-      return [rRle, rZopfli, rRleZopfli]
+      return [rRle, rZopfli, rPredZopfli, rRleZopfli]
     else
-      return [rZopfli]
+      return [rZopfli, rPredZopfli]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object@PDFXRefStream{} =

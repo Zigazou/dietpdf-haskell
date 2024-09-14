@@ -11,7 +11,7 @@ import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.Sequence qualified as SQ
 
-import Pdf.Graphics.Object (separateGfx)
+import Pdf.Graphics.Optimize (optimizeGFX)
 import Pdf.Graphics.Parser.Stream (gfxParse)
 import Pdf.Object.Container (Filter (fFilter), deepMap, getFilters)
 import Pdf.Object.Filter (filterOptimize)
@@ -70,22 +70,8 @@ streamOptimize object = whatOptimizationFor object >>= \case
     return object
 
   GfxOptimization -> do
-    stream <- getStream object
-    case gfxParse stream of
-      Right SQ.Empty -> do
-        sayF "  - No GFX optimization for this object"
-        return object
-
-      Right objects -> do
-        let optimizedStream = separateGfx objects
-        sayComparisonF "GFX stream optimization"
-                       (BS.length stream)
-                       (BS.length optimizedStream)
-        setStream optimizedStream object
-
-      _error -> do
-        sayF "  - GFX stream could not be parsed"
-        return object
+    stream <- getStream object >>= optimizeGFX
+    setStream stream object
 
   NoOptimization -> do
     sayF "  - No optimization for generic stream"

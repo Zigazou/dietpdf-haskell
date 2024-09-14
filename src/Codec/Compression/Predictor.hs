@@ -254,6 +254,7 @@ predictF PNGUp      = \s -> sCurrent s - sAbove s
 predictF PNGAverage = \s -> sCurrent s - average (sLeft s) (sAbove s)
 predictF PNGPaeth =
   \s -> sCurrent s - paethBest (sLeft s) (sAbove s) (sUpperLeft s)
+predictF TIFFPredictor2 = \s -> sCurrent s - sLeft s
 predictF _anyOtherPredictor = sCurrent
 
 {- |
@@ -267,6 +268,7 @@ unpredictF PNGUp      = \s -> sCurrent s + sAbove s
 unpredictF PNGAverage = \s -> sCurrent s + average (sLeft s) (sAbove s)
 unpredictF PNGPaeth =
   \s -> sCurrent s + paethBest (sLeft s) (sAbove s) (sUpperLeft s)
+unpredictF TIFFPredictor2 = \s -> sCurrent s + sLeft s
 unpredictF _anyOtherPredictor = sCurrent
 
 type EntropyType :: Type

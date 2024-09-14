@@ -5,7 +5,7 @@ module Pdf.Object.FilterCombine.PredZopfli
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predictor
     ( EntropyType (EntropyDeflate, EntropyShannon)
-    , Predictor (PNGOptimum)
+    , Predictor (PNGOptimum, TIFFPredictor2)
     , predict
     )
 
@@ -15,7 +15,7 @@ import Pdf.Object.Container (Filter (Filter), FilterList)
 import Pdf.Object.Object (PDFObject (PDFName), mkPDFDictionary, mkPDFNumber)
 
 import Util.Array (mkArray)
-import Util.UnifiedError (UnifiedError (InvalidFilterParm))
+import Util.UnifiedError (UnifiedError)
 
 predZopfli
   :: Maybe (Int, Int)
@@ -48,4 +48,28 @@ predZopfli (Just (width, components)) stream = do
     , compressed
     )
 
-predZopfli _noWidth _stream = Left InvalidFilterParm
+predZopfli Nothing stream =  do
+  let
+    width      = BS.length stream
+    components = 1 :: Int
+
+  compressed <- predict EntropyShannon
+                        TIFFPredictor2
+                        width
+                        components
+                        stream
+                    >>= FL.compress
+
+  return
+    ( mkArray
+      [ Filter
+          (PDFName "FlateDecode")
+          (mkPDFDictionary
+            [ ("Predictor", mkPDFNumber TIFFPredictor2)
+            , ("Columns"  , mkPDFNumber width)
+            , ("Colors"   , mkPDFNumber components)
+            ]
+          )
+      ]
+    , compressed
+    )

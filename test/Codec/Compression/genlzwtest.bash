@@ -6,6 +6,10 @@
 # - lzw_test.uncompressed
 # - lzw_test.compressed
 
+UNCOMPRESSED="lzw_test5.uncompressed"
+COMPRESSED="lzw_test5.compressed"
+POINTSIZE=96
+
 # Extract a 32 bits value from a binary file and output it in decimal.
 function get_value32() {
     local source_file="$1"
@@ -54,7 +58,7 @@ check_command "NetPBM" pnmtotiff 2
 convert \
     -set colorspace Gray \
     -depth 8 \
-    -pointsize 1024 \
+    -pointsize $POINTSIZE \
     label:DIETPDF \
     lzw_test.pgm
 
@@ -62,7 +66,7 @@ convert \
 tail \
     --lines=+4 \
     lzw_test.pgm \
-    > lzw_test.uncompressed
+    > $UNCOMPRESSED
 
 # Convert the uncompressed image to an LZW compressed image without predictor.
 pnmtotiff \
@@ -80,7 +84,7 @@ image_file_directory_offset=$(get_value32 lzw_test.tiff 4)
 compressed_stream_length=$((image_file_directory_offset - 8))
 extract_bytes lzw_test.tiff 8 "$compressed_stream_length" \
     2> /dev/null \
-    > lzw_test.compressed 
+    > $COMPRESSED
 
 # Delete images used to generate compressed/uncompressed streams.
 rm lzw_test.tiff lzw_test.pgm
