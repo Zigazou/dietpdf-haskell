@@ -15,7 +15,7 @@ import Data.Map.Strict qualified as Map
 import Util.Sequence (mapMaybe)
 import Data.Text qualified as T
 
-import Pdf.Document.Collection (findLast, fromPDFDocument)
+import Pdf.Document.PDFObjects (findLast, fromPDFDocument)
 import Pdf.Document.Document (PDFDocument, cFilter, fromList, singleton)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Pdf.Document.ObjectStream (explodeDocument, explodeList, insert)

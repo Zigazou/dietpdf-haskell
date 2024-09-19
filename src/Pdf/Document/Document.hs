@@ -129,7 +129,7 @@ The cons function for `CollectionOf` type.
 -}
 {-# INLINE cCons #-}
 cCons :: Ord a => a -> CollectionOf a -> CollectionOf a
-cCons object (CollectionOf !objects) = CollectionOf (object OS.|< objects)
+cCons object (CollectionOf !objects) = CollectionOf (objects OS.|> object)
 
 {- |
 The `sepBy1` function for `CollectionOf` (`sepBy1` only generates `List`).

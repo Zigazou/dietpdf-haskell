@@ -16,7 +16,6 @@ import Control.Monad.Trans.Except (runExcept, throwE)
 
 import Data.ByteString qualified as BS
 import Data.Sequence as SQ (Seq ((:<|)))
-import Data.Text qualified as T
 
 import Pdf.Object.Container
     ( Filter (fDecodeParms, fFilter)
@@ -24,7 +23,6 @@ import Pdf.Object.Container
     , getFilters
     , setFilters
     )
-import Pdf.Object.Format (txtObjectNumberVersion)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFNumber)
     , ToPDFNumber (mkPDFNumber)
@@ -33,7 +31,7 @@ import Pdf.Object.Object
     )
 import Pdf.Object.State (getStream, getValue, getValueDefault, setStream)
 
-import Util.Logging (Logging, sayF)
+import Util.Logging (Logging)
 import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 getPredictor :: PDFObject -> Either UnifiedError Predictor
@@ -114,8 +112,7 @@ It usually decompresses the stream.
 -}
 unfilter :: Logging m => PDFObject -> FallibleT m PDFObject
 unfilter object = if hasStream object
-  then do
-    sayF (T.concat ["  - Unfiltering ", txtObjectNumberVersion object])
+  then
     unfiltered object >>= \(remainingFilters, unfilteredStream) ->
       setStream unfilteredStream object >>= setFilters remainingFilters
   else return object

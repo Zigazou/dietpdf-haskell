@@ -22,7 +22,7 @@ import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as SQ
 
-import Pdf.Document.Collection (PDFObjects)
+import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Document.EncodedObject
     ( EncodedObject (EncodedObject, eoBinaryData, eoObjectLength, eoObjectNumber)
     )

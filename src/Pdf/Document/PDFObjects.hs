@@ -2,7 +2,7 @@
 -- This module manipulates collections of `PDFObject`.
 --
 -- These functions are meant to be used when optimizing/encoding a PDF.
-module Pdf.Document.Collection
+module Pdf.Document.PDFObjects
   ( -- * Encoding of object collections
     PDFObjects,
     toPDFDocument,

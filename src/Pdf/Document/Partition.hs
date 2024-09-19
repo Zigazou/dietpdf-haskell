@@ -14,7 +14,7 @@ import Data.IntMap qualified as IM
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 
-import Pdf.Document.Collection (PDFObjects, toPDFDocument)
+import Pdf.Document.PDFObjects (PDFObjects, toPDFDocument)
 import Pdf.Document.Document (PDFDocument, deepFind, member)
 import Pdf.Document.Uncompress (uncompressDocument, uncompressObjects)
 import Pdf.Object.Object

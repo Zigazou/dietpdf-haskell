@@ -5,7 +5,7 @@ module Pdf.Document.Uncompress
 
 import Data.Functor ((<&>))
 
-import Pdf.Document.Collection (PDFObjects)
+import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Document.Document (PDFDocument, fromList, toList)
 import Pdf.Document.ObjectStream (explodeDocument, explodeObjects)
 import Pdf.Object.Unfilter (unfilter)

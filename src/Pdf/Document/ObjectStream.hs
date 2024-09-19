@@ -40,7 +40,7 @@ import Data.Functor ((<&>))
 import Data.IntMap (fromList, singleton, union)
 import Data.Kind (Type)
 
-import Pdf.Document.Collection (PDFObjects)
+import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Document.Document (PDFDocument, cFilter)
 import Pdf.Document.Document qualified as D
 import Pdf.Object.Object
