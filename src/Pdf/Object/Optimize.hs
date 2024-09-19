@@ -8,59 +8,28 @@ module Pdf.Object.Optimize
 import Codec.Compression.XML (optimizeXML)
 
 import Data.ByteString qualified as BS
-import Data.Kind (Type)
 import Data.Sequence qualified as SQ
 
 import External.JpegTran (jpegtranOptimize)
 
 import Pdf.Graphics.Optimize (optimizeGFX)
-import Pdf.Graphics.Parser.Stream (gfxParse)
 import Pdf.Object.Container (Filter (fFilter), deepMap, getFilters)
 import Pdf.Object.Filter (filterOptimize)
 import Pdf.Object.Format (txtObjectNumberVersion)
 import Pdf.Object.Object
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
-    , hasKey
     , hasStream
     )
-import Pdf.Object.State (getStream, getValue, setStream)
+import Pdf.Object.OptimizationType
+    ( OptimizationType (GfxOptimization, JPGOptimization, XMLOptimization)
+    , whatOptimizationFor
+    )
+import Pdf.Object.State (getStream, setStream)
 import Pdf.Object.String (optimizeString)
 import Pdf.Object.Unfilter (unfilter)
 
 import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
-import Util.UnifiedError (FallibleT, ifFail, tryF)
-
-type OptimizationType :: Type
-data OptimizationType = XMLOptimization
-                      | GfxOptimization
-                      | ObjectStreamOptimization
-                      | JPGOptimization
-                      | NoOptimization
-                      deriving stock (Eq)
-
-{- |
-Determine the optimization type that can be applied to a `PDFObject`.
--}
-whatOptimizationFor :: Logging m => PDFObject -> FallibleT m OptimizationType
-whatOptimizationFor object =
-  getValue "Subtype" object >>= \case
-    Just (PDFName "XML") -> return XMLOptimization
-    Just (PDFName "Image") -> do
-      stream <- getStream object
-      if BS.take 2 stream == "\xff\xd8"
-        then return JPGOptimization
-        else  return NoOptimization
-    _notXMLorImage         -> getValue "Type" object >>= \case
-      Just (PDFName "ObjStm") -> return ObjectStreamOptimization
-      _notObjectStream        -> if hasKey "Type" object
-        then return NoOptimization
-        else do
-          tryF (getStream object) >>= \case
-            Right stream -> case gfxParse stream of
-              Right SQ.Empty -> return NoOptimization
-              Right _        -> return GfxOptimization
-              _notGfx        -> return NoOptimization
-            _noStream -> return NoOptimization
+import Util.UnifiedError (FallibleT, ifFail)
 
 streamOptimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
 streamOptimize object = whatOptimizationFor object >>= \case
@@ -71,8 +40,6 @@ streamOptimize object = whatOptimizationFor object >>= \case
                    (BS.length stream)
                    (BS.length optimizedStream)
     setStream optimizedStream object
-
-  ObjectStreamOptimization -> return object
 
   GfxOptimization -> do
     stream <- getStream object >>= optimizeGFX
@@ -87,7 +54,7 @@ streamOptimize object = whatOptimizationFor object >>= \case
 
     setStream stream object
 
-  NoOptimization -> return object
+  _anyOtherOptimization -> return object
 
 {- |
 Completely refilter a stream by finding the best filter combination.
@@ -101,9 +68,7 @@ refilter object = do
   if hasStream object
     then do
       optimization <- whatOptimizationFor object
-      if optimization == JPGOptimization
-        then unfilter stringOptimized >>= streamOptimize
-        else unfilter stringOptimized >>= streamOptimize >>= filterOptimize
+      unfilter stringOptimized >>= streamOptimize >>= filterOptimize optimization
     else return stringOptimized
 
 isFilterOK :: Filter -> Bool

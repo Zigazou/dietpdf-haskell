@@ -18,9 +18,9 @@ import Pdf.Object.Container
     ( Filter (Filter)
     , FilterList
     , getFilters
-    , hasFilter
     , setFilters
     )
+import Pdf.Object.FilterCombine.Jpeg2k (jpeg2k)
 import Pdf.Object.FilterCombine.PredRleZopfli (predRleZopfli)
 import Pdf.Object.FilterCombine.PredZopfli (predZopfli)
 import Pdf.Object.FilterCombine.Rle (rle)
@@ -30,6 +30,9 @@ import Pdf.Object.Object
     ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
     , fromPDFObject
     , hasStream
+    )
+import Pdf.Object.OptimizationType
+    ( OptimizationType (JPGOptimization, XRefStreamOptimization)
     )
 import Pdf.Object.State (getStream, getValue, setStream)
 
@@ -44,14 +47,26 @@ filterInfo filterName streamBefore streamAfter = sayComparisonF
   (BS.length streamBefore)
   (BS.length streamAfter)
 
-applyEveryFilter
-  :: Logging m
+applyEveryFilterGeneric
+  :: Logging IO
   => Maybe (Int, Int)
   -> BS.ByteString
-  -> FallibleT m [(FilterList, BS.ByteString)]
+  -> FallibleT IO [(FilterList, BS.ByteString)]
 -- The stream has width and components information.
-applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
+applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
   let rNothing = (mkEmptyArray, stream)
+      jpeg2kParameters =
+        Just ( width
+             , BS.length stream `div` (width * components)
+             , components
+             , case components of
+                3 -> "RGB"
+                4 -> "CMYK"
+                _ -> "GRAY"
+             )
+
+  rJpeg2k <- jpeg2k jpeg2kParameters stream
+  filterInfo "JPEG2000" stream (snd rJpeg2k)
 
   rRle <- except $ rle widthComponents stream
   filterInfo "RLE" stream (snd rRle)
@@ -70,7 +85,7 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
 
-      return [rNothing, rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
+      return [rNothing, rJpeg2k, rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
     else do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
@@ -78,10 +93,10 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rPredRleZopfli <- except $ predRleZopfli widthComponents stream
       filterInfo "Predictor/Store+RLE+Zopfli" stream (snd rPredRleZopfli)
 
-      return [rNothing, rZopfli, rPredZopfli, rPredRleZopfli]
+      return [rNothing, rJpeg2k, rZopfli, rPredZopfli, rPredRleZopfli]
 
 -- The stream has no width nor components information.
-applyEveryFilter Nothing stream = do
+applyEveryFilterGeneric Nothing stream = do
   let rNothing = (mkEmptyArray, stream)
 
   rRle <- except $ rle Nothing stream
@@ -112,6 +127,23 @@ applyEveryFilterJPG _ stream = do
   filterInfo "Zopfli" stream (snd rZopfli)
   return [rNothing, rZopfli]
 
+applyEveryFilterXRef
+  :: Logging m
+  => Maybe (Int, Int)
+  -> BS.ByteString
+  -> FallibleT m [(FilterList, BS.ByteString)]
+-- The stream has width and components information.
+applyEveryFilterXRef widthComponents@(Just (_width, _components)) stream = do
+  rPredZopfli <- except $ predZopfli widthComponents stream
+  filterInfo "Predictor+Zopfli" stream (snd rPredZopfli)
+  return [rPredZopfli]
+applyEveryFilterXRef Nothing stream = do
+  let rNothing = (mkEmptyArray, stream)
+
+  rZopfli <- except $ zopfli Nothing stream
+  filterInfo "Zopfli" stream (snd rZopfli)
+  return [rNothing, rZopfli]
+
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object@PDFXRefStream{} =
   xrefStreamWidth object <&> Just . (, 1)
@@ -130,18 +162,23 @@ getWidthComponents object = do
     Just (PDFNumber width') -> return $ Just (round width', components)
     _anyOtherValue          -> return Nothing
 
-filterOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
-filterOptimize object = if hasStream object
+filterOptimize
+  :: Logging IO
+  => OptimizationType
+  -> PDFObject
+  -> FallibleT IO PDFObject
+filterOptimize optimization object = if hasStream object
   then do
     stream          <- getStream object
     filters         <- getFilters object
     widthComponents <- getWidthComponents object
 
-    let filterTest = if hasFilter "DCTDecode" filters
-                      then applyEveryFilterJPG
-                      else applyEveryFilter
+    let applyEveryFilter = case optimization of
+                            JPGOptimization        -> applyEveryFilterJPG
+                            XRefStreamOptimization -> applyEveryFilterXRef
+                            _anyOtherOptimization  -> applyEveryFilterGeneric
 
-    candidates <- filterTest widthComponents stream <&> mkArray
+    candidates <- applyEveryFilter widthComponents stream <&> mkArray
 
     let (bestFilters, bestStream) = minimumBy resultCompare candidates
 
