@@ -11,6 +11,8 @@ import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.Sequence qualified as SQ
 
+import External.JpegTran (jpegtranOptimize)
+
 import Pdf.Graphics.Optimize (optimizeGFX)
 import Pdf.Graphics.Parser.Stream (gfxParse)
 import Pdf.Object.Container (Filter (fFilter), deepMap, getFilters)
@@ -32,6 +34,7 @@ type OptimizationType :: Type
 data OptimizationType = XMLOptimization
                       | GfxOptimization
                       | ObjectStreamOptimization
+                      | JPGOptimization
                       | NoOptimization
                       deriving stock (Eq)
 
@@ -42,7 +45,11 @@ whatOptimizationFor :: Logging m => PDFObject -> FallibleT m OptimizationType
 whatOptimizationFor object =
   getValue "Subtype" object >>= \case
     Just (PDFName "XML") -> return XMLOptimization
-    Just (PDFName "Image") -> return NoOptimization
+    Just (PDFName "Image") -> do
+      stream <- getStream object
+      if BS.take 2 stream == "\xff\xd8"
+        then return JPGOptimization
+        else  return NoOptimization
     _notXMLorImage         -> getValue "Type" object >>= \case
       Just (PDFName "ObjStm") -> return ObjectStreamOptimization
       _notObjectStream        -> if hasKey "Type" object
@@ -55,7 +62,7 @@ whatOptimizationFor object =
               _notGfx        -> return NoOptimization
             _noStream -> return NoOptimization
 
-streamOptimize :: Logging m => PDFObject -> FallibleT m PDFObject
+streamOptimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
 streamOptimize object = whatOptimizationFor object >>= \case
   XMLOptimization -> do
     stream <- getStream object
@@ -65,29 +72,38 @@ streamOptimize object = whatOptimizationFor object >>= \case
                    (BS.length optimizedStream)
     setStream optimizedStream object
 
-  ObjectStreamOptimization -> do
-    sayF "  - No optimization for object stream"
-    return object
+  ObjectStreamOptimization -> return object
 
   GfxOptimization -> do
     stream <- getStream object >>= optimizeGFX
     setStream stream object
 
-  NoOptimization -> do
-    sayF "  - No optimization for generic stream"
-    return object
+  JPGOptimization -> do
+    stream <- getStream object
+    optimizedStream <- jpegtranOptimize stream
+    sayComparisonF "JPG stream optimization"
+                (BS.length stream)
+                (BS.length optimizedStream)
+
+    setStream stream object
+
+  NoOptimization -> return object
 
 {- |
 Completely refilter a stream by finding the best filter combination.
 
 It also optimized nested strings and XML streams.
 -}
-refilter :: Logging m => PDFObject -> FallibleT m PDFObject
+refilter :: Logging IO => PDFObject -> FallibleT IO PDFObject
 refilter object = do
   stringOptimized <- deepMap optimizeString object
 
   if hasStream object
-    then unfilter stringOptimized >>= streamOptimize >>= filterOptimize
+    then do
+      optimization <- whatOptimizationFor object
+      if optimization == JPGOptimization
+        then unfilter stringOptimized >>= streamOptimize
+        else unfilter stringOptimized >>= streamOptimize >>= filterOptimize
     else return stringOptimized
 
 isFilterOK :: Filter -> Bool
@@ -134,7 +150,7 @@ If the PDF object is not elligible to optimization or if optimization is
 ineffective, it is returned as is.
 -}
 {-# INLINE optimize #-}
-optimize :: Logging m => PDFObject -> FallibleT m PDFObject
+optimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
 optimize object = optimizable object >>= \case
   True -> do
     sayF (txtObjectNumberVersion object)

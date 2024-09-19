@@ -14,7 +14,13 @@ import Data.Sequence ((><))
 import Data.Text qualified as T
 
 import Pdf.Document.XRef (xrefStreamWidth)
-import Pdf.Object.Container (FilterList, getFilters, setFilters, Filter (Filter))
+import Pdf.Object.Container
+    ( Filter (Filter)
+    , FilterList
+    , getFilters
+    , hasFilter
+    , setFilters
+    )
 import Pdf.Object.FilterCombine.PredRleZopfli (predRleZopfli)
 import Pdf.Object.FilterCombine.PredZopfli (predZopfli)
 import Pdf.Object.FilterCombine.Rle (rle)
@@ -22,11 +28,12 @@ import Pdf.Object.FilterCombine.RleZopfli (rleZopfli)
 import Pdf.Object.FilterCombine.Zopfli (zopfli)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
-    , hasStream, fromPDFObject
+    , fromPDFObject
+    , hasStream
     )
 import Pdf.Object.State (getStream, getValue, setStream)
 
-import Util.Array (mkArray)
+import Util.Array (mkArray, mkEmptyArray)
 import Util.Logging (Logging, sayComparisonF)
 import Util.UnifiedError (FallibleT)
 
@@ -44,6 +51,8 @@ applyEveryFilter
   -> FallibleT m [(FilterList, BS.ByteString)]
 -- The stream has width and components information.
 applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
+  let rNothing = (mkEmptyArray, stream)
+
   rRle <- except $ rle widthComponents stream
   filterInfo "RLE" stream (snd rRle)
 
@@ -61,7 +70,7 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
 
-      return [rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
+      return [rNothing, rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
     else do
       rPredZopfli <- except $ predZopfli widthComponents stream
       filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
@@ -69,27 +78,39 @@ applyEveryFilter widthComponents@(Just (_width, _components)) stream = do
       rPredRleZopfli <- except $ predRleZopfli widthComponents stream
       filterInfo "Predictor/Store+RLE+Zopfli" stream (snd rPredRleZopfli)
 
-      return [rZopfli, rPredZopfli, rPredRleZopfli]
+      return [rNothing, rZopfli, rPredZopfli, rPredRleZopfli]
 
 -- The stream has no width nor components information.
 applyEveryFilter Nothing stream = do
+  let rNothing = (mkEmptyArray, stream)
+
   rRle <- except $ rle Nothing stream
   filterInfo "RLE" stream (snd rRle)
 
   rZopfli <- except $ zopfli Nothing stream
   filterInfo "Zopfli" stream (snd rZopfli)
 
-  rPredZopfli <- except $ predZopfli Nothing stream
-  filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
-
   if (BS.length . snd $ rRle) < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
       filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
 
-      return [rRle, rZopfli, rPredZopfli, rRleZopfli]
+      return [rNothing, rRle, rZopfli, rRleZopfli]
     else
-      return [rZopfli, rPredZopfli]
+      return [rNothing, rZopfli]
+
+applyEveryFilterJPG
+  :: Logging m
+  => Maybe (Int, Int)
+  -> BS.ByteString
+  -> FallibleT m [(FilterList, BS.ByteString)]
+-- The stream has width and components information.
+applyEveryFilterJPG _ stream = do
+  let rNothing = (mkEmptyArray, stream)
+
+  rZopfli <- except $ zopfli Nothing stream
+  filterInfo "Zopfli" stream (snd rZopfli)
+  return [rNothing, rZopfli]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
 getWidthComponents object@PDFXRefStream{} =
@@ -116,7 +137,12 @@ filterOptimize object = if hasStream object
     filters         <- getFilters object
     widthComponents <- getWidthComponents object
 
-    candidates      <- applyEveryFilter widthComponents stream <&> mkArray
+    let filterTest = if hasFilter "DCTDecode" filters
+                      then applyEveryFilterJPG
+                      else applyEveryFilter
+
+    candidates <- filterTest widthComponents stream <&> mkArray
+
     let (bestFilters, bestStream) = minimumBy resultCompare candidates
 
     -- Do nothing if the best result is worse than the original stream.

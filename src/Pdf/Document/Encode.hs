@@ -138,9 +138,9 @@ An error is signaled in the following cases:
 -}
 {-# INLINE pdfEncode #-}
 pdfEncode
-  :: Logging m
+  :: Logging IO
   => PDFDocument -- ^ A collection of PDF objects (order matters)
-  -> FallibleT m BS.ByteString -- ^ A unified error or a bytestring
+  -> FallibleT IO BS.ByteString -- ^ A unified error or a bytestring
 pdfEncode objects = do
   -- Extract objects embedded in object streams
   allObjects <- explodeDocument objects

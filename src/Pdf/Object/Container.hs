@@ -11,10 +11,12 @@ module Pdf.Object.Container
   , filtersFilter
   , filtersParms
   , getFilters
+  , hasFilter
   ) where
 
 import Control.Monad.Trans.Except (throwE)
 
+import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
@@ -151,3 +153,10 @@ setFilters filters object = if hasDictionary object
   then updateValue "Filter" (filtersFilter filters) object
           >>= updateValue "DecodeParms" (filtersParms filters)
   else return object
+
+hasFilter :: BS.ByteString -> FilterList -> Bool
+hasFilter name = any (has name)
+  where
+    has :: BS.ByteString -> Filter -> Bool
+    has value (Filter (PDFName n) _) = n == value
+    has _ _                          = False

@@ -1,14 +1,13 @@
 module Pdf.Graphics.Optimize (optimizeGFX) where
 
 import Data.ByteString qualified as BS
+import Data.ByteString.Search (indices)
 import Data.Kind (Type)
 import Data.Sequence qualified as SQ
 
-import Data.ByteString.Search (indices)
-
 import Pdf.Graphics.Object
-    ( GFXObject (GFXNumber, GFXOperator)
-    , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrockeColorN, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
+    ( GFXObject (GFXArray, GFXNumber, GFXOperator)
+    , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrockeColorN, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSUnknown)
     , separateGfx
     )
 import Pdf.Graphics.Parser.Stream (gfxParse)
@@ -103,7 +102,11 @@ collectCommands (gfxObjects, gfxCommands) gfxObject =
   (gfxObjects SQ.|> gfxObject, gfxCommands)
 
 parseCommands :: Array GFXObject -> Array GFXCommand
-parseCommands = snd . foldl collectCommands (mempty, mempty)
+parseCommands objects =
+  let (gfxObjects, gfxCommands) = foldl collectCommands (mempty, mempty) objects
+  in  if SQ.null gfxObjects
+    then gfxCommands
+    else gfxCommands SQ.|> GFXCommand (GSUnknown "") gfxObjects
 
 extractObjects :: Array GFXCommand -> Array GFXObject
 extractObjects =
@@ -118,6 +121,8 @@ roundN n x = fromIntegral (round (x * (10.0 ^ n)) :: Int) / (10.0 ^ n)
 reducePrecision :: Integer -> GFXObject -> GFXObject
 reducePrecision precision (GFXNumber value) =
   GFXNumber (roundN precision value)
+reducePrecision precision (GFXArray items) =
+  GFXArray (reducePrecision precision <$> items)
 reducePrecision _anyPrecision gfxObject = gfxObject
 
 optimizeCommand :: GFXState -> GFXCommand -> GFXCommand
@@ -154,15 +159,11 @@ optimizeCommands = snd . foldl optimizeWithState mempty
       )
 
 optimizeGFX :: Logging m => BS.ByteString -> FallibleT m BS.ByteString
-optimizeGFX stream = if indices "beginbfchar" stream /= []
-  then do
-    sayF "  - No optimization for this object"
-    return stream
+optimizeGFX stream = if indices "/CIDInit" stream /= []
+  then return stream
   else
     case gfxParse stream of
-      Right SQ.Empty -> do
-        sayF "  - No GFX optimization for this object"
-        return stream
+      Right SQ.Empty -> return stream
 
       Right objects -> do
         let optimizedStream = separateGfx
