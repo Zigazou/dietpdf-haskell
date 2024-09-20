@@ -32,6 +32,18 @@ zopfliCompressOptions = HL.CompressOptions { HL.verbose            = HL.NONE
                                            , HL.blockSplittingMax  = 15
                                            }
 
+variableNumIterations :: Int -> Int
+variableNumIterations dataLength
+  | dataLength <   2048 = 1023
+  | dataLength <   4096 = 511
+  | dataLength <   8192 = 255
+  | dataLength <  16384 = 127
+  | dataLength <  32768 = 63
+  | dataLength <  65536 = 31
+  | dataLength < 131072 = 15
+  | dataLength < 524288 = 7
+  | otherwise           = 3
+
 {-|
 Compress a strict bytestring.
 
@@ -44,7 +56,12 @@ compress
   :: BS.ByteString -- ^ A strict bytestring to encode
   -> Either UnifiedError BS.ByteString
   -- ^ Either an error or the compressed bytestring
-compress = Right . HL.compressWith zopfliCompressOptions HL.ZLIB
+compress content = Right . HL.compressWith adaptiveOptions HL.ZLIB $ content
+  where
+    adaptiveOptions = zopfliCompressOptions
+                        { HL.numIterations = variableNumIterations
+                                           $ BS.length content
+                        }
 
 zlibCompressParams :: ZL.CompressParams
 zlibCompressParams =
