@@ -52,7 +52,7 @@ streamOptimize object = whatOptimizationFor object >>= \case
                 (BS.length stream)
                 (BS.length optimizedStream)
 
-    setStream stream object
+    setStream optimizedStream object
 
   _anyOtherOptimization -> return object
 
