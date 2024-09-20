@@ -60,7 +60,7 @@ encodeObject object@(PDFIndirectObjectWithStream number _ _ _) = return $
 encodeObject object@(PDFObjectStream number _ _ _) = do
   let bytes = fromPDFObject object
   embeddedObjects <- explodeList [object]
-  return $ EncodedObject 
+  return $ EncodedObject
             number
             (BS.length bytes)
             bytes
@@ -121,9 +121,10 @@ getTrailer partition = case lastTrailer partition of
   validTrailer -> validTrailer
 
 objectToEmbed :: PDFObject -> Bool
-objectToEmbed object = isIndirect object
-                    && (not . hasStream) object
-                    -- && (not . isInfo) object
+objectToEmbed object = isIndirect object && not (hasStream object)
+
+objectWithContent :: PDFObject -> Bool
+objectWithContent object = hasStream object && not (isTrailer object)
 
 {-|
 Given a list of PDF objects, generate the PDF file content.
@@ -146,10 +147,12 @@ pdfEncode objects = do
   allObjects <- explodeDocument objects
 
   let partition = PDFPartition
-        { ppObjectsWithStream    = fromPDFDocument $ cFilter hasStream allObjects
-        , ppObjectsWithoutStream = fromPDFDocument $ cFilter objectToEmbed allObjects
-        , ppHeads                = cFilter isHeader allObjects
-        , ppTrailers             = cFilter isTrailer allObjects
+        { ppObjectsWithStream =
+            fromPDFDocument $ cFilter objectWithContent allObjects
+        , ppObjectsWithoutStream =
+            fromPDFDocument $ cFilter objectToEmbed allObjects
+        , ppHeads = cFilter isHeader allObjects
+        , ppTrailers = cFilter isTrailer allObjects
         }
 
       pdfHead = fromPDFObject (PDFVersion "1.7")
