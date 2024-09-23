@@ -67,7 +67,8 @@ normalizeHexString hexString = if stringLengthIsEven && lastDigitIsZero
   normalized                 = BS.concatMap onlyHexChar hexString
   normalizedWithoutLastDigit = BS.take (BS.length normalized - 1) normalized
   lastDigitIsZero =
-    asciiDIGITZERO == BS.index normalized (BS.length normalized - 1)
+       (normalized /= "")
+    && (asciiDIGITZERO == BS.index normalized (BS.length normalized - 1))
   stringLengthIsEven = even (BS.length normalized)
 
 {-|

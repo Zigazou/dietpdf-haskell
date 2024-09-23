@@ -24,7 +24,8 @@ module Pdf.Object.Parser.HexString
   ( hexStringP
   ) where
 
-import Data.Binary.Parser (Get, isHexDigit, label, takeWhile1, word8)
+import Data.Binary.Parser (Get, isHexDigit, label, word8)
+import Data.Binary.Parser qualified as BP
 
 import Pdf.Object.Object (PDFObject (PDFHexString), isWhiteSpace)
 
@@ -41,6 +42,6 @@ It returns a `PDFHexString`.
 hexStringP :: Get PDFObject
 hexStringP = label "hexstring" $ do
   word8 asciiLESSTHANSIGN
-  content <- takeWhile1 (\byte -> isHexDigit byte || isWhiteSpace byte)
+  content <- BP.takeWhile (\byte -> isHexDigit byte || isWhiteSpace byte)
   word8 asciiGREATERTHANSIGN
   return $ PDFHexString (normalizeHexString content)
