@@ -4,7 +4,7 @@ github:              "zigazou/dietpdf"
 license:             BSD3
 author:              "Frédéric BISSON"
 maintainer:          "zigazou@protonmail.com"
-copyright:           "2022 Frédéric BISSON"
+copyright:           "2024 Frédéric BISSON"
 
 extra-source-files:
 - README.md
@@ -34,6 +34,7 @@ ghc-options:
 - -Wno-safe
 - -Wno-redundant-bang-patterns
 - -j
+- -threaded
 library:
   source-dirs: src
   default-extensions:
@@ -87,6 +88,7 @@ library:
   - process
   - vector
   - spool
+  - temporary
 
 executables:
   dietpdf:
@@ -116,6 +118,7 @@ executables:
     - -fmax-simplifier-iterations=6
     - -flate-specialise
     - -fstatic-argument-transformation
+    - -threaded
     dependencies:
     - bytestring
     - optparse-applicative

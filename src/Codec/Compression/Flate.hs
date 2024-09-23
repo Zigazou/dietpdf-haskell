@@ -32,8 +32,8 @@ zopfliCompressOptions = HL.CompressOptions { HL.verbose            = HL.NONE
                                            , HL.blockSplittingMax  = 15
                                            }
 
-variableNumIterations :: Int -> Int
-variableNumIterations dataLength
+variableNumberOfIterations :: Int -> Int
+variableNumberOfIterations dataLength
   | dataLength <   2048 = 1023
   | dataLength <   4096 = 511
   | dataLength <   8192 = 255
@@ -59,7 +59,7 @@ compress
 compress content = Right . HL.compressWith adaptiveOptions HL.ZLIB $ content
   where
     adaptiveOptions = zopfliCompressOptions
-                        { HL.numIterations = variableNumIterations
+                        { HL.numIterations = variableNumberOfIterations
                                            $ BS.length content
                         }
 

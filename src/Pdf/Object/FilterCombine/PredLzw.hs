@@ -1,7 +1,6 @@
 module Pdf.Object.FilterCombine.PredLzw
   ( predLzw
   ) where
-
 import Codec.Compression.LZW qualified as LZW
 import Codec.Compression.Predictor
     ( EntropyType (EntropyDeflate, EntropyShannon)
@@ -11,16 +10,19 @@ import Codec.Compression.Predictor
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Container (Filter (Filter))
+import Pdf.Object.FilterCombine.FilterCombination
+    ( FilterCombination
+    , mkFCAppend
+    )
 import Pdf.Object.Object (PDFObject (PDFName), mkPDFDictionary, mkPDFNumber)
 
-import Util.Array (mkArray)
 import Util.UnifiedError (UnifiedError (InvalidFilterParm))
 
 predLzw
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
+  -> Either UnifiedError FilterCombination
 predLzw (Just (width, components)) stream = do
   -- Try finding optimal predictors with Shannon entropy function
   compressedS <-
@@ -34,18 +36,16 @@ predLzw (Just (width, components)) stream = do
         then compressedD
         else compressedS
 
-  return
-    ( mkArray
-      [ Filter
-          (PDFName "LZWDecode")
-          (mkPDFDictionary
-            [ ("Predictor", mkPDFNumber PNGOptimum)
-            , ("Columns"  , mkPDFNumber width)
-            , ("Colors"   , mkPDFNumber components)
-            ]
-          )
-      ]
-    , compressed
-    )
+  return $ mkFCAppend
+    [ Filter
+        (PDFName "LZWDecode")
+        (mkPDFDictionary
+          [ ("Predictor", mkPDFNumber PNGOptimum)
+          , ("Columns"  , mkPDFNumber width)
+          , ("Colors"   , mkPDFNumber components)
+          ]
+        )
+    ]
+    compressed
 
 predLzw _noWidth _stream = Left InvalidFilterParm

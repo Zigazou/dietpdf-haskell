@@ -11,6 +11,7 @@ import Data.ByteString qualified as BS
 import Data.Sequence qualified as SQ
 
 import External.JpegTran (jpegtranOptimize)
+import External.TtfAutoHint (ttfAutoHintOptimize)
 
 import Pdf.Graphics.Optimize (optimizeGFX)
 import Pdf.Object.Container (Filter (fFilter), deepMap, getFilters)
@@ -21,7 +22,7 @@ import Pdf.Object.Object
     , hasStream
     )
 import Pdf.Object.OptimizationType
-    ( OptimizationType (GfxOptimization, JPGOptimization, XMLOptimization)
+    ( OptimizationType (GfxOptimization, JPGOptimization, TTFOptimization, XMLOptimization)
     , whatOptimizationFor
     )
 import Pdf.Object.State (getStream, setStream)
@@ -49,6 +50,15 @@ streamOptimize object = whatOptimizationFor object >>= \case
     stream <- getStream object
     optimizedStream <- jpegtranOptimize stream
     sayComparisonF "JPG stream optimization"
+                (BS.length stream)
+                (BS.length optimizedStream)
+
+    setStream optimizedStream object
+
+  TTFOptimization -> do
+    stream <- getStream object
+    optimizedStream <- ttfAutoHintOptimize stream
+    sayComparisonF "TTF stream optimization"
                 (BS.length stream)
                 (BS.length optimizedStream)
 

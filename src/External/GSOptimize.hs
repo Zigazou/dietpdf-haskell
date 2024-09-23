@@ -43,22 +43,14 @@ gsOptions =
   , ("d", "DetectDuplicateImages", "true")        -- group identical images
   , ("d", "AutoRotatePages", "/None")             -- don't rotate pages
   , ("d", "CompressFonts", "true")                -- compress fonts
-  , ("d", "DownsampleColorImages", "true")        -- downsample color images
-  , ("d", "DownsampleGrayImages", "true")         -- downsample gray images
-  , ("d", "DownsampleMonoImages", "true")         -- downsample monochrome images
-  , ("d", "ColorImageResolution", "200")          -- color image resolution
-  , ("d", "GrayImageResolution", "200")           -- gray image resolution
-  , ("d", "MonoImageResolution", "200")           -- monochrome image resolution
-  , ("d", "ColorImageDownsampleThreshold", "1.0") -- color image downsample threshold
-  , ("d", "GrayImageDownsampleThreshold", "1.0")  -- gray image downsample threshold
-  , ("d", "MonoImageDownsampleThreshold", "1.0")  -- b&w downsample threshold
-  , ("d", "ColorImageDownsampleType", "/Bicubic") -- color image downsample type
-  , ("d", "GrayImageDownsampleType", "/Bicubic")  -- gray image downsample type
-  , ("d", "MonoImageDownsampleType", "/Bicubic")  -- b&w image downsample type
+  , ("d", "DownsampleColorImages", "false")       -- downsample color images
+  , ("d", "DownsampleGrayImages", "false")        -- downsample gray images
+  , ("d", "DownsampleMonoImages", "false")        -- downsample monochrome images
   , ("d", "ColorImageFilter", "/FlateEncode")     -- color image filter
   , ("d", "CompatibilityLevel", "1.7")            -- PDF compatibility level
-  , ("d", "ConvertCMYKImagesToRGB", "true")       -- convert CMYK images to RGB
+  , ("d", "ConvertCMYKImagesToRGB", "false")      -- keep CMYK images
   , ("d", "MaxInlineImageSize", "0")              -- disable inline images
+  , ("d", "JPEGQ", "100")                         -- limit JPEG deterioration
   , ("d", "QUIET", "")                            -- quiet mode
   , ("d", "SAFER", "")                            -- safe mode
   , ("d", "NOPAUSE", "")                          -- no pause

@@ -12,10 +12,9 @@ import Control.Monad.Trans.Except (runExcept, throwE)
 import Data.ByteString qualified as BS
 import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as Map
-import Util.Sequence (mapMaybe)
+import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 
-import Pdf.Document.PDFObjects (findLast, fromPDFDocument)
 import Pdf.Document.Document (PDFDocument, cFilter, fromList, singleton)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Pdf.Document.ObjectStream (explodeDocument, explodeList, insert)
@@ -24,6 +23,7 @@ import Pdf.Document.Partition
     , lastTrailer
     , removeUnused
     )
+import Pdf.Document.PDFObjects (findLast, fromPDFDocument)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)
 import Pdf.Object.Object.PDFObject
@@ -42,12 +42,12 @@ import Pdf.Object.State (getValue, setMaybe)
 
 import Util.Dictionary (mkDictionary)
 import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
+import Util.Sequence (mapMaybe)
 import Util.UnifiedError
     ( FallibleT
     , UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
     , tryF
     )
-import Data.Sequence qualified as SQ
 
 -- | Encodes a PDF object and keep track of its number and length.
 encodeObject :: Logging m => PDFObject -> FallibleT m EncodedObject
@@ -74,7 +74,10 @@ updateXRefStm trailer xRefStm = do
   mRoot <- getValue "Root" trailer
   mInfo <- getValue "Info" trailer
   mID <- getValue "ID" trailer
-  setMaybe "Root" mRoot xRefStm >>= setMaybe "Info" mInfo >>= setMaybe "ID" mID
+
+  setMaybe "Root" mRoot xRefStm
+    >>= setMaybe "Info" mInfo
+    >>= setMaybe "ID" mID
 
 isCatalog :: PDFObject -> Bool
 isCatalog object@PDFIndirectObject{} =

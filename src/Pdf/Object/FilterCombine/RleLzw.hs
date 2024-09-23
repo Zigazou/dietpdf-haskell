@@ -5,24 +5,27 @@ module Pdf.Object.FilterCombine.RleLzw
 import Codec.Compression.LZW qualified as LZW
 
 import Data.ByteString qualified as BS
+import Data.Functor ((<&>))
 
-import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Container (Filter (Filter))
+import Pdf.Object.FilterCombine.FilterCombination
+    ( FilterCombination
+    , fcBytes
+    , mkFCAppend
+    )
 import Pdf.Object.FilterCombine.Rle (rle)
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
 
-import Util.Array (mkArray)
 import Util.UnifiedError (UnifiedError)
 
 rleLzw
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
+  -> Either UnifiedError FilterCombination
 rleLzw _ stream = do
-  compressed <- rle Nothing stream >>= LZW.compress . snd
-  return
-    ( mkArray
+  rle Nothing stream
+    >>= LZW.compress . fcBytes
+    <&> mkFCAppend
       [ Filter (PDFName "LZWDecode")       PDFNull
       , Filter (PDFName "RunLengthDecode") PDFNull
       ]
-    , compressed
-    )

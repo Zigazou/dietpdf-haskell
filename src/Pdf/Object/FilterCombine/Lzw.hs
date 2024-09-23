@@ -5,17 +5,20 @@ module Pdf.Object.FilterCombine.Lzw
 import Codec.Compression.LZW qualified as LZW
 
 import Data.ByteString qualified as BS
+import Data.Functor ((<&>))
 
-import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Container (Filter (Filter))
+import Pdf.Object.FilterCombine.FilterCombination
+    ( FilterCombination
+    , mkFCAppend
+    )
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
 
-import Util.Array (mkArray)
 import Util.UnifiedError (UnifiedError)
 
 lzw
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
-lzw _ stream = do
-  compressed <- LZW.compress stream
-  return (mkArray [Filter (PDFName "LZWDecode") PDFNull], compressed)
+  -> Either UnifiedError FilterCombination
+lzw _ stream =
+  LZW.compress stream <&> mkFCAppend [Filter (PDFName "LZWDecode") PDFNull]

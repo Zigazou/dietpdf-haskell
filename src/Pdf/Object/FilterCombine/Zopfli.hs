@@ -5,17 +5,20 @@ module Pdf.Object.FilterCombine.Zopfli
 import Codec.Compression.Flate qualified as FL
 
 import Data.ByteString qualified as BS
+import Data.Functor ((<&>))
 
-import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Container (Filter (Filter))
+import Pdf.Object.FilterCombine.FilterCombination
+    ( FilterCombination
+    , mkFCAppend
+    )
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
 
-import Util.Array (mkArray)
 import Util.UnifiedError (UnifiedError)
 
 zopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
-zopfli _ stream = do
-  compressed <- FL.compress stream
-  return (mkArray [Filter (PDFName "FlateDecode") PDFNull], compressed)
+  -> Either UnifiedError FilterCombination
+zopfli _ stream =
+  FL.compress stream <&> mkFCAppend [Filter (PDFName "FlateDecode") PDFNull]

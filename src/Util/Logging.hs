@@ -55,10 +55,10 @@ sayComparisonF label sizeBefore sizeAfter = sayF
   )
  where
   ratio :: Float
-  ratio =
-    100
-      * (fromIntegral sizeAfter - fromIntegral sizeBefore)
-      / fromIntegral sizeBefore
+  ratio = let ratio' = 100
+                     * (fromIntegral sizeAfter - fromIntegral sizeBefore)
+                     / fromIntegral sizeBefore
+          in  if sizeBefore == 0 then 0 else ratio'
 
 {-# INLINE sayErrorF #-}
 sayErrorF :: (Logging m, MonadTrans t) => T.Text -> UnifiedError -> t m ()

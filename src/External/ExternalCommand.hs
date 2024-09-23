@@ -1,4 +1,9 @@
-module External.ExternalCommand (externalCommand, externalCommandBuf) where
+module External.ExternalCommand
+  ( externalCommand
+  , externalCommandBuf
+  , externalCommandBuf'
+  )
+where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
@@ -9,12 +14,12 @@ import GHC.IO.Handle
     ( BufferMode (BlockBuffering)
     , Handle
     , hClose
-    , hFlush
     , hSetBinaryMode
+    , hSetBuffering
     )
 
 import System.Exit (ExitCode (ExitFailure, ExitSuccess))
-import System.IO (hSetBuffering)
+import System.IO.Temp (withSystemTempFile)
 import System.Process
     ( StdStream (CreatePipe)
     , proc
@@ -36,9 +41,12 @@ externalCommand command args = do
 
 externalCommandBuf :: FilePath -> [String] -> BS.ByteString -> FallibleT IO BS.ByteString
 externalCommandBuf command args input = do
-  let process =
-        (proc command args) { std_in  = CreatePipe, std_out = CreatePipe }
+  let process = (proc command args) { std_in  = CreatePipe
+                                    , std_out = CreatePipe
+                                    }
+
   result <- lift $ withCreateProcess process (injectInput input)
+
   case result of
     Right output -> return output
     Left err     -> throwE err
@@ -61,15 +69,52 @@ externalCommandBuf command args input = do
 
     -- Write input to stdin
     BS.hPut stdin input'
-    hFlush stdin
     hClose stdin
 
     -- Read stdout and stderr
-    output <- BS.hGetContents stdout
+    output   <- BS.hGetContents stdout
     exitCode <- waitForProcess ph
 
     case exitCode of
       ExitSuccess    -> return $ Right output
-      ExitFailure rc -> return $ Left (ExternalCommandError "jpegtran" rc)
+      ExitFailure rc -> return $ Left (ExternalCommandError command rc)
   injectInput _ _ _ _ _ =
-    return $ Left (ExternalCommandError "jpegtran: invalid handles" 1)
+    return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)
+
+externalCommandBuf'
+  :: FilePath
+  -> [String]
+  -> BS.ByteString
+  -> FallibleT IO BS.ByteString
+externalCommandBuf' command args input = do
+  withSystemTempFile "dietpdf.temporary" $ \temp tempHandle -> do
+    lift $ hClose tempHandle
+    lift $ BS.writeFile temp input
+    let process = (proc command (args ++ [temp])) { std_out = CreatePipe }
+
+    result <- lift $ withCreateProcess process injectInput
+
+    case result of
+      Right output -> return output
+      Left err     -> throwE err
+ where
+  injectInput
+    :: Maybe Handle
+    -> Maybe Handle
+    -> Maybe Handle
+    -> ProcessHandle
+    -> IO (Either UnifiedError BS.ByteString)
+  injectInput _stdin (Just stdout) _stderr ph = do
+    -- Configure stdout
+    hSetBinaryMode stdout True
+    hSetBuffering stdout (BlockBuffering Nothing)
+
+    -- Read stdout and stderr
+    output   <- BS.hGetContents stdout
+    exitCode <- waitForProcess ph
+
+    case exitCode of
+      ExitSuccess    -> return $ Right output
+      ExitFailure rc -> return $ Left (ExternalCommandError command rc)
+  injectInput _ _ _ _ =
+    return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)

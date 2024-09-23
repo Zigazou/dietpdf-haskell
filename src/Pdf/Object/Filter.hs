@@ -13,12 +13,18 @@ import Data.Functor ((<&>))
 import Data.Sequence ((><))
 import Data.Text qualified as T
 
+import External.PamToJpeg2k (jpegToJpeg2k)
+
 import Pdf.Document.XRef (xrefStreamWidth)
-import Pdf.Object.Container
-    ( Filter (Filter)
-    , FilterList
-    , getFilters
-    , setFilters
+import Pdf.Object.Container (Filter (Filter), getFilters, setFilters)
+import Pdf.Object.FilterCombine.FilterCombination
+    ( FilterCombination (FilterCombination)
+    , fcBytes
+    , fcLength
+    , fcList
+    , fcReplace
+    , mkFCAppend
+    , mkFCReplace
     )
 import Pdf.Object.FilterCombine.Jpeg2k (jpeg2k)
 import Pdf.Object.FilterCombine.PredRleZopfli (predRleZopfli)
@@ -27,7 +33,7 @@ import Pdf.Object.FilterCombine.Rle (rle)
 import Pdf.Object.FilterCombine.RleZopfli (rleZopfli)
 import Pdf.Object.FilterCombine.Zopfli (zopfli)
 import Pdf.Object.Object
-    ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
+    ( PDFObject (PDFName, PDFNull, PDFNumber, PDFNumber, PDFXRefStream)
     , fromPDFObject
     , hasStream
     )
@@ -36,7 +42,7 @@ import Pdf.Object.OptimizationType
     )
 import Pdf.Object.State (getStream, getValue, setStream)
 
-import Util.Array (mkArray, mkEmptyArray)
+import Util.Array (mkArray)
 import Util.Logging (Logging, sayComparisonF)
 import Util.UnifiedError (FallibleT)
 
@@ -51,10 +57,10 @@ applyEveryFilterGeneric
   :: Logging IO
   => Maybe (Int, Int)
   -> BS.ByteString
-  -> FallibleT IO [(FilterList, BS.ByteString)]
+  -> FallibleT IO [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
-  let rNothing = (mkEmptyArray, stream)
+  let rNothing = mkFCAppend [] stream
       jpeg2kParameters =
         Just ( width
              , BS.length stream `div` (width * components)
@@ -65,83 +71,107 @@ applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
                 _ -> "GRAY"
              )
 
-  rJpeg2k <- jpeg2k jpeg2kParameters stream
-  filterInfo "JPEG2000" stream (snd rJpeg2k)
+  rJpeg2k <- if components /= 4
+    then do
+      rJpeg2k' <- jpeg2k jpeg2kParameters stream
+      filterInfo "JPEG2000" stream (fcBytes rJpeg2k')
+
+      return [rJpeg2k']
+    else
+      return []
 
   rRle <- except $ rle widthComponents stream
-  filterInfo "RLE" stream (snd rRle)
+  filterInfo "RLE" stream (fcBytes rRle)
 
   rZopfli <- except $ zopfli widthComponents stream
-  filterInfo "Zopfli" stream (snd rZopfli)
+  filterInfo "Zopfli" stream (fcBytes rZopfli)
 
-  if (BS.length . snd $ rRle) < BS.length stream
+  rleCombine <- if fcLength rRle < BS.length stream
     then do
-      rPredRleZopfli <- except $ predRleZopfli widthComponents stream
-      filterInfo "Predictor/Store+RLE+Zopfli" stream (snd rPredRleZopfli)
-
       rRleZopfli <- except $ rleZopfli widthComponents stream
-      filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
+      filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
 
-      rPredZopfli <- except $ predZopfli widthComponents stream
-      filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
+      return [rRle, rRleZopfli]
+    else
+      return []
 
-      return [rNothing, rJpeg2k, rRle, rZopfli, rPredRleZopfli, rRleZopfli, rPredZopfli]
-    else do
-      rPredZopfli <- except $ predZopfli widthComponents stream
-      filterInfo "Predictor/Zopfli" stream (snd rPredZopfli)
+  rPredZopfli <- except $ predZopfli widthComponents stream
+  filterInfo "Predictor/Zopfli" stream (fcBytes rPredZopfli)
 
-      rPredRleZopfli <- except $ predRleZopfli widthComponents stream
-      filterInfo "Predictor/Store+RLE+Zopfli" stream (snd rPredRleZopfli)
+  rPredRleZopfli <- except $ predRleZopfli widthComponents stream
+  filterInfo "Predictor/Store+RLE+Zopfli" stream (fcBytes rPredRleZopfli)
 
-      return [rNothing, rJpeg2k, rZopfli, rPredZopfli, rPredRleZopfli]
+  return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli]
+        ++ rleCombine
+        ++ rJpeg2k
 
 -- The stream has no width nor components information.
 applyEveryFilterGeneric Nothing stream = do
-  let rNothing = (mkEmptyArray, stream)
+  let rNothing = mkFCAppend [] stream
 
   rRle <- except $ rle Nothing stream
-  filterInfo "RLE" stream (snd rRle)
+  filterInfo "RLE" stream (fcBytes rRle)
 
   rZopfli <- except $ zopfli Nothing stream
-  filterInfo "Zopfli" stream (snd rZopfli)
+  filterInfo "Zopfli" stream (fcBytes rZopfli)
 
-  if (BS.length . snd $ rRle) < BS.length stream
+  if fcLength rRle < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
-      filterInfo "RLE+Zopfli" stream (snd rRleZopfli)
+      filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
 
       return [rNothing, rRle, rZopfli, rRleZopfli]
     else
       return [rNothing, rZopfli]
 
 applyEveryFilterJPG
-  :: Logging m
+  :: Logging IO
   => Maybe (Int, Int)
   -> BS.ByteString
-  -> FallibleT m [(FilterList, BS.ByteString)]
+  -> FallibleT IO [FilterCombination]
 -- The stream has width and components information.
-applyEveryFilterJPG _ stream = do
-  let rNothing = (mkEmptyArray, stream)
+applyEveryFilterJPG (Just (_width, components)) stream = do
+  let rNothing = mkFCAppend [] stream
 
   rZopfli <- except $ zopfli Nothing stream
-  filterInfo "Zopfli" stream (snd rZopfli)
+  filterInfo "Zopfli" stream (fcBytes rZopfli)
+
+  -- Try Jpeg2000 for images with less than 4 components.
+  rJpeg2k <- if components /= 4
+    then do
+      rJpeg2k' <- jpegToJpeg2k 15 stream
+                  <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
+
+      filterInfo "JPEG2000" stream (fcBytes rJpeg2k')
+      return [rJpeg2k']
+    else
+      return []
+
+  return $ [rNothing, rZopfli] ++ rJpeg2k
+
+applyEveryFilterJPG Nothing stream = do
+  let rNothing = mkFCAppend [] stream
+
+  rZopfli <- except $ zopfli Nothing stream
+  filterInfo "Zopfli" stream (fcBytes rZopfli)
+
   return [rNothing, rZopfli]
 
 applyEveryFilterXRef
   :: Logging m
   => Maybe (Int, Int)
   -> BS.ByteString
-  -> FallibleT m [(FilterList, BS.ByteString)]
+  -> FallibleT m [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterXRef widthComponents@(Just (_width, _components)) stream = do
   rPredZopfli <- except $ predZopfli widthComponents stream
-  filterInfo "Predictor+Zopfli" stream (snd rPredZopfli)
+  filterInfo "Predictor+Zopfli" stream (fcBytes rPredZopfli)
   return [rPredZopfli]
 applyEveryFilterXRef Nothing stream = do
-  let rNothing = (mkEmptyArray, stream)
+  let rNothing = mkFCAppend [] stream
 
   rZopfli <- except $ zopfli Nothing stream
-  filterInfo "Zopfli" stream (snd rZopfli)
+  filterInfo "Zopfli" stream (fcBytes rZopfli)
   return [rNothing, rZopfli]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
@@ -180,20 +210,30 @@ filterOptimize optimization object = if hasStream object
 
     candidates <- applyEveryFilter widthComponents stream <&> mkArray
 
-    let (bestFilters, bestStream) = minimumBy resultCompare candidates
+    let
+      original      = FilterCombination filters stream True
+      bestCandidate = minimumBy resultCompare candidates
 
     -- Do nothing if the best result is worse than the original stream.
-    if resultLoad (bestFilters, bestStream) < resultLoad (filters, stream)
-      then setStream bestStream object >>= setFilters (bestFilters >< filters)
+    if resultLoad bestCandidate < resultLoad original
+      then
+        if fcReplace bestCandidate
+          then
+            setStream (fcBytes bestCandidate) object
+              >>= setFilters (fcList bestCandidate)
+          else
+            setStream (fcBytes bestCandidate) object
+              >>= setFilters (fcList bestCandidate >< fcList original)
       else return object
   else return object
  where
-  resultCompare :: (FilterList, BS.ByteString) -> (FilterList, BS.ByteString) -> Ordering
+  resultCompare :: FilterCombination -> FilterCombination -> Ordering
   resultCompare load1 load2 = compare (resultLoad load1) (resultLoad load2)
 
-  resultLoad :: (FilterList, BS.ByteString) -> Int
-  resultLoad (filterList, stream) = BS.length stream
-                                  + foldr ((+) . filterLoad) 0 filterList
+  resultLoad :: FilterCombination -> Int
+  resultLoad filterCombination =
+      fcLength filterCombination
+    + foldr ((+) . filterLoad) 0 (fcList filterCombination)
 
   filterLoad :: Filter -> Int
   filterLoad (Filter f p) = BS.length (fromPDFObject f)

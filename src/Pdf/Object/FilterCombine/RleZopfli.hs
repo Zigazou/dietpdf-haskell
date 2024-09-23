@@ -5,24 +5,27 @@ module Pdf.Object.FilterCombine.RleZopfli
 import Codec.Compression.Flate qualified as FL
 
 import Data.ByteString qualified as BS
+import Data.Functor ((<&>))
 
-import Pdf.Object.Container (Filter (Filter), FilterList)
+import Pdf.Object.Container (Filter (Filter))
+import Pdf.Object.FilterCombine.FilterCombination
+    ( FilterCombination
+    , fcBytes
+    , mkFCAppend
+    )
 import Pdf.Object.FilterCombine.Rle (rle)
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
 
-import Util.Array (mkArray)
 import Util.UnifiedError (UnifiedError)
 
 rleZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError (FilterList, BS.ByteString)
+  -> Either UnifiedError FilterCombination
 rleZopfli _ stream = do
-  compressed <- rle Nothing stream >>= FL.compress . snd
-  return
-    ( mkArray
+  rle Nothing stream
+    >>= FL.compress . fcBytes
+    <&> mkFCAppend
       [ Filter (PDFName "FlateDecode")     PDFNull
       , Filter (PDFName "RunLengthDecode") PDFNull
       ]
-    , compressed
-    )

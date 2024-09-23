@@ -1,5 +1,5 @@
 module Pdf.Object.OptimizationType
-  ( OptimizationType(XMLOptimization, GfxOptimization, ObjectStreamOptimization, XRefStreamOptimization, JPGOptimization, NoOptimization)
+  ( OptimizationType(XMLOptimization, GfxOptimization, ObjectStreamOptimization, XRefStreamOptimization, JPGOptimization, NoOptimization, TTFOptimization)
   , whatOptimizationFor
   )
 where
@@ -7,8 +7,10 @@ import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.Sequence qualified as SQ
 
+import Font.TrueType.Parser.Font (ttfParse)
+
 import Pdf.Graphics.Parser.Stream (gfxParse)
-import Pdf.Object.Object (PDFObject (PDFName), hasKey)
+import Pdf.Object.Object (PDFObject (PDFName))
 import Pdf.Object.State (getStream, getValue)
 
 import Util.Logging (Logging)
@@ -20,6 +22,7 @@ data OptimizationType = XMLOptimization
                       | ObjectStreamOptimization
                       | XRefStreamOptimization
                       | JPGOptimization
+                      | TTFOptimization
                       | NoOptimization
                       deriving stock (Eq)
 
@@ -34,16 +37,17 @@ whatOptimizationFor object =
       stream <- getStream object
       if BS.take 2 stream == "\xff\xd8"
         then return JPGOptimization
-        else  return NoOptimization
-    _notXMLorImage         -> getValue "Type" object >>= \case
-      Just (PDFName "ObjStm") -> return ObjectStreamOptimization
-      Just (PDFName "XRef") -> return XRefStreamOptimization
-      _notObjectStream        -> if hasKey "Type" object
-        then return NoOptimization
-        else do
+        else return NoOptimization
+    _notXMLorImage -> getValue "Type" object >>= \case
+      Just (PDFName "ObjStm")     -> return ObjectStreamOptimization
+      Just (PDFName "XRef")       -> return XRefStreamOptimization
+      Just (PDFName _unknownType) -> return NoOptimization
+      _anyOtherCase -> do
           tryF (getStream object) >>= \case
-            Right stream -> case gfxParse stream of
-              Right SQ.Empty -> return NoOptimization
-              Right _        -> return GfxOptimization
-              _notGfx        -> return NoOptimization
+            Right stream -> case ttfParse stream of
+              Right _ttfFont -> return TTFOptimization
+              _notTtfFont    -> case gfxParse stream of
+                Right SQ.Empty -> return NoOptimization
+                Right _        -> return GfxOptimization
+                _notGfx        -> return NoOptimization
             _noStream -> return NoOptimization
