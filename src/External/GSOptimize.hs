@@ -5,6 +5,7 @@ import Data.Text qualified as T
 
 import External.ExternalCommand (externalCommand)
 
+import Util.Context (Contextual (ctx))
 import Util.Logging (sayF)
 import Util.UnifiedError (FallibleT)
 
@@ -66,7 +67,8 @@ generateOptions = fmap generateOption
 
 gsOptimize :: FilePath -> FilePath -> FallibleT IO ()
 gsOptimize inputPdf outputPdf = do
-  sayF $ T.concat ["Running GhostScript on ", T.pack inputPdf]
+  sayF (ctx ("ghostscript" :: String))
+     $ T.concat ["Running GhostScript on ", T.pack inputPdf]
 
   externalCommand "gs"
     ( generateOptions gsOptions ++ ["-sOutputFile=" ++ outputPdf, inputPdf] )

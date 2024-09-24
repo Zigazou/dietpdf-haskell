@@ -65,6 +65,7 @@ library:
   - -fmax-simplifier-iterations=6
   - -flate-specialise
   - -fstatic-argument-transformation
+  - -threaded
   dependencies:
   - bytestring
   - binary
@@ -89,6 +90,7 @@ library:
   - vector
   - spool
   - temporary
+  - async
 
 executables:
   dietpdf:
@@ -119,6 +121,8 @@ executables:
     - -flate-specialise
     - -fstatic-argument-transformation
     - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
     dependencies:
     - bytestring
     - optparse-applicative

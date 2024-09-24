@@ -7,4 +7,8 @@ import External.ExternalCommand (externalCommandBuf)
 import Util.UnifiedError (FallibleT)
 
 ttfAutoHintOptimize :: BS.ByteString -> FallibleT IO BS.ByteString
-ttfAutoHintOptimize = externalCommandBuf "ttfautohint" ["--dehint", "--no-info"]
+ttfAutoHintOptimize = externalCommandBuf "ttfautohint" 
+                                         [ "--dehint"
+                                         , "--no-info"
+                                         , "--ignore-restrictions"
+                                         ]

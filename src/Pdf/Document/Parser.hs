@@ -17,6 +17,7 @@ import Pdf.Object.Parser.StartXRef (startXRefP)
 import Pdf.Object.Parser.Trailer (trailerP)
 import Pdf.Object.Parser.XRef (xrefP)
 
+import Util.Context (Context (NoContext))
 import Util.Logging (Logging, sayF)
 import Util.UnifiedError (FallibleT, UnifiedError (ParseError))
 
@@ -40,7 +41,7 @@ pdfParse
   => BS.ByteString -- ^ The bytestring to parse coming from a file.
   -> FallibleT m PDFDocument -- ^ Error or a `PDFDocument`.
 pdfParse source = do
-  sayF "Parsing PDF file"
+  sayF NoContext "Parsing PDF file"
   case parseDetail pdfRawP source of
     Left  err                      -> throwE (ParseError err)
     Right (""    , _     , result) -> return result

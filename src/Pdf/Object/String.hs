@@ -12,6 +12,7 @@ import Util.Logging (Logging, sayComparisonF)
 import Util.PdfDocEncoding (unicodeToPdfDocEncoding)
 import Util.String (hexStringToString)
 import Util.UnifiedError (FallibleT)
+import Util.Context (Contextual(ctx))
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"
@@ -55,24 +56,30 @@ optimizeString object = case object of
     | isASCIIEncoded encoded -> do
         -- If the hex string contains only ASCII characters, converts it to a
         -- PDFString which will be twice shorter.
-        sayComparisonF "Hex string optimization (ASCII)"
-                      (BS.length values)
-                      (BS.length encoded)
+        sayComparisonF
+          (ctx object)
+          "Hex string optimization (ASCII)"
+          (BS.length values)
+          (BS.length encoded)
         return $ PDFString encoded
     | isUTF16Encoded encoded -> case utf16beToPdfDocEncoding encoded of
         -- If the PDFHexString is UTF-16 but only contains PDFDocEncoding
         -- characters, converts it to a PDFString which will be four times
         -- shorter.
         Just pdfDocEncoded -> do
-          sayComparisonF "Hex string optimization (PDFDocEncoding)"
-                        (BS.length values)
-                        (BS.length pdfDocEncoded)
+          sayComparisonF 
+            (ctx object)
+            "Hex string optimization (PDFDocEncoding)"
+            (BS.length values)
+            (BS.length pdfDocEncoded)
           return $ PDFString pdfDocEncoded
         Nothing -> do
           let utf16beEncoded = hexStringToString values
-          sayComparisonF "Hex string optimization (UTF-16BE)"
-                        (BS.length values)
-                        (BS.length utf16beEncoded)
+          sayComparisonF
+            (ctx object)
+            "Hex string optimization (UTF-16BE)"
+            (BS.length values)
+            (BS.length utf16beEncoded)
           return $ PDFString utf16beEncoded
     | otherwise -> return object
     where encoded = hexStringToString values
@@ -81,9 +88,11 @@ optimizeString object = case object of
         -- If the PDFHexString is UTF-16 but only contains ASCII characters,
         -- converts it to a PDFString which will be four times shorter.
         Just pdfDocEncoded -> do
-          sayComparisonF "Hex string optimization (PDFDocEncoding)"
-                        (BS.length encoded)
-                        (BS.length pdfDocEncoded)
+          sayComparisonF
+            (ctx object)
+            "Hex string optimization (PDFDocEncoding)"
+            (BS.length encoded)
+            (BS.length pdfDocEncoded)
           return $ PDFString pdfDocEncoded
         Nothing -> return object
     | otherwise -> return object

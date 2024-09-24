@@ -24,6 +24,7 @@ import Pdf.Object.Object
 
 import Util.Logging (Logging, sayF)
 import Util.UnifiedError (FallibleT)
+import Util.Context (Contextual(ctx))
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 type PDFPartition :: Type
@@ -81,23 +82,25 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
 {-# INLINE removeUnused #-}
 removeUnused :: Logging m => PDFPartition -> FallibleT m PDFPartition
 removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers) = do
-  sayF "  - Uncompressing objects with stream"
+  let context = ctx ("removeunused" :: String)
+
+  sayF context "Uncompressing objects with stream"
   uObjectsWithStream <- uncompressObjects objectsWithStream
-  sayF "  - Uncompressing objects without stream"
+  sayF context "Uncompressing objects without stream"
   uObjectsWithoutStream <- uncompressObjects objectsWithoutStream
-  sayF "  - Uncompressing head objects"
+  sayF context "Uncompressing head objects"
   uHeads <- uncompressDocument heads
-  sayF "  - Uncompressing trailer objects"
+  sayF context "Uncompressing trailer objects"
   uTrailers <- uncompressDocument trailers
 
-  sayF "  - Locating all references"
+  sayF context "Locating all references"
   let references =
         deepFind isReference uHeads
           <> deepFind isReference uTrailers
           <> deepFind isReference (toPDFDocument uObjectsWithStream)
           <> deepFind isReference (toPDFDocument uObjectsWithoutStream)
 
-  sayF "  - Removing unused objects"
+  sayF context "Removing unused objects"
 
   return $ PDFPartition
     { ppObjectsWithStream    = IM.filter (used references) objectsWithStream

@@ -13,6 +13,7 @@ import Pdf.Graphics.Object
 import Pdf.Graphics.Parser.Stream (gfxParse)
 
 import Util.Array (Array)
+import Util.Context (Context)
 import Util.Logging (Logging, sayComparisonF, sayF)
 import Util.UnifiedError (FallibleT)
 
@@ -158,8 +159,12 @@ optimizeCommands = snd . foldl optimizeWithState mempty
       , optimizeds SQ.|> optimizeCommand (getState stack) cmd
       )
 
-optimizeGFX :: Logging m => BS.ByteString -> FallibleT m BS.ByteString
-optimizeGFX stream = if indices "/CIDInit" stream /= []
+optimizeGFX
+  :: Logging m
+  => Context
+  -> BS.ByteString
+  -> FallibleT m BS.ByteString
+optimizeGFX context stream = if indices "/CIDInit" stream /= []
   then return stream
   else
     case gfxParse stream of
@@ -172,12 +177,14 @@ optimizeGFX stream = if indices "/CIDInit" stream /= []
                             . parseCommands
                             $ objects
 
-        sayComparisonF "GFX stream optimization"
-                        (BS.length stream)
-                        (BS.length optimizedStream)
+        sayComparisonF
+          context
+          "GFX stream optimization"
+          (BS.length stream)
+          (BS.length optimizedStream)
 
         return optimizedStream
 
       _error -> do
-          sayF "  - GFX stream could not be parsed"
+          sayF context "GFX stream could not be parsed"
           return stream

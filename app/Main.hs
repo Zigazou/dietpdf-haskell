@@ -23,6 +23,8 @@ import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString qualified as BS
 
+import External.GSOptimize (gsOptimize)
+
 import Hexdump (Cfg, defaultCfg, prettyHexCfg, startByte)
 
 import Options.Applicative
@@ -44,7 +46,7 @@ import System.IO.Error (isDoesNotExistError)
 import System.IO.Temp (withSystemTempFile)
 import System.Posix (fileSize, getFileStatus)
 
-import External.GSOptimize (gsOptimize)
+import Util.Context (Contextual (ctx))
 import Util.Logging (sayComparisonF)
 import Util.UnifiedError
     ( FallibleT
@@ -101,7 +103,8 @@ runApp (OptimizeOptions inputPDF outputPDF useGS) = do
       originalSize <- lift $ getFileSize inputPDF
       ghostScriptSize <- lift $ getFileSize ghostscriptPDF
 
-      sayComparisonF "GhostScripted PDF" originalSize ghostScriptSize
+      sayComparisonF (ctx ("ghostscript" :: String))
+                     "GhostScripted PDF" originalSize ghostScriptSize
 
       if ghostScriptSize < originalSize then go ghostscriptPDF
                                         else go inputPDF

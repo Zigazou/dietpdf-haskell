@@ -15,6 +15,7 @@ module Pdf.Object.State
   , setMaybe
   , updateValue
   , setStream
+  , setStream1
   , embedObject
   ) where
 
@@ -212,6 +213,20 @@ setStream newStream object = case object of
  where
   newLength :: PDFObject
   newLength = mkPDFNumber . BS.length $ newStream
+
+{- |
+Define the stream part of a `PDFObject` if it has one.
+
+It also updates the Length entry in the associated `Dictionary`.
+
+This function works only on `PDFIndirectObjectStream` and `PDFObjectStream`.
+
+It has no effect on any other `PDFObject`.
+-}
+setStream1 :: Logging m => Int -> BS.ByteString -> PDFObject -> FallibleT m PDFObject
+setStream1 uncompressedLength newStream object =
+  setStream newStream object >>=
+    setValue "Length1" (mkPDFNumber uncompressedLength)
 
 {- |
 Embed an object into a `PDFObject`.

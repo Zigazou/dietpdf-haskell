@@ -12,6 +12,7 @@ import Pdf.Object.Unfilter (unfilter)
 
 import Util.Logging (Logging, sayF)
 import Util.UnifiedError (FallibleT)
+import Util.Context ( ctx)
 
 {- |
 Uncompress all `PDFObject` contained in a `PDFDObjects`.
@@ -26,10 +27,12 @@ uncompressed.
 {-# INLINE uncompressObjects #-}
 uncompressObjects :: Logging m => PDFObjects -> FallibleT m PDFObjects
 uncompressObjects pdf = do
-  sayF "  - Extracting objects from object streams"
+  let context = ctx ("uncompressobjects" :: String)
+
+  sayF context "Extracting objects from object streams"
   objects <- explodeObjects pdf
 
-  sayF "  - Unfiltering all objects"
+  sayF context "Unfiltering all objects"
   mapM unfilter objects
 
 {- |
@@ -45,8 +48,9 @@ uncompressed.
 {-# INLINE uncompressDocument #-}
 uncompressDocument :: Logging m => PDFDocument -> FallibleT m PDFDocument
 uncompressDocument pdf = do
-  sayF "  - Extracting objects from object streams"
+  let context = ctx ("uncompressdocument" :: String)
+  sayF context "Extracting objects from object streams"
   objects <- explodeDocument pdf <&> toList
 
-  sayF "  - Unfiltering all objects"
+  sayF context "Unfiltering all objects"
   fromList <$> mapM unfilter objects

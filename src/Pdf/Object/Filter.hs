@@ -43,23 +43,31 @@ import Pdf.Object.OptimizationType
 import Pdf.Object.State (getStream, getValue, setStream)
 
 import Util.Array (mkArray)
+import Util.Context (Context, Contextual (ctx))
 import Util.Logging (Logging, sayComparisonF)
 import Util.UnifiedError (FallibleT)
 
 filterInfo
-  :: Logging m => T.Text -> BS.ByteString -> BS.ByteString -> FallibleT m ()
-filterInfo filterName streamBefore streamAfter = sayComparisonF
-  ("Filter " <> filterName)
-  (BS.length streamBefore)
-  (BS.length streamAfter)
+  :: Logging m
+  => Context
+  -> T.Text
+  -> BS.ByteString
+  -> BS.ByteString
+  -> FallibleT m ()
+filterInfo context filterName streamBefore streamAfter =
+  sayComparisonF context
+                 ("filter " <> filterName)
+                 (BS.length streamBefore)
+                 (BS.length streamAfter)
 
 applyEveryFilterGeneric
   :: Logging IO
-  => Maybe (Int, Int)
+  => Context
+  -> Maybe (Int, Int)
   -> BS.ByteString
   -> FallibleT IO [FilterCombination]
 -- The stream has width and components information.
-applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
+applyEveryFilterGeneric context widthComponents@(Just (width, components)) stream = do
   let rNothing = mkFCAppend [] stream
       jpeg2kParameters =
         Just ( width
@@ -74,51 +82,51 @@ applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
   rJpeg2k <- if components /= 4
     then do
       rJpeg2k' <- jpeg2k jpeg2kParameters stream
-      filterInfo "JPEG2000" stream (fcBytes rJpeg2k')
+      filterInfo context "JPEG2000" stream (fcBytes rJpeg2k')
 
       return [rJpeg2k']
     else
       return []
 
   rRle <- except $ rle widthComponents stream
-  filterInfo "RLE" stream (fcBytes rRle)
+  filterInfo context "RLE" stream (fcBytes rRle)
 
   rZopfli <- except $ zopfli widthComponents stream
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  filterInfo context "Zopfli" stream (fcBytes rZopfli)
 
   rleCombine <- if fcLength rRle < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli widthComponents stream
-      filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
+      filterInfo context "RLE+Zopfli" stream (fcBytes rRleZopfli)
 
       return [rRle, rRleZopfli]
     else
       return []
 
   rPredZopfli <- except $ predZopfli widthComponents stream
-  filterInfo "Predictor/Zopfli" stream (fcBytes rPredZopfli)
+  filterInfo context "Predictor/Zopfli" stream (fcBytes rPredZopfli)
 
   rPredRleZopfli <- except $ predRleZopfli widthComponents stream
-  filterInfo "Predictor/Store+RLE+Zopfli" stream (fcBytes rPredRleZopfli)
+  filterInfo context "Predictor/Store+RLE+Zopfli" stream (fcBytes rPredRleZopfli)
 
   return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli]
         ++ rleCombine
         ++ rJpeg2k
 
 -- The stream has no width nor components information.
-applyEveryFilterGeneric Nothing stream = do
+applyEveryFilterGeneric context Nothing stream = do
   let rNothing = mkFCAppend [] stream
 
   rRle <- except $ rle Nothing stream
-  filterInfo "RLE" stream (fcBytes rRle)
+  filterInfo context "RLE" stream (fcBytes rRle)
 
   rZopfli <- except $ zopfli Nothing stream
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  filterInfo context "Zopfli" stream (fcBytes rZopfli)
 
   if fcLength rRle < BS.length stream
     then do
       rRleZopfli <- except $ rleZopfli Nothing stream
-      filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
+      filterInfo context "RLE+Zopfli" stream (fcBytes rRleZopfli)
 
       return [rNothing, rRle, rZopfli, rRleZopfli]
     else
@@ -126,15 +134,16 @@ applyEveryFilterGeneric Nothing stream = do
 
 applyEveryFilterJPG
   :: Logging IO
-  => Maybe (Int, Int)
+  => Context
+  -> Maybe (Int, Int)
   -> BS.ByteString
   -> FallibleT IO [FilterCombination]
 -- The stream has width and components information.
-applyEveryFilterJPG (Just (_width, components)) stream = do
+applyEveryFilterJPG context (Just (_width, components)) stream = do
   let rNothing = mkFCAppend [] stream
 
   rZopfli <- except $ zopfli Nothing stream
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  filterInfo context "Zopfli" stream (fcBytes rZopfli)
 
   -- Try Jpeg2000 for images with less than 4 components.
   rJpeg2k <- if components /= 4
@@ -142,36 +151,37 @@ applyEveryFilterJPG (Just (_width, components)) stream = do
       rJpeg2k' <- jpegToJpeg2k 15 stream
                   <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
 
-      filterInfo "JPEG2000" stream (fcBytes rJpeg2k')
+      filterInfo context "JPEG2000" stream (fcBytes rJpeg2k')
       return [rJpeg2k']
     else
       return []
 
   return $ [rNothing, rZopfli] ++ rJpeg2k
 
-applyEveryFilterJPG Nothing stream = do
+applyEveryFilterJPG context Nothing stream = do
   let rNothing = mkFCAppend [] stream
 
   rZopfli <- except $ zopfli Nothing stream
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  filterInfo context "Zopfli" stream (fcBytes rZopfli)
 
   return [rNothing, rZopfli]
 
 applyEveryFilterXRef
   :: Logging m
-  => Maybe (Int, Int)
+  => Context
+  -> Maybe (Int, Int)
   -> BS.ByteString
   -> FallibleT m [FilterCombination]
 -- The stream has width and components information.
-applyEveryFilterXRef widthComponents@(Just (_width, _components)) stream = do
+applyEveryFilterXRef context widthComponents@(Just (_width, _components)) stream = do
   rPredZopfli <- except $ predZopfli widthComponents stream
-  filterInfo "Predictor+Zopfli" stream (fcBytes rPredZopfli)
+  filterInfo context "Predictor+Zopfli" stream (fcBytes rPredZopfli)
   return [rPredZopfli]
-applyEveryFilterXRef Nothing stream = do
+applyEveryFilterXRef context Nothing stream = do
   let rNothing = mkFCAppend [] stream
 
   rZopfli <- except $ zopfli Nothing stream
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  filterInfo context "Zopfli" stream (fcBytes rZopfli)
   return [rNothing, rZopfli]
 
 getWidthComponents :: Logging m => PDFObject -> FallibleT m (Maybe (Int, Int))
@@ -208,7 +218,8 @@ filterOptimize optimization object = if hasStream object
                             XRefStreamOptimization -> applyEveryFilterXRef
                             _anyOtherOptimization  -> applyEveryFilterGeneric
 
-    candidates <- applyEveryFilter widthComponents stream <&> mkArray
+    candidates <- applyEveryFilter (ctx object) widthComponents stream
+              <&> mkArray
 
     let
       original      = FilterCombination filters stream True

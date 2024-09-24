@@ -6,14 +6,18 @@ module Pdf.Document.Encode
   , encodeObject
   ) where
 
+import Control.Concurrent.Async (mapConcurrently)
 import Control.Monad (when)
-import Control.Monad.Trans.Except (runExcept, throwE)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Except (runExcept, runExceptT, throwE)
 
 import Data.ByteString qualified as BS
 import Data.IntMap qualified as IM
 import Data.Map.Strict qualified as Map
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
+
+import GHC.IO.Handle (BufferMode (LineBuffering))
 
 import Pdf.Document.Document (PDFDocument, cFilter, fromList, singleton)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
@@ -23,7 +27,7 @@ import Pdf.Document.Partition
     , lastTrailer
     , removeUnused
     )
-import Pdf.Document.PDFObjects (findLast, fromPDFDocument)
+import Pdf.Document.PDFObjects (PDFObjects, findLast, fromPDFDocument)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)
 import Pdf.Object.Object.PDFObject
@@ -40,6 +44,9 @@ import Pdf.Object.Object.Properties
 import Pdf.Object.Optimize (optimize)
 import Pdf.Object.State (getValue, setMaybe)
 
+import System.IO (hSetBuffering, stderr)
+
+import Util.Context (Contextual (ctx))
 import Util.Dictionary (mkDictionary)
 import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Util.Sequence (mapMaybe)
@@ -129,6 +136,11 @@ objectToEmbed object = isIndirect object && not (hasStream object)
 objectWithContent :: PDFObject -> Bool
 objectWithContent object = hasStream object && not (isTrailer object)
 
+concurrentOptimize :: Logging IO => PDFObjects -> FallibleT IO PDFObjects
+concurrentOptimize objects =
+  liftIO (mapConcurrently (runExceptT . optimize) objects)
+    >>= either throwE return . sequence
+
 {-|
 Given a list of PDF objects, generate the PDF file content.
 
@@ -149,7 +161,8 @@ pdfEncode objects = do
   -- Extract objects embedded in object streams
   allObjects <- explodeDocument objects
 
-  let partition = PDFPartition
+  let context = ctx ("encode" :: String)
+      partition = PDFPartition
         { ppObjectsWithStream =
             fromPDFDocument $ cFilter objectWithContent allObjects
         , ppObjectsWithoutStream =
@@ -161,71 +174,67 @@ pdfEncode objects = do
       pdfHead = fromPDFObject (PDFVersion "1.7")
       pdfEnd  = fromPDFObject PDFEndOfFile
 
-  sayF "Starting discovery"
-
   when (null (ppObjectsWithStream partition) && null (ppObjectsWithoutStream partition)) $ do
-    sayF "Indirect objects not found"
+    sayF context "Indirect objects not found"
     throwE EncodeNoIndirectObject
 
   let withStreamCount = IM.size (ppObjectsWithStream partition)
       withoutStreamCount = IM.size (ppObjectsWithoutStream partition)
 
-  sayF $ T.concat ["Indirect object with stream: ", T.pack (show withStreamCount)]
-  sayF $ T.concat ["Indirect object without stream: ", T.pack (show withoutStreamCount)]
+  sayF context $ T.concat ["Indirect object with stream: ", T.pack (show withStreamCount)]
+  sayF context $ T.concat ["Indirect object without stream: ", T.pack (show withoutStreamCount)]
 
   when (null $ ppHeads partition) $ do
-    sayF "Version not found"
+    sayF context "Version not found"
     throwE EncodeNoVersion
-
-  sayF "Version found"
 
   let pdfTrailer = getTrailer partition
 
   when (pdfTrailer == PDFTrailer PDFNull) $ do
-    sayF "Trailer not found"
+    sayF context "Trailer not found"
     throwE EncodeNoTrailer
 
-  sayF "Trailer found"
+  sayF context "Optimizing PDF"
 
-  sayF "Optimizing PDF"
+  _ <- liftIO $ hSetBuffering stderr LineBuffering
 
-  oObjectsWithStream <- mapM optimize (ppObjectsWithStream partition)
-  oObjectsWithoutStream <- mapM optimize (ppObjectsWithoutStream partition)
+  oObjectsWithStream    <- concurrentOptimize (ppObjectsWithStream partition)
+  oObjectsWithoutStream <- concurrentOptimize (ppObjectsWithoutStream partition)
   let oPartition = partition { ppObjectsWithStream    = oObjectsWithStream
                              , ppObjectsWithoutStream = oObjectsWithoutStream
                              , ppTrailers             = singleton pdfTrailer
                              }
 
-  sayF "Last cleaning"
+  sayF context "Last cleaning"
   cleaned <- tryF (removeUnused oPartition) >>= \case
     Right unusedRemoved -> do
       let allCount = IM.size (ppObjectsWithStream partition)
                    + IM.size (ppObjectsWithoutStream partition)
           usedCount = IM.size (ppObjectsWithStream unusedRemoved)
                     + IM.size (ppObjectsWithoutStream unusedRemoved)
-      sayComparisonF "Unused objects removal" allCount usedCount
+      sayComparisonF context "Unused objects removal" allCount usedCount
       return unusedRemoved
     Left theError -> do
-      sayErrorF "Unable to remove unused objects" theError
+      sayErrorF context "Unable to remove unused objects" theError
       return oPartition
 
-  sayF "Calculating last object number"
+  sayF context "Calculating last object number"
   let
     lastObjectNumber = max (fst . IM.findMax $ ppObjectsWithStream cleaned)
                            (fst . IM.findMax $ ppObjectsWithoutStream cleaned)
 
-  sayF "Grouping objects without stream"
+  sayF context "Grouping objects without stream"
   let objectsWithoutStream = fromList $ snd <$> IM.toList (ppObjectsWithoutStream cleaned)
   objectStream <- insert objectsWithoutStream (lastObjectNumber + 1)
 
-  sayF "Encoding PDF"
+  sayF context "Encoding PDF"
   encodedObjStm <- optimize objectStream >>= encodeObject
   encodedStreams <- mapM encodeObject (ppObjectsWithStream cleaned)
   let
     encodedAll = IM.insert (lastObjectNumber + 1) encodedObjStm encodedStreams
     body = BS.concat $ eoBinaryData . snd <$> IM.toAscList encodedAll
 
-  sayF "Optimize XRef stream table"
+  sayF context "Optimize XRef stream table"
   xref <- do
     let
       xrefst = xrefStreamTable (lastObjectNumber + 2)
@@ -239,6 +248,6 @@ pdfEncode objects = do
     xRefStmOffset = BS.length pdfHead + BS.length body
     startxref = fromPDFObject (PDFStartXRef xRefStmOffset)
 
-  sayF "PDF has been optimized!"
+  sayF context "PDF has been optimized!"
 
   return $ BS.concat [pdfHead, body, encodedXRef, startxref, pdfEnd]

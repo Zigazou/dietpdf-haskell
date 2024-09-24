@@ -19,32 +19,44 @@ import Fmt (commaizeF, fixedF, padLeftF, padRightF, (+|), (|+))
 import System.IO (stderr)
 
 import Util.UnifiedError (UnifiedError)
+import Util.Context (Context(Context, NoContext))
 
 type Logging :: (Type -> Type) -> Constraint
 class Monad m => Logging m where
-  say :: T.Text -> m ()
+  say :: Context -> T.Text -> m ()
 
+-- This instance does not use the hPutStrLn function to ensure the output is
+-- sent in a single write operation. This allows multiple threads to write to
+-- the same handle without interleaving their output.
 instance Logging IO where
-  say :: T.Text -> IO ()
-  say = TIO.hPutStrLn stderr
+  say :: Context -> T.Text -> IO ()
+  say (Context intro) message = TIO.hPutStr stderr (T.concat [intro, ": ", message, "\n"])
+  say NoContext message = TIO.hPutStr stderr (T.concat [message, "\n"])
 
 instance Logging Identity where
-  say :: T.Text -> Identity ()
-  say _ = return ()
+  say :: Context -> T.Text -> Identity ()
+  say _ _ = return ()
 
 instance Logging (Writer [T.Text]) where
-  say :: T.Text -> Writer [T.Text] ()
-  say = void . tell . return
+  say :: Context -> T.Text -> Writer [T.Text] ()
+  say (Context intro) message = (void . tell . return) (T.concat [intro, ": ", message])
+  say NoContext message = (void . tell . return) message
 
 {-# INLINE sayF #-}
-sayF :: (Logging m, MonadTrans t) => T.Text -> t m ()
-sayF = lift . say
+sayF :: (Logging m, MonadTrans t) => Context -> T.Text -> t m ()
+sayF mIntro = lift . say mIntro
 
 {-# INLINE sayComparisonF #-}
-sayComparisonF :: (Logging m, MonadTrans t) => T.Text -> Int -> Int -> t m ()
-sayComparisonF label sizeBefore sizeAfter = sayF
-  (  "  - "
-  +| padRightF 36 ' ' label
+sayComparisonF
+  :: (Logging m, MonadTrans t)
+  => Context
+  -> T.Text
+  -> Int
+  -> Int
+  -> t m ()
+sayComparisonF intro label sizeBefore sizeAfter = sayF
+  intro
+  (  padRightF 36 ' ' label
   |+ " "
   +| padLeftF 12 ' ' (commaizeF sizeBefore)
   |+ " -> "
@@ -61,6 +73,6 @@ sayComparisonF label sizeBefore sizeAfter = sayF
           in  if sizeBefore == 0 then 0 else ratio'
 
 {-# INLINE sayErrorF #-}
-sayErrorF :: (Logging m, MonadTrans t) => T.Text -> UnifiedError -> t m ()
-sayErrorF label theError =
-  sayF ("  - " +| padRightF 32 ' ' label |+ " " +| T.pack (show theError) |+ "")
+sayErrorF :: (Logging m, MonadTrans t) => Context -> T.Text -> UnifiedError -> t m ()
+sayErrorF intro label theError =
+  sayF intro (padRightF 32 ' ' label |+ " " +| T.pack (show theError) |+ "")

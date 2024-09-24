@@ -12,6 +12,7 @@ import Pdf.Document.Document (PDFDocument, toList)
 import Pdf.Object.Object (PDFObject (PDFIndirectObjectWithStream))
 import Pdf.Object.Signature (streamHash)
 
+import Util.Context (ctx)
 import Util.Logging (sayF)
 import Util.UnifiedError (FallibleT)
 
@@ -43,10 +44,11 @@ objectHashes document = do
   printHashForObject
     :: ObjectHash -> Set ObjectHash -> FallibleT IO (Set ObjectHash)
   printHashForObject oHash@(ObjectHash number hash) hashFound =
-    if member oHash hashFound
+    let context = ctx ("objecthashes" :: String)
+    in if member oHash hashFound
       then do
-        sayF $ T.concat [hash, "\t", T.pack (show number), " duplicate!"]
+        sayF context $ T.concat [hash, "\t", T.pack (show number), " duplicate!"]
         return hashFound
       else do
-        sayF $ T.concat [hash, "\t", T.pack (show number)]
+        sayF context $ T.concat [hash, "\t", T.pack (show number)]
         return (insert oHash hashFound)

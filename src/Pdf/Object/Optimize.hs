@@ -16,7 +16,6 @@ import External.TtfAutoHint (ttfAutoHintOptimize)
 import Pdf.Graphics.Optimize (optimizeGFX)
 import Pdf.Object.Container (Filter (fFilter), deepMap, getFilters)
 import Pdf.Object.Filter (filterOptimize)
-import Pdf.Object.Format (txtObjectNumberVersion)
 import Pdf.Object.Object
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
     , hasStream
@@ -25,46 +24,52 @@ import Pdf.Object.OptimizationType
     ( OptimizationType (GfxOptimization, JPGOptimization, TTFOptimization, XMLOptimization)
     , whatOptimizationFor
     )
-import Pdf.Object.State (getStream, setStream)
+import Pdf.Object.State (getStream, setStream, setStream1)
 import Pdf.Object.String (optimizeString)
 import Pdf.Object.Unfilter (unfilter)
 
+import Util.Context (Contextual (ctx))
 import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Util.UnifiedError (FallibleT, ifFail)
 
 streamOptimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
-streamOptimize object = whatOptimizationFor object >>= \case
-  XMLOptimization -> do
-    stream <- getStream object
-    let optimizedStream = optimizeXML stream
-    sayComparisonF "XML stream optimization"
-                   (BS.length stream)
-                   (BS.length optimizedStream)
-    setStream optimizedStream object
+streamOptimize object =
+  let context = ctx object
+  in whatOptimizationFor object >>= \case
+    XMLOptimization -> do
+      stream <- getStream object
+      let optimizedStream = optimizeXML stream
+      sayComparisonF context
+                    "XML stream optimization"
+                    (BS.length stream)
+                    (BS.length optimizedStream)
+      setStream optimizedStream object
 
-  GfxOptimization -> do
-    stream <- getStream object >>= optimizeGFX
-    setStream stream object
+    GfxOptimization -> do
+      stream <- getStream object >>= optimizeGFX context
+      setStream stream object
 
-  JPGOptimization -> do
-    stream <- getStream object
-    optimizedStream <- jpegtranOptimize stream
-    sayComparisonF "JPG stream optimization"
-                (BS.length stream)
-                (BS.length optimizedStream)
+    JPGOptimization -> do
+      stream <- getStream object
+      optimizedStream <- jpegtranOptimize stream
+      sayComparisonF context
+                    "JPG stream optimization"
+                    (BS.length stream)
+                    (BS.length optimizedStream)
 
-    setStream optimizedStream object
+      setStream optimizedStream object
 
-  TTFOptimization -> do
-    stream <- getStream object
-    optimizedStream <- ttfAutoHintOptimize stream
-    sayComparisonF "TTF stream optimization"
-                (BS.length stream)
-                (BS.length optimizedStream)
+    TTFOptimization -> do
+      stream <- getStream object
+      optimizedStream <- ttfAutoHintOptimize stream
+      sayComparisonF context
+                    "TTF stream optimization"
+                    (BS.length stream)
+                    (BS.length optimizedStream)
 
-    setStream optimizedStream object
+      setStream1 (BS.length optimizedStream) optimizedStream object
 
-  _anyOtherOptimization -> return object
+    _anyOtherOptimization -> return object
 
 {- |
 Completely refilter a stream by finding the best filter combination.
@@ -78,7 +83,9 @@ refilter object = do
   if hasStream object
     then do
       optimization <- whatOptimizationFor object
-      unfilter stringOptimized >>= streamOptimize >>= filterOptimize optimization
+      unfilter stringOptimized
+        >>= streamOptimize
+        >>= filterOptimize optimization
     else return stringOptimized
 
 isFilterOK :: Filter -> Bool
@@ -127,10 +134,10 @@ ineffective, it is returned as is.
 {-# INLINE optimize #-}
 optimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
 optimize object = optimizable object >>= \case
-  True -> do
-    sayF (txtObjectNumberVersion object)
-    ifFail (refilter object)
-           (\theError -> sayErrorF "Cannot optimize" theError >> return object)
+  True -> refilter object
+    `ifFail` (\theError -> sayErrorF (ctx object) "cannot optimize" theError
+                        >> return object
+             )
   False -> do
-    sayF (txtObjectNumberVersion object <> ": ignored")
+    sayF (ctx object) "ignored"
     return object

@@ -40,6 +40,7 @@ import Pdf.Graphics.Object (GFXObject)
 import Pdf.Object.Object.XRefSubsection (XRefSubsection)
 
 import Util.Array (Array, mkArray, mkEmptyArray)
+import Util.Context (Context (Context), Contextual (ctx), ctx2, ctx3, ctx4)
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
 
 {-|
@@ -195,3 +196,28 @@ instance Ord PDFObject where
   compare (PDFTrailer   x) (PDFTrailer   y) = compare x y
   compare (PDFStartXRef x) (PDFStartXRef y) = compare x y
   compare objectA objectB = compare (objectRank objectA) (objectRank objectB)
+
+instance Contextual PDFObject where
+  ctx :: PDFObject -> Context
+  ctx (PDFComment _)                              = Context "com"
+  ctx (PDFVersion _)                              = Context "ver"
+  ctx PDFNull                                     = Context "null"
+  ctx (PDFBool True)                              = Context "true"
+  ctx (PDFBool False)                             = Context "false"
+  ctx (PDFNumber value)                           = ctx value
+  ctx (PDFKeyword name)                           = ctx2 '*' name
+  ctx (PDFName name)                              = ctx2 '/' name
+  ctx (PDFString _)                               = Context "str"
+  ctx (PDFHexString _)                            = Context "hex"
+  ctx (PDFReference num ver)                      = ctx4 '@' num '.' ver
+  ctx (PDFArray _)                                = Context "array"
+  ctx (PDFDictionary _)                           = Context "dict"
+  ctx (PDFIndirectObject num ver _)               = ctx3 num '.' ver
+  ctx (PDFIndirectObjectWithStream num ver _ _)   = ctx3 num '.' ver
+  ctx (PDFIndirectObjectWithGraphics num ver _ _) = ctx3 num '.' ver
+  ctx (PDFObjectStream num ver _ _)               = ctx3 num '.' ver
+  ctx (PDFXRefStream num ver _ _)                 = ctx3 num '.' ver
+  ctx (PDFXRef      _)                            = Context "xref"
+  ctx (PDFTrailer   _)                            = Context "trail"
+  ctx (PDFStartXRef _)                            = Context "startxref"
+  ctx PDFEndOfFile                                = Context "eof"
