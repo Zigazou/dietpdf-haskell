@@ -25,7 +25,6 @@ import Data.Binary.Parser (Get, label, skipWhile, string)
 
 import Pdf.Object.Object (PDFObject (PDFTrailer), isWhiteSpace)
 import Pdf.Object.Parser.Container (dictionaryP)
-import Pdf.Object.Parser.LooseEndOfLine (looseEndOfLineP)
 
 {- |
 Parse a `PDFTrailer`.
@@ -33,6 +32,5 @@ Parse a `PDFTrailer`.
 trailerP :: Get PDFObject
 trailerP = label "xref" $ do
   string "trailer"
-  looseEndOfLineP
   skipWhile isWhiteSpace
   PDFTrailer <$> dictionaryP
