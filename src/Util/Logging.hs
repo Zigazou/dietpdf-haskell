@@ -16,7 +16,7 @@ import Data.Text.IO qualified as TIO
 
 import Fmt (commaizeF, fixedF, padLeftF, padRightF, (+|), (|+))
 
-import System.IO (stderr)
+import System.IO (stderr, hFlush)
 
 import Util.UnifiedError (UnifiedError)
 import Util.Context (Context(Context, NoContext))
@@ -30,8 +30,12 @@ class Monad m => Logging m where
 -- the same handle without interleaving their output.
 instance Logging IO where
   say :: Context -> T.Text -> IO ()
-  say (Context intro) message = TIO.hPutStr stderr (T.concat [intro, ": ", message, "\n"])
-  say NoContext message = TIO.hPutStr stderr (T.concat [message, "\n"])
+  say (Context intro) message = do
+    TIO.hPutStr stderr (T.concat [intro, ": ", message, "\n"])
+    hFlush stderr
+  say NoContext message = do
+    TIO.hPutStr stderr (T.concat [message, "\n"])
+    hFlush stderr
 
 instance Logging Identity where
   say :: Context -> T.Text -> Identity ()
