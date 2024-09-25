@@ -40,7 +40,8 @@ PDF file.
 -}
 fromPDFObject :: PDFObject -> BS.ByteString
 fromPDFObject (PDFComment comment)     = BS.concat ["%", comment, "\n"]
-fromPDFObject (PDFVersion version)     = BS.concat ["%PDF-", version, "\n"]
+fromPDFObject (PDFVersion version)     =
+  BS.concat ["%PDF-", version, "\n%\xc0\xca\xc0\xda\n"]
 fromPDFObject PDFEndOfFile             = "%%EOF\n"
 fromPDFObject (PDFNumber    number   ) = fromNumber number
 fromPDFObject (PDFKeyword   keyword  ) = keyword
@@ -87,11 +88,9 @@ fromIndirectObject number revision object = BS.concat
   [ BSU.fromString (show number)
   , " "
   , BSU.fromString (show revision)
-  , " obj"
-  , spaceIfNeeded (PDFKeyword "obj") object
+  , " obj\n"
   , fromPDFObject object
-  , spaceIfNeeded object (PDFKeyword "endobj")
-  , "endobj\n"
+  , "\nendobj\n"
   ]
 
 fromIndirectObjectWithStream
@@ -100,14 +99,13 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   [ BSU.fromString (show number)
   , " "
   , BSU.fromString (show revision)
-  , " obj"
-  , spaceIfNeeded (PDFKeyword "obj") mkEmptyPDFDictionary
+  , " obj\n"
   , fromDictionary dict
   , spaceIfNeeded mkEmptyPDFDictionary (PDFKeyword "stream")
   , "stream\n"
   , stream
   , "endstream"
-  , " endobj\n"
+  , "\nendobj\n"
   ]
 
 fromIndirectObjectWithGraphics
@@ -116,12 +114,11 @@ fromIndirectObjectWithGraphics number revision dict gfx = BS.concat
   [ BSU.fromString (show number)
   , " "
   , BSU.fromString (show revision)
-  , " obj"
-  , spaceIfNeeded (PDFKeyword "obj") mkEmptyPDFDictionary
+  , " obj\n"
   , fromDictionary dict
   , spaceIfNeeded mkEmptyPDFDictionary (PDFKeyword "stream")
   , "stream\n"
   , separateGfx gfx
   , "endstream"
-  , " endobj\n"
+  , "\nendobj\n"
   ]
