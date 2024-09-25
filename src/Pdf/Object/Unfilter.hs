@@ -7,7 +7,8 @@ module Pdf.Object.Unfilter
 
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.LZW qualified as LZ
-import Codec.Compression.Predictor (Predictor, toPredictor, unpredict)
+import Codec.Compression.Predict (Predictor, unpredict)
+import Codec.Compression.Predict.Predictor (decodePredictor)
 import Codec.Compression.RunLength qualified as RL
 import Codec.Filter.Ascii85 qualified as A8
 import Codec.Filter.AsciiHex qualified as AH
@@ -36,7 +37,7 @@ import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 getPredictor :: PDFObject -> Either UnifiedError Predictor
 getPredictor params = case runExcept (getValue "Predictor" params) of
-  Right (Just (PDFNumber value)) -> toPredictor . round $ value
+  Right (Just (PDFNumber value)) -> decodePredictor . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
 getColumns :: PDFObject -> Either UnifiedError Int

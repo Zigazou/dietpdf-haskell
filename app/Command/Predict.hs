@@ -2,8 +2,8 @@ module Command.Predict
   ( predictByteString
   ) where
 
-import Codec.Compression.Predictor
-    ( EntropyType (EntropyShannon)
+import Codec.Compression.Predict
+    ( Entropy (EntropyShannon)
     , Predictor
     , predict
     )

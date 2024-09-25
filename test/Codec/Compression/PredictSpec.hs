@@ -1,14 +1,14 @@
-module Codec.Compression.PredictorSpec
+module Codec.Compression.PredictSpec
   ( spec
   ) where
 
-import Codec.Compression.Predictor
-    ( EntropyType (EntropyShannon)
+import Codec.Compression.Predict
+    ( Entropy (EntropyShannon)
     , Predictor (PNGAverage, PNGNone, PNGSub, PNGUp, TIFFNoPrediction)
-    , entropyShannon
     , predict
     , unpredict
     )
+import Codec.Compression.Predict.Entropy (entropyShannon)
 
 import Control.Monad (forM_)
 

@@ -15,7 +15,7 @@ import Test.Hspec (Spec, describe, it, shouldBe)
 
 indirectObjectExamples :: [(PDFObject, BS.ByteString)]
 indirectObjectExamples =
-  [(PDFIndirectObject 1 0 (PDFNumber 1.0), "1 0 obj 1 endobj\n")]
+  [(PDFIndirectObject 1 0 (PDFNumber 1.0), "1 0 obj\n1\nendobj\n")]
 
 spec :: Spec
 spec =

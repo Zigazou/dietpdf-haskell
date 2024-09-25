@@ -13,7 +13,7 @@ module AppOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
   ) where
 
-import Codec.Compression.Predictor (Predictor)
+import Codec.Compression.Predict (Predictor)
 
 import Data.Kind (Type)
 

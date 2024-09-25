@@ -2,8 +2,8 @@ module Pdf.Object.FilterCombine.PredLzw
   ( predLzw
   ) where
 import Codec.Compression.LZW qualified as LZW
-import Codec.Compression.Predictor
-    ( EntropyType (EntropyDeflate, EntropyShannon)
+import Codec.Compression.Predict
+    ( Entropy (EntropyDeflate, EntropyShannon)
     , Predictor (PNGOptimum)
     , predict
     )

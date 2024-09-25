@@ -2,7 +2,7 @@ module Command.Unpredict
   ( unpredictByteString
   ) where
 
-import Codec.Compression.Predictor (Predictor, unpredict)
+import Codec.Compression.Predict (Predictor, unpredict)
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)

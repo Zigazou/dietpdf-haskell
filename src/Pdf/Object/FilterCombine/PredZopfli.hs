@@ -3,8 +3,8 @@ module Pdf.Object.FilterCombine.PredZopfli
   ) where
 
 import Codec.Compression.Flate qualified as FL
-import Codec.Compression.Predictor
-    ( EntropyType (EntropyDeflate, EntropyShannon)
+import Codec.Compression.Predict
+    ( Entropy (EntropyDeflate, EntropyShannon)
     , Predictor (PNGOptimum, TIFFPredictor2)
     , predict
     )
