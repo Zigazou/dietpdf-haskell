@@ -3,6 +3,7 @@ module Command.Info
   ) where
 
 import Data.Context (ctx)
+import Data.Logging (sayF)
 import Data.Text.Lazy qualified as T
 import Data.UnifiedError (FallibleT)
 
@@ -10,8 +11,6 @@ import Formatting (format, int, (%))
 
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Object.Object (objectInfo)
-
-import Data.Logging (sayF)
 
 showInfo :: PDFDocument -> FallibleT IO ()
 showInfo document = do
