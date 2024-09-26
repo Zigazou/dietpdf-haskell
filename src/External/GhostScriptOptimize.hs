@@ -50,6 +50,7 @@ gsOptions =
   , ("d", "CompatibilityLevel", "1.7")            -- PDF compatibility level
   , ("d", "ConvertCMYKImagesToRGB", "false")      -- keep CMYK images
   , ("d", "MaxInlineImageSize", "0")              -- disable inline images
+  , ("r", "300", "")                              -- resolution
   , ("d", "JPEGQ", "100")                         -- limit JPEG deterioration
   , ("d", "QUIET", "")                            -- quiet mode
   , ("d", "SAFER", "")                            -- safe mode
