@@ -15,6 +15,7 @@ module Font.TrueType.FontDirectory
   , calcTableChecksum
   ) where
 
+import Data.Array (Array)
 import Data.Binary (Word16, Word32)
 import Data.Binary.Parser (getWord32be, many', parseOnly)
 import Data.Bits (shiftL)
@@ -30,8 +31,6 @@ import Font.TrueType.FontTable
 import Font.TrueType.Parser.Head (headP)
 import Font.TrueType.ScalerType (ScalerType)
 import Font.TrueType.TableIdentifier (TableIdentifier (RTTFontHeader))
-
-import Util.Array (Array)
 
 calcChecksum :: BS.ByteString -> Word32
 calcChecksum raw =

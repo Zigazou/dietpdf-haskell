@@ -27,8 +27,8 @@ module Codec.Compression.Predict.ImageStream
 import Codec.Compression.Predict.Entropy (Entropy)
 import Codec.Compression.Predict.Predictor
     ( Predictor (TIFFNoPrediction)
-    , isPNGGroup
     , encodeRowPredictor
+    , isPNGGroup
     )
 import Codec.Compression.Predict.Scanline
     ( Scanline (Scanline)
@@ -40,9 +40,9 @@ import Codec.Compression.Predict.Scanline
 
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
+import Data.UnifiedError (UnifiedError)
 
 import Util.ByteString (groupComponents, separateComponents, splitRaw)
-import Util.UnifiedError (UnifiedError)
 
 {-|
 An image stream is a structure holding samples from an image stream while

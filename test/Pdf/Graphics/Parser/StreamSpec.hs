@@ -4,6 +4,7 @@ module Pdf.Graphics.Parser.StreamSpec
 
 import Control.Monad (forM_)
 
+import Data.Array (Array, mkArray)
 import Data.ByteString qualified as BS
 
 import Pdf.Graphics.Object
@@ -15,7 +16,6 @@ import Pdf.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-import Util.Array (Array, mkArray)
 import Util.Dictionary (mkDictionary)
 
 streamExamples :: [(BS.ByteString, Array GFXObject)]

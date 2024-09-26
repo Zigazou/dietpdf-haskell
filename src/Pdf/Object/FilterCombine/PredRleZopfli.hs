@@ -12,6 +12,7 @@ import Codec.Compression.RunLength qualified as RL
 
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
+import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import Pdf.Object.Container (Filter (Filter))
 import Pdf.Object.FilterCombine.FilterCombination
@@ -23,8 +24,6 @@ import Pdf.Object.Object
     , mkPDFDictionary
     , mkPDFNumber
     )
-
-import Util.UnifiedError (UnifiedError (InvalidFilterParm))
 
 predRleZopfli
   :: Maybe (Int, Int)

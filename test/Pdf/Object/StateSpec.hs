@@ -5,7 +5,9 @@ module Pdf.Object.StateSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
+import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
+import Data.UnifiedError (FallibleT)
 
 import Pdf.Object.Object
     ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream)
@@ -19,8 +21,6 @@ import Pdf.Object.State (embedObject, setMaybe, setStream)
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.Dictionary (mkDictionary, mkEmptyDictionary)
-import Util.Logging (Logging)
-import Util.UnifiedError (FallibleT)
 
 setMaybeExamples
   :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]

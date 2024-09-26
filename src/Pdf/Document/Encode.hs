@@ -12,10 +12,17 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (runExcept, runExceptT, throwE)
 
 import Data.ByteString qualified as BS
+import Data.Context (Contextual (ctx))
 import Data.IntMap qualified as IM
+import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Map.Strict qualified as Map
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
+import Data.UnifiedError
+    ( FallibleT
+    , UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
+    , tryF
+    )
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
@@ -46,15 +53,8 @@ import Pdf.Object.State (getValue, setMaybe)
 
 import System.IO (hSetBuffering, stderr)
 
-import Util.Context (Contextual (ctx))
 import Util.Dictionary (mkDictionary)
-import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Util.Sequence (mapMaybe)
-import Util.UnifiedError
-    ( FallibleT
-    , UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
-    , tryF
-    )
 
 -- | Encodes a PDF object and keep track of its number and length.
 encodeObject :: Logging m => PDFObject -> FallibleT m EncodedObject

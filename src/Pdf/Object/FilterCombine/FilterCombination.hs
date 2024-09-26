@@ -6,12 +6,11 @@ module Pdf.Object.FilterCombine.FilterCombination
   )
 where
 
+import Data.Array (mkArray)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 
 import Pdf.Object.Container (Filter, FilterList)
-
-import Util.Array (mkArray)
 
 type FilterCombination :: Type
 data FilterCombination = FilterCombination

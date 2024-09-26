@@ -5,7 +5,9 @@ module Pdf.Parser.ParserSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
+import Data.Array (mkArray)
 import Data.ByteString qualified as BS
+import Data.UnifiedError (UnifiedError)
 
 import Pdf.Document.Document (PDFDocument, fromList)
 import Pdf.Document.Parser (pdfParse)
@@ -18,9 +20,7 @@ import Pdf.Object.Object
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-import Util.Array (mkArray)
 import Util.Dictionary (mkDictionary)
-import Util.UnifiedError (UnifiedError)
 
 pdfParseExamples :: [(BS.ByteString, Either UnifiedError PDFDocument)]
 pdfParseExamples =

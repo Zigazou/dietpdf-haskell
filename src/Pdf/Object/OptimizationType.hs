@@ -5,16 +5,15 @@ module Pdf.Object.OptimizationType
 where
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
+import Data.Logging (Logging)
 import Data.Sequence qualified as SQ
+import Data.UnifiedError (FallibleT, tryF)
 
 import Font.TrueType.Parser.Font (ttfParse)
 
 import Pdf.Graphics.Parser.Stream (gfxParse)
 import Pdf.Object.Object (PDFObject (PDFName))
 import Pdf.Object.State (getStream, getValue)
-
-import Util.Logging (Logging)
-import Util.UnifiedError (FallibleT, tryF)
 
 type OptimizationType :: Type
 data OptimizationType = XMLOptimization

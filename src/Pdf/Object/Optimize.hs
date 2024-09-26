@@ -8,7 +8,10 @@ module Pdf.Object.Optimize
 import Codec.Compression.XML (optimizeXML)
 
 import Data.ByteString qualified as BS
+import Data.Context (Contextual (ctx))
+import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Sequence qualified as SQ
+import Data.UnifiedError (FallibleT, ifFail)
 
 import External.JpegTran (jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)
@@ -27,10 +30,6 @@ import Pdf.Object.OptimizationType
 import Pdf.Object.State (getStream, setStream, setStream1)
 import Pdf.Object.String (optimizeString)
 import Pdf.Object.Unfilter (unfilter)
-
-import Util.Context (Contextual (ctx))
-import Util.Logging (Logging, sayComparisonF, sayErrorF, sayF)
-import Util.UnifiedError (FallibleT, ifFail)
 
 streamOptimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
 streamOptimize object =

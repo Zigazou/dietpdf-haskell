@@ -19,17 +19,16 @@ import Control.Monad.Trans.Except (throwE)
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
 import Data.Kind (Type)
+import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
 import Data.Sequence qualified as SQ
+import Data.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 import Pdf.Object.Object
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream)
     , hasDictionary
     )
 import Pdf.Object.State (embedObject, getValue, updateValue)
-
-import Util.Logging (Logging)
-import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 {- |
 Apply a function to any object contained by an object at any level.

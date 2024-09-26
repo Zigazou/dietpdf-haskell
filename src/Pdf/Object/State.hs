@@ -23,7 +23,12 @@ import Control.Monad.Identity (Identity (runIdentity))
 import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString qualified as BS
+import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
+import Data.UnifiedError
+    ( FallibleT
+    , UnifiedError (InvalidObjectToEmbed, NoDictionary, NoStream)
+    )
 
 import Pdf.Object.Object
     ( PDFObject (PDFArray, PDFComment, PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFStartXRef, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
@@ -31,11 +36,6 @@ import Pdf.Object.Object
     )
 
 import Util.Dictionary (Dictionary)
-import Util.Logging (Logging)
-import Util.UnifiedError
-    ( FallibleT
-    , UnifiedError (InvalidObjectToEmbed, NoDictionary, NoStream)
-    )
 
 {- |
 Returns the stream embedded in a `PDFObject`.

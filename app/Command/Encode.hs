@@ -14,8 +14,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
-
-import Util.UnifiedError (FallibleT, UnifiedError)
+import Data.UnifiedError (FallibleT, UnifiedError)
 
 
 manage :: Either UnifiedError BS.ByteString -> FallibleT IO ()

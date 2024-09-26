@@ -6,6 +6,7 @@ import Codec.Compression.Flate qualified as FL
 
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
+import Data.UnifiedError (UnifiedError)
 
 import Pdf.Object.Container (Filter (Filter))
 import Pdf.Object.FilterCombine.FilterCombination
@@ -15,8 +16,6 @@ import Pdf.Object.FilterCombine.FilterCombination
     )
 import Pdf.Object.FilterCombine.Rle (rle)
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
-
-import Util.UnifiedError (UnifiedError)
 
 rleZopfli
   :: Maybe (Int, Int)

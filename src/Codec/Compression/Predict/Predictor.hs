@@ -40,11 +40,10 @@ module Codec.Compression.Predict.Predictor
   ) where
 
 import Data.Kind (Type)
+import Data.UnifiedError (UnifiedError (InvalidPredictor))
 import Data.Word (Word8)
 
 import Pdf.Object.Object (PDFObject (PDFNumber), ToPDFNumber (mkPDFNumber))
-
-import Util.UnifiedError (UnifiedError (InvalidPredictor))
 
 type Predictor :: Type
 data Predictor

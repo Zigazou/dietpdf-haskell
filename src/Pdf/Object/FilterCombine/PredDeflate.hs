@@ -10,6 +10,7 @@ import Codec.Compression.Predict
     )
 
 import Data.ByteString qualified as BS
+import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import Pdf.Object.Container (Filter (Filter))
 import Pdf.Object.FilterCombine.FilterCombination
@@ -17,8 +18,6 @@ import Pdf.Object.FilterCombine.FilterCombination
     , mkFCAppend
     )
 import Pdf.Object.Object (PDFObject (PDFName), mkPDFDictionary, mkPDFNumber)
-
-import Util.UnifiedError (UnifiedError (InvalidFilterParm))
 
 predDeflate
   :: Maybe (Int, Int)

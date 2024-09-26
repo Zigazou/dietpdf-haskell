@@ -34,10 +34,10 @@ import Codec.Compression.Predict.Predictor
     ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction)
     , PredictorFunc
     , Samples (Samples)
-    , isPNGGroup
-    , getPredictorFunction
     , decodeRowPredictor
+    , getPredictorFunction
     , getUnpredictorFunction
+    , isPNGGroup
     )
 import Codec.Compression.RunLength qualified as RLE
 
@@ -45,10 +45,10 @@ import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.List (minimumBy)
 import Data.Maybe (fromMaybe)
+import Data.UnifiedError (UnifiedError)
 import Data.Word (Word8)
 
 import Util.ByteString (groupComponents, separateComponents)
-import Util.UnifiedError (UnifiedError)
 
 {- |
 A `Scanline` is a line of pixels.

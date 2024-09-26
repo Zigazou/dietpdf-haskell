@@ -7,6 +7,10 @@ import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
 import Data.List (find)
+import Data.UnifiedError
+    ( FallibleT
+    , UnifiedError (ObjectNotFound, ObjectStreamNotFound)
+    )
 
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Object.Object
@@ -14,11 +18,6 @@ import Pdf.Object.Object
     )
 import Pdf.Object.State (getStream)
 import Pdf.Object.Unfilter (unfilter)
-
-import Util.UnifiedError
-    ( FallibleT
-    , UnifiedError (ObjectNotFound, ObjectStreamNotFound)
-    )
 
 objectWithNumber :: Int -> PDFObject -> Bool
 objectWithNumber n (PDFIndirectObjectWithStream num _ _ _) = n == num

@@ -4,6 +4,7 @@ module Font.TrueType.Parser.FontSpec
 
 import Control.Monad (forM_)
 
+import Data.Array (mkArray)
 import Data.ByteString qualified as BS
 import Data.Word (Word32)
 
@@ -21,8 +22,6 @@ import Font.TrueType.ScalerType (ScalerType (FontTrueType00010000))
 import Font.TrueType.TableIdentifier (toTableIdentifier)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
-
-import Util.Array (mkArray)
 
 fontExamples :: [(FilePath, FontDirectory)]
 fontExamples =

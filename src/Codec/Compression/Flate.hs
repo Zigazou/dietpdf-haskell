@@ -21,8 +21,7 @@ import Codec.Compression.Zlib.Internal qualified as ZLI
 
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
-
-import Util.UnifiedError (UnifiedError (FlateDecodeError))
+import Data.UnifiedError (UnifiedError (FlateDecodeError))
 
 zopfliCompressOptions :: HL.CompressOptions
 zopfliCompressOptions = HL.CompressOptions { HL.verbose            = HL.NONE

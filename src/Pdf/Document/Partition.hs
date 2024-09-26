@@ -9,22 +9,21 @@ module Pdf.Document.Partition
   , removeUnused
   ) where
 
+import Data.Context (Contextual (ctx))
 import Data.Foldable (find)
 import Data.IntMap qualified as IM
 import Data.Kind (Type)
+import Data.Logging (Logging, sayF)
 import Data.Maybe (fromMaybe)
+import Data.UnifiedError (FallibleT)
 
-import Pdf.Document.PDFObjects (PDFObjects, toPDFDocument)
 import Pdf.Document.Document (PDFDocument, deepFind, member)
+import Pdf.Document.PDFObjects (PDFObjects, toPDFDocument)
 import Pdf.Document.Uncompress (uncompressDocument, uncompressObjects)
 import Pdf.Object.Object
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFReference, PDFTrailer, PDFVersion)
     , hasKey
     )
-
-import Util.Logging (Logging, sayF)
-import Util.UnifiedError (FallibleT)
-import Util.Context (Contextual(ctx))
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 type PDFPartition :: Type

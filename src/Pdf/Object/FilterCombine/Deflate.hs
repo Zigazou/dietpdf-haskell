@@ -14,7 +14,7 @@ import Pdf.Object.FilterCombine.FilterCombination
     )
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
 
-import Util.UnifiedError (UnifiedError)
+import Data.UnifiedError (UnifiedError)
 
 deflate
   :: Maybe (Int, Int)

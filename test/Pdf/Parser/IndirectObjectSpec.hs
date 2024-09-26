@@ -2,6 +2,7 @@ module Pdf.Parser.IndirectObjectSpec
   ( spec
   ) where
 
+import Data.Array (mkArray)
 import Data.ByteString qualified as BS
 
 import Pdf.Object.Object
@@ -11,7 +12,6 @@ import Pdf.Object.Parser.IndirectObject (indirectObjectP)
 
 import Test.Hspec (Spec, describe)
 
-import Util.Array (mkArray)
 import Util.Dictionary (mkDictionary)
 import Util.ParserHelper (itWith)
 

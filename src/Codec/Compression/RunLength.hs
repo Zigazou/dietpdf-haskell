@@ -41,11 +41,10 @@ import Data.Binary.Parser
     )
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
+import Data.UnifiedError (UnifiedError (RLEDecodeError, RLEEncodeError))
 import Data.Word (Word8)
 
 import GHC.Base (maxInt)
-
-import Util.UnifiedError (UnifiedError (RLEDecodeError, RLEEncodeError))
 
 type RLEAction :: Type
 data RLEAction

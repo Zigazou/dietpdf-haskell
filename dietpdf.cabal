@@ -11,7 +11,7 @@ homepage:       https://github.com/zigazou/dietpdf#readme
 bug-reports:    https://github.com/zigazou/dietpdf/issues
 author:         Frédéric BISSON
 maintainer:     zigazou@protonmail.com
-copyright:      2022 Frédéric BISSON
+copyright:      2024 Frédéric BISSON
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -27,11 +27,29 @@ library
   exposed-modules:
       Codec.Compression.Flate
       Codec.Compression.LZW
-      Codec.Compression.Predictor
+      Codec.Compression.LZW.LZWDecode
+      Codec.Compression.LZW.LZWDictionary
+      Codec.Compression.LZW.LZWEncode
+      Codec.Compression.Predict
+      Codec.Compression.Predict.Entropy
+      Codec.Compression.Predict.ImageStream
+      Codec.Compression.Predict.Predictor
+      Codec.Compression.Predict.Scanline
       Codec.Compression.RunLength
       Codec.Compression.XML
       Codec.Filter.Ascii85
       Codec.Filter.AsciiHex
+      Data.Array
+      Data.BitsArray
+      Data.Context
+      Data.Logging
+      Data.UnifiedError
+      External.ExternalCommand
+      External.GSOptimize
+      External.JpegTran
+      External.PamToJpeg2k
+      External.PDFTKClean
+      External.TtfAutoHint
       Font.TrueType.FontDirectory
       Font.TrueType.FontTable
       Font.TrueType.Parser.Font
@@ -41,7 +59,6 @@ library
       Font.TrueType.ScalerType
       Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
-      Pdf.Document.Collection
       Pdf.Document.Document
       Pdf.Document.Encode
       Pdf.Document.EncodedObject
@@ -51,9 +68,11 @@ library
       Pdf.Document.ObjectStream
       Pdf.Document.Parser
       Pdf.Document.Partition
+      Pdf.Document.PDFObjects
       Pdf.Document.Uncompress
       Pdf.Document.XRef
       Pdf.Graphics.Object
+      Pdf.Graphics.Optimize
       Pdf.Graphics.Parser.Comment
       Pdf.Graphics.Parser.Container
       Pdf.Graphics.Parser.EmptyContent
@@ -69,10 +88,15 @@ library
       Pdf.Object.Container
       Pdf.Object.Filter
       Pdf.Object.FilterCombine.Deflate
+      Pdf.Object.FilterCombine.FilterCombination
+      Pdf.Object.FilterCombine.Jpeg2k
+      Pdf.Object.FilterCombine.Lzw
       Pdf.Object.FilterCombine.PredDeflate
+      Pdf.Object.FilterCombine.PredLzw
       Pdf.Object.FilterCombine.PredRleZopfli
       Pdf.Object.FilterCombine.PredZopfli
       Pdf.Object.FilterCombine.Rle
+      Pdf.Object.FilterCombine.RleLzw
       Pdf.Object.FilterCombine.RleZopfli
       Pdf.Object.FilterCombine.Zopfli
       Pdf.Object.FilterCombine.ZopfliRle
@@ -90,6 +114,7 @@ library
       Pdf.Object.Object.XRefEntry
       Pdf.Object.Object.XRefState
       Pdf.Object.Object.XRefSubsection
+      Pdf.Object.OptimizationType
       Pdf.Object.Optimize
       Pdf.Object.Parser.Comment
       Pdf.Object.Parser.Container
@@ -109,19 +134,16 @@ library
       Pdf.Object.State
       Pdf.Object.String
       Pdf.Object.Unfilter
-      Util.Array
       Util.Ascii
       Util.ByteString
       Util.Dictionary
-      Util.GSOptimize
       Util.Hex
-      Util.Logging
       Util.Name
       Util.Number
-      Util.PDFTKClean
+      Util.PdfDocEncoding
+      Util.Sequence
       Util.String
       Util.Text
-      Util.UnifiedError
   other-modules:
       Paths_dietpdf
   hs-source-dirs:
@@ -142,9 +164,13 @@ library
       StandaloneKindSignatures
       ImportQualifiedPost
       RoleAnnotations
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
+      NumericUnderscores
+      BinaryLiterals
+      ViewPatterns
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded
   build-depends:
-      base >=4.7 && <5
+      async
+    , base >=4.7 && <5
     , binary
     , binary-parsers
     , bytestring
@@ -159,10 +185,13 @@ library
     , ordered-containers
     , process
     , split
+    , spool
     , stringsearch
+    , temporary
     , text
     , transformers
     , utf8-string
+    , vector
     , xml
     , zlib
   default-language: Haskell2010
@@ -197,7 +226,7 @@ executable dietpdf
       TupleSections
       StandaloneKindSignatures
       ImportQualifiedPost
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -209,6 +238,7 @@ executable dietpdf
     , temporary
     , text
     , transformers
+    , unix
   default-language: Haskell2010
 
 test-suite dietpdf-test
@@ -217,10 +247,13 @@ test-suite dietpdf-test
   other-modules:
       Codec.Compression.FlateSpec
       Codec.Compression.LZWSpec
-      Codec.Compression.PredictorSpec
+      Codec.Compression.PredictSpec
       Codec.Compression.RunLengthSpec
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
+      Data.BitsArraySpec
+      Data.LoggingSpec
+      External.PamToJpeg2kSpec
       Font.TrueType.Parser.FontSpec
       Font.TrueType.Parser.HeadSpec
       Pdf.Document.DocumentSpec
@@ -247,6 +280,7 @@ test-suite dietpdf-test
       Pdf.Object.Parser.ArraySpec
       Pdf.Object.Parser.CommentSpec
       Pdf.Object.Parser.DictionarySpec
+      Pdf.Object.Parser.HexStringSpec
       Pdf.Object.Parser.IndirectObjectSpec
       Pdf.Object.Parser.LooseEndOfLineSpec
       Pdf.Object.Parser.NameSpec
@@ -262,7 +296,6 @@ test-suite dietpdf-test
       Pdf.Parser.ParserSpec
       Util.ByteStringSpec
       Util.HexSpec
-      Util.LoggingSpec
       Util.NumberSpec
       Util.ParserHelper
       Util.StringSpec
@@ -284,7 +317,9 @@ test-suite dietpdf-test
       TupleSections
       StandaloneKindSignatures
       ImportQualifiedPost
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns
+      NumericUnderscores
+      BinaryLiterals
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded
   build-depends:
       QuickCheck
     , base >=4.7 && <5
@@ -297,5 +332,6 @@ test-suite dietpdf-test
     , mtl
     , text
     , transformers
+    , vector
     , zlib
   default-language: Haskell2010

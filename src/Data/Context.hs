@@ -1,4 +1,4 @@
-module Util.Context
+module Data.Context
 ( Context(Context, NoContext)
 , Contextual(ctx)
 , noCtx

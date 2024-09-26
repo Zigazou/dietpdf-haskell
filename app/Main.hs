@@ -22,6 +22,13 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString qualified as BS
+import Data.Context (Contextual (ctx))
+import Data.Logging (sayComparisonF)
+import Data.UnifiedError
+    ( FallibleT
+    , UnifiedError (ParseError, UnableToOpenFile)
+    , tryF
+    )
 
 import External.GSOptimize (gsOptimize)
 
@@ -45,14 +52,6 @@ import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
 import System.IO.Temp (withSystemTempFile)
 import System.Posix (fileSize, getFileStatus)
-
-import Util.Context (Contextual (ctx))
-import Util.Logging (sayComparisonF)
-import Util.UnifiedError
-    ( FallibleT
-    , UnifiedError (ParseError, UnableToOpenFile)
-    , tryF
-    )
 
 readPDF :: FilePath -> FallibleT IO PDFDocument
 readPDF filename = do

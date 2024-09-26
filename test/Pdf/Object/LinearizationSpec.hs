@@ -9,6 +9,7 @@ import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
 import Data.ByteString qualified as BS
+import Data.Logging (Logging)
 
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Parser (pdfParse)
@@ -18,8 +19,6 @@ import Pdf.Object.Linearization
     )
 
 import Test.Hspec (Spec, describe, it, shouldBe)
-
-import Util.Logging (Logging)
 
 linearizationExamples :: [(BS.ByteString, Maybe Linearization)]
 linearizationExamples =

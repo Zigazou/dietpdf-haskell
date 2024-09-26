@@ -7,6 +7,8 @@ module Pdf.Object.ContainerSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
+import Data.UnifiedError (FallibleT)
+
 import Pdf.Object.Container
     ( Filter (Filter)
     , FilterList
@@ -22,8 +24,6 @@ import Pdf.Object.Object
     )
 
 import Test.Hspec (Spec, describe, it, shouldBe)
-
-import Util.UnifiedError (FallibleT)
 
 deepMapExamples
   :: [(PDFObject, PDFObject -> FallibleT IO PDFObject, PDFObject)]

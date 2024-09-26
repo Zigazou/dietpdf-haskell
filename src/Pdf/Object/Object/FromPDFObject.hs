@@ -2,6 +2,7 @@ module Pdf.Object.Object.FromPDFObject
   ( fromPDFObject
   ) where
 
+import Data.Array (Array)
 import Data.ByteString qualified as BS
 import Data.ByteString.UTF8 qualified as BSU
 import Data.Foldable (toList)
@@ -15,7 +16,6 @@ import Pdf.Object.Object.PDFObject
     , mkEmptyPDFDictionary
     )
 
-import Util.Array (Array)
 import Util.Dictionary (Dictionary)
 import Util.Name (fromName)
 import Util.Number (fromInt, fromNumber)

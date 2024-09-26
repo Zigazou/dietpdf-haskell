@@ -2,19 +2,18 @@ module Command.Hash
   ( objectHashes
   ) where
 
+import Data.Context (ctx)
 import Data.Foldable (foldrM)
 import Data.Kind (Type)
+import Data.Logging (sayF)
 import Data.Maybe (catMaybes)
 import Data.Set (Set, empty, insert, member)
 import Data.Text qualified as T
+import Data.UnifiedError (FallibleT)
 
 import Pdf.Document.Document (PDFDocument, toList)
 import Pdf.Object.Object (PDFObject (PDFIndirectObjectWithStream))
 import Pdf.Object.Signature (streamHash)
-
-import Util.Context (ctx)
-import Util.Logging (sayF)
-import Util.UnifiedError (FallibleT)
 
 type ObjectHash :: Type
 data ObjectHash = ObjectHash !Int !T.Text

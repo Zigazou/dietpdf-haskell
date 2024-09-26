@@ -1,7 +1,7 @@
 {-|
 This module defines what is an array at the lowest level.
 -}
-module Util.Array
+module Data.Array
   ( Array
   , mkArray
   , mkEmptyArray

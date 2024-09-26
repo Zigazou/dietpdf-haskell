@@ -1,4 +1,4 @@
-module Util.Logging
+module Data.Logging
   ( Logging(say)
   , sayF
   , sayComparisonF
@@ -10,16 +10,15 @@ import Control.Monad.Identity (Identity)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Writer (Writer, tell)
 
+import Data.Context (Context (Context, NoContext))
 import Data.Kind (Constraint, Type)
 import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
+import Data.UnifiedError (UnifiedError)
 
 import Fmt (commaizeF, fixedF, padLeftF, padRightF, (+|), (|+))
 
-import System.IO (stderr, hFlush)
-
-import Util.UnifiedError (UnifiedError)
-import Util.Context (Context(Context, NoContext))
+import System.IO (hFlush, stderr)
 
 type Logging :: (Type -> Type) -> Constraint
 class Monad m => Logging m where

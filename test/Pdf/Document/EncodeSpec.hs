@@ -6,6 +6,7 @@ import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
 import Data.Sequence (Seq (Empty), fromList)
+import Data.UnifiedError (Fallible)
 
 import Pdf.Document.Encode (encodeObject)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))
@@ -17,7 +18,6 @@ import Pdf.Object.Object.PDFObject (PDFObject (PDFNumber))
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.Dictionary (mkDictionary, mkEmptyDictionary)
-import Util.UnifiedError (Fallible)
 
 encodeObjectExamples :: [(PDFObject, Fallible EncodedObject)]
 encodeObjectExamples =

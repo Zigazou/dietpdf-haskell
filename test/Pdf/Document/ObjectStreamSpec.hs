@@ -5,6 +5,9 @@ module Pdf.Document.ObjectStreamSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
+import Data.Array (mkArray)
+import Data.UnifiedError (Fallible, UnifiedError (NoObjectToEncode))
+
 import Pdf.Document.Document (PDFDocument, fromList)
 import Pdf.Document.ObjectStream (explodeList, insert)
 import Pdf.Object.Object
@@ -15,9 +18,7 @@ import Pdf.Object.Object
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-import Util.Array (mkArray)
 import Util.Dictionary (mkDictionary, mkEmptyDictionary)
-import Util.UnifiedError (Fallible, UnifiedError (NoObjectToEncode))
 
 fromObjectStreamExamples :: [(PDFObject, Fallible [PDFObject])]
 fromObjectStreamExamples =

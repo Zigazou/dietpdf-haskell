@@ -6,6 +6,7 @@ import Codec.Compression.LZW qualified as LZW
 
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
+import Data.UnifiedError (UnifiedError)
 
 import Pdf.Object.Container (Filter (Filter))
 import Pdf.Object.FilterCombine.FilterCombination
@@ -13,8 +14,6 @@ import Pdf.Object.FilterCombine.FilterCombination
     , mkFCAppend
     )
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
-
-import Util.UnifiedError (UnifiedError)
 
 lzw
   :: Maybe (Int, Int)

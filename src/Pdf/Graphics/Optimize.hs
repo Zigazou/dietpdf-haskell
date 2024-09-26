@@ -1,9 +1,13 @@
 module Pdf.Graphics.Optimize (optimizeGFX) where
 
+import Data.Array (Array)
 import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
+import Data.Context (Context)
 import Data.Kind (Type)
+import Data.Logging (Logging, sayComparisonF, sayF)
 import Data.Sequence qualified as SQ
+import Data.UnifiedError (FallibleT)
 
 import Pdf.Graphics.Object
     ( GFXObject (GFXArray, GFXNumber, GFXOperator)
@@ -11,11 +15,6 @@ import Pdf.Graphics.Object
     , separateGfx
     )
 import Pdf.Graphics.Parser.Stream (gfxParse)
-
-import Util.Array (Array)
-import Util.Context (Context)
-import Util.Logging (Logging, sayComparisonF, sayF)
-import Util.UnifiedError (FallibleT)
 
 type GFXCommand :: Type
 data GFXCommand = GFXCommand

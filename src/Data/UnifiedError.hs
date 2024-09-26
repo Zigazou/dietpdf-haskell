@@ -4,7 +4,7 @@ This module groups all the errors that DietPDF may generate.
 Having one type for all errors means the Either monad can be used to avoid
 long if then else if then else.
 -}
-module Util.UnifiedError
+module Data.UnifiedError
   ( UnifiedError(..)
   , FallibleT
   , Fallible

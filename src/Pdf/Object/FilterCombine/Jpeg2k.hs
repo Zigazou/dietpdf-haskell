@@ -6,6 +6,8 @@ import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
+import Data.Logging (Logging)
+import Data.UnifiedError (FallibleT, UnifiedError (UnsupportedFeature))
 
 import External.PamToJpeg2k (pamToJpeg2k)
 
@@ -15,9 +17,6 @@ import Pdf.Object.FilterCombine.FilterCombination
     , mkFCAppend
     )
 import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
-
-import Util.Logging (Logging)
-import Util.UnifiedError (FallibleT, UnifiedError (UnsupportedFeature))
 
 jpeg2k
   :: Logging IO

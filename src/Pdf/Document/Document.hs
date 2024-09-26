@@ -22,12 +22,11 @@ import Control.Applicative (Alternative, (<|>))
 import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Data.Set.Ordered qualified as OS
+import Data.UnifiedError (FallibleT)
 
 import Pdf.Object.Object
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFTrailer)
     )
-
-import Util.UnifiedError (FallibleT)
 
 {- |
 This is a simple trick to allow `PDFDocument` to be foldable because it is not

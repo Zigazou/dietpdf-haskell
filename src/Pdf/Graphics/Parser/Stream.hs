@@ -4,8 +4,10 @@ module Pdf.Graphics.Parser.Stream
 
 import Control.Applicative ((<|>))
 
+import Data.Array (Array, mkArray)
 import Data.Binary.Parser (Get, label, many', parseDetail, satisfy, sepBy)
 import Data.ByteString qualified as BS
+import Data.UnifiedError (UnifiedError (ParseError))
 import Data.Word (Word8)
 
 import Pdf.Graphics.Object (GFXObject, isWhiteSpace)
@@ -18,9 +20,6 @@ import Pdf.Graphics.Parser.Keyword (keywordP)
 import Pdf.Graphics.Parser.Name (nameP)
 import Pdf.Graphics.Parser.Number (numberP)
 import Pdf.Graphics.Parser.String (stringP)
-
-import Util.Array (Array, mkArray)
-import Util.UnifiedError (UnifiedError (ParseError))
 
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)

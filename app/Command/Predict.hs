@@ -2,18 +2,13 @@ module Command.Predict
   ( predictByteString
   ) where
 
-import Codec.Compression.Predict
-    ( Entropy (EntropyShannon)
-    , Predictor
-    , predict
-    )
+import Codec.Compression.Predict (Entropy (EntropyShannon), Predictor, predict)
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
-
-import Util.UnifiedError (FallibleT)
+import Data.UnifiedError (FallibleT)
 
 predictByteString
   :: Predictor -> Int -> Int -> BS.ByteString -> FallibleT IO ()

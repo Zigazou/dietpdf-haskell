@@ -1,13 +1,12 @@
 -- | Optimize a PDF file using GhostScript.
 module External.GSOptimize (gsOptimize) where
 
+import Data.Context (Contextual (ctx))
+import Data.Logging (sayF)
 import Data.Text qualified as T
+import Data.UnifiedError (FallibleT)
 
 import External.ExternalCommand (externalCommand)
-
-import Util.Context (Contextual (ctx))
-import Util.Logging (sayF)
-import Util.UnifiedError (FallibleT)
 
 {-
 https://askubuntu.com/questions/113544/how-can-i-reduce-the-file-size-of-a-scanned-pdf-file

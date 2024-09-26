@@ -61,6 +61,7 @@ import Data.Binary.Parser
     , word8
     )
 import Data.ByteString qualified as BS
+import Data.UnifiedError (UnifiedError (InvalidAscii85Stream))
 import Data.Word (Word8)
 
 import Pdf.Object.Object (isWhiteSpace)
@@ -72,7 +73,6 @@ import Util.Ascii
     , asciiLOWERZ
     , asciiTILDE
     )
-import Util.UnifiedError (UnifiedError (InvalidAscii85Stream))
 
 specialZeroP :: Get BS.ByteString
 specialZeroP = label "specialzero" $ do

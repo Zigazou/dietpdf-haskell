@@ -3,16 +3,15 @@ module Pdf.Document.Uncompress
   , uncompressDocument
   ) where
 
+import Data.Context (ctx)
 import Data.Functor ((<&>))
+import Data.Logging (Logging, sayF)
+import Data.UnifiedError (FallibleT)
 
-import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Document.Document (PDFDocument, fromList, toList)
 import Pdf.Document.ObjectStream (explodeDocument, explodeObjects)
+import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Object.Unfilter (unfilter)
-
-import Util.Logging (Logging, sayF)
-import Util.UnifiedError (FallibleT)
-import Util.Context ( ctx)
 
 {- |
 Uncompress all `PDFObject` contained in a `PDFDObjects`.

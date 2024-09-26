@@ -39,10 +39,15 @@ import Data.Foldable (foldl')
 import Data.Functor ((<&>))
 import Data.IntMap (fromList, singleton, union)
 import Data.Kind (Type)
+import Data.Logging (Logging)
+import Data.UnifiedError
+    ( FallibleT
+    , UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError)
+    )
 
-import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Document.Document (PDFDocument, cFilter)
 import Pdf.Document.Document qualified as D
+import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Object.Object
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream)
     , fromPDFObject
@@ -61,12 +66,7 @@ import Pdf.Object.Unfilter (unfilter)
 
 import Util.Ascii (asciiDIGITZERO)
 import Util.Dictionary (Dictionary, mkDictionary)
-import Util.Logging (Logging)
 import Util.Number (fromInt)
-import Util.UnifiedError
-    ( FallibleT
-    , UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError)
-    )
 
 type ObjectStream :: Type
 data ObjectStream = ObjectStream

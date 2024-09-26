@@ -7,6 +7,9 @@ import Control.Monad.Trans.Except (throwE)
 
 import Data.Binary.Parser (Get, label, many', parseDetail, satisfy)
 import Data.ByteString qualified as BS
+import Data.Context (Context (NoContext))
+import Data.Logging (Logging, sayF)
+import Data.UnifiedError (FallibleT, UnifiedError (ParseError))
 import Data.Word (Word8)
 
 import Pdf.Document.Document (PDFDocument, dSepBy)
@@ -16,10 +19,6 @@ import Pdf.Object.Parser.IndirectObject (indirectObjectP)
 import Pdf.Object.Parser.StartXRef (startXRefP)
 import Pdf.Object.Parser.Trailer (trailerP)
 import Pdf.Object.Parser.XRef (xrefP)
-
-import Util.Context (Context (NoContext))
-import Util.Logging (Logging, sayF)
-import Util.UnifiedError (FallibleT, UnifiedError (ParseError))
 
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)

@@ -6,13 +6,12 @@ import Control.Monad.Trans.Class (MonadTrans (lift))
 
 import Data.ByteString qualified as BS
 import Data.Text.Lazy.IO qualified as T
+import Data.UnifiedError (FallibleT)
 
 import Formatting (format, int, (%))
 
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Encode (pdfEncode)
-
-import Util.UnifiedError (FallibleT)
 
 optimize :: FilePath -> PDFDocument -> FallibleT IO ()
 optimize outputPDF objects = do

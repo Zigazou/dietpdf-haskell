@@ -18,11 +18,12 @@ import Data.ByteString qualified as BS
 import Data.Foldable (foldl', toList)
 import Data.IntMap.Strict qualified as IM
 import Data.Ix (range, rangeSize)
+import Data.Logging (Logging)
 import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as SQ
+import Data.UnifiedError (FallibleT, UnifiedError (XRefStreamNoW))
 
-import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Document.EncodedObject
     ( EncodedObject (EncodedObject, eoBinaryData, eoObjectLength, eoObjectNumber)
     )
@@ -32,6 +33,7 @@ import Pdf.Document.ObjectOffset
     , getOffsetValue
     )
 import Pdf.Document.ObjectOffsets (ObjectOffsets, indexRange, insertFreeEntries)
+import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Object.Object.PDFObject
     ( PDFObject (PDFArray, PDFName, PDFNumber, PDFXRef, PDFXRefStream)
     , mkPDFArray
@@ -42,9 +44,7 @@ import Pdf.Object.Object.XRefSubsection (XRefSubsection (XRefSubsection))
 import Pdf.Object.State (getValue)
 
 import Util.Dictionary (Dictionary, mkDictionary)
-import Util.Logging (Logging)
 import Util.Number (bytesNeededToEncode, encodeIntToBytes)
-import Util.UnifiedError (FallibleT, UnifiedError (XRefStreamNoW))
 
 {- |
 Given an encoded object, returns a list of tuples where the first element is the

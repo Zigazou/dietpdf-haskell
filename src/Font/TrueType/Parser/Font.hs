@@ -5,10 +5,12 @@ module Font.TrueType.Parser.Font
 
 import Control.Monad (when)
 
+import Data.Array (Array)
 import Data.Binary (get)
 import Data.Binary.Parser (Get, label, parseOnly)
 import Data.ByteString qualified as BS
 import Data.Sequence qualified as SQ
+import Data.UnifiedError (UnifiedError (UnknownScalerType))
 
 import Font.TrueType.FontDirectory
     ( FontDirectory (FontDirectory)
@@ -20,9 +22,6 @@ import Font.TrueType.FontTable (FontTable (FTRaw))
 import Font.TrueType.Parser.ScalerType (scalerTypeP)
 import Font.TrueType.Parser.TableIdentifier (tableIdentifierP)
 import Font.TrueType.ScalerType (isUnknown)
-
-import Util.Array (Array)
-import Util.UnifiedError (UnifiedError (UnknownScalerType))
 
 offsetSubtableP :: Get OffsetSubtable
 offsetSubtableP =

@@ -44,6 +44,7 @@ module Pdf.Graphics.Object
   , spaceIfNeeded
   ) where
 
+import Data.Array (Array, mkArray, mkEmptyArray)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.Ix (inRange)
@@ -57,7 +58,6 @@ import Data.Word (Word8)
 import Formatting (format, int, (%))
 import Formatting.ByteStringFormatter (utf8)
 
-import Util.Array (Array, mkArray, mkEmptyArray)
 import Util.Ascii
     ( asciiAPOSTROPHE
     , asciiASTERISK

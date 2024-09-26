@@ -1,13 +1,12 @@
 -- | Clean a PDF file using PDFTK.
 module External.PDFTKClean (pdftkClean) where
 
+import Data.Context (Contextual (ctx))
+import Data.Logging (sayF)
 import Data.Text qualified as T
+import Data.UnifiedError (FallibleT)
 
 import External.ExternalCommand (externalCommand)
-
-import Util.Logging (sayF)
-import Util.UnifiedError (FallibleT)
-import Util.Context (Contextual(ctx))
 
 pdftkClean :: FilePath -> FilePath -> FallibleT IO ()
 pdftkClean inputPdf outputPdf = do

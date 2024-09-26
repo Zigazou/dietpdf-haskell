@@ -1,13 +1,12 @@
 -- | Optimize a JPG file using JpegTran.
 module External.JpegTran (jpegtranOptimize) where
 
+import Codec.Compression.Flate (fastCompress)
+
 import Data.ByteString qualified as BS
+import Data.UnifiedError (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf)
-
-import Util.UnifiedError (FallibleT)
-
-import Codec.Compression.Flate (fastCompress)
 
 jpegtranOptimize :: BS.ByteString -> FallibleT IO BS.ByteString
 jpegtranOptimize input = do

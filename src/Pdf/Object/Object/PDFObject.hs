@@ -33,14 +33,14 @@ module Pdf.Object.Object.PDFObject
   , mkPDFDictionary
   ) where
 
+import Data.Array (Array, mkArray, mkEmptyArray)
 import Data.ByteString qualified as BS
+import Data.Context (Context (Context), Contextual (ctx), ctx2, ctx3, ctx4)
 import Data.Kind (Type)
 
 import Pdf.Graphics.Object (GFXObject)
 import Pdf.Object.Object.XRefSubsection (XRefSubsection)
 
-import Util.Array (Array, mkArray, mkEmptyArray)
-import Util.Context (Context (Context), Contextual (ctx), ctx2, ctx3, ctx4)
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
 
 {-|

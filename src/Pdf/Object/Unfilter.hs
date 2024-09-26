@@ -16,7 +16,9 @@ import Codec.Filter.AsciiHex qualified as AH
 import Control.Monad.Trans.Except (runExcept, throwE)
 
 import Data.ByteString qualified as BS
+import Data.Logging (Logging)
 import Data.Sequence as SQ (Seq ((:<|)))
+import Data.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 import Pdf.Object.Container
     ( Filter (fDecodeParms, fFilter)
@@ -31,9 +33,6 @@ import Pdf.Object.Object
     , hasStream
     )
 import Pdf.Object.State (getStream, getValue, getValueDefault, setStream)
-
-import Util.Logging (Logging)
-import Util.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
 
 getPredictor :: PDFObject -> Either UnifiedError Predictor
 getPredictor params = case runExcept (getValue "Predictor" params) of

@@ -9,6 +9,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
+import Data.UnifiedError (FallibleT, UnifiedError (ExternalCommandError))
 
 import GHC.IO.Handle
     ( BufferMode (BlockBuffering)
@@ -28,8 +29,6 @@ import System.Process
     , withCreateProcess
     )
 import System.Process.Internals (CreateProcess (std_in, std_out), ProcessHandle)
-
-import Util.UnifiedError (FallibleT, UnifiedError (ExternalCommandError))
 
 externalCommand :: FilePath -> [String] -> FallibleT IO ()
 externalCommand command args = do

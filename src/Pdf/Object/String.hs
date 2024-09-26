@@ -3,16 +3,16 @@ module Pdf.Object.String
   ) where
 
 import Data.ByteString qualified as BS
+import Data.Context (Contextual (ctx))
 import Data.Map qualified as Map
+import Data.UnifiedError (FallibleT)
 
 import Pdf.Object.Object (PDFObject (PDFHexString, PDFString))
 
 import Util.Ascii (asciiDELETE)
-import Util.Logging (Logging, sayComparisonF)
+import Data.Logging (Logging, sayComparisonF)
 import Util.PdfDocEncoding (unicodeToPdfDocEncoding)
 import Util.String (hexStringToString)
-import Util.UnifiedError (FallibleT)
-import Util.Context (Contextual(ctx))
 
 utf16beBOM :: BS.ByteString
 utf16beBOM = "\xfe\xff"
@@ -67,7 +67,7 @@ optimizeString object = case object of
         -- characters, converts it to a PDFString which will be four times
         -- shorter.
         Just pdfDocEncoded -> do
-          sayComparisonF 
+          sayComparisonF
             (ctx object)
             "Hex string optimization (PDFDocEncoding)"
             (BS.length values)

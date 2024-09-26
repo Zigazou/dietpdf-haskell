@@ -7,12 +7,11 @@ import Codec.Compression.RunLength (compress, decompress)
 import Control.Monad (forM, forM_)
 
 import Data.ByteString qualified as BS
+import Data.UnifiedError (UnifiedError)
 import Data.Word (Word8)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Gen, arbitrary, forAll)
-
-import Util.UnifiedError (UnifiedError)
 
 decodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
 decodeExamples =

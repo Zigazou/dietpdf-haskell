@@ -23,8 +23,7 @@ import Data.BitsArray (BitsArray, appendBits, newBitsArray, toByteString)
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
 import Data.Kind (Type)
-
-import Util.UnifiedError (UnifiedError)
+import Data.UnifiedError (UnifiedError)
 
 type EncodeStep :: Type
 data EncodeStep = EncodeStep

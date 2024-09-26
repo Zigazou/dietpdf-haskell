@@ -1,11 +1,11 @@
 module External.PamToJpeg2k (pamToJpeg2k, jpegToJpeg2k) where
 
 import Data.ByteString qualified as BS
+import Data.UnifiedError (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf, externalCommandBuf')
 
 import Util.Number (fromInt)
-import Util.UnifiedError (FallibleT)
 
 createPamImage
   :: Int

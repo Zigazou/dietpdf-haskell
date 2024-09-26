@@ -21,8 +21,7 @@ import Codec.Compression.Predict.Predictor
     )
 
 import Data.ByteString qualified as BS
-
-import Util.UnifiedError (UnifiedError (InvalidNumberOfBytes))
+import Data.UnifiedError (UnifiedError (InvalidNumberOfBytes))
 
 {- |
 Apply a `Predictor` to a `ByteString`, considering its line width.

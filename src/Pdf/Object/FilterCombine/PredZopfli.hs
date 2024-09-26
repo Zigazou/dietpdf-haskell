@@ -11,6 +11,7 @@ import Codec.Compression.Predict
 
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
+import Data.UnifiedError (UnifiedError)
 
 import Pdf.Object.Container (Filter (Filter))
 import Pdf.Object.FilterCombine.FilterCombination
@@ -18,8 +19,6 @@ import Pdf.Object.FilterCombine.FilterCombination
     , mkFCAppend
     )
 import Pdf.Object.Object (PDFObject (PDFName), mkPDFDictionary, mkPDFNumber)
-
-import Util.UnifiedError (UnifiedError)
 
 predZopfli
   :: Maybe (Int, Int)

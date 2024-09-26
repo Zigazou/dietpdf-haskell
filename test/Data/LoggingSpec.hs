@@ -1,17 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Util.LoggingSpec
+module Data.LoggingSpec
   ( spec
   ) where
 
 import Control.Monad.Writer (Writer, runWriter)
 
+import Data.Context (Context (NoContext))
+import Data.Logging (say)
 import Data.Text qualified as T
 
 import Test.Hspec (Spec, describe, it, shouldBe)
-
-import Util.Context (Context (NoContext))
-import Util.Logging (say)
 
 calc2 :: Int -> Writer [T.Text] Int
 calc2 n = do

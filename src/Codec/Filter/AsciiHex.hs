@@ -26,10 +26,10 @@ module Codec.Filter.AsciiHex
   ) where
 
 import Data.ByteString qualified as BS
+import Data.UnifiedError (UnifiedError)
 
 import Util.Ascii (asciiGREATERTHANSIGN)
 import Util.Hex (fromHexDigits, toHexDigits)
-import Util.UnifiedError (UnifiedError)
 
 {- |
 Decodes an hexadecimal bytestring.

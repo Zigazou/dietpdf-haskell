@@ -7,11 +7,15 @@ module Pdf.Object.Filter
 
 import Control.Monad.Trans.Except (except)
 
+import Data.Array (mkArray)
 import Data.ByteString qualified as BS
+import Data.Context (Context, Contextual (ctx))
 import Data.Foldable (minimumBy)
 import Data.Functor ((<&>))
+import Data.Logging (Logging, sayComparisonF)
 import Data.Sequence ((><))
 import Data.Text qualified as T
+import Data.UnifiedError (FallibleT)
 
 import External.PamToJpeg2k (jpegToJpeg2k)
 
@@ -41,11 +45,6 @@ import Pdf.Object.OptimizationType
     ( OptimizationType (JPGOptimization, XRefStreamOptimization)
     )
 import Pdf.Object.State (getStream, getValue, setStream)
-
-import Util.Array (mkArray)
-import Util.Context (Context, Contextual (ctx))
-import Util.Logging (Logging, sayComparisonF)
-import Util.UnifiedError (FallibleT)
 
 filterInfo
   :: Logging m

@@ -28,8 +28,7 @@ import Data.Bits (shiftL, shiftR, (.&.))
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.Maybe (isNothing)
-
-import Util.UnifiedError
+import Data.UnifiedError
     ( UnifiedError (InternalError, NotEnoughBytes, ParseError)
     )
 

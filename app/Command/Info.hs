@@ -2,16 +2,16 @@ module Command.Info
   ( showInfo
   ) where
 
+import Data.Context (ctx)
 import Data.Text.Lazy qualified as T
+import Data.UnifiedError (FallibleT)
 
 import Formatting (format, int, (%))
 
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Object.Object (objectInfo)
 
-import Util.Context (ctx)
-import Util.Logging (sayF)
-import Util.UnifiedError (FallibleT)
+import Data.Logging (sayF)
 
 showInfo :: PDFDocument -> FallibleT IO ()
 showInfo document = do
