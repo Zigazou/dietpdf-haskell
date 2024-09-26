@@ -17,7 +17,6 @@ data Context = Context !T.Text
              | NoContext
              deriving stock (Eq, Show)
 
-{-# INLINE noCtx #-}
 noCtx :: Context
 noCtx = NoContext
 

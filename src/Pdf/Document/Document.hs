@@ -49,13 +49,11 @@ member :: Ord a => a -> CollectionOf a -> Bool
 member object (CollectionOf objects) = OS.member object objects
 
 instance Foldable CollectionOf where
-  {-# INLINE foldMap #-}
   foldMap :: Monoid m => (a -> m) -> CollectionOf a -> m
   foldMap f (CollectionOf dict) = foldMap f dict
 
 -- | The `<>` operator does a concatenation when used with `CollectionOf`.
 instance Ord a => Semigroup (CollectionOf a) where
-  {-# INLINE (<>) #-}
   (<>) :: CollectionOf a -> CollectionOf a -> CollectionOf a
   (<>) (CollectionOf x) (CollectionOf y) = CollectionOf (x OS.<>| y)
 
@@ -88,7 +86,6 @@ cfMap f = foldr (accumulate f) (pure mempty)
 Equivalent to the `filter` function which works on `List` except this one
 works on `CollectionOf`.
 -}
-{-# INLINE cFilter #-}
 cFilter :: Ord a => (a -> Bool) -> CollectionOf a -> CollectionOf a
 cFilter f (CollectionOf !set) = CollectionOf $! OS.filter f set
 
@@ -112,35 +109,30 @@ Convert a list of `PDFObject` to a `PDFDocument`.
 Only the last `PDFVersion`, `PDFXRef`, `PDFTrailer` are kept.
 Only the last indirect object with a specific number is kept.
 -}
-{-# INLINE fromList #-}
 fromList :: Ord a => [a] -> CollectionOf a
 fromList = CollectionOf . foldl' (OS.>|) OS.empty
 
 {- |
 Convert a `CollectionOf` to a `List`.
 -}
-{-# INLINE toList #-}
 toList :: CollectionOf a -> [a]
 toList (CollectionOf !objects) = OS.toAscList objects
 
 {- |
 The cons function for `CollectionOf` type.
 -}
-{-# INLINE cCons #-}
 cCons :: Ord a => a -> CollectionOf a -> CollectionOf a
 cCons object (CollectionOf !objects) = CollectionOf (object OS.<| objects)
 
 {- |
 The `sepBy1` function for `CollectionOf` (`sepBy1` only generates `List`).
 -}
-{-# INLINE dSepBy1 #-}
 dSepBy1 :: (Alternative f, Ord a) => f a -> f s -> f (CollectionOf a)
 dSepBy1 !p !s = go where go = liftA2 cCons p ((s *> go) <|> pure mempty)
 
 {- |
 The `sepBy` function for `CollectionOf` (`sepBy` only generates `List`).
 -}
-{-# INLINE dSepBy #-}
 dSepBy :: (Alternative f, Ord a) => f a -> f s -> f (CollectionOf a)
 dSepBy !p !s =
   liftA2 cCons p ((s *> dSepBy1 p s) <|> pure mempty) <|> pure mempty

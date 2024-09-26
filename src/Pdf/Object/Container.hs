@@ -63,7 +63,6 @@ data Filter = Filter
   }
   deriving stock Show
 
-{-# INLINE hasNoDecodeParms #-}
 hasNoDecodeParms :: Filter -> Bool
 hasNoDecodeParms = (== PDFNull) . fDecodeParms
 
@@ -72,7 +71,6 @@ type FilterList :: Type
 type FilterList = SQ.Seq Filter
 
 -- | Create a `FilterList`.
-{-# INLINE mkFilterList #-}
 mkFilterList :: [Filter] -> FilterList
 mkFilterList = SQ.fromList
 

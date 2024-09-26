@@ -151,7 +151,6 @@ An error is signaled in the following cases:
 - no PDF version in the list of PDF objects
 - no trailer in the list of PDF objects
 -}
-{-# INLINE pdfEncode #-}
 pdfEncode
   :: Logging IO
   => PDFDocument -- ^ A collection of PDF objects (order matters)

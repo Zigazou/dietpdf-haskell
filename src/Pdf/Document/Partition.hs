@@ -43,13 +43,11 @@ data PDFPartition = PDFPartition
   deriving stock (Eq, Show)
 
 instance Semigroup PDFPartition where
-  {-# INLINE (<>) #-}
   (<>) :: PDFPartition -> PDFPartition -> PDFPartition
   (<>) (PDFPartition m1 n1 h1 t1) (PDFPartition m2 n2 h2 t2) =
     PDFPartition (m1 <> m2) (n1 <> n2) (h1 <> h2) (t2 <> t1)
 
 instance Monoid PDFPartition where
-  {-# INLINE mempty #-}
   mempty :: PDFPartition
   mempty = PDFPartition mempty mempty mempty mempty
 
@@ -78,7 +76,6 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
   trailer (PDFTrailer _) = True
   trailer _              = False
 
-{-# INLINE removeUnused #-}
 removeUnused :: Logging m => PDFPartition -> FallibleT m PDFPartition
 removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers) = do
   let context = ctx ("removeunused" :: String)
@@ -108,11 +105,9 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
     , ppTrailers             = trailers
     }
  where
-  {-# INLINE isNotLinearized #-}
   isNotLinearized :: PDFObject -> Bool
   isNotLinearized = not . hasKey "Linearized"
 
-  {-# INLINE isReferenced #-}
   isReferenced :: PDFDocument -> PDFObject -> Bool
   isReferenced refs (PDFIndirectObject num gen _) =
     PDFReference num gen `member` refs
@@ -122,11 +117,9 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
     PDFReference num gen `member` refs
   isReferenced _anyRefs _anyOtherObject = True
 
-  {-# INLINE used #-}
   used :: PDFDocument -> PDFObject -> Bool
   used refs object = isNotLinearized object && isReferenced refs object
 
-  {-# INLINE isReference #-}
   isReference :: PDFObject -> Bool
   isReference PDFReference{}  = True
   isReference _anyOtherObject = False

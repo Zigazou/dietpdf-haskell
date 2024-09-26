@@ -97,7 +97,6 @@ errorType (UnknownScalerType _)      = ParsingError
 errorType ObjectStreamNotFound       = ParsingError
 errorType (UnsupportedFeature _)     = UnsupportedError
 
-{-# INLINE show' #-}
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
 

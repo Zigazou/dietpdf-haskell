@@ -45,11 +45,9 @@ instance Logging (Writer [T.Text]) where
   say (Context intro) message = (void . tell . return) (T.concat [intro, ": ", message])
   say NoContext message = (void . tell . return) message
 
-{-# INLINE sayF #-}
 sayF :: (Logging m, MonadTrans t) => Context -> T.Text -> t m ()
 sayF mIntro = lift . say mIntro
 
-{-# INLINE sayComparisonF #-}
 sayComparisonF
   :: (Logging m, MonadTrans t)
   => Context
@@ -75,7 +73,6 @@ sayComparisonF intro label sizeBefore sizeAfter = sayF
                      / fromIntegral sizeBefore
           in  if sizeBefore == 0 then 0 else ratio'
 
-{-# INLINE sayErrorF #-}
 sayErrorF :: (Logging m, MonadTrans t) => Context -> T.Text -> UnifiedError -> t m ()
 sayErrorF intro label theError =
   sayF intro (padRightF 32 ' ' label |+ " " +| T.pack (show theError) |+ "")

@@ -143,7 +143,6 @@ Optimization of spaces is done at the `PDFObject` level, not by this function.
 If the PDF object is not elligible to optimization or if optimization is
 ineffective, it is returned as is.
 -}
-{-# INLINE optimize #-}
 optimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
 optimize object = optimizable object >>= \case
   True -> refilter object

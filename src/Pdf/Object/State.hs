@@ -45,7 +45,6 @@ of the monad.
 
 Only `PDFIndirectObjectWithStream` and `PDFObjectStream` have stream embedded.
 -}
-{-# INLINE getStream #-}
 getStream :: Logging m => PDFObject -> FallibleT m BS.ByteString
 getStream object = case object of
   (PDFIndirectObjectWithStream _ _ _ stream) -> return stream
@@ -75,7 +74,6 @@ It works transparently for any `PDFObject` containing a dictionary:
 `PDFDictionary`, `PDFIndirectObjectWithStream`, `PDFObjectStream`,
 `PDFIndirectObject` (when embedding a `Dictionary`) and `PDFTrailer`.
 -}
-{-# INLINE getValue #-}
 getValue
   :: Logging m
   => BS.ByteString -- ^ Key of the value to retrieve
@@ -112,7 +110,6 @@ Set value in a dictionary contained in a `PDFObject`.
 
 If the object has no dictionary, it is ignored.
 -}
-{-# INLINE setValue #-}
 setValue
   :: Logging m
   => BS.ByteString -- ^ The key in a dictionary
