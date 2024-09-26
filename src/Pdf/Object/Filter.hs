@@ -145,9 +145,13 @@ applyEveryFilterJPG context (Just (_width, components)) stream = do
   filterInfo context "Zopfli" stream (fcBytes rZopfli)
 
   -- Try Jpeg2000 for images with less than 4 components.
+  let
+    jpeg2kRatio = 15 :: Int
+    jpeg2kMinimumSize = 150 :: Int
   rJpeg2k <- if components /= 4
+             && (BS.length stream `div` jpeg2kRatio) > jpeg2kMinimumSize
     then do
-      rJpeg2k' <- jpegToJpeg2k 15 stream
+      rJpeg2k' <- jpegToJpeg2k jpeg2kRatio stream
                   <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
 
       filterInfo context "JPEG2000" stream (fcBytes rJpeg2k')
