@@ -39,6 +39,7 @@ module Codec.Compression.Predict.Predictor
   , getUnpredictorFunction
   ) where
 
+import Data.Fallible (Fallible)
 import Data.Kind (Type)
 import Data.UnifiedError (UnifiedError (InvalidPredictor))
 import Data.Word (Word8)
@@ -78,7 +79,7 @@ data Predictor
 {- | Convert a PDF predictor code, returns either a `Predictor` or an
 `InvalidPredictor` error.
 -}
-decodePredictor :: Word8 -> Either UnifiedError Predictor
+decodePredictor :: Word8 -> Fallible Predictor
 decodePredictor 1     = Right TIFFNoPrediction
 decodePredictor 2     = Right TIFFPredictor2
 decodePredictor 10    = Right PNGNone
@@ -92,7 +93,7 @@ decodePredictor value = Left $ InvalidPredictor value
 {- | Convert a PDF predictor code, returns either a `Predictor` or an
 `InvalidPredictor` error.
 -}
-decodeRowPredictor :: Word8 -> Either UnifiedError Predictor
+decodeRowPredictor :: Word8 -> Fallible Predictor
 decodeRowPredictor 0     = Right PNGNone
 decodeRowPredictor 1     = Right PNGSub
 decodeRowPredictor 2     = Right PNGUp

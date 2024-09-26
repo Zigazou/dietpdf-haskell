@@ -16,7 +16,7 @@ import Codec.Filter.AsciiHex qualified as AH
 import Control.Monad.Trans.Except (runExcept, throwE)
 
 import Data.ByteString qualified as BS
-import Data.Fallible (FallibleT)
+import Data.Fallible (Fallible, FallibleT)
 import Data.Logging (Logging)
 import Data.Sequence as SQ (Seq ((:<|)))
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
@@ -35,27 +35,27 @@ import Pdf.Object.Object
     )
 import Pdf.Object.State (getStream, getValue, getValueDefault, setStream)
 
-getPredictor :: PDFObject -> Either UnifiedError Predictor
+getPredictor :: PDFObject -> Fallible Predictor
 getPredictor params = case runExcept (getValue "Predictor" params) of
   Right (Just (PDFNumber value)) -> decodePredictor . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
-getColumns :: PDFObject -> Either UnifiedError Int
+getColumns :: PDFObject -> Fallible Int
 getColumns params = case runExcept (getValueDefault "Columns" (PDFNumber 1) params) of
   Right (Just (PDFNumber value)) -> return . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
-getComponents :: PDFObject -> Either UnifiedError Int
+getComponents :: PDFObject -> Fallible Int
 getComponents params = case runExcept (getValueDefault "BitsPerComponent" (PDFNumber 8) params) of
   Right (Just (PDFNumber value)) -> return . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
-getColors :: Int -> PDFObject -> Either UnifiedError Int
+getColors :: Int -> PDFObject -> Fallible Int
 getColors defaultColors params = case runExcept (getValueDefault "Colors" (mkPDFNumber defaultColors) params) of
   Right (Just (PDFNumber value)) -> return . round $ value
   _anythingElse                  -> Left InvalidFilterParm
 
-unpredictStream :: Int -> Filter -> BS.ByteString -> Either UnifiedError BS.ByteString
+unpredictStream :: Int -> Filter -> BS.ByteString -> Fallible BS.ByteString
 unpredictStream defaultColors pdfFilter stream =
   let params = fDecodeParms pdfFilter in
   if hasKey "Predictor" params
@@ -70,7 +70,7 @@ unpredictStream defaultColors pdfFilter stream =
 unfilterStream
   :: Int
   -> (FilterList, BS.ByteString)
-  -> Either UnifiedError (FilterList, BS.ByteString)
+  -> Fallible (FilterList, BS.ByteString)
 unfilterStream colors (filters@(pdfFilter :<| otherFilters), stream)
   | fFilter pdfFilter == PDFName "FlateDecode"
   = FL.decompress stream >>= unpredictStream colors pdfFilter

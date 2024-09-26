@@ -7,13 +7,13 @@ import Codec.Compression.RunLength (compress, decompress)
 import Control.Monad (forM, forM_)
 
 import Data.ByteString qualified as BS
-import Data.UnifiedError (UnifiedError)
+import Data.Fallible (Fallible)
 import Data.Word (Word8)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Gen, arbitrary, forAll)
 
-decodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
+decodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
 decodeExamples =
   [ (""                        , Right "")
   , ("\o365a"                  , Right "aaaaaaaaaaaa")
@@ -21,7 +21,7 @@ decodeExamples =
   , ("\o365a\o365b\o000c\o000d", Right "aaaaaaaaaaaabbbbbbbbbbbbcd")
   ]
 
-encodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
+encodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
 encodeExamples =
   [ (""                          , Right "")
   , ("a"                         , Right "\o000a")

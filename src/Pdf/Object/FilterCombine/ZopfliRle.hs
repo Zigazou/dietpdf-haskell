@@ -5,8 +5,8 @@ module Pdf.Object.FilterCombine.ZopfliRle
 import Codec.Compression.Flate qualified as FL
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
-import Data.UnifiedError (UnifiedError)
 
 import Pdf.Object.Container (Filter (Filter))
 import Pdf.Object.FilterCombine.FilterCombination
@@ -20,7 +20,7 @@ import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
 zopfliRle
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError FilterCombination
+  -> Fallible FilterCombination
 zopfliRle _ stream =
   FL.compress stream
     >>= rle Nothing

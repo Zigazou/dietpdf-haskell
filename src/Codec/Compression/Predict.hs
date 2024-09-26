@@ -21,6 +21,7 @@ import Codec.Compression.Predict.Predictor
     )
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidNumberOfBytes))
 
 {- |
@@ -32,7 +33,7 @@ predict
   -> Int -- ^ Width of the stream
   -> Int -- ^ Number of color components
   -> BS.ByteString -- ^ Stream to encode
-  -> Either UnifiedError BS.ByteString -- ^ Encoded stream or an error
+  -> Fallible BS.ByteString -- ^ Encoded stream or an error
 predict entropy predictor width components stream
   | width < 1 = Left $ InvalidNumberOfBytes 0 0
   | otherwise = do
@@ -48,7 +49,7 @@ unpredict
   -> Int -- ^ Width of the image
   -> Int -- ^ Number of color components
   -> BS.ByteString -- ^ Stream to decode
-  -> Either UnifiedError BS.ByteString -- ^ Decoded stream or an error
+  -> Fallible BS.ByteString -- ^ Decoded stream or an error
 unpredict predictor width components stream
   | width < 1 = Left $ InvalidNumberOfBytes 0 0
   | otherwise = do

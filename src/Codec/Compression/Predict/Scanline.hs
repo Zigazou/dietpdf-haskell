@@ -42,10 +42,10 @@ import Codec.Compression.Predict.Predictor
 import Codec.Compression.RunLength qualified as RLE
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Kind (Type)
 import Data.List (minimumBy)
 import Data.Maybe (fromMaybe)
-import Data.UnifiedError (UnifiedError)
 import Data.Word (Word8)
 
 import Util.ByteString (groupComponents, separateComponents)
@@ -133,7 +133,7 @@ applyUnpredictorToScanline predictor (Scanline _ prior, Scanline linePredictor c
 Convert a `ByteString` to a `Scanline` according to a `Predictor`.
 -}
 fromPredictedLine
-  :: Predictor -> Int -> BS.ByteString -> Either UnifiedError Scanline
+  :: Predictor -> Int -> BS.ByteString -> Fallible Scanline
 fromPredictedLine predictor components raw
   | isPNGGroup predictor = do
     let (predictCode, bytes) = BS.splitAt 1 raw

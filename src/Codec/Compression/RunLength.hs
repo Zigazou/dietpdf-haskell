@@ -40,6 +40,7 @@ import Data.Binary.Parser
     , scan
     )
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Kind (Type)
 import Data.UnifiedError (UnifiedError (RLEDecodeError, RLEEncodeError))
 import Data.Word (Word8)
@@ -78,7 +79,7 @@ rleDecodeP = anyWord8 >>= toRLEAction
 {-|
 Decode a RLE bytestring.
 -}
-decompress :: BS.ByteString -> Either UnifiedError BS.ByteString
+decompress :: BS.ByteString -> Fallible BS.ByteString
 decompress stream =
   case
       BS.concat
@@ -122,7 +123,7 @@ rleEncodeP = do
 {-|
 Encode a bytestring into an RLE bytestring.
 -}
-compress :: BS.ByteString -> Either UnifiedError BS.ByteString
+compress :: BS.ByteString -> Fallible BS.ByteString
 compress stream =
   case
       BS.concat

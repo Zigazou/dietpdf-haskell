@@ -10,6 +10,7 @@ import Codec.Compression.Predict
     )
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import Pdf.Object.Container (Filter (Filter))
@@ -22,7 +23,7 @@ import Pdf.Object.Object (PDFObject (PDFName), mkPDFDictionary, mkPDFNumber)
 predDeflate
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError FilterCombination
+  -> Fallible FilterCombination
 predDeflate (Just (width, components)) stream = do
   -- Try finding optimal predictors with Shannon entropy function
   compressedS <-

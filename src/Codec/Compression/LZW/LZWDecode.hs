@@ -26,6 +26,7 @@ import Control.Monad.State.Lazy (State, get, put, runState)
 
 import Data.Bits (shiftL, shiftR, (.&.))
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Kind (Type)
 import Data.Maybe (isNothing)
 import Data.UnifiedError
@@ -73,7 +74,7 @@ failWith errorValue action = do
     Just value -> return value
     Nothing    -> setError errorValue >> return mempty
 
-lzwNextCode :: BS.ByteString -> State DecodeStep (Either UnifiedError Int)
+lzwNextCode :: BS.ByteString -> State DecodeStep (Fallible Int)
 lzwNextCode stream = do
   step <- get
   let bitPosition = psBitPosition step
@@ -87,7 +88,7 @@ lzwNextCode stream = do
       let byte :: Int -> Int
           byte = fromIntegral . BS.index stream . (offset +)
 
-          code :: Either UnifiedError Int
+          code :: Fallible Int
           code = if
             | offset > BS.length stream - spanLength -> Left
             $ NotEnoughBytes spanLength (BS.length stream - offset)
@@ -215,7 +216,7 @@ It may return errors on invalid codes.
 -}
 decompress
   :: BS.ByteString -- ^ A strict bytestring of at least 2 bytes
-  -> Either UnifiedError BS.ByteString
+  -> Fallible BS.ByteString
      -- ^ The uncompressed bytestring or an error
 decompress stream = do
   let (output, state) = runState

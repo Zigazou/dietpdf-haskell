@@ -7,13 +7,14 @@ import Codec.Compression.Flate (compress, decompress)
 import Control.Monad (forM, forM_)
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (FlateDecodeError))
 import Data.Word (Word8)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Gen, arbitrary, forAll)
 
-errorExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
+errorExamples :: [(BS.ByteString, Fallible BS.ByteString)]
 errorExamples =
   [ ( "a"
     , Left $ FlateDecodeError

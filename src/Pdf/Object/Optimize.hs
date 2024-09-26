@@ -7,11 +7,14 @@ module Pdf.Object.Optimize
 
 import Codec.Compression.XML (optimizeXML)
 
+import Control.Monad.Trans.Except (except)
+
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
-import Data.Fallible (FallibleT, ifFail)
+import Data.Fallible (FallibleT, ifFail, tryF)
 import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Sequence qualified as SQ
+import Data.Text qualified as T
 
 import External.JpegTran (jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)
@@ -31,17 +34,35 @@ import Pdf.Object.State (getStream, setStream, setStream1)
 import Pdf.Object.String (optimizeString)
 import Pdf.Object.Unfilter (unfilter)
 
+
+optimizeStreamOrIgnore
+  :: Logging m
+  => T.Text
+  -> PDFObject
+  -> (BS.ByteString -> FallibleT m BS.ByteString)
+  -> FallibleT m BS.ByteString
+optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
+  let context = ctx object
+  stream <- getStream object
+  tryF (optimizationProcess stream) >>= \case
+    Right optimizedStream -> do
+      sayComparisonF context
+                     optimizationLabel
+                     (BS.length stream)
+                     (BS.length optimizedStream)
+      return optimizedStream
+    Left anError -> do
+      sayErrorF context "cannot optimize" anError
+      return stream
+
 streamOptimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
 streamOptimize object =
   let context = ctx object
   in whatOptimizationFor object >>= \case
     XMLOptimization -> do
-      stream <- getStream object
-      let optimizedStream = optimizeXML stream
-      sayComparisonF context
-                    "XML stream optimization"
-                    (BS.length stream)
-                    (BS.length optimizedStream)
+      optimizedStream <- optimizeStreamOrIgnore "XML stream optimization"
+                                                object
+                                                (except . optimizeXML)
       setStream optimizedStream object
 
     GfxOptimization -> do
@@ -49,23 +70,15 @@ streamOptimize object =
       setStream stream object
 
     JPGOptimization -> do
-      stream <- getStream object
-      optimizedStream <- jpegtranOptimize stream
-      sayComparisonF context
-                    "JPG stream optimization"
-                    (BS.length stream)
-                    (BS.length optimizedStream)
-
+      optimizedStream <- optimizeStreamOrIgnore "JPG stream optimization"
+                                                object
+                                                jpegtranOptimize
       setStream optimizedStream object
 
     TTFOptimization -> do
-      stream <- getStream object
-      optimizedStream <- ttfAutoHintOptimize stream
-      sayComparisonF context
-                    "TTF stream optimization"
-                    (BS.length stream)
-                    (BS.length optimizedStream)
-
+      optimizedStream <- optimizeStreamOrIgnore "TTF stream optimization"
+                                                object
+                                                ttfAutoHintOptimize
       setStream1 (BS.length optimizedStream) optimizedStream object
 
     _anyOtherOptimization -> return object

@@ -7,13 +7,13 @@ import Codec.Filter.Ascii85 (decode, encode)
 import Control.Monad (forM, forM_)
 
 import Data.ByteString qualified as BS
-import Data.UnifiedError (UnifiedError)
+import Data.Fallible (Fallible)
 import Data.Word (Word8)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Gen, arbitrary, forAll)
 
-decodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
+decodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
 decodeExamples =
   [ ("87cURD_*#4DfTZ)+T~>"    , Right "Hello, World!")
   , ("87cUR D_*#4 DfTZ) +T ~>", Right "Hello, World!")
@@ -27,7 +27,7 @@ decodeExamples =
   , ("5sdq,\r77Kd<\n8P2V~>"   , Right "ABCDEFGHIJK")
   ]
 
-encodeExamples :: [(BS.ByteString, Either UnifiedError BS.ByteString)]
+encodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
 encodeExamples =
   [ (""                , Right "~>")
   , ("\x00\x00\x00\x00", Right "z~>")

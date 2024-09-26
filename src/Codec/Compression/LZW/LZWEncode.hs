@@ -21,9 +21,9 @@ import Control.Monad.State.Lazy (State, get, put, runState)
 
 import Data.BitsArray (BitsArray, appendBits, newBitsArray, toByteString)
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
-import Data.UnifiedError (UnifiedError)
 
 type EncodeStep :: Type
 data EncodeStep = EncodeStep
@@ -123,8 +123,7 @@ It may return errors on invalid codes.
 -}
 compress
   :: BS.ByteString -- ^ A strict bytestring
-  -> Either UnifiedError BS.ByteString
-     -- ^ The compressed bytestring or an error
+  -> Fallible BS.ByteString -- ^ The compressed bytestring or an error
 compress stream = do
   let (output, _anyError) = runState (processEncode stream)
                                      (initialEncodeStep (BS.length stream * 2 + 16))

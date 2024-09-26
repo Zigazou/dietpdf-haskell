@@ -24,7 +24,7 @@ type Fallible :: Type -> Type
 type Fallible = Either UnifiedError
 
 {-# INLINE tryF #-}
-tryF :: Monad m => FallibleT m a -> FallibleT m (Either UnifiedError a)
+tryF :: Monad m => FallibleT m a -> FallibleT m (Fallible a)
 tryF = lift . runExceptT
 
 {-# INLINE ifFail #-}

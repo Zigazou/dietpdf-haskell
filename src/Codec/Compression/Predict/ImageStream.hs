@@ -39,8 +39,8 @@ import Codec.Compression.Predict.Scanline
     )
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Kind (Type)
-import Data.UnifiedError (UnifiedError)
 
 import Util.ByteString (groupComponents, separateComponents, splitRaw)
 
@@ -93,7 +93,7 @@ Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
 line width.
 -}
 fromPredictedStream
-  :: Predictor -> Int -> Int -> BS.ByteString -> Either UnifiedError ImageStream
+  :: Predictor -> Int -> Int -> BS.ByteString -> Fallible ImageStream
 fromPredictedStream predictor width components raw = do
   let rawWidth = components * width + if isPNGGroup predictor then 1 else 0
   scanlines <- mapM (fromPredictedLine predictor components) (splitRaw rawWidth raw)
@@ -121,7 +121,7 @@ packStream = BS.concat . fmap packScanline . iLines
 Convert an unpredicted `Bytestring` to an `ImageStream` given its line width.
 -}
 fromUnpredictedStream
-  :: Int -> Int -> BS.ByteString -> Either UnifiedError ImageStream
+  :: Int -> Int -> BS.ByteString -> Fallible ImageStream
 fromUnpredictedStream width components raw = return ImageStream
   { iWidth            = width
   , iComponents       = components

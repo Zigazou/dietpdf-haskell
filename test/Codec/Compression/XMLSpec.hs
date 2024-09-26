@@ -96,4 +96,4 @@ spec = describe "optimizeXML" $ do
   forM_ xmlExamples $ \(example, expected) ->
     it ("should work with " ++ show example)
       $          optimizeXML example
-      `shouldBe` expected
+      `shouldBe` Right expected

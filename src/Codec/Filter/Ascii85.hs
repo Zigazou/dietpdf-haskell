@@ -61,6 +61,7 @@ import Data.Binary.Parser
     , word8
     )
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidAscii85Stream))
 import Data.Word (Word8)
 
@@ -182,7 +183,7 @@ Right "\x00\x00\x00\x00"
 -}
 decode
   :: BS.ByteString -- ^ Data to encode
-  -> Either UnifiedError BS.ByteString
+  -> Fallible BS.ByteString
   -- ^ An `InvalidAscii85Stream` is returned if the stream is not valid
 decode stream =
   let stream' = BS.filter (> 32) stream
@@ -236,7 +237,7 @@ Right "5sdq,77Kd<8P2V~z"
 -}
 encode
   :: BS.ByteString -- ^ Data to encode
-  -> Either UnifiedError BS.ByteString
+  -> Fallible BS.ByteString
 encode stream = case parseOnly (encodeAscii85P <* endOfInput) stream of
   Left  msg     -> Left (InvalidAscii85Stream msg)
   Right encoded -> Right (BS.concat [encoded, "~>"])

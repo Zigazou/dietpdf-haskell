@@ -7,6 +7,7 @@ import Control.Applicative ((<|>))
 import Data.Array (Array, mkArray)
 import Data.Binary.Parser (Get, label, many', parseDetail, satisfy, sepBy)
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (ParseError))
 import Data.Word (Word8)
 
@@ -51,7 +52,7 @@ returning errors.
 -}
 gfxParse
   :: BS.ByteString -- ^ The bytestring to parse coming from a file.
-  -> Either UnifiedError (Array GFXObject) -- ^ Error or a `List of `GFXObject`.
+  -> Fallible (Array GFXObject) -- ^ Error or a `List of `GFXObject`.
 gfxParse source = case parseDetail gfxRawP source of
   Left  err                      -> Left (ParseError err)
   Right (""    , _     , result) -> Right (mkArray result)

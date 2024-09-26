@@ -5,8 +5,8 @@ module Pdf.Object.FilterCombine.Rle
 import Codec.Compression.RunLength qualified as RL
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
-import Data.UnifiedError (UnifiedError)
 
 import Pdf.Object.Container (Filter (Filter))
 import Pdf.Object.FilterCombine.FilterCombination
@@ -18,6 +18,6 @@ import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
 rle
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError FilterCombination
+  -> Fallible FilterCombination
 rle _ stream =
   RL.compress stream <&> mkFCAppend [Filter (PDFName "RunLengthDecode") PDFNull]

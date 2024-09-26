@@ -21,6 +21,7 @@ import Codec.Compression.Zlib.Internal qualified as ZLI
 
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
+import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (FlateDecodeError))
 
 zopfliCompressOptions :: HL.CompressOptions
@@ -53,8 +54,7 @@ The output is standardized but will always return a Right value.
 -}
 compress
   :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Either UnifiedError BS.ByteString
-  -- ^ Either an error or the compressed bytestring
+  -> Fallible BS.ByteString -- ^ Either an error or the compressed bytestring
 compress content = Right . HL.compressWith adaptiveOptions HL.ZLIB $ content
   where
     adaptiveOptions = zopfliCompressOptions
@@ -84,8 +84,7 @@ The output is standardized but will always return a Right value.
 -}
 fastCompress
   :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Either UnifiedError BS.ByteString
-  -- ^ Either an error or the compressed bytestring
+  -> Fallible BS.ByteString -- ^ Either an error or the compressed bytestring
 fastCompress =
   Right . BL.toStrict . ZL.compressWith zlibCompressParams . BL.fromStrict
 {-|
@@ -109,8 +108,7 @@ The output is standardized but will always return a Right value.
 -}
 noCompress
   :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Either UnifiedError BS.ByteString
-  -- ^ Either an error or the compressed bytestring
+  -> Fallible BS.ByteString -- ^ Either an error or the compressed bytestring
 noCompress =
   Right . BL.toStrict . ZL.compressWith zlibNoCompressParams . BL.fromStrict
 
@@ -122,11 +120,11 @@ It may return errors on unexpected end of string or incorrect value.
 -}
 decompress
   :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Either UnifiedError BS.ByteString
+  -> Fallible BS.ByteString
   -- ^ Either an error or the compressed bytestring
 decompress = fmap BL.toStrict . decompressLazy . BL.fromStrict
  where
-  decompressLazy :: BL.ByteString -> Either UnifiedError BL.ByteString
+  decompressLazy :: BL.ByteString -> Fallible BL.ByteString
   decompressLazy = ZLI.foldDecompressStreamWithInput
     (fmap . BL.append . BL.fromStrict)
     (const (Right BL.empty))

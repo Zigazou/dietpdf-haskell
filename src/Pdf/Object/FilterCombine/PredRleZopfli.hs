@@ -11,6 +11,7 @@ import Codec.Compression.Predict
 import Codec.Compression.RunLength qualified as RL
 
 import Data.ByteString qualified as BS
+import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
@@ -28,7 +29,7 @@ import Pdf.Object.Object
 predRleZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
-  -> Either UnifiedError FilterCombination
+  -> Fallible FilterCombination
 predRleZopfli (Just (width, components)) stream =
   -- Try finding optimal predictors with Deflate "entropy" function
   predict EntropyRLE PNGOptimum width components stream

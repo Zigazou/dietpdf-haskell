@@ -14,10 +14,9 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
-import Data.Fallible (FallibleT)
-import Data.UnifiedError (UnifiedError)
+import Data.Fallible (Fallible, FallibleT)
 
-manage :: Either UnifiedError BS.ByteString -> FallibleT IO ()
+manage :: Fallible BS.ByteString -> FallibleT IO ()
 manage (Right compressed) = lift $ BS.putStr compressed
 manage (Left  err       ) = throwE err
 

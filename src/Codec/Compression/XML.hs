@@ -10,6 +10,7 @@ import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Search.DFA (replace)
 import Data.ByteString.UTF8 qualified as BSU
 import Data.Char (isSpace)
+import Data.Fallible (Fallible)
 import Data.Text qualified as T
 import Data.Text.Encoding (decodeLatin1, decodeUtf8')
 
@@ -25,6 +26,7 @@ toText :: BS.ByteString -> T.Text
 toText bytes = case decodeUtf8' bytes of
   Right text -> text
   Left  _    -> decodeLatin1 bytes
+
 {- | Optimize XML stream.
 
 It:
@@ -32,13 +34,13 @@ It:
 - removes indentation spaces
 - transforms empty tag <a></a> into <a />
 -}
-optimizeXML :: BS.ByteString -> BS.ByteString
-optimizeXML stream = BS.concat
-  (   patchByteOrder
-  .   BSU.fromString
-  .   showContent
-  <$> (removeSpace . parseXML . toText) stream
-  )
+optimizeXML :: BS.ByteString -> Fallible BS.ByteString
+optimizeXML = pure
+            . BS.concat
+            . ( (patchByteOrder . BSU.fromString . showContent) <$> )
+            . removeSpace
+            . parseXML
+            . toText
  where
   patchByteOrder :: BS.ByteString -> BS.ByteString
   patchByteOrder =

@@ -6,8 +6,8 @@ import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
 import Data.Array (mkArray)
+import Data.Fallible (Fallible)
 import Data.ByteString qualified as BS
-import Data.UnifiedError (UnifiedError)
 
 import Pdf.Document.Document (PDFDocument, fromList)
 import Pdf.Document.Parser (pdfParse)
@@ -22,7 +22,7 @@ import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.Dictionary (mkDictionary)
 
-pdfParseExamples :: [(BS.ByteString, Either UnifiedError PDFDocument)]
+pdfParseExamples :: [(BS.ByteString, Fallible PDFDocument)]
 pdfParseExamples =
   [ ("%PDF-1.4\n", Right $ fromList [PDFVersion "1.4"])
   , ( "%PDF-1.4\n      \n%%EOF\n"

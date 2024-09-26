@@ -9,7 +9,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
-import Data.Fallible (FallibleT)
+import Data.Fallible (Fallible, FallibleT)
 import Data.UnifiedError (UnifiedError (ExternalCommandError))
 
 import GHC.IO.Handle
@@ -57,7 +57,7 @@ externalCommandBuf command args input = do
     -> Maybe Handle
     -> Maybe Handle
     -> ProcessHandle
-    -> IO (Either UnifiedError BS.ByteString)
+    -> IO (Fallible BS.ByteString)
   injectInput input' (Just stdin) (Just stdout) _stderr ph = do
     -- Configure stdin
     hSetBinaryMode stdin True
@@ -103,7 +103,7 @@ externalCommandBuf' command args input = do
     -> Maybe Handle
     -> Maybe Handle
     -> ProcessHandle
-    -> IO (Either UnifiedError BS.ByteString)
+    -> IO (Fallible BS.ByteString)
   injectInput _stdin (Just stdout) _stderr ph = do
     -- Configure stdout
     hSetBinaryMode stdout True
