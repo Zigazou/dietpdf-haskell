@@ -15,6 +15,7 @@ where
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.Foldable (foldl', toList)
 import Data.IntMap.Strict qualified as IM
 import Data.Ix (range, rangeSize)
@@ -22,7 +23,7 @@ import Data.Logging (Logging)
 import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as SQ
-import Data.UnifiedError (FallibleT, UnifiedError (XRefStreamNoW))
+import Data.UnifiedError (UnifiedError (XRefStreamNoW))
 
 import Pdf.Document.EncodedObject
     ( EncodedObject (EncodedObject, eoBinaryData, eoObjectLength, eoObjectNumber)

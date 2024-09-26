@@ -9,9 +9,9 @@ import Codec.Compression.XML (optimizeXML)
 
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
+import Data.Fallible (FallibleT, ifFail)
 import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Sequence qualified as SQ
-import Data.UnifiedError (FallibleT, ifFail)
 
 import External.JpegTran (jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)

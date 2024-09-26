@@ -42,6 +42,8 @@ library
       Data.Array
       Data.BitsArray
       Data.Context
+      Data.ErrorType
+      Data.Fallible
       Data.Logging
       Data.UnifiedError
       External.ExternalCommand

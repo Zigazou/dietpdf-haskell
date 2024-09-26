@@ -16,9 +16,10 @@ import Codec.Filter.AsciiHex qualified as AH
 import Control.Monad.Trans.Except (runExcept, throwE)
 
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.Logging (Logging)
 import Data.Sequence as SQ (Seq ((:<|)))
-import Data.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
+import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import Pdf.Object.Container
     ( Filter (fDecodeParms, fFilter)

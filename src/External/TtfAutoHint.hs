@@ -1,7 +1,7 @@
 module External.TtfAutoHint (ttfAutoHintOptimize) where
 
 import Data.ByteString qualified as BS
-import Data.UnifiedError (FallibleT)
+import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf)
 

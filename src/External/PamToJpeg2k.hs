@@ -1,7 +1,7 @@
 module External.PamToJpeg2k (pamToJpeg2k, jpegToJpeg2k) where
 
 import Data.ByteString qualified as BS
-import Data.UnifiedError (FallibleT)
+import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf, externalCommandBuf')
 

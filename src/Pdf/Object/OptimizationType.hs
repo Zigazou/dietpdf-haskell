@@ -4,10 +4,10 @@ module Pdf.Object.OptimizationType
   )
 where
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT, tryF)
 import Data.Kind (Type)
 import Data.Logging (Logging)
 import Data.Sequence qualified as SQ
-import Data.UnifiedError (FallibleT, tryF)
 
 import Font.TrueType.Parser.Font (ttfParse)
 

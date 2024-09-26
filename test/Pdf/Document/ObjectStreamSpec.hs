@@ -6,7 +6,8 @@ import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
 import Data.Array (mkArray)
-import Data.UnifiedError (Fallible, UnifiedError (NoObjectToEncode))
+import Data.Fallible (Fallible)
+import Data.UnifiedError (UnifiedError (NoObjectToEncode))
 
 import Pdf.Document.Document (PDFDocument, fromList)
 import Pdf.Document.ObjectStream (explodeList, insert)

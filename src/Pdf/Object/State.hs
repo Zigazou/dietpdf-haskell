@@ -23,11 +23,11 @@ import Control.Monad.Identity (Identity (runIdentity))
 import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
 import Data.UnifiedError
-    ( FallibleT
-    , UnifiedError (InvalidObjectToEmbed, NoDictionary, NoStream)
+    ( UnifiedError (InvalidObjectToEmbed, NoDictionary, NoStream)
     )
 
 import Pdf.Object.Object

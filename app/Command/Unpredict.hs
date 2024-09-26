@@ -8,7 +8,7 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
-import Data.UnifiedError (FallibleT)
+import Data.Fallible (FallibleT)
 
 unpredictByteString
   :: Predictor -> Int -> Int -> BS.ByteString -> FallibleT IO ()

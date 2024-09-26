@@ -10,12 +10,12 @@ import Control.Monad.Trans.Except (except)
 import Data.Array (mkArray)
 import Data.ByteString qualified as BS
 import Data.Context (Context, Contextual (ctx))
+import Data.Fallible (FallibleT)
 import Data.Foldable (minimumBy)
 import Data.Functor ((<&>))
 import Data.Logging (Logging, sayComparisonF)
 import Data.Sequence ((><))
 import Data.Text qualified as T
-import Data.UnifiedError (FallibleT)
 
 import External.PamToJpeg2k (jpegToJpeg2k)
 

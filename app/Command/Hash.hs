@@ -3,13 +3,13 @@ module Command.Hash
   ) where
 
 import Data.Context (ctx)
+import Data.Fallible (FallibleT)
 import Data.Foldable (foldrM)
 import Data.Kind (Type)
 import Data.Logging (sayF)
 import Data.Maybe (catMaybes)
 import Data.Set (Set, empty, insert, member)
 import Data.Text qualified as T
-import Data.UnifiedError (FallibleT)
 
 import Pdf.Document.Document (PDFDocument, toList)
 import Pdf.Object.Object (PDFObject (PDFIndirectObjectWithStream))

@@ -19,10 +19,10 @@ module Pdf.Document.Document
 
 import Control.Applicative (Alternative, (<|>))
 
+import Data.Fallible (FallibleT)
 import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Data.Set.Ordered qualified as OS
-import Data.UnifiedError (FallibleT)
 
 import Pdf.Object.Object
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFTrailer)

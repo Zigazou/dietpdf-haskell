@@ -5,8 +5,8 @@ module Pdf.Document.EncodeSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
+import Data.Fallible (Fallible)
 import Data.Sequence (Seq (Empty), fromList)
-import Data.UnifiedError (Fallible)
 
 import Pdf.Document.Encode (encodeObject)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))

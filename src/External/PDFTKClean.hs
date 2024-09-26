@@ -2,9 +2,9 @@
 module External.PDFTKClean (pdftkClean) where
 
 import Data.Context (Contextual (ctx))
+import Data.Fallible (FallibleT)
 import Data.Logging (sayF)
 import Data.Text qualified as T
-import Data.UnifiedError (FallibleT)
 
 import External.ExternalCommand (externalCommand)
 

@@ -4,13 +4,13 @@ module Pdf.Object.String
 
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
+import Data.Fallible (FallibleT)
+import Data.Logging (Logging, sayComparisonF)
 import Data.Map qualified as Map
-import Data.UnifiedError (FallibleT)
 
 import Pdf.Object.Object (PDFObject (PDFHexString, PDFString))
 
 import Util.Ascii (asciiDELETE)
-import Data.Logging (Logging, sayComparisonF)
 import Util.PdfDocEncoding (unicodeToPdfDocEncoding)
 import Util.String (hexStringToString)
 

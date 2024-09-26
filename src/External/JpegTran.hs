@@ -4,7 +4,7 @@ module External.JpegTran (jpegtranOptimize) where
 import Codec.Compression.Flate (fastCompress)
 
 import Data.ByteString qualified as BS
-import Data.UnifiedError (FallibleT)
+import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf)
 

@@ -17,12 +17,13 @@ module Pdf.Object.Container
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
 import Data.Sequence qualified as SQ
-import Data.UnifiedError (FallibleT, UnifiedError (InvalidFilterParm))
+import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import Pdf.Object.Object
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream)

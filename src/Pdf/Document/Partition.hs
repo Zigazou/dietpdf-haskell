@@ -10,12 +10,12 @@ module Pdf.Document.Partition
   ) where
 
 import Data.Context (Contextual (ctx))
+import Data.Fallible (FallibleT)
 import Data.Foldable (find)
 import Data.IntMap qualified as IM
 import Data.Kind (Type)
 import Data.Logging (Logging, sayF)
 import Data.Maybe (fromMaybe)
-import Data.UnifiedError (FallibleT)
 
 import Pdf.Document.Document (PDFDocument, deepFind, member)
 import Pdf.Document.PDFObjects (PDFObjects, toPDFDocument)

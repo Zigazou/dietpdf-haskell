@@ -13,15 +13,14 @@ import Control.Monad.Trans.Except (runExcept, runExceptT, throwE)
 
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
+import Data.Fallible (FallibleT, tryF)
 import Data.IntMap qualified as IM
 import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Map.Strict qualified as Map
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 import Data.UnifiedError
-    ( FallibleT
-    , UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
-    , tryF
+    ( UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
     )
 
 import GHC.IO.Handle (BufferMode (LineBuffering))

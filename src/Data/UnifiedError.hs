@@ -5,36 +5,17 @@ Having one type for all errors means the Either monad can be used to avoid
 long if then else if then else.
 -}
 module Data.UnifiedError
-  ( UnifiedError(..)
-  , FallibleT
-  , Fallible
-  , tryF
-  , ifFail
-  ) where
-
-import Control.Monad.Except (ExceptT, runExceptT)
-import Control.Monad.Trans.Class (MonadTrans (lift))
+  ( UnifiedError(ParseError, UnableToOpenFile, EncodeNoIndirectObject, EncodeNoVersion, EncodeNoTrailer, EncodeNoRootEntry, RLEDecodeError, RLEEncodeError, FlateDecodeError, LZWStopCodeNotFound, NotEnoughBytes, InternalError, InvalidPredictor, InvalidNumberOfBytes, InvalidFilterParm, InvalidAscii85Stream, NoStream, NoDictionary, InvalidObjectToEmbed, NoObjectToEncode, UnknownScalerType, ObjectStreamNotFound, ObjectNotFound, XRefStreamNoW, ExternalCommandError, PDFTKError, UnsupportedFeature)
+  )
+where
 
 import Data.Binary.Get (ByteOffset)
 import Data.ByteString qualified as BS
+import Data.ErrorType
+    ( ErrorType (EncodingError, ParsingError, ReadingError, StructureError, UnsupportedError)
+    )
 import Data.Kind (Type)
 import Data.Word (Word8)
-
-type ErrorType :: Type
-data ErrorType = ReadingError
-               | ParsingError
-               | EncodingError
-               | StructureError
-               | UnsupportedError
-               deriving stock Eq
-
-instance Show ErrorType where
-  show :: ErrorType -> String
-  show ReadingError     = "reading"
-  show ParsingError     = "parsing"
-  show EncodingError    = "encoding"
-  show StructureError   = "structure"
-  show UnsupportedError = "unsupported"
 
 type UnifiedError :: Type
 data UnifiedError
@@ -86,12 +67,6 @@ data UnifiedError
   | PDFTKError !String
   | UnsupportedFeature !String
   deriving stock (Eq)
-
-type FallibleT :: (Type -> Type) -> Type -> Type
-type FallibleT = ExceptT UnifiedError
-
-type Fallible :: Type -> Type
-type Fallible = Either UnifiedError
 
 errorType :: UnifiedError -> ErrorType
 errorType (ParseError _)             = ParsingError
@@ -180,18 +155,3 @@ instance Show UnifiedError where
   show err@(PDFTKError msg) = show' err ("PDFTK error: " ++ msg)
   show err@(UnsupportedFeature msg) =
     show' err ("Unsupported feature: " ++ msg)
-
-{-# INLINE tryF #-}
-tryF :: Monad m => FallibleT m a -> FallibleT m (Either UnifiedError a)
-tryF = lift . runExceptT
-
-{-# INLINE ifFail #-}
-ifFail
-  :: Monad m
-  => FallibleT m a
-  -> (UnifiedError -> FallibleT m a)
-  -> FallibleT m a
-ifFail computation inCaseOfFail = do
-  tryF computation >>= \case
-    Right result  -> return result
-    Left  anError -> inCaseOfFail anError

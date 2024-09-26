@@ -5,9 +5,10 @@ module Pdf.Object.FilterCombine.Jpeg2k
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
-import Data.UnifiedError (FallibleT, UnifiedError (UnsupportedFeature))
+import Data.UnifiedError (UnifiedError (UnsupportedFeature))
 
 import External.PamToJpeg2k (pamToJpeg2k)
 

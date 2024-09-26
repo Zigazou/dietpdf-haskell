@@ -4,7 +4,7 @@ module External.GhostScriptOptimize (ghostScriptOptimize) where
 import Data.Context (Contextual (ctx))
 import Data.Logging (sayF)
 import Data.Text qualified as T
-import Data.UnifiedError (FallibleT)
+import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommand)
 

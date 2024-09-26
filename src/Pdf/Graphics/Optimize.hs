@@ -4,10 +4,10 @@ import Data.Array (Array)
 import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
 import Data.Context (Context)
+import Data.Fallible (FallibleT)
 import Data.Kind (Type)
 import Data.Logging (Logging, sayComparisonF, sayF)
 import Data.Sequence qualified as SQ
-import Data.UnifiedError (FallibleT)
 
 import Pdf.Graphics.Object
     ( GFXObject (GFXArray, GFXNumber, GFXOperator)

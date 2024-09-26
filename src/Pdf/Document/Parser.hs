@@ -8,8 +8,9 @@ import Control.Monad.Trans.Except (throwE)
 import Data.Binary.Parser (Get, label, many', parseDetail, satisfy)
 import Data.ByteString qualified as BS
 import Data.Context (Context (NoContext))
+import Data.Fallible (FallibleT)
 import Data.Logging (Logging, sayF)
-import Data.UnifiedError (FallibleT, UnifiedError (ParseError))
+import Data.UnifiedError (UnifiedError (ParseError))
 import Data.Word (Word8)
 
 import Pdf.Document.Document (PDFDocument, dSepBy)

@@ -23,12 +23,9 @@ import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
+import Data.Fallible (FallibleT, tryF)
 import Data.Logging (sayComparisonF)
-import Data.UnifiedError
-    ( FallibleT
-    , UnifiedError (ParseError, UnableToOpenFile)
-    , tryF
-    )
+import Data.UnifiedError (UnifiedError (ParseError, UnableToOpenFile))
 
 import External.GhostScriptOptimize (ghostScriptOptimize)
 

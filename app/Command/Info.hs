@@ -3,9 +3,9 @@ module Command.Info
   ) where
 
 import Data.Context (ctx)
+import Data.Fallible (FallibleT)
 import Data.Logging (sayF)
 import Data.Text.Lazy qualified as T
-import Data.UnifiedError (FallibleT)
 
 import Formatting (format, int, (%))
 

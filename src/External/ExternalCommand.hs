@@ -9,7 +9,8 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
-import Data.UnifiedError (FallibleT, UnifiedError (ExternalCommandError))
+import Data.Fallible (FallibleT)
+import Data.UnifiedError (UnifiedError (ExternalCommandError))
 
 import GHC.IO.Handle
     ( BufferMode (BlockBuffering)

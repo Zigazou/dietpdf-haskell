@@ -5,9 +5,9 @@ module Pdf.Object.StateSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
+import Data.Fallible (FallibleT)
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
-import Data.UnifiedError (FallibleT)
 
 import Pdf.Object.Object
     ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream)

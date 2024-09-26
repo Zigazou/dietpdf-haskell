@@ -35,14 +35,14 @@ import Data.Binary.Parser
     , takeWhile1
     )
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.Foldable (foldl')
 import Data.Functor ((<&>))
 import Data.IntMap (fromList, singleton, union)
 import Data.Kind (Type)
 import Data.Logging (Logging)
 import Data.UnifiedError
-    ( FallibleT
-    , UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError)
+    ( UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError)
     )
 
 import Pdf.Document.Document (PDFDocument, cFilter)

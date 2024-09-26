@@ -7,7 +7,7 @@ module Pdf.Object.ContainerSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
-import Data.UnifiedError (FallibleT)
+import Data.Fallible (FallibleT)
 
 import Pdf.Object.Container
     ( Filter (Filter)

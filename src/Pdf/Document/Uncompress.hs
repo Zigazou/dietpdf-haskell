@@ -4,9 +4,9 @@ module Pdf.Document.Uncompress
   ) where
 
 import Data.Context (ctx)
+import Data.Fallible (FallibleT)
 import Data.Functor ((<&>))
 import Data.Logging (Logging, sayF)
-import Data.UnifiedError (FallibleT)
 
 import Pdf.Document.Document (PDFDocument, fromList, toList)
 import Pdf.Document.ObjectStream (explodeDocument, explodeObjects)

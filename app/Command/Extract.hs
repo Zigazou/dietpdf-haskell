@@ -6,11 +6,9 @@ import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.List (find)
-import Data.UnifiedError
-    ( FallibleT
-    , UnifiedError (ObjectNotFound, ObjectStreamNotFound)
-    )
+import Data.UnifiedError (UnifiedError (ObjectNotFound, ObjectStreamNotFound))
 
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Object.Object

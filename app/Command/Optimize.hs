@@ -5,8 +5,8 @@ module Command.Optimize
 import Control.Monad.Trans.Class (MonadTrans (lift))
 
 import Data.ByteString qualified as BS
+import Data.Fallible (FallibleT)
 import Data.Text.Lazy.IO qualified as T
-import Data.UnifiedError (FallibleT)
 
 import Formatting (format, int, (%))
 
