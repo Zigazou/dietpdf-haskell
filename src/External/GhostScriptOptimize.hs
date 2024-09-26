@@ -1,5 +1,5 @@
 -- | Optimize a PDF file using GhostScript.
-module External.GSOptimize (gsOptimize) where
+module External.GhostScriptOptimize (ghostScriptOptimize) where
 
 import Data.Context (Contextual (ctx))
 import Data.Logging (sayF)
@@ -64,8 +64,8 @@ generateOptions = fmap generateOption
   generateOption (switch, option, "")    = concat ["-", switch, option]
   generateOption (switch, option, value) = concat ["-", switch, option, "=", value]
 
-gsOptimize :: FilePath -> FilePath -> FallibleT IO ()
-gsOptimize inputPdf outputPdf = do
+ghostScriptOptimize :: FilePath -> FilePath -> FallibleT IO ()
+ghostScriptOptimize inputPdf outputPdf = do
   sayF (ctx ("ghostscript" :: String))
      $ T.concat ["Running GhostScript on ", T.pack inputPdf]
 

@@ -30,7 +30,7 @@ import Data.UnifiedError
     , tryF
     )
 
-import External.GSOptimize (gsOptimize)
+import External.GhostScriptOptimize (ghostScriptOptimize)
 
 import Hexdump (Cfg, defaultCfg, prettyHexCfg, startByte)
 
@@ -96,7 +96,7 @@ runApp (OptimizeOptions inputPDF outputPDF useGS) = do
       lift $ hClose ghostscriptHandle
 
       -- Optimize PDF with GhostScript.
-      gsOptimize inputPDF ghostscriptPDF
+      ghostScriptOptimize inputPDF ghostscriptPDF
 
       -- Compare the sizes of the original and GhostScript PDFs.
       originalSize <- lift $ getFileSize inputPDF

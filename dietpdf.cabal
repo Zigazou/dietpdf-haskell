@@ -45,7 +45,7 @@ library
       Data.Logging
       Data.UnifiedError
       External.ExternalCommand
-      External.GSOptimize
+      External.GhostScriptOptimize
       External.JpegTran
       External.PamToJpeg2k
       External.PDFTKClean
