@@ -144,6 +144,7 @@ library
       Util.Number
       Util.PdfDocEncoding
       Util.Sequence
+      Util.SimpleTiff
       Util.String
       Util.Text
   other-modules:
@@ -300,6 +301,7 @@ test-suite dietpdf-test
       Util.HexSpec
       Util.NumberSpec
       Util.ParserHelper
+      Util.SimpleTiffSpec
       Util.StringSpec
       Paths_dietpdf
   hs-source-dirs:
