@@ -20,7 +20,7 @@ import Data.Map.Strict qualified as Map
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 import Data.UnifiedError
-    ( UnifiedError (EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
+    ( UnifiedError (EncodeEncrypted, EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
     )
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
@@ -172,25 +172,22 @@ pdfEncode objects = do
       pdfHead = fromPDFObject (PDFVersion "1.7")
       pdfEnd  = fromPDFObject PDFEndOfFile
 
-  when (null (ppObjectsWithStream partition) && null (ppObjectsWithoutStream partition)) $ do
-    sayF context "Indirect objects not found"
-    throwE EncodeNoIndirectObject
+  when (   null (ppObjectsWithStream partition)
+        && null (ppObjectsWithoutStream partition))
+       (throwE EncodeNoIndirectObject)
 
-  let withStreamCount = IM.size (ppObjectsWithStream partition)
+  let withStreamCount    = IM.size (ppObjectsWithStream partition)
       withoutStreamCount = IM.size (ppObjectsWithoutStream partition)
 
   sayF context $ T.concat ["Indirect object with stream: ", T.pack (show withStreamCount)]
   sayF context $ T.concat ["Indirect object without stream: ", T.pack (show withoutStreamCount)]
 
-  when (null $ ppHeads partition) $ do
-    sayF context "Version not found"
-    throwE EncodeNoVersion
+  when (null $ ppHeads partition) (throwE EncodeNoVersion)
 
   let pdfTrailer = getTrailer partition
 
-  when (pdfTrailer == PDFTrailer PDFNull) $ do
-    sayF context "Trailer not found"
-    throwE EncodeNoTrailer
+  when (pdfTrailer == PDFTrailer PDFNull) (throwE EncodeNoTrailer)
+  when (hasKey "Encrypt" pdfTrailer) (throwE EncodeEncrypted)
 
   sayF context "Optimizing PDF"
 

@@ -5,7 +5,7 @@ Having one type for all errors means the Either monad can be used to avoid
 long if then else if then else.
 -}
 module Data.UnifiedError
-  ( UnifiedError(ParseError, UnableToOpenFile, EncodeNoIndirectObject, EncodeNoVersion, EncodeNoTrailer, EncodeNoRootEntry, RLEDecodeError, RLEEncodeError, FlateDecodeError, LZWStopCodeNotFound, NotEnoughBytes, InternalError, InvalidPredictor, InvalidNumberOfBytes, InvalidFilterParm, InvalidAscii85Stream, NoStream, NoDictionary, InvalidObjectToEmbed, NoObjectToEncode, UnknownScalerType, ObjectStreamNotFound, ObjectNotFound, XRefStreamNoW, ExternalCommandError, PDFTKError, UnsupportedFeature)
+  ( UnifiedError(ParseError, UnableToOpenFile, EncodeNoIndirectObject, EncodeNoVersion, EncodeNoTrailer, EncodeNoRootEntry, RLEDecodeError, RLEEncodeError, FlateDecodeError, LZWStopCodeNotFound, NotEnoughBytes, InternalError, InvalidPredictor, InvalidNumberOfBytes, InvalidFilterParm, InvalidAscii85Stream, NoStream, NoDictionary, InvalidObjectToEmbed, NoObjectToEncode, UnknownScalerType, ObjectStreamNotFound, ObjectNotFound, XRefStreamNoW, ExternalCommandError, PDFTKError, UnsupportedFeature, EncodeEncrypted)
   )
 where
 
@@ -31,6 +31,8 @@ data UnifiedError
   | EncodeNoTrailer
   -- | The PDF file contains no root entry
   | EncodeNoRootEntry
+  -- | The PDF file is encrypted
+  | EncodeEncrypted
   -- | The decoding of an RLE bytestring generated an error
   | RLEDecodeError !String
   -- | The encoding to an RLE bytestring generated an error
@@ -76,6 +78,7 @@ errorType (ExternalCommandError _ _) = ReadingError
 errorType (PDFTKError _)             = ReadingError
 errorType EncodeNoIndirectObject     = EncodingError
 errorType EncodeNoVersion            = EncodingError
+errorType EncodeEncrypted            = EncodingError
 errorType EncodeNoTrailer            = EncodingError
 errorType EncodeNoRootEntry          = EncodingError
 errorType (RLEEncodeError   _)       = EncodingError
@@ -107,6 +110,7 @@ instance Show UnifiedError where
   show err@ObjectNotFound                   = show' err "Object not found"
   show err@EncodeNoIndirectObject = show' err "No indirect object to encode"
   show err@EncodeNoVersion                  = show' err "No version to encode"
+  show err@EncodeEncrypted                  = show' err "PDF is encrypted"
   show err@EncodeNoTrailer                  = show' err "No trailer to encode"
   show err@EncodeNoRootEntry = show' err "No root entry to encode"
   show err@(RLEEncodeError   msg)           = show' err msg
