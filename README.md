@@ -11,16 +11,6 @@ while preserving image quality.
 In fact, running DietPDF after using other tools will likely further reduce the
 PDF file size.
 
-## Requirements
-
-- GhostScript `gs` (optional, only if `-g` is used)
-- JpegTran `jpegtran` (required)
-- ImageMagick `convert` (required)
-- Grok image compression (`grk_compress`) as found on
-  [Github Grok repository](https://github.com/GrokImageCompression/grok)
-  (required)
-- TTFAutoHint `ttfautohint` (required)
-
 ## Usage
 
 Though DietPDF is mainly targeted at compressing PDF, it offers other tools
@@ -139,19 +129,65 @@ Unpredicts a file as it would be in a PDF stream.
 * *components*: The number of components (e.g., color channels).
 * *input_pdf_file*: (Optional) The file to unpredict.
 
-## Limitations
+## Requirements
+
+The following tools/commands must be available via the `PATH` environment
+variable.
 
 ### GhostScript
+
+**optional**: `gs`
+
+GhostScript is only used with the `-g` option.
+
+GhostScript may be used as a preprocessor before optimizing. As GhostScript
+completely rewrites the PDF, it may help to further reduce the PDF file size.
 
 GhostScript may drop contents it does not natively handle. For example, if you
 have embedded videos launched when clicking on an image, GhostScript will drop
 them while rewriting the PDF.
 
-On the other hand, with its rewriting engine, GhostScript often reduce PDF size.
-
 GhostScript before version 10.02.1 may mess with document summary or with some
 fonts. Check your version before enabling it. This is especially true for Debian
 distributions since they tend to keep old versions of applications.
+
+### JpegTran
+
+**required**: `jpegtran`
+
+JpegTran is used against embedded Jpeg files. It can convert between baseline
+and progressive Jpeg without any loss. 
+
+It is also able to optimize the Jpeg data, reducing file size, again, without
+any loss.
+
+### ImageMagick
+
+**required**: `convert`
+
+ImageMagick is used to convert Jpeg files to Tiff files. While other tools can
+do the same (like NetPBM tools), few support CMYK Jpeg files. 
+
+### Grok image compression
+
+**required**: `grk_compress`
+
+The Grok image compression tools are not available as packages. You need to
+download them from [Github Grok repository](https://github.com/GrokImageCompression/grok)
+and install them manually.
+
+Grok is used to handle Jpeg 2000 images. While OpenJPEG also does the same and
+is available as package in most Linux distributions, Grok supports CMYK JPEG
+2000.
+
+### TTFAutoHint
+
+**required**: `ttfautohint`
+
+TTFAutoHint is used to reduce size of True Type fonts embedded in a PDF file. It
+does so by removing hinting which is not used by the PDF viewers.
+
+## Limitations
 
 ### Encrypted PDF
 
