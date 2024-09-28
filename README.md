@@ -4,14 +4,15 @@ Reduce PDF files
 
 ## Requirements
 
-- GhostScript (optional, only if `-g` is used)
-- jpegtran (required)
-- jpegtopnm, pamtojpeg2k from the NetPBM tools (required)
-- ttfautohint (required)
+- GhostScript `gs` (optional, only if `-g` is used)
+- JpegTran `jpegtran` (required)
+- ImageMagick `convert` (required)
+- Grok image compression (`grk_compress`) as found on
+  [Github Grok repository](https://github.com/GrokImageCompression/grok)
+  (required)
+- TTFAutoHint `ttfautohint` (required)
 
 ## Options
-
-
 
 ## Limitations
 

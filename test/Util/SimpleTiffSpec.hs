@@ -5,6 +5,7 @@ module Util.SimpleTiffSpec
 import Control.Monad.Except (runExceptT)
 
 import Data.ByteString qualified as BS
+import Data.ColorSpace (ColorSpace (ColorSpaceRGB))
 
 import External.ExternalCommand (externalCommandBuf')
 
@@ -50,7 +51,7 @@ spec :: Spec
 spec = do
   describe "simpleTiff" $ do
     it "creates a simple RGB TIFF file" $ do
-      let tiff = simpleTiff 4 9 3 rgbImage
+      let tiff = simpleTiff 4 9 ColorSpaceRGB rgbImage
       raw <- runExceptT $ externalCommandBuf' "tifftopnm" [ "-quiet"] tiff
       raw `shouldBe` Right pnmRgbImage
 

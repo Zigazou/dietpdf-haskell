@@ -9,6 +9,7 @@ import Control.Monad.Trans.Except (except)
 
 import Data.Array (mkArray)
 import Data.ByteString qualified as BS
+import Data.ColorSpace (fromComponents)
 import Data.Context (Context, Contextual (ctx))
 import Data.Fallible (FallibleT)
 import Data.Foldable (minimumBy)
@@ -17,7 +18,7 @@ import Data.Logging (Logging, sayComparisonF)
 import Data.Sequence ((><))
 import Data.Text qualified as T
 
-import External.PamToJpeg2k (jpegToJpeg2k)
+import External.JpegToJpeg2k (jpegToJpeg2k)
 
 import Pdf.Document.XRef (xrefStreamWidth)
 import Pdf.Object.Container (Filter (Filter), getFilters, setFilters)
@@ -71,21 +72,11 @@ applyEveryFilterGeneric context widthComponents@(Just (width, components)) strea
       jpeg2kParameters =
         Just ( width
              , BS.length stream `div` (width * components)
-             , components
-             , case components of
-                3 -> "RGB"
-                4 -> "CMYK"
-                _ -> "GRAY"
+             , fromComponents components
              )
 
-  rJpeg2k <- if components /= 4
-    then do
-      rJpeg2k' <- jpeg2k jpeg2kParameters stream
-      filterInfo context "JPEG2000" stream (fcBytes rJpeg2k')
-
-      return [rJpeg2k']
-    else
-      return []
+  rJpeg2k <- jpeg2k jpeg2kParameters stream
+  filterInfo context "JPEG2000" stream (fcBytes rJpeg2k)
 
   rRle <- except $ rle widthComponents stream
   filterInfo context "RLE" stream (fcBytes rRle)
@@ -108,9 +99,8 @@ applyEveryFilterGeneric context widthComponents@(Just (width, components)) strea
   rPredRleZopfli <- except $ predRleZopfli widthComponents stream
   filterInfo context "Predictor/Store+RLE+Zopfli" stream (fcBytes rPredRleZopfli)
 
-  return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli]
+  return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli, rJpeg2k]
         ++ rleCombine
-        ++ rJpeg2k
 
 -- The stream has no width nor components information.
 applyEveryFilterGeneric context Nothing stream = do
@@ -138,28 +128,20 @@ applyEveryFilterJPG
   -> BS.ByteString
   -> FallibleT IO [FilterCombination]
 -- The stream has width and components information.
-applyEveryFilterJPG context (Just (_width, components)) stream = do
+applyEveryFilterJPG context (Just _imageProperty) stream = do
   let rNothing = mkFCAppend [] stream
 
   rZopfli <- except $ zopfli Nothing stream
   filterInfo context "Zopfli" stream (fcBytes rZopfli)
 
   -- Try Jpeg2000 for images with less than 4 components.
-  let
-    jpeg2kRatio = 15 :: Int
-    jpeg2kMinimumSize = 150 :: Int
-  rJpeg2k <- if components /= 4
-             && (BS.length stream `div` jpeg2kRatio) > jpeg2kMinimumSize
-    then do
-      rJpeg2k' <- jpegToJpeg2k jpeg2kRatio stream
-                  <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
+  let jpeg2kQuality = 40 :: Int
 
-      filterInfo context "JPEG2000" stream (fcBytes rJpeg2k')
-      return [rJpeg2k']
-    else
-      return []
+  rJpeg2k <- jpegToJpeg2k jpeg2kQuality stream
+         <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
+  filterInfo context "JPEG2000" stream (fcBytes rJpeg2k)
 
-  return $ [rNothing, rZopfli] ++ rJpeg2k
+  return [rNothing, rZopfli, rJpeg2k]
 
 applyEveryFilterJPG context Nothing stream = do
   let rNothing = mkFCAppend [] stream

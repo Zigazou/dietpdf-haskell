@@ -2,6 +2,7 @@ module External.ExternalCommand
   ( externalCommand
   , externalCommandBuf
   , externalCommandBuf'
+  , externalCommandBuf''
   )
 where
 
@@ -37,7 +38,7 @@ externalCommand command args = do
 
   case exitCode of
     ExitSuccess    -> return ()
-    ExitFailure rc -> throwE (ExternalCommandError "Command failed" rc)
+    ExitFailure rc -> throwE (ExternalCommandError (show args) rc)
 
 externalCommandBuf :: FilePath -> [String] -> BS.ByteString -> FallibleT IO BS.ByteString
 externalCommandBuf command args input = do
@@ -118,3 +119,34 @@ externalCommandBuf' command args input = do
       ExitFailure rc -> return $ Left (ExternalCommandError command rc)
   injectInput _ _ _ _ =
     return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)
+
+insertFileNames :: [String] -> [FilePath] -> [String]
+insertFileNames [] _ = []
+insertFileNames args [] = args
+insertFileNames ("-":args) (fileName:fileNames) =
+  fileName : insertFileNames args fileNames
+insertFileNames (arg:args) fileNames = arg : insertFileNames args fileNames
+
+externalCommandBuf''
+  :: FilePath
+  -> [String]
+  -> String
+  -> String
+  -> BS.ByteString
+  -> FallibleT IO BS.ByteString
+externalCommandBuf'' command args inputExt outputExt input = do
+  let inputTemplate  = "dietpdf." ++ inputExt
+      outputTemplate = "dietpdf." ++ outputExt
+
+  withSystemTempFile inputTemplate $ \tempIn tempInHandle -> do
+    withSystemTempFile outputTemplate $ \tempOut tempOutHandle -> do
+      lift $ hClose tempInHandle
+      lift $ hClose tempOutHandle
+      lift $ BS.writeFile tempIn input
+
+      let args' = insertFileNames args [tempIn, tempOut]
+      (exitCode, _, _) <- lift $ readProcessWithExitCode command args' ""
+
+      case exitCode of
+        ExitSuccess    -> lift $ BS.readFile tempOut
+        ExitFailure rc -> throwE (ExternalCommandError (show args') rc)

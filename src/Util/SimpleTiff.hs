@@ -9,27 +9,31 @@ import Data.ByteString.Builder
     , word32LE
     )
 import Data.ByteString.Lazy qualified as BL
+import Data.ColorSpace
+    ( ColorSpace (ColorSpaceCMYK, ColorSpaceGray, ColorSpaceRGB, ColorSpaceUnknown)
+    , csComponents
+    )
 import Data.Kind (Type)
 import Data.Word (Word16, Word32)
 
 build :: Builder -> BS.ByteString
 build = BL.toStrict . toLazyByteString
 
-simpleTiff :: Int -> Int -> Int -> BS.ByteString -> BS.ByteString
-simpleTiff width height 1 imageData = build $
+simpleTiff :: Int -> Int -> ColorSpace -> BS.ByteString -> BS.ByteString
+simpleTiff width height ColorSpaceGray imageData = build $
      tiffMagicLE
   <> word32LE 0x00000008 -- Offset of the first IFD
   -- Offset 0x00000008
   <> word16LE 12 -- Number of directory entries
   <> tiffImageWidth width
   <> tiffImageLength height
-  <> tiffBitsPerSample grayComponents 0
+  <> tiffBitsPerSample ColorSpaceGray 0
   <> tiffNoCompression
   <> tiffGrayPhotometricInterpretation
   <> tiffStripOffsets 0x0000009E
   <> tiffGraySamplesPerPixel
   <> tiffRowsPerStrip height
-  <> tiffStripByteCounts width height grayComponents
+  <> tiffStripByteCounts width height ColorSpaceGray
   <> tiffXResolution
   <> tiffYResolution
   <> tiffResolutionUnit
@@ -37,53 +41,53 @@ simpleTiff width height 1 imageData = build $
   -- Offset 0x0000009E -- 8 + 2 + 12 * 12 + 4 = 158
   <> byteString imageData
 
-simpleTiff width height 3 imageData = build $
+simpleTiff width height ColorSpaceRGB imageData = build $
      tiffMagicLE
   <> word32LE 0x00000008 -- Offset of the first IFD
   -- Offset 0x00000008
   <> word16LE 12 -- Number of directory entries
   <> tiffImageWidth width
   <> tiffImageLength height
-  <> tiffBitsPerSample rgbComponents 0x0000009E
+  <> tiffBitsPerSample ColorSpaceRGB 0x0000009E
   <> tiffNoCompression
   <> tiffRGBPhotometricInterpretation
   <> tiffStripOffsets 0x000000A4
   <> tiffRGBSamplesPerPixel
   <> tiffRowsPerStrip height
-  <> tiffStripByteCounts width height rgbComponents
+  <> tiffStripByteCounts width height ColorSpaceRGB
   <> tiffXResolution
   <> tiffYResolution
   <> tiffResolutionUnit
   <> word32LE 0x00000000 -- No more Image File Directory
   -- Offset 0x0000009E -- 8 + 2 + 12 * 12 + 4 = 158
-  <> bitsPerSampleData rgbComponents
+  <> bitsPerSampleData ColorSpaceRGB
   -- Offset 0x000000A4 -- 158 + 6 = 164
   <> byteString imageData
 
-simpleTiff width height 4 imageData = build $
+simpleTiff width height ColorSpaceCMYK imageData = build $
      tiffMagicLE
   <> word32LE 0x00000008 -- Offset of the first IFD
   -- Offset 0x00000008
   <> word16LE 12 -- Number of directory entries
   <> tiffImageWidth width
   <> tiffImageLength height
-  <> tiffBitsPerSample cmykComponents 0x0000009E
+  <> tiffBitsPerSample ColorSpaceCMYK 0x0000009E
   <> tiffNoCompression
   <> tiffCMYKPhotometricInterpretation
   <> tiffStripOffsets 0x000000A6
   <> tiffCMYKSamplesPerPixel
   <> tiffRowsPerStrip height
-  <> tiffStripByteCounts width height cmykComponents
+  <> tiffStripByteCounts width height ColorSpaceCMYK
   <> tiffXResolution
   <> tiffYResolution
   <> tiffResolutionUnit
   <> word32LE 0x00000000 -- No more Image File Directory
   -- Offset 0x0000009E -- 8 + 2 + 12 * 12 + 4 = 158
-  <> bitsPerSampleData cmykComponents
+  <> bitsPerSampleData ColorSpaceCMYK
   -- Offset 0x000000A6 -- 158 + 8 = 166
   <> byteString imageData
 
-simpleTiff _width _height _components _imageData = ""
+simpleTiff _width _height (ColorSpaceUnknown _) _imageData = ""
 
 type TagIdentifier :: Type
 type TagIdentifier = Word16
@@ -129,14 +133,8 @@ offsetShortTag tag count offset = word16LE tag
                                <> word32LE (fromIntegral count)
                                <> word32LE offset
 
-cmykComponents :: Components
-cmykComponents = [8, 8, 8, 8]
-
-rgbComponents :: Components
-rgbComponents = [8, 8, 8]
-
-grayComponents :: Components
-grayComponents = [8]
+components :: ColorSpace -> Components
+components = flip replicate 8 . csComponents
 
 tiffImageWidth :: Int -> Builder
 tiffImageWidth = longTag tagImageWidth
@@ -144,13 +142,13 @@ tiffImageWidth = longTag tagImageWidth
 tiffImageLength :: Int -> Builder
 tiffImageLength = longTag tagImageLength
 
-bitsPerSampleData :: Components -> Builder
-bitsPerSampleData = foldMap (word16LE . fromIntegral)
+bitsPerSampleData :: ColorSpace -> Builder
+bitsPerSampleData = foldMap (word16LE . fromIntegral) . components
 
-tiffBitsPerSample :: Components -> Offset -> Builder
-tiffBitsPerSample [component] _offset = shortTag tagBitsPerSample component
-tiffBitsPerSample components offset =
-  offsetShortTag tagBitsPerSample (length components) offset
+tiffBitsPerSample :: ColorSpace -> Offset -> Builder
+tiffBitsPerSample ColorSpaceGray _offset = shortTag tagBitsPerSample 8
+tiffBitsPerSample colorSpace offset =
+  offsetShortTag tagBitsPerSample (csComponents colorSpace) offset
 
 tiffNoCompression :: Builder
 tiffNoCompression = shortTag tagCompression 1
@@ -179,9 +177,9 @@ tiffCMYKSamplesPerPixel = shortTag tagSamplesPerPixel 4
 tiffRowsPerStrip :: Int -> Builder
 tiffRowsPerStrip = longTag tagRowsPerStrip
 
-tiffStripByteCounts :: Int -> Int -> Components -> Builder
-tiffStripByteCounts width height components =
-  longTag tagStripByteCounts (width * height * length components)
+tiffStripByteCounts :: Int -> Int -> ColorSpace -> Builder
+tiffStripByteCounts width height colorSpace =
+  longTag tagStripByteCounts (width * height * csComponents colorSpace)
 
 tiffXResolution :: Builder
 tiffXResolution = shortTag tagXResolution 72 -- 72 DPI

@@ -41,6 +41,7 @@ library
       Codec.Filter.AsciiHex
       Data.Array
       Data.BitsArray
+      Data.ColorSpace
       Data.Context
       Data.ErrorType
       Data.Fallible
@@ -48,9 +49,10 @@ library
       Data.UnifiedError
       External.ExternalCommand
       External.GhostScriptOptimize
+      External.JpegToJpeg2k
       External.JpegTran
-      External.PamToJpeg2k
       External.PDFTKClean
+      External.TiffToJpeg2k
       External.TtfAutoHint
       Font.TrueType.FontDirectory
       Font.TrueType.FontTable
@@ -144,6 +146,7 @@ library
       Util.Number
       Util.PdfDocEncoding
       Util.Sequence
+      Util.SimplePam
       Util.SimpleTiff
       Util.String
       Util.Text
