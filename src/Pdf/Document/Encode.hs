@@ -12,8 +12,9 @@ import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (runExcept, runExceptT, throwE)
 
 import Data.ByteString qualified as BS
-import Data.Context (Contextual (ctx))
+import Data.Context (Context, Contextual (ctx))
 import Data.Fallible (FallibleT, tryF)
+import Data.Functor ((<&>))
 import Data.IntMap qualified as IM
 import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Map.Strict qualified as Map
@@ -33,7 +34,7 @@ import Pdf.Document.Partition
     , lastTrailer
     , removeUnused
     )
-import Pdf.Document.PDFObjects (PDFObjects, findLast, fromPDFDocument)
+import Pdf.Document.PDFObjects (findLast, fromPDFDocument)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)
 import Pdf.Object.Object.PDFObject
@@ -55,7 +56,12 @@ import System.IO (hSetBuffering, stderr)
 import Util.Dictionary (mkDictionary)
 import Util.Sequence (mapMaybe)
 
--- | Encodes a PDF object and keep track of its number and length.
+{- |
+Encodes a PDF object and keeps track of its number and length.
+
+Returns an `EncodedObject` which contains the object's number, the length of its
+byte representation, the byte data, and any embedded objects.
+-}
 encodeObject :: Logging m => PDFObject -> FallibleT m EncodedObject
 encodeObject object@(PDFIndirectObject number _ _) = return $
     EncodedObject number (BS.length bytes) bytes SQ.Empty
@@ -75,6 +81,13 @@ encodeObject object@(PDFObjectStream number _ _ _) = do
 encodeObject object = return $ EncodedObject 0 (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
 
+
+{- |
+Updates an XRef stream object by copying certain fields ("Root", "Info", "ID")
+from a given trailer object.
+
+Returns the updated XRef stream object.
+-}
 updateXRefStm :: Logging m => PDFObject -> PDFObject -> FallibleT m PDFObject
 updateXRefStm trailer xRefStm = do
   mRoot <- getValue "Root" trailer
@@ -85,6 +98,12 @@ updateXRefStm trailer xRefStm = do
     >>= setMaybe "Info" mInfo
     >>= setMaybe "ID" mID
 
+{- |
+Checks if the given PDF object is a Catalog object by verifying that its "Type"
+key is set to "Catalog".
+
+Returns `True` if it is a Catalog, `False` otherwise.
+-}
 isCatalog :: PDFObject -> Bool
 isCatalog object@PDFIndirectObject{} =
   case runExcept (getValue "Type" object) of
@@ -92,10 +111,23 @@ isCatalog object@PDFIndirectObject{} =
     Right value -> value == Just (PDFName "Catalog")
 isCatalog _anyOtherObject = False
 
+{- |
+Checks if the given PDF object contains document information (e.g., has an
+"Author" key).
+  
+Returns `True` if the object contains document info, `False` otherwise.
+-}
 isInfo :: PDFObject -> Bool
 isInfo object@PDFIndirectObject{} = hasKey "Author" object
 isInfo _anyOtherObject            = False
 
+{- |
+Retrieves the trailer object from a `PDFPartition`. If a valid trailer object is
+not present, it attempts to create one using the "Root" and "Info" references
+from the partition.
+
+Returns the final trailer object.
+-}
 getTrailer :: PDFPartition -> PDFObject
 getTrailer partition = case lastTrailer partition of
   (PDFTrailer PDFNull) ->
@@ -129,18 +161,80 @@ getTrailer partition = case lastTrailer partition of
           _anyOtherCase -> PDFTrailer PDFNull
   validTrailer -> validTrailer
 
+
+{- |
+Determines if a PDF object should be embedded in an object stream (ObjStm).
+
+Returns `True` for indirect objects that do not have a stream.
+-}
 objectToEmbed :: PDFObject -> Bool
 objectToEmbed object = isIndirect object && not (hasStream object)
 
+{- |
+Checks if a PDF object contains content (i.e., it has a stream but is not a
+trailer).
+
+Returns `True` if the object has a stream and is not a trailer.
+-}
 objectWithContent :: PDFObject -> Bool
 objectWithContent object = hasStream object && not (isTrailer object)
 
-concurrentOptimize :: Logging IO => PDFObjects -> FallibleT IO PDFObjects
-concurrentOptimize objects =
-  liftIO (mapConcurrently (runExceptT . optimize) objects)
+{- |
+Parallel map function that applies a given transformation to each element of a
+traversable structure (e.g., list) using concurrency.
+
+Returns the transformed elements wrapped in a `FallibleT`.
+-}
+pMapM
+  :: (Logging IO, Traversable t)
+  => (a -> FallibleT IO b)
+  -> t a
+  -> FallibleT IO (t b)
+pMapM transform items =
+  liftIO (mapConcurrently (runExceptT . transform) items)
     >>= either throwE return . sequence
 
-{-|
+{- |
+Partitions a collection of PDF objects (`PDFDocument`) into a `PDFPartition`,
+separating objects with streams, objects without streams, header objects, and
+trailers.
+-}
+partitionDocument :: PDFDocument -> PDFPartition
+partitionDocument objs =
+  PDFPartition
+    { ppObjectsWithStream    = fromPDFDocument $ cFilter objectWithContent objs
+    , ppObjectsWithoutStream = fromPDFDocument $ cFilter objectToEmbed objs
+    , ppHeads                = cFilter isHeader objs
+    , ppTrailers             = cFilter isTrailer objs
+    }
+
+
+{- |
+Cleans a `PDFPartition` by removing unused objects and logs the number of
+removed objects.
+
+Returns the cleaned partition. If an error occurs, logs the error and returns
+the original partition.
+-}
+cleanPartition
+  :: Logging m
+  => Context
+  -> PDFPartition
+  -> FallibleT m PDFPartition
+cleanPartition context partition =
+  tryF (removeUnused partition) >>= \case
+    Right unusedRemoved -> do
+      let allCount = IM.size (ppObjectsWithStream partition)
+                  + IM.size (ppObjectsWithoutStream partition)
+          usedCount = IM.size (ppObjectsWithStream unusedRemoved)
+                    + IM.size (ppObjectsWithoutStream unusedRemoved)
+      sayComparisonF context "Unused objects removal" allCount usedCount
+      return unusedRemoved
+    Left theError -> do
+      sayErrorF context "Unable to remove unused objects" theError
+      return partition
+
+{- |
 Given a list of PDF objects, generate the PDF file content.
 
 This function recreates the XRef table in the old format.
@@ -156,31 +250,25 @@ pdfEncode
   => PDFDocument -- ^ A collection of PDF objects (order matters)
   -> FallibleT IO BS.ByteString -- ^ A unified error or a bytestring
 pdfEncode objects = do
+  _ <- liftIO $ hSetBuffering stderr LineBuffering
+
   -- Extract objects embedded in object streams
-  allObjects <- explodeDocument objects
-
-  let context = ctx ("encode" :: String)
-      partition = PDFPartition
-        { ppObjectsWithStream =
-            fromPDFDocument $ cFilter objectWithContent allObjects
-        , ppObjectsWithoutStream =
-            fromPDFDocument $ cFilter objectToEmbed allObjects
-        , ppHeads = cFilter isHeader allObjects
-        , ppTrailers = cFilter isTrailer allObjects
-        }
-
-      pdfHead = fromPDFObject (PDFVersion "1.7")
-      pdfEnd  = fromPDFObject PDFEndOfFile
+  partition <- explodeDocument objects <&> partitionDocument
 
   when (   null (ppObjectsWithStream partition)
         && null (ppObjectsWithoutStream partition))
        (throwE EncodeNoIndirectObject)
 
-  let withStreamCount    = IM.size (ppObjectsWithStream partition)
+  let context            = ctx ("encode" :: String)
+      withStreamCount    = IM.size (ppObjectsWithStream partition)
       withoutStreamCount = IM.size (ppObjectsWithoutStream partition)
 
-  sayF context $ T.concat ["Indirect object with stream: ", T.pack (show withStreamCount)]
-  sayF context $ T.concat ["Indirect object without stream: ", T.pack (show withoutStreamCount)]
+  sayF context $ T.concat [ "Indirect object with stream: "
+                          , T.pack (show withStreamCount)
+                          ]
+  sayF context $ T.concat [ "Indirect object without stream: "
+                          , T.pack (show withoutStreamCount)
+                          ]
 
   when (null $ ppHeads partition) (throwE EncodeNoVersion)
 
@@ -191,27 +279,16 @@ pdfEncode objects = do
 
   sayF context "Optimizing PDF"
 
-  _ <- liftIO $ hSetBuffering stderr LineBuffering
+  oObjectsWithStream    <- pMapM optimize (ppObjectsWithStream partition)
+  oObjectsWithoutStream <- pMapM optimize (ppObjectsWithoutStream partition)
 
-  oObjectsWithStream    <- concurrentOptimize (ppObjectsWithStream partition)
-  oObjectsWithoutStream <- concurrentOptimize (ppObjectsWithoutStream partition)
   let oPartition = partition { ppObjectsWithStream    = oObjectsWithStream
                              , ppObjectsWithoutStream = oObjectsWithoutStream
                              , ppTrailers             = singleton pdfTrailer
                              }
 
   sayF context "Last cleaning"
-  cleaned <- tryF (removeUnused oPartition) >>= \case
-    Right unusedRemoved -> do
-      let allCount = IM.size (ppObjectsWithStream partition)
-                   + IM.size (ppObjectsWithoutStream partition)
-          usedCount = IM.size (ppObjectsWithStream unusedRemoved)
-                    + IM.size (ppObjectsWithoutStream unusedRemoved)
-      sayComparisonF context "Unused objects removal" allCount usedCount
-      return unusedRemoved
-    Left theError -> do
-      sayErrorF context "Unable to remove unused objects" theError
-      return oPartition
+  cleaned <- cleanPartition context oPartition
 
   sayF context "Calculating last object number"
   let
@@ -223,11 +300,14 @@ pdfEncode objects = do
   objectStream <- insert objectsWithoutStream (lastObjectNumber + 1)
 
   sayF context "Encoding PDF"
-  encodedObjStm <- optimize objectStream >>= encodeObject
-  encodedStreams <- mapM encodeObject (ppObjectsWithStream cleaned)
+  encodedObjStm  <- optimize objectStream >>= encodeObject
+  encodedStreams <- pMapM encodeObject (ppObjectsWithStream cleaned)
   let
     encodedAll = IM.insert (lastObjectNumber + 1) encodedObjStm encodedStreams
     body = BS.concat $ eoBinaryData . snd <$> IM.toAscList encodedAll
+
+  let pdfHead = fromPDFObject (PDFVersion "1.7")
+      pdfEnd  = fromPDFObject PDFEndOfFile
 
   sayF context "Optimize XRef stream table"
   xref <- do
