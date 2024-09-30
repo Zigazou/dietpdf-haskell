@@ -19,11 +19,12 @@ getJpegComponents jpegImage =
 Converts a JPEG image to a lossy JPEG 2000 image.
 -}
 jpegToJpeg2k :: Int -> BS.ByteString -> FallibleT IO BS.ByteString
-jpegToJpeg2k quality jpegImage = do
-  if getJpegComponents jpegImage == 4
-    then do
+jpegToJpeg2k quality jpegImage =
+  case getJpegComponents jpegImage of
+    4 -> do
       -- Use ImageMagick to convert the JPEG image to a TIFF image because it
-      -- can keep CMYK colorspace in the process.
+      -- can keep CMYK colorspace in the process. It is also necessary to
+      -- negate the image.
       tiffImage <- externalCommandBuf'' "convert"
                                         ["-" , "-negate", "-"]
                                         "jpg"
@@ -34,12 +35,11 @@ jpegToJpeg2k quality jpegImage = do
                           [ "--in-file", "-"
                           , "--quality", show quality
                           , "--out-file", "-"
-                          , "--verbose"
                           ]
                           "tiff"
-                          "j2k"
+                          "jp2"
                           tiffImage
-    else
+    _anyOtherCase -> do
       -- For other types of JPEG (RGB, Grayscale), Grok is able to read them.
       -- It also avoids using ImageMagick which can change the colorspace due
       -- to a bug in color space handling before ImageMagick v6.9.13.
@@ -47,8 +47,7 @@ jpegToJpeg2k quality jpegImage = do
                           [ "--in-file", "-"
                           , "--quality", show quality
                           , "--out-file", "-"
-                          , "--verbose"
                           ]
                           "jpg"
-                          "j2k"
+                          "jp2"
                           jpegImage

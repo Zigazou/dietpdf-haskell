@@ -22,8 +22,7 @@ tiffToJpeg2k width height colorSpace input =
   externalCommandBuf'' "grk_compress"
                        [ "--in-file", "-"
                        , "--out-file", "-"
-                       , "--verbose"
                        ]
                        "tiff"
-                       "j2k"
+                       "jp2"
                        (simpleTiff width height colorSpace input)
