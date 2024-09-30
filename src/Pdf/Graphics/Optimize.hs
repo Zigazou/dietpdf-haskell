@@ -31,13 +31,13 @@ data GFXState = GFXState
 defaultState :: GFXState
 defaultState = GFXState
   { gsTransform = 1.0
-  , gsPrecision = 2
+  , gsPrecision = 3
   }
 
 applyTransform :: Double -> GFXState -> GFXState
 applyTransform coeff state = state
   { gsTransform = newCoeff
-  , gsPrecision = max 0 (round (logBase 10 newCoeff) + 1)
+  , gsPrecision = max 0 (round (logBase 10 newCoeff) + 2)
   }
   where newCoeff = gsTransform state * coeff
 
@@ -95,7 +95,10 @@ category GSSetStrokeCMYKColorspace    = Color
 category GSSetNonStrokeCMYKColorspace = Color
 category _                            = OtherCategory
 
-collectCommands :: (Array GFXObject, Array GFXCommand) -> GFXObject -> (Array GFXObject, Array GFXCommand)
+collectCommands
+  :: (Array GFXObject, Array GFXCommand)
+  -> GFXObject
+  -> (Array GFXObject, Array GFXCommand)
 collectCommands (gfxObjects, gfxCommands) (GFXOperator operator) =
   (mempty, gfxCommands SQ.|> GFXCommand operator gfxObjects)
 collectCommands (gfxObjects, gfxCommands) gfxObject =
@@ -141,7 +144,10 @@ optimizeCommand state command
 optimizeCommands :: Array GFXCommand -> Array GFXCommand
 optimizeCommands = snd . foldl optimizeWithState mempty
   where
-    optimizeWithState :: (GFXStateStack, Array GFXCommand) -> GFXCommand -> (GFXStateStack, Array GFXCommand)
+    optimizeWithState
+      :: (GFXStateStack, Array GFXCommand)
+      -> GFXCommand
+      -> (GFXStateStack, Array GFXCommand)
     optimizeWithState (stack, optimizeds) cmd@(GFXCommand GSSaveGS _) =
       ( saveState stack, optimizeds SQ.|> cmd)
     optimizeWithState (stack, optimizeds) cmd@(GFXCommand GSRestoreGS _) =
@@ -150,7 +156,7 @@ optimizeCommands = snd . foldl optimizeWithState mempty
       case parameters of
         GFXNumber precision SQ.:<| _ ->
           ( transformState precision stack
-          , optimizeds SQ.|> cmd
+          , optimizeds SQ.|> optimizeCommand (getState stack) cmd
           )
         _otherParameters      -> ( stack, optimizeds SQ.|> cmd)
     optimizeWithState (stack, optimizeds) cmd =
