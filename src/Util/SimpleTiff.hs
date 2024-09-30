@@ -160,7 +160,7 @@ tiffRGBPhotometricInterpretation :: Builder
 tiffRGBPhotometricInterpretation = shortTag tagPhotometricInterpretation 2
 
 tiffGrayPhotometricInterpretation :: Builder
-tiffGrayPhotometricInterpretation = shortTag tagPhotometricInterpretation 0
+tiffGrayPhotometricInterpretation = shortTag tagPhotometricInterpretation 1
 
 tiffCMYKPhotometricInterpretation :: Builder
 tiffCMYKPhotometricInterpretation = shortTag tagPhotometricInterpretation 5
