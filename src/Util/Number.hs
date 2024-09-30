@@ -2,6 +2,7 @@
 -- | This modules gives helper functions for working with numbers.
 module Util.Number
   ( fromNumber
+  , fromNumberRounded
   , fromInt
   , toNumber
   , bytesNeededToEncode
@@ -50,7 +51,25 @@ fromNumber number
   | startsWith "0." str  = BS.drop 1 str
   | startsWith "-0." str = BS.cons asciiHYPHENMINUS (BS.drop 2 str)
   | otherwise            = str
-  where str = toShortest (round' 3 number)
+  where str = toShortest number
+
+{-|
+Output an optimized floating number for a PDF file.
+
+For example:
+
+- 0.0 → "0"
+- -0.0 → "0"
+- -0.3 → "-.3"
+- 0.3 → ".3"
+- 3.0 → "3"
+-}
+fromNumberRounded :: Int -> Double -> BS.ByteString
+fromNumberRounded limit number
+  | startsWith "0." str  = BS.drop 1 str
+  | startsWith "-0." str = BS.cons asciiHYPHENMINUS (BS.drop 2 str)
+  | otherwise            = str
+  where str = toShortest (round' limit number)
 
 -- | Output an int
 fromInt :: Int -> BS.ByteString

@@ -12,7 +12,7 @@ import Data.Sequence qualified as SQ
 
 import Pdf.Graphics.Object
     ( GFXObject (GFXArray, GFXNumber, GFXOperator)
-    , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrockeColorN, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSUnknown)
+    , GSOperator (GSBeginText, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSEndText, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSNLShowText, GSNLShowTextWithSpacing, GSRectangle, GSRestoreGS, GSSaveGS, GSSetBoundingBoxGlyph, GSSetCTM, GSSetCharacterSpacing, GSSetGlyphWidth, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrockeColorN, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetTextRenderingMode, GSSetTextRise, GSSetWordSpacing, GSShowManyText, GSShowText, GSUnknown)
     , separateGfx
     )
 import Pdf.Graphics.Parser.Stream (gfxParse)
@@ -32,13 +32,13 @@ data GFXState = GFXState
 defaultState :: GFXState
 defaultState = GFXState
   { gsTransform = 1.0
-  , gsPrecision = 3
+  , gsPrecision = 2
   }
 
 applyTransform :: Double -> GFXState -> GFXState
 applyTransform coeff state = state
   { gsTransform = newCoeff
-  , gsPrecision = max 0 (round (logBase 10 newCoeff) + 2)
+  , gsPrecision = max 0 (round (logBase 10 newCoeff) + 1)
   }
   where newCoeff = gsTransform state * coeff
 
@@ -82,6 +82,19 @@ category GSCubicBezierCurve2To        = GraphicsCoordinate
 category GSRectangle                  = GraphicsCoordinate
 category GSMoveToNextLine             = TextCoordinate
 category GSMoveToNextLineLP           = TextCoordinate
+category GSShowText                   = TextCoordinate
+category GSNLShowText                 = TextCoordinate
+category GSNLShowTextWithSpacing      = TextCoordinate
+category GSShowManyText               = TextCoordinate
+category GSSetCharacterSpacing        = TextCoordinate
+category GSSetWordSpacing             = TextCoordinate
+category GSSetHorizontalScaling       = TextCoordinate
+category GSSetTextLeading             = TextCoordinate
+category GSSetTextFont                = TextCoordinate
+category GSSetTextRenderingMode       = TextCoordinate
+category GSSetTextRise                = TextCoordinate
+category GSSetGlyphWidth              = TextCoordinate
+category GSSetBoundingBoxGlyph        = TextCoordinate
 category GSSetStrokeColorspace        = Color
 category GSSetNonStrokeColorspace     = Color
 category GSSetStrokeColor             = Color
@@ -134,7 +147,7 @@ optimizeCommand state command
   | category operator == GraphicsCoordinate =
     command { gcParameters = reducePrecision (gsPrecision state) <$> parameters }
   | category operator == TextCoordinate =
-    command { gcParameters = reducePrecision (gsPrecision state) <$> parameters }
+    command { gcParameters = reducePrecision (2 + gsPrecision state) <$> parameters }
   | category operator == Color =
     command { gcParameters = reducePrecision 3 <$> parameters }
   | otherwise = command
@@ -153,11 +166,22 @@ optimizeCommands = snd . foldl' optimizeWithState mempty
       ( saveState stack, optimizeds SQ.|> cmd)
     optimizeWithState (stack, optimizeds) cmd@(GFXCommand GSRestoreGS _) =
       ( restoreState stack, optimizeds SQ.|> cmd)
+    optimizeWithState (stack, optimizeds) cmd@(GFXCommand GSBeginText _) =
+      ( saveState stack, optimizeds SQ.|> cmd)
+    optimizeWithState (stack, optimizeds) cmd@(GFXCommand GSEndText _) =
+      ( restoreState stack, optimizeds SQ.|> cmd)
     optimizeWithState (stack, optimizeds) cmd@(GFXCommand GSSetCTM parameters) =
       case parameters of
         GFXNumber precision SQ.:<| _ ->
           ( transformState precision stack
-          , optimizeds SQ.|> optimizeCommand (getState stack) cmd
+          , optimizeds SQ.|> cmd
+          )
+        _otherParameters      -> ( stack, optimizeds SQ.|> cmd)
+    optimizeWithState (stack, optimizeds) cmd@(GFXCommand GSSetTextMatrix parameters) =
+      case parameters of
+        GFXNumber precision SQ.:<| _ ->
+          ( transformState precision stack
+          , optimizeds SQ.|> cmd
           )
         _otherParameters      -> ( stack, optimizeds SQ.|> cmd)
     optimizeWithState (stack, optimizeds) cmd =
