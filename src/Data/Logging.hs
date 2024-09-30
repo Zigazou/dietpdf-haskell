@@ -16,7 +16,7 @@ import Data.Text qualified as T
 import Data.Text.IO qualified as TIO
 import Data.UnifiedError (UnifiedError)
 
-import Fmt (commaizeF, fixedF, padLeftF, padRightF, (+|), (|+))
+import Fmt (commaizeF, fixedF, (+|), (|+))
 
 import System.IO (hFlush, stderr)
 
@@ -57,14 +57,11 @@ sayComparisonF
   -> t m ()
 sayComparisonF intro label sizeBefore sizeAfter = sayF
   intro
-  (  padRightF 36 ' ' label
-  |+ " "
-  +| padLeftF 12 ' ' (commaizeF sizeBefore)
-  |+ " -> "
-  +| padLeftF 12 ' ' (commaizeF sizeAfter)
-  |+ " ("
-  +| padLeftF 8 ' ' (fixedF 2 ratio)
-  |+ "%)"
+  (  label
+  |+ " from="  +| commaizeF sizeBefore
+  |+ " to="    +| commaizeF sizeAfter
+  |+ " ratio=" +| fixedF 2 ratio
+  |+ "%"
   )
  where
   ratio :: Float
@@ -75,4 +72,4 @@ sayComparisonF intro label sizeBefore sizeAfter = sayF
 
 sayErrorF :: (Logging m, MonadTrans t) => Context -> T.Text -> UnifiedError -> t m ()
 sayErrorF intro label theError =
-  sayF intro (padRightF 32 ' ' label |+ " " +| T.pack (show theError) |+ "")
+  sayF intro (label |+ " " +| T.pack (show theError) |+ "")
