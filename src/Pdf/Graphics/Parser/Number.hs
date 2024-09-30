@@ -56,7 +56,7 @@ import Util.Ascii (asciiDIGITZERO, asciiFULLSTOP, asciiHYPHENMINUS)
 plusMinus :: Num a => Get (a -> a)
 plusMinus = do
   sign <- satisfy isPlusMinus
-  return $ if sign == asciiHYPHENMINUS then negate else id
+  if sign == asciiHYPHENMINUS then return negate else return id
 
 dot :: Get ()
 dot = word8 asciiFULLSTOP

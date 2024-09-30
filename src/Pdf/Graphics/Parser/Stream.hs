@@ -5,7 +5,7 @@ module Pdf.Graphics.Parser.Stream
 import Control.Applicative ((<|>))
 
 import Data.Array (Array, mkArray)
-import Data.Binary.Parser (Get, label, many', parseDetail, satisfy, sepBy)
+import Data.Binary.Parser (Get, label, many', parseDetail, peek, satisfy, sepBy)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (ParseError))
@@ -22,20 +22,28 @@ import Pdf.Graphics.Parser.Name (nameP)
 import Pdf.Graphics.Parser.Number (numberP)
 import Pdf.Graphics.Parser.String (stringP)
 
+import Util.Ascii
+    ( asciiLEFTPARENTHESIS
+    , asciiLEFTSQUAREBRACKET
+    , asciiLESSTHANSIGN
+    , asciiPERCENTSIGN
+    , asciiSOLIDUS
+    , asciiUPPERB
+    )
+
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)
 
 gfxObjectP :: Get GFXObject
-gfxObjectP =
-        inlineImageP
-    <|> keywordP
-    <|> numberP
-    <|> nameP
-    <|> dictionaryP
-    <|> arrayP
-    <|> stringP
-    <|> hexStringP
-    <|> commentP
+gfxObjectP = do
+  nextChar <- peek
+  if | nextChar == asciiSOLIDUS           -> nameP
+     | nextChar == asciiLESSTHANSIGN      -> dictionaryP <|> hexStringP
+     | nextChar == asciiLEFTPARENTHESIS   -> stringP
+     | nextChar == asciiLEFTSQUAREBRACKET -> arrayP
+     | nextChar == asciiPERCENTSIGN       -> commentP
+     | nextChar == asciiUPPERB            -> inlineImageP <|> keywordP
+     | otherwise                          -> numberP <|> keywordP
 
 gfxRawP :: Get [GFXObject]
 gfxRawP = label "gfxG" $ do

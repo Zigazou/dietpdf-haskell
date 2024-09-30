@@ -120,15 +120,12 @@ Keyword characters are either lowercase or uppercase alphabetical characters.
 -}
 isKeywordCharacter :: Word8 -> Bool
 isKeywordCharacter byte
-  | byte == asciiASTERISK
-  = True
-  | byte == asciiAPOSTROPHE
-  = True
-  | byte == asciiQUOTATIONMARK
-  = True
-  | otherwise
-  = inRange (asciiLOWERA, asciiLOWERZ) byte
-    || inRange (asciiUPPERA, asciiUPPERZ) byte
+  | inRange (asciiLOWERA, asciiLOWERZ) byte = True
+  | inRange (asciiUPPERA, asciiUPPERZ) byte = True
+  | byte == asciiASTERISK                   = True
+  | byte == asciiAPOSTROPHE                 = True
+  | byte == asciiQUOTATIONMARK              = True
+  | otherwise                               = False
 
 {-|
 Test if a byte a an octal digit.
