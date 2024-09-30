@@ -1,10 +1,10 @@
-module External.PamToJpeg2kSpec
+module External.JpegToJpeg2kSpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 
-import External.PamToJpeg2k (jpegToJpeg2k)
+import External.JpegToJpeg2k (jpegToJpeg2k)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Control.Monad.Except (runExceptT)
