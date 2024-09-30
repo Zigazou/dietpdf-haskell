@@ -51,7 +51,6 @@ library
       External.GhostScriptOptimize
       External.JpegToJpeg2k
       External.JpegTran
-      External.PDFTKClean
       External.TiffToJpeg2k
       External.TtfAutoHint
       Font.TrueType.FontDirectory

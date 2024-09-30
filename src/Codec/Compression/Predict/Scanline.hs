@@ -58,8 +58,8 @@ the pixels are stored.
 -}
 type Scanline :: Type
 data Scanline = Scanline
-  { slPredictor :: Maybe Predictor
-  , slStream    :: [BS.ByteString]
+  { slPredictor :: !(Maybe Predictor)
+  , slStream    :: ![BS.ByteString]
   }
 
 {- |

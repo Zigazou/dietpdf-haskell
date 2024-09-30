@@ -11,6 +11,8 @@ import Util.SimpleTiff (simpleTiff)
 {- |
 Converts a bitmap image to a lossless JPEG 2000 image using Grok because it
 supports CMYK JPEG 2000.
+
+This function is a wrapper around the `grk_compress` command-line tool.
 -}
 tiffToJpeg2k
   :: Int

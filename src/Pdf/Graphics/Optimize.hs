@@ -5,6 +5,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
 import Data.Context (Context)
 import Data.Fallible (FallibleT)
+import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Data.Logging (Logging, sayComparisonF, sayF)
 import Data.Sequence qualified as SQ
@@ -106,14 +107,14 @@ collectCommands (gfxObjects, gfxCommands) gfxObject =
 
 parseCommands :: Array GFXObject -> Array GFXCommand
 parseCommands objects =
-  let (gfxObjects, gfxCommands) = foldl collectCommands (mempty, mempty) objects
+  let (gfxObjects, gfxCommands) = foldl' collectCommands (mempty, mempty) objects
   in  if SQ.null gfxObjects
     then gfxCommands
     else gfxCommands SQ.|> GFXCommand (GSUnknown "") gfxObjects
 
 extractObjects :: Array GFXCommand -> Array GFXObject
 extractObjects =
-  foldl (
+  foldl' (
     \acc (GFXCommand operator objects) ->
       acc <> objects SQ.|> GFXOperator operator
   ) mempty
@@ -142,7 +143,7 @@ optimizeCommand state command
     parameters = gcParameters command
 
 optimizeCommands :: Array GFXCommand -> Array GFXCommand
-optimizeCommands = snd . foldl optimizeWithState mempty
+optimizeCommands = snd . foldl' optimizeWithState mempty
   where
     optimizeWithState
       :: (GFXStateStack, Array GFXCommand)

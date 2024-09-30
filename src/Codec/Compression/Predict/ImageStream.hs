@@ -50,11 +50,11 @@ allowing easier handling when applying predictors.
 -}
 type ImageStream :: Type
 data ImageStream = ImageStream
-  { iWidth            :: Int
-  , iComponents       :: Int
-  , iBitsPerComponent :: Int
-  , iPredictor        :: Maybe Predictor
-  , iLines            :: [Scanline]
+  { iWidth            :: !Int
+  , iComponents       :: !Int
+  , iBitsPerComponent :: !Int
+  , iPredictor        :: !(Maybe Predictor)
+  , iLines            :: ![Scanline]
   }
 
 {- |

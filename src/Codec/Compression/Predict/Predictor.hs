@@ -159,10 +159,10 @@ predictors. It holds a sample and it’s 3 preceding samples.
 -}
 type Samples :: Type
 data Samples = Samples
-  { sUpperLeft :: Word8
-  , sAbove     :: Word8
-  , sLeft      :: Word8
-  , sCurrent   :: Word8
+  { sUpperLeft :: !Word8
+  , sAbove     :: !Word8
+  , sLeft      :: !Word8
+  , sCurrent   :: !Word8
   }
 
 {- |

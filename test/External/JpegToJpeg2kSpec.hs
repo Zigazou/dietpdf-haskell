@@ -15,4 +15,4 @@ spec = do
     it "converts jpeg to jpeg2k" $ do
       jpegData <- BS.readFile "test/External/jpegtojpeg2k.opt.jpg"
       jpeg2kData <- runExceptT $ jpegToJpeg2k 15 jpegData
-      BS.take 2 <$> jpeg2kData `shouldBe` Right "\xff\x4f"
+      BS.take 6 <$> jpeg2kData `shouldBe` Right "\x00\x00\x00\x0c\x6a\x50"

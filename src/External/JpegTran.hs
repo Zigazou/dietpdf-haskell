@@ -8,6 +8,17 @@ import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf)
 
+{- |
+Optimize a JPG file using `jpegtran`.
+
+This function is a wrapper around the `jpegtran` command-line tool. It
+optimizes the input JPG file by removing all metadata and optimizing the
+compression.
+
+To find the better optimization, this function runs `jpegtran` twice: once
+with the `-progressive` flag and once without it. It then compares the
+compressed sizes of the two outputs and returns the smaller one.
+-}
 jpegtranOptimize :: BS.ByteString -> FallibleT IO BS.ByteString
 jpegtranOptimize input = do
   progressive <- externalCommandBuf

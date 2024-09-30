@@ -65,6 +65,12 @@ generateOptions = fmap generateOption
   generateOption (switch, option, "")    = concat ["-", switch, option]
   generateOption (switch, option, value) = concat ["-", switch, option, "=", value]
 
+{- |
+Optimize a PDF file using GhostScript.
+
+This function is a wrapper around the `gs` command-line tool. It optimizes the
+input PDF file by compressing images, fonts, and other objects.
+-}
 ghostScriptOptimize :: FilePath -> FilePath -> FallibleT IO ()
 ghostScriptOptimize inputPdf outputPdf = do
   sayF (ctx ("ghostscript" :: String))

@@ -13,10 +13,22 @@ getJpegComponents jpegImage =
   in case (ffc0, ffc2) of
        (offset:_, _) -> fromIntegral (BS.index jpegImage (offset + 9))
        (_, offset:_) -> fromIntegral (BS.index jpegImage (offset + 9))
-       _             -> 3
+       _default      -> 3
 
 {- |
 Converts a JPEG image to a lossy JPEG 2000 image.
+
+This function is a wrapper around the `grk_compress` command-line tool.
+
+The input JPEG image can be in any color space (RGB, CMYK, Grayscale). The
+output JPEG 2000 image will be in the same color space as the input JPEG image.
+The quality of the output JPEG 2000 image is determined by the `quality`
+parameter.
+
+If the input JPEG image is in CMYK color space, this function uses ImageMagick
+to convert the JPEG image to a TIFF image because it can keep CMYK colorspace
+in the process. It is also necessary to negate the image. Then, it uses Grok to
+convert the TIFF image to a JPEG 2000 image.
 -}
 jpegToJpeg2k :: Int -> BS.ByteString -> FallibleT IO BS.ByteString
 jpegToJpeg2k quality jpegImage =
