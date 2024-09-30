@@ -259,7 +259,7 @@ test-suite dietpdf-test
       Codec.Filter.Ascii85Spec
       Data.BitsArraySpec
       Data.LoggingSpec
-      External.PamToJpeg2kSpec
+      External.JpegToJpeg2kSpec
       Font.TrueType.Parser.FontSpec
       Font.TrueType.Parser.HeadSpec
       Pdf.Document.DocumentSpec
