@@ -15,20 +15,27 @@ module Pdf.Graphics.Interpreter.GraphicsState
   , applyGraphicsMatrixS
   , applyTextMatrix
   , applyTextMatrixS
+  , setFont
+  , setFontS
+  , setHorizontalScaling
+  , setHorizontalScalingS
+  , setTextRise
+  , setTextRiseS
   ) where
 
 import Control.Monad.State (MonadState (get), State, gets, put)
 
+import Data.ByteString qualified as BS
 import Data.Kind (Type)
 
 import Pdf.Graphics.Interpreter.TextState
-    ( TextState (tsMatrix)
+    ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsMatrix, tsRise)
     , defaultTextState
     , tsScaleX
     , tsScaleY
     )
 import Pdf.Graphics.Interpreter.TransformationMatrix
-    ( TransformationMatrix
+    ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
     , matrixScale
     )
 
@@ -106,7 +113,7 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulColorPrecision :: GraphicsState -> Int
-usefulColorPrecision _state = 3
+usefulColorPrecision _state = 2
 
 usefulColorPrecisionS :: State GraphicsState Int
 usefulColorPrecisionS = gets usefulColorPrecision
@@ -137,13 +144,23 @@ the graphics state.
 -}
 applyGraphicsMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
 applyGraphicsMatrix matrix state = state
-  { gsCTM = graphicsMatrix
+  { gsCTM    = graphicsMatrix
   , gsScaleX = scaleX
   , gsScaleY = scaleY
   }
  where
-  graphicsMatrix = gsCTM state <> matrix
-  (scaleX, scaleY) = matrixScale graphicsMatrix (gsScaleX state, gsScaleY state)
+  tsState          = gsTextState state
+  graphicsMatrix   = gsCTM state <> matrix
+  renderingMatrix  = graphicsMatrix <> (TransformationMatrix
+    { tmA = tsFontSize tsState * tsHorizontalScaling tsState
+    , tmB = 0.0
+    , tmC = 0.0
+    , tmD = tsFontSize tsState
+    , tmE = 0.0
+    , tmF = tsRise tsState
+    })
+  (scaleX, scaleY) = matrixScale renderingMatrix
+                                 (gsScaleX state, gsScaleY state)
 
 applyGraphicsMatrixS :: TransformationMatrix -> State GraphicsState ()
 applyGraphicsMatrixS matrix = get >>= put . applyGraphicsMatrix matrix
@@ -169,3 +186,46 @@ applyTextMatrix matrix state = state
 
 applyTextMatrixS :: TransformationMatrix -> State GraphicsState ()
 applyTextMatrixS matrix = get >>= put . applyTextMatrix matrix
+
+{- |
+Set the font and font size of the current text state.
+
+The font name is a byte string that represents the font name. The font size is
+a double that represents the font size in points.
+-}
+setFont :: BS.ByteString -> Double -> GraphicsState -> GraphicsState
+setFont fontName fontSize state = state
+  { gsTextState = (gsTextState state)
+      { tsFont = fontName
+      , tsFontSize = fontSize
+      }
+  }
+
+setFontS :: BS.ByteString -> Double -> State GraphicsState ()
+setFontS fontName fontSize = get >>= put . setFont fontName fontSize
+
+{- |
+Set the horizontal scaling of the current text state.
+
+The scaling is a double that represents the horizontal scaling factor in
+percentages (0..100).
+-}
+setHorizontalScaling :: Double -> GraphicsState -> GraphicsState
+setHorizontalScaling scaling state = state
+  { gsTextState = (gsTextState state) { tsHorizontalScaling = scaling / 100 } }
+
+setHorizontalScalingS :: Double -> State GraphicsState ()
+setHorizontalScalingS scaling = get >>= put . setHorizontalScaling scaling
+
+{- |
+Set the rise of the current text state.
+
+The rise is a double that represents the distance, in points, to move the
+baseline up or down.
+-}
+setTextRise :: Double -> GraphicsState -> GraphicsState
+setTextRise rise state = state
+  { gsTextState = (gsTextState state) { tsRise = rise } }
+
+setTextRiseS :: Double -> State GraphicsState ()
+setTextRiseS rise = get >>= put . setTextRise rise

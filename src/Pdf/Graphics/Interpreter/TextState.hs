@@ -7,6 +7,7 @@ where
 import Data.Kind (Type)
 
 import Pdf.Graphics.Interpreter.TransformationMatrix (TransformationMatrix)
+import Data.ByteString qualified as BS
 
 {- |
 The text state is a collection of parameters that define the current page's text
@@ -27,7 +28,7 @@ data TextState = TextState
   , tsWordSpacing       :: !Double
   , tsHorizontalScaling :: !Double
   , tsLeading           :: !Double
-  , tsFont              :: !String
+  , tsFont              :: !BS.ByteString
   , tsFontSize          :: !Double
   , tsRenderingMode     :: !Int
   , tsRise              :: !Double
@@ -54,7 +55,7 @@ defaultTextState :: TextState
 defaultTextState = TextState
   { tsCharacterSpacing  = 0.0
   , tsWordSpacing       = 0.0
-  , tsHorizontalScaling = 100.0
+  , tsHorizontalScaling = 1.0
   , tsLeading           = 0.0
   , tsFont              = "Helvetica"
   , tsFontSize          = 12.0
