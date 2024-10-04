@@ -4,7 +4,7 @@ module Pdf.Graphics.Parser.StreamSpec
 
 import Control.Monad (forM_)
 
-import Data.Array (Array, mkArray)
+import Data.Array (mkArray)
 import Data.ByteString qualified as BS
 
 import Pdf.Graphics.Object
@@ -12,13 +12,14 @@ import Pdf.Graphics.Object
     , GSOperator (GSBeginText, GSEndText, GSIntersectClippingPathEOR, GSSetCharacterSpacing, GSSetNonStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetWordSpacing, GSShowText)
     , mkGFXArray
     )
+import Pdf.Graphics.Objects (Objects)
 import Pdf.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.Dictionary (mkDictionary)
 
-streamExamples :: [(BS.ByteString, Array GFXObject)]
+streamExamples :: [(BS.ByteString, Objects)]
 streamExamples =
   [ ( "BT /F1 1 Tf 64 0 0 64 7.1771 2.4414 Tm 0 Tc \
      \W* 0 Tw % Comment\n1.0 0.0 0.0 rg (\\001) Tj ET \

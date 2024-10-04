@@ -38,7 +38,7 @@ import Data.ByteString qualified as BS
 import Data.Context (Context (Context), Contextual (ctx), ctx2, ctx3, ctx4)
 import Data.Kind (Type)
 
-import Pdf.Graphics.Object (GFXObject)
+import Pdf.Graphics.Objects (Objects)
 import Pdf.Object.Object.XRefSubsection (XRefSubsection)
 
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
@@ -77,7 +77,7 @@ data PDFObject
   | -- | An indirect object with a `ByteString` stream
     PDFIndirectObjectWithStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
   | -- | An indirect object with an `Array` of `GFXObject`
-    PDFIndirectObjectWithGraphics !Int !Int !(Dictionary PDFObject) !(Array GFXObject)
+    PDFIndirectObjectWithGraphics !Int !Int !(Dictionary PDFObject) !Objects
   | -- | An object stream, object number, generation, dictionary and stream
     PDFObjectStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
   | -- | An XRef stream, object number, generation, dictionary and stream

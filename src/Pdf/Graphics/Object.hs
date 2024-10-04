@@ -31,6 +31,7 @@ module Pdf.Graphics.Object
   , fromGFXObject
   , toGSOperator
   , separateGfx
+  , reducePrecision
 
     -- * GFX characters
   , isDelimiter
@@ -78,7 +79,7 @@ import Util.Ascii
     )
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
 import Util.Name (fromName)
-import Util.Number (fromInt, fromNumber)
+import Util.Number (fromInt, fromNumber, roundAndAHalf)
 import Util.String (fromHexString, fromString)
 
 {-|
@@ -341,7 +342,7 @@ data GSOperator
   | -- | Set the colour to use for nonstroking operations in a device (sc)
     GSSetNonStrokeColor
   | -- | Set the colour to use for nonstroking operations in a deviceN (scn)
-    GSSetNonStrockeColorN
+    GSSetNonStrokeColorN
   | -- | Set the stroking colour space to DeviceGray (G)
     GSSetStrokeGrayColorspace
   | -- | Set the nonstroking colour space to DeviceGray (g)
@@ -437,7 +438,7 @@ toGSOperator "cs"    = GSSetNonStrokeColorspace
 toGSOperator "SC"    = GSSetStrokeColor
 toGSOperator "SCN"   = GSSetStrokeColorN
 toGSOperator "sc"    = GSSetNonStrokeColor
-toGSOperator "scn"   = GSSetNonStrockeColorN
+toGSOperator "scn"   = GSSetNonStrokeColorN
 toGSOperator "G"     = GSSetStrokeGrayColorspace
 toGSOperator "g"     = GSSetNonStrokeGrayColorspace
 toGSOperator "RG"    = GSSetStrokeRGBColorspace
@@ -512,7 +513,7 @@ fromGSOperator GSSetNonStrokeColorspace       = "cs"
 fromGSOperator GSSetStrokeColor               = "SC"
 fromGSOperator GSSetStrokeColorN              = "SCN"
 fromGSOperator GSSetNonStrokeColor            = "sc"
-fromGSOperator GSSetNonStrockeColorN          = "scn"
+fromGSOperator GSSetNonStrokeColorN           = "scn"
 fromGSOperator GSSetStrokeGrayColorspace      = "G"
 fromGSOperator GSSetNonStrokeGrayColorspace   = "g"
 fromGSOperator GSSetStrokeRGBColorspace       = "RG"
@@ -761,3 +762,15 @@ fromInlineImage keyValues image = BS.concat
   abbreviateKey "Interpolate"      = "I"
   abbreviateKey "Width"            = "W"
   abbreviateKey key                = key
+
+{- |
+Round a GFXNumber or GFXNumbers in GFXArray to a given precision.
+
+Any other GFXObject is returned as is.
+-}
+reducePrecision :: Int -> GFXObject -> GFXObject
+reducePrecision precision (GFXNumber value) =
+  GFXNumber (roundAndAHalf precision value)
+reducePrecision precision (GFXArray items) =
+  GFXArray (reducePrecision precision <$> items)
+reducePrecision _anyPrecision gfxObject = gfxObject

@@ -84,7 +84,6 @@ library:
   - transformers
   - stringsearch
   - double-conversion
-  - fmt
   - cryptonite
   - process
   - vector
@@ -156,6 +155,18 @@ tests:
     - ImportQualifiedPost
     - NumericUnderscores
     - BinaryLiterals
+    ghc-options:
+    - -O2
+    - -funfolding-use-threshold=16
+    - -optc-O3
+    - -optc-ffast-math
+    - -flate-dmd-anal
+    - -fmax-simplifier-iterations=6
+    - -flate-specialise
+    - -fstatic-argument-transformation
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
     dependencies:
     - dietpdf
     - hspec

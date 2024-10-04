@@ -8,6 +8,7 @@ module AppOptions
     , DecodeOptions
     , PredictOptions
     , UnpredictOptions
+    , HumanOptions
     )
   , appOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
@@ -64,6 +65,7 @@ data AppOptions
   | DecodeOptions !Codec !(Maybe FilePath)
   | PredictOptions !Predictor !Int !Int !(Maybe FilePath)
   | UnpredictOptions !Predictor !Int !Int !(Maybe FilePath)
+  | HumanOptions !(Maybe FilePath)
 
 commandInfo :: Mod CommandFields AppOptions
 commandInfo = command
@@ -154,6 +156,16 @@ commandUnpredict = command
     (progDesc "Unpredict a file as it would be in a stream")
   )
 
+commandHuman :: Mod CommandFields AppOptions
+commandHuman = command
+  "human"
+  (info
+    (   HumanOptions
+    <$> optional (argument str (metavar "<input_gfx_file>" <> help "Graphics code to make human"))
+    )
+    (progDesc "Print graphics code in a readable human form")
+  )
+
 appOptions :: Parser AppOptions
 appOptions =
   subparser
@@ -165,3 +177,4 @@ appOptions =
     <> commandDecode
     <> commandPredict
     <> commandUnpredict
+    <> commandHuman

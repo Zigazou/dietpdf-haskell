@@ -8,7 +8,8 @@ import Data.ByteString.UTF8 qualified as BSU
 import Data.Foldable (toList)
 import Data.Map qualified as Map
 
-import Pdf.Graphics.Object (GFXObject, separateGfx)
+import Pdf.Graphics.Object (separateGfx)
+import Pdf.Graphics.Objects (Objects)
 import Pdf.Object.Object.Delimiter (spaceIfNeeded)
 import Pdf.Object.Object.FromXRef (fromXRef)
 import Pdf.Object.Object.PDFObject
@@ -109,7 +110,7 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   ]
 
 fromIndirectObjectWithGraphics
-  :: Int -> Int -> Dictionary PDFObject -> Array GFXObject -> BS.ByteString
+  :: Int -> Int -> Dictionary PDFObject -> Objects -> BS.ByteString
 fromIndirectObjectWithGraphics number revision dict gfx = BS.concat
   [ BSU.fromString (show number)
   , " "

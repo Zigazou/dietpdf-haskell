@@ -74,7 +74,16 @@ library
       Pdf.Document.PDFObjects
       Pdf.Document.Uncompress
       Pdf.Document.XRef
+      Pdf.Graphics.Interpreter.Command
+      Pdf.Graphics.Interpreter.GraphicsObject
+      Pdf.Graphics.Interpreter.GraphicsState
+      Pdf.Graphics.Interpreter.Human
+      Pdf.Graphics.Interpreter.OperatorCategory
+      Pdf.Graphics.Interpreter.Program
+      Pdf.Graphics.Interpreter.TextState
+      Pdf.Graphics.Interpreter.TransformationMatrix
       Pdf.Graphics.Object
+      Pdf.Graphics.Objects
       Pdf.Graphics.Optimize
       Pdf.Graphics.Parser.Comment
       Pdf.Graphics.Parser.Container
@@ -182,7 +191,6 @@ library
     , containers
     , cryptonite
     , double-conversion
-    , fmt
     , formatting
     , hopfli
     , monad-loops
@@ -209,6 +217,7 @@ executable dietpdf
       Command.Encode
       Command.Extract
       Command.Hash
+      Command.Human
       Command.Info
       Command.Optimize
       Command.Predict
@@ -265,6 +274,9 @@ test-suite dietpdf-test
       Pdf.Document.EncodeSpec
       Pdf.Document.ObjectStreamSpec
       Pdf.Document.XRefSpec
+      Pdf.Graphics.Interpreter.GraphicsStateSpec
+      Pdf.Graphics.Interpreter.ProgramSpec
+      Pdf.Graphics.Interpreter.TransformationMatrixSpec
       Pdf.Graphics.Parser.ArraySpec
       Pdf.Graphics.Parser.CommentSpec
       Pdf.Graphics.Parser.DictionarySpec
@@ -325,7 +337,7 @@ test-suite dietpdf-test
       ImportQualifiedPost
       NumericUnderscores
       BinaryLiterals
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
     , base >=4.7 && <5

@@ -7,6 +7,8 @@ module Util.Number
   , toNumber
   , bytesNeededToEncode
   , encodeIntToBytes
+  , round'
+  , roundAndAHalf
   ) where
 
 import Data.Bits (shiftR)
@@ -19,11 +21,31 @@ import Data.Word (Word8)
 import Util.Ascii (asciiDIGITZERO, asciiHYPHENMINUS)
 import Util.String (startsWith)
 
+{- |
+Rounds a number to a given number of decimal places.
+
+The number of decimal places is given by the first argument.
+-}
 round' :: Int -> Double -> Double
-round' limit x = fromIntegral (round (x * t) :: Int) / t
+round' limit x = fromIntegral (floor (x * t + 0.5) :: Int) / t
  where
-  t :: Double
   t = 10 ^ limit
+
+{- |
+Rounds a number to a given number of decimal places.
+
+The number of decimal places is given by the first argument.
+-}
+roundAndAHalf :: Int -> Double -> Double
+roundAndAHalf limit x = adjusted
+ where
+  rounded    = round' limit x
+  maxDelta   = 0.25 * (10 ** fromIntegral (-limit))
+  adjustment = 0.5 * (10 ** fromIntegral (-limit))
+  adjusted
+    | x - rounded >= maxDelta    = round' 12 (rounded + adjustment)
+    | x - rounded <= (-maxDelta) = round' 12 (rounded - adjustment)
+    | otherwise                  = rounded
 
 {-|
 Given a list of `Word8`, returns a number.
@@ -51,7 +73,7 @@ fromNumber number
   | startsWith "0." str  = BS.drop 1 str
   | startsWith "-0." str = BS.cons asciiHYPHENMINUS (BS.drop 2 str)
   | otherwise            = str
-  where str = toShortest number
+  where str = toShortest (round' 6 number)
 
 {-|
 Output an optimized floating number for a PDF file.

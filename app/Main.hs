@@ -3,7 +3,7 @@ module Main
   ) where
 
 import AppOptions
-    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, HashOptions, InfoOptions, OptimizeOptions, PredictOptions, UnpredictOptions)
+    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, HashOptions, InfoOptions, OptimizeOptions, PredictOptions, UnpredictOptions, HumanOptions)
     , appOptions
     )
 
@@ -11,6 +11,7 @@ import Command.Decode (decodeByteString)
 import Command.Encode (encodeByteString)
 import Command.Extract (extract)
 import Command.Hash (objectHashes)
+import Command.Human (humanByteString)
 import Command.Info (showInfo)
 import Command.Optimize (optimize)
 import Command.Predict (predictByteString)
@@ -130,6 +131,8 @@ runApp (PredictOptions predictor width components inputFile) =
 
 runApp (UnpredictOptions predictor width components inputFile) =
   readByteString inputFile >>= unpredictByteString predictor width components
+
+runApp (HumanOptions inputFile) = readByteString inputFile >>= humanByteString
 
 options :: ParserInfo AppOptions
 options = info

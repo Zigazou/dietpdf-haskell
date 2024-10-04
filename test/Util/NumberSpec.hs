@@ -8,7 +8,14 @@ import Data.ByteString qualified as BS
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-import Util.Number (bytesNeededToEncode, encodeIntToBytes, fromNumber, toNumber)
+import Util.Number
+    ( bytesNeededToEncode
+    , encodeIntToBytes
+    , fromNumber
+    , round'
+    , roundAndAHalf
+    , toNumber
+    )
 
 toNumberExamples :: [(BS.ByteString, Int)]
 toNumberExamples =
@@ -29,8 +36,8 @@ fromNumberExamples =
   , (-0.0   , "0")
   , (0.1    , ".1")
   , (-0.1   , "-.1")
-  , (0.00028, "0")
-  , (0.0028 , ".003")
+  , (0.00028, ".00028")
+  , (0.0028 , ".0028")
   ]
 
 bytesNeededToEncodeExamples :: [(Int, Int)]
@@ -74,6 +81,70 @@ encodeIntToBytesExamples =
   , (4294967296, 2, "\x00\x00")
   ]
 
+roundExamples :: [(Int, Double, Double)]
+roundExamples =
+  [ (0, 0.0, 0.0)
+  , (0, 0.1, 0.0)
+  , (0, 0.5, 1.0)
+  , (0, 0.9, 1.0)
+  , (0, 1.0, 1.0)
+  , (0, 1.1, 1.0)
+  , (0, 1.5, 2.0)
+  , (0, 1.9, 2.0)
+  , (0, 2.0, 2.0)
+  , (0, 2.1, 2.0)
+  , (0, 2.5, 3.0)
+  , (0, 2.9, 3.0)
+  , (0, 3.0, 3.0)
+  , (0, 3.1, 3.0)
+  , (0, 3.5, 4.0)
+  , (0, 3.9, 4.0)
+  , (0, 4.0, 4.0)
+  , (0, 4.1, 4.0)
+  , (0, 4.5, 5.0)
+  , (0, 4.9, 5.0)
+  , (0, 5.0, 5.0)
+  , (0, 5.1, 5.0)
+  , (0, 5.5, 6.0)
+  , (0, 5.9, 6.0)
+  , (0, 6.0, 6.0)
+  , (0, 6.1, 6.0)
+  , (0, 6.5, 7.0)
+  , (0, 6.9, 7.0)
+  , (0, 7.0, 7.0)
+  , (0, 7.1, 7.0)
+  , (0, 7.5, 8.0)
+  , (0, 7.9, 8.0)
+  , (0, 8.0, 8.0)
+  , (2, 419.4, 419.4)
+  , (2, 595.02, 595.02)
+  , (2, 0.29999, 0.3)
+  , (2, -595.004, -595.0)
+  ]
+
+roundAndAHalfExamples :: [(Int, Double, Double)]
+roundAndAHalfExamples =
+  [ (0, 0.0, 0.0)
+  , (0, 0.1, 0.0)
+  , (0, 0.2, 0.0)
+  , (0, 0.3, 0.5)
+  , (0, 0.4, 0.5)
+  , (0, 0.5, 0.5)
+  , (0, 0.6, 0.5)
+  , (0, 0.7, 0.5)
+  , (0, 0.8, 1.0)
+  , (0, 0.9, 1.0)
+  , (0, 1.0, 1.0)
+  , (0, 1.1, 1.0)
+  , (0, 1.2, 1.0)
+  , (0, 1.3, 1.5)
+  , (2, 419.4, 419.4)
+  , (2, 595.02, 595.02)
+  , (2, 0.29999, 0.3)
+  , (2, -595.004, -595.005)
+  , (2, 53.157, 53.155)
+  ]
+
 spec :: Spec
 spec = do
   describe "toNumber" $ forM_ toNumberExamples $ \(example, expected) ->
@@ -99,3 +170,17 @@ spec = do
         it ("should encode int to minimum bytes " ++ show example)
           $          encodeIntToBytes count example
           `shouldBe` expected
+
+  describe "round'"
+    $ forM_ roundExamples
+    $ \(limit, example, expected) ->
+      it ("should round number " ++ show example)
+        $          round' limit example
+        `shouldBe` expected
+
+  describe "roundAndAHalf"
+    $ forM_ roundAndAHalfExamples
+    $ \(limit, example, expected) ->
+      it ("should round and a half number " ++ show example)
+        $          roundAndAHalf limit example
+        `shouldBe` expected
