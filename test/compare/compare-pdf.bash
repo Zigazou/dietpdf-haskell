@@ -72,6 +72,7 @@ pattern=$(printf "%s" "$pages1" | wc --bytes)
 min_psnr_found=10000
 max_psnr_found=0
 psnr_cumulative=0
+psnr_identical=0
 for ((i=1; i<=pages1; i++))
 do
     page=$(printf "%0${pattern}d" $i)
@@ -92,11 +93,18 @@ do
     psnr=$(cat "$tmpdir/diff-$page.txt")
     page_status="OK"
     bad_psnr "$psnr" && page_status="BAD"
-    printf "Page %d: PSNR = %3.2f %s\n" "$i" "$psnr" "$page_status"
+    if [ "$psnr" == "inf" ]
+    then
+        printf "Page %d: PSNR = identical %s\n" "$i" "$page_status"
 
-    [ $(echo "$psnr < $min_psnr_found" | bc) -eq 1 ] && min_psnr_found="$psnr"
-    [ $(echo "$psnr > $max_psnr_found" | bc) -eq 1 ] && max_psnr_found="$psnr"
-    psnr_cumulative=$(echo "$psnr_cumulative + $psnr" | bc)
+        psnr_identical=$(($psnr_identical + 1))
+    else
+        printf "Page %d: PSNR = %3.2f %s\n" "$i" "$psnr" "$page_status"
+
+        [ $(echo "$psnr < $min_psnr_found" | bc) -eq 1 ] && min_psnr_found="$psnr"
+        [ $(echo "$psnr > $max_psnr_found" | bc) -eq 1 ] && max_psnr_found="$psnr"
+        psnr_cumulative=$(echo "$psnr_cumulative + $psnr" | bc)
+    fi
 
     bad_psnr "$psnr" && difference_found=1
 done
@@ -105,7 +113,7 @@ done
 rm -rf "$tmpdir"
 
 # Print statistics.
-psnr_average=$(echo "$psnr_cumulative / $pages1" | bc)
+psnr_average=$(echo "$psnr_cumulative / ($pages1 - $psnr_identical)" | bc)
 printf "Min PSNR: %3.2f\n" "$min_psnr_found"
 printf "Max PSNR: %3.2f\n" "$max_psnr_found"
 printf "Average PSNR: %3.2f\n" "$psnr_average"
