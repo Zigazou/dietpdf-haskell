@@ -377,6 +377,12 @@ data GSOperator
     GSIntersectClippingPathNZWR
   | -- | Modify current clipping path using the even-odd rule (W*)
     GSIntersectClippingPathEOR
+  | -- | Begin Inline image (BI)
+    GSBeginInlineImage
+  | -- | Inline image data (ID)
+    GSInlineImageData
+  | -- | End Inline image (EI)
+    GSEndInlineImage
   | -- | Unknown operator
     GSUnknown !BS.ByteString
   deriving stock (Eq, Show)
@@ -456,6 +462,9 @@ toGSOperator "BX"    = GSBeginCompatibilitySection
 toGSOperator "EX"    = GSEndCompatibilitySection
 toGSOperator "W"     = GSIntersectClippingPathNZWR
 toGSOperator "W*"    = GSIntersectClippingPathEOR
+toGSOperator "BI"    = GSBeginInlineImage
+toGSOperator "ID"    = GSInlineImageData
+toGSOperator "EI"    = GSEndInlineImage
 toGSOperator unknown = GSUnknown unknown
 
 {- |
@@ -531,6 +540,9 @@ fromGSOperator GSBeginCompatibilitySection    = "BX"
 fromGSOperator GSEndCompatibilitySection      = "EX"
 fromGSOperator GSIntersectClippingPathNZWR    = "W"
 fromGSOperator GSIntersectClippingPathEOR     = "W*"
+fromGSOperator GSBeginInlineImage             = "BI"
+fromGSOperator GSInlineImageData              = "ID"
+fromGSOperator GSEndInlineImage               = "EI"
 fromGSOperator (GSUnknown unknown)            = unknown
 
 {-|
