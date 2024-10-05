@@ -12,7 +12,7 @@
 # - bc
 #
 # Usage:
-#   compare-pdf.bash file1.pdf file2.pdf
+#   pdf-compare.bash file1.pdf file2.pdf
 #
 # The script will print the PSNR value for each pair of pages. If the PSNR is
 # below the threshold, the script will print "BAD" next to the PSNR value.
@@ -21,6 +21,7 @@
 # This value is the minimum PSNR value that is considered acceptable. Values
 # below this threshold are considered to be bad.
 PSNR_MIN=40
+DPI=150
 
 # Force commands to return floating numbers with a dot as decimal separator.
 export LANG=C
@@ -37,6 +38,10 @@ function bad_psnr() {
     (( $(echo "$psnr > $PSNR_MIN" | bc -l) )) && return 1
 
     return 0
+}
+
+function count_pages() {
+    printf "%s" $#
 }
 
 [ "$#" -ne 2 ] && error "$0 file1.pdf file2.pdf"
@@ -60,27 +65,31 @@ pages2=$(pdfinfo "$pdf2" | grep "Pages" | awk '{print $2}')
 tmpdir=$(mktemp -d)
 
 # Convert each PDF to a series of PNG images.
-printf "Extracting pages from\n"
-pdftoppm -r 150 -png "$pdf1" "$tmpdir/pdf1" 2> /dev/null &
-pdftoppm -r 150 -png "$pdf2" "$tmpdir/pdf2" 2> /dev/null &
+printf "Extracting pages\n"
+pdftoppm -r "$DPI" -png "$pdf1" "$tmpdir/pdf1" 2> /dev/null &
+pdftoppm -r "$DPI" -png "$pdf2" "$tmpdir/pdf2" 2> /dev/null &
 
 wait
 
 # Compare each pair of images.
-difference_found=0
-pattern=$(printf "%s" "$pages1" | wc --bytes)
-min_psnr_found=10000
-max_psnr_found=0
+number_width=$(printf "%s" "$pages1" | wc --bytes)
+
+psnr_min_found=1000000
+psnr_max_found=0
 psnr_cumulative=0
-psnr_identical=0
+identical_pages=""
+bad_pages=""
+good_pages=""
+missing_pages=""
+worst_page=""
+printf "Comparing pages\n"
 for ((i=1; i<=pages1; i++))
 do
-    page=$(printf "%0${pattern}d" $i)
+    page=$(printf "%0${number_width}d" $i)
 
     if [ ! -f "$tmpdir/pdf1-$page.png" ] || [ ! -f "$tmpdir/pdf2-$page.png" ]
     then
-        printf "Page %d: Missing\n" "$i"
-        difference_found=1
+        missing_pages="$missing_pages$i "
         continue
     fi
 
@@ -91,31 +100,60 @@ do
         2> "$tmpdir/diff-$page.txt"
 
     psnr=$(cat "$tmpdir/diff-$page.txt")
-    page_status="OK"
-    bad_psnr "$psnr" && page_status="BAD"
     if [ "$psnr" == "inf" ]
     then
-        printf "Page %d: PSNR = identical %s\n" "$i" "$page_status"
-
-        psnr_identical=$(($psnr_identical + 1))
-    else
-        printf "Page %d: PSNR = %3.2f %s\n" "$i" "$psnr" "$page_status"
-
-        [ $(echo "$psnr < $min_psnr_found" | bc) -eq 1 ] && min_psnr_found="$psnr"
-        [ $(echo "$psnr > $max_psnr_found" | bc) -eq 1 ] && max_psnr_found="$psnr"
-        psnr_cumulative=$(echo "$psnr_cumulative + $psnr" | bc)
+        # Keep track of pages that are identical.
+        identical_pages="$identical_pages$i "
+        continue
     fi
 
-    bad_psnr "$psnr" && difference_found=1
+    # Keep track of the pages that are considered bad or good.
+    if bad_psnr "$psnr"
+    then
+        bad_pages="$bad_pages$i "
+    else
+        good_pages="$good_pages$i "
+    fi
+
+    # Update min and max PSNR values.
+    if [ $(echo "$psnr < $psnr_min_found" | bc) -eq 1 ]
+    then
+        psnr_min_found="$psnr"
+        worst_page="$i"
+    else
+        psnr_max_found="$psnr"
+    fi
+
+    # Keep track of the cumulative PSNR in order to compute the average.
+    psnr_cumulative=$(echo "$psnr_cumulative + $psnr" | bc)
 done
 
 # Clean up.
 rm -rf "$tmpdir"
 
 # Print statistics.
-psnr_average=$(echo "$psnr_cumulative / ($pages1 - $psnr_identical)" | bc)
-printf "Min PSNR: %3.2f\n" "$min_psnr_found"
-printf "Max PSNR: %3.2f\n" "$max_psnr_found"
-printf "Average PSNR: %3.2f\n" "$psnr_average"
+psnr_good=$(count_pages $good_pages)
+psnr_bad=$(count_pages $bad_pages)
+psnr_missing=$(count_pages $missing_pages)
+psnr_identical=$(count_pages $identical_pages)
 
-exit "$difference_found"
+if [ "$psnr_good" -gt 0 ] && [ "$psnr_bad" -gt 0 ]
+then
+    psnr_average=$(echo "$psnr_cumulative / ($psnr_good.0 + $psnr_bad.0)" | bc)
+
+    printf "PSNR minimum       :\t%3.2f\n" "$psnr_min_found"
+    printf "PSNR average       :\t%3.2f\n" "$psnr_average"
+    printf "PSNR maximum       :\t%3.2f\n" "$psnr_max_found"
+else
+    printf "PSNR minimum       :\tinf\n"
+    printf "PSNR average       :\tinf\n"
+    printf "PSNR maximum       :\tinf\n"
+fi
+
+printf "Pages ident. %5d :\t%s\n" "$psnr_identical" "$identical_pages"
+printf "Pages good   %5d :\t%s\n" "$psnr_good"      "$good_pages"
+printf "Pages bad    %5d :\t%s\n" "$psnr_bad"       "$bad_pages"
+printf "Pages miss.  %5d :\t%s\n" "$psnr_missing"   "$missing_pages"
+printf "Worst page         :\t%s\n" "$worst_page"
+
+test -z "$bad_pages"
