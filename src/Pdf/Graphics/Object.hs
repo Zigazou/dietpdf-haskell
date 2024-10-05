@@ -282,7 +282,7 @@ data GSOperator
   | -- | Fill the path, using the nonzero winding number rule (f)
     GSFillPathNZWR
   | -- | Fill the path, using the even-odd rule (f*)
-    GSFilePathEOR
+    GSFillPathEOR
   | -- | Fill and then stroke the path, using the NZW rule (B)
     GSFillStrokePathNZWR
   | -- | Fill and then stroke the path, using the even-odd rule (B*)
@@ -414,7 +414,7 @@ toGSOperator "re"    = GSRectangle
 toGSOperator "S"     = GSStrokePath
 toGSOperator "s"     = GSCloseStrokePath
 toGSOperator "f"     = GSFillPathNZWR
-toGSOperator "f*"    = GSFilePathEOR
+toGSOperator "f*"    = GSFillPathEOR
 toGSOperator "B"     = GSFillStrokePathNZWR
 toGSOperator "B*"    = GSFillStrokePathEOR
 toGSOperator "b"     = GSCloseFillStrokeNZWR
@@ -492,7 +492,7 @@ fromGSOperator GSRectangle                    = "re"
 fromGSOperator GSStrokePath                   = "S"
 fromGSOperator GSCloseStrokePath              = "s"
 fromGSOperator GSFillPathNZWR                 = "f"
-fromGSOperator GSFilePathEOR                  = "f*"
+fromGSOperator GSFillPathEOR                  = "f*"
 fromGSOperator GSFillStrokePathNZWR           = "B"
 fromGSOperator GSFillStrokePathEOR            = "B*"
 fromGSOperator GSCloseFillStrokeNZWR          = "b"
