@@ -137,7 +137,7 @@ psnr_bad=$(count_pages $bad_pages)
 psnr_missing=$(count_pages $missing_pages)
 psnr_identical=$(count_pages $identical_pages)
 
-if [ "$psnr_good" -gt 0 ] && [ "$psnr_bad" -gt 0 ]
+if [ "$psnr_good" -gt 0 ] || [ "$psnr_bad" -gt 0 ]
 then
     psnr_average=$(echo "$psnr_cumulative / ($psnr_good.0 + $psnr_bad.0)" | bc)
 
