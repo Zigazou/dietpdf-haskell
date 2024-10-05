@@ -97,7 +97,7 @@ optimizeCommand command = case (operator, parameters) of
     PathConstructionOperator -> usefulGraphicsPrecisionS <&> optimizeParameters command
     PathPaintingOperator     -> usefulGraphicsPrecisionS <&> optimizeParameters command
     ClippingPathOperator     -> usefulGraphicsPrecisionS <&> optimizeParameters command
-    TextStateOperator        -> usefulGraphicsPrecisionS <&> optimizeParameters command
+    TextStateOperator        -> usefulTextPrecisionS <&> optimizeParameters command
     Type3FontOperator        -> usefulTextPrecisionS <&> optimizeParameters command
     TextPositioningOperator  -> usefulTextPrecisionS <&> optimizeParameters command
     TextShowingOperator      -> usefulTextPrecisionS <&> optimizeParameters command
