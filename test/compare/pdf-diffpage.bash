@@ -36,31 +36,43 @@ function render_page() {
         2> /dev/null
 }
 
-[ "$#" -ne 4 ] && error "$0 page file1.pdf file2.pdf diff.png"
+[ "$#" -lt 4 ] && error "$0 file1.pdf file2.pdf pageA [pageB [pageC...]]"
 
-page="$1"
-pdf1="$2"
-pdf2="$3"
-diff="$4"
+pdf1="$1"
+pdf2="$2"
 
 [ ! -f "$pdf1" ] && error "Cannot find $pdf1"
 [ ! -f "$pdf2" ] && error "Cannot find $pdf2"
+
+shift 2
+pages="$*"  # Remaining arguments are the pages to compare.
 
 # Create a temporary directory.
 tmpdir=$(mktemp -d)
 
 # Convert each PDF to a series of PNG images.
 printf "Extracting pages\n"
-render_page "$page" "$pdf1" "$tmpdir/pdf1" &
-render_page "$page" "$pdf2" "$tmpdir/pdf2" &
+
+for page in $pages
+do
+    render_page "$page" "$pdf1" "$tmpdir/pdf1-$page" &
+    render_page "$page" "$pdf2" "$tmpdir/pdf2-$page" &
+done
 
 wait
 
-compare \
-    -fuzz 0.5% \
-    "$tmpdir/pdf1.png" \
-    "$tmpdir/pdf2.png" \
-    "$diff"
+printf "Comparing pages\n"
+for page in $pages
+do
+    compare \
+        -fuzz 0.5% \
+        "$tmpdir/pdf1-$page.png" \
+        "$tmpdir/pdf2-$page.png" \
+        "$pdf2-$page.diff.png" \
+        &
+done
+
+wait
 
 # Clean up.
 rm -rf "$tmpdir"
