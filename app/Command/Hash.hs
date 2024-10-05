@@ -7,7 +7,7 @@ import Data.Fallible (FallibleT)
 import Data.Foldable (foldrM)
 import Data.Kind (Type)
 import Data.Logging (sayF)
-import Data.Maybe (catMaybes)
+import Data.Maybe (mapMaybe)
 import Data.Set (Set, empty, insert, member)
 import Data.Text qualified as T
 
@@ -30,7 +30,7 @@ objectHashes :: PDFDocument -> FallibleT IO ()
 objectHashes document = do
   let
     hashes :: [ObjectHash]
-    hashes = catMaybes $ objectHash <$> toList document
+    hashes = mapMaybe objectHash (toList document)
 
   _ <- foldrM printHashForObject empty hashes
   return ()
