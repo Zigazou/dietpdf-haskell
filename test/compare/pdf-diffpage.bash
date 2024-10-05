@@ -36,7 +36,7 @@ function render_page() {
         2> /dev/null
 }
 
-[ "$#" -lt 4 ] && error "$0 file1.pdf file2.pdf pageA [pageB [pageC...]]"
+[ "$#" -lt 3 ] && error "$0 file1.pdf file2.pdf pageA [pageB [pageC...]]"
 
 pdf1="$1"
 pdf2="$2"
