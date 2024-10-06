@@ -1,5 +1,6 @@
 module Pdf.Object.Object.Properties
   ( hasKey
+  , getValueForKey
   , hasDictionary
   , hasStream
   , updateStream
@@ -85,6 +86,15 @@ hasKey key (PDFXRefStream               _ _ dict _    ) = dictHasKey key dict
 hasKey key (PDFIndirectObject _ _ (PDFDictionary dict)) = dictHasKey key dict
 hasKey key (PDFTrailer (PDFDictionary dict)           ) = dictHasKey key dict
 hasKey _   _anyOtherObject                              = False
+
+getValueForKey :: BS.ByteString -> PDFObject -> Maybe PDFObject
+getValueForKey key (PDFDictionary dict) = Map.lookup key dict
+getValueForKey key (PDFIndirectObject _ _ (PDFDictionary dict)) = Map.lookup key dict
+getValueForKey key (PDFIndirectObjectWithStream _ _ dict _) = Map.lookup key dict
+getValueForKey key (PDFObjectStream _ _ dict _) = Map.lookup key dict
+getValueForKey key (PDFXRefStream _ _ dict _) = Map.lookup key dict
+getValueForKey key (PDFTrailer (PDFDictionary dict)) = Map.lookup key dict
+getValueForKey _ _ = Nothing
 
 {- |
 Determine if a `PDFObject` has a dictionary.

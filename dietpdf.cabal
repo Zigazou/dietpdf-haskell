@@ -46,6 +46,7 @@ library
       Data.ErrorType
       Data.Fallible
       Data.Logging
+      Data.TranslationTable
       Data.UnifiedError
       External.ExternalCommand
       External.GhostScriptOptimize
@@ -97,6 +98,7 @@ library
       Pdf.Graphics.Parser.Reference
       Pdf.Graphics.Parser.Stream
       Pdf.Graphics.Parser.String
+      Pdf.Graphics.RenameResources
       Pdf.Object.Container
       Pdf.Object.Filter
       Pdf.Object.FilterCombine.Deflate
@@ -122,6 +124,7 @@ library
       Pdf.Object.Object.PDFCharacter
       Pdf.Object.Object.PDFObject
       Pdf.Object.Object.Properties
+      Pdf.Object.Object.RenameResources
       Pdf.Object.Object.ToPDFNumber
       Pdf.Object.Object.XRefEntry
       Pdf.Object.Object.XRefState
@@ -191,6 +194,7 @@ library
     , containers
     , cryptonite
     , double-conversion
+    , extra
     , formatting
     , hopfli
     , monad-loops

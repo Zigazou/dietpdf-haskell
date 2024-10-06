@@ -90,6 +90,7 @@ library:
   - spool
   - temporary
   - async
+  - extra
 
 executables:
   dietpdf:

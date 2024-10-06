@@ -15,6 +15,7 @@ import Data.Fallible (FallibleT, ifFail, tryF)
 import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
+import Data.TranslationTable (TranslationTable)
 
 import External.JpegTran (jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)
@@ -55,8 +56,12 @@ optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
       sayErrorF context "cannot optimize" anError
       return stream
 
-streamOptimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
-streamOptimize object =
+streamOptimize
+  :: Logging IO
+  => TranslationTable
+  -> PDFObject
+  -> FallibleT IO PDFObject
+streamOptimize nameTranslations object =
   let context = ctx object
   in whatOptimizationFor object >>= \case
     XMLOptimization -> do
@@ -66,7 +71,7 @@ streamOptimize object =
       setStream optimizedStream object
 
     GfxOptimization -> do
-      stream <- getStream object >>= optimizeGFX context
+      stream <- getStream object >>= optimizeGFX context nameTranslations
       setStream stream object
 
     JPGOptimization -> do
@@ -88,15 +93,19 @@ Completely refilter a stream by finding the best filter combination.
 
 It also optimized nested strings and XML streams.
 -}
-refilter :: Logging IO => PDFObject -> FallibleT IO PDFObject
-refilter object = do
+refilter
+  :: Logging IO
+  => TranslationTable
+  -> PDFObject
+  -> FallibleT IO PDFObject
+refilter nameTranslations object = do
   stringOptimized <- deepMap optimizeString object
 
   if hasStream object
     then do
       optimization <- whatOptimizationFor object
       unfilter stringOptimized
-        >>= streamOptimize
+        >>= streamOptimize nameTranslations
         >>= filterOptimize optimization
     else return stringOptimized
 
@@ -143,9 +152,13 @@ Optimization of spaces is done at the `PDFObject` level, not by this function.
 If the PDF object is not elligible to optimization or if optimization is
 ineffective, it is returned as is.
 -}
-optimize :: Logging IO => PDFObject -> FallibleT IO PDFObject
-optimize object = optimizable object >>= \case
-  True -> refilter object
+optimize
+  :: Logging IO
+  => TranslationTable
+  -> PDFObject
+  -> FallibleT IO PDFObject
+optimize nameTranslations object = optimizable object >>= \case
+  True -> refilter nameTranslations object
     `ifFail` (\theError -> sayErrorF (ctx object) "cannot optimize" theError
                         >> return object
              )

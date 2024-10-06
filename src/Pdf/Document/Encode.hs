@@ -18,6 +18,7 @@ import Data.Functor ((<&>))
 import Data.IntMap qualified as IM
 import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (catMaybes)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 import Data.UnifiedError
@@ -42,6 +43,7 @@ import Pdf.Object.Object.PDFObject
     )
 import Pdf.Object.Object.Properties
     ( getObjectNumber
+    , getValueForKey
     , hasKey
     , hasStream
     , isHeader
@@ -53,8 +55,10 @@ import Pdf.Object.State (getValue, setMaybe)
 
 import System.IO (hSetBuffering, stderr)
 
+import Util.ByteString (renameStrings)
 import Util.Dictionary (mkDictionary)
 import Util.Sequence (mapMaybe)
+import Pdf.Object.Object.RenameResources (renameResources)
 
 {- |
 Encodes a PDF object and keeps track of its number and length.
@@ -114,7 +118,7 @@ isCatalog _anyOtherObject = False
 {- |
 Checks if the given PDF object contains document information (e.g., has an
 "Author" key).
-  
+
 Returns `True` if the object contains document info, `False` otherwise.
 -}
 isInfo :: PDFObject -> Bool
@@ -235,6 +239,33 @@ cleanPartition context partition =
       return partition
 
 {- |
+Finds all resource names in a collection of PDF objects.
+
+Resources are typically stored in a dictionary object with a "Resources" key.
+-}
+getAllResourceNames :: IM.IntMap PDFObject -> [BS.ByteString]
+getAllResourceNames allObjects = concat (getAllResourceNames' allObjects)
+ where
+  getAllResourceNames' :: IM.IntMap PDFObject -> [[BS.ByteString]]
+  getAllResourceNames' objects = do
+    (_, object) <- IM.toList objects
+    let colorspaces = getResourceKeys "ColorSpace" object
+        fonts       = getResourceKeys "Font" object
+        xobjects    = getResourceKeys "XObject" object
+        extGStates  = getResourceKeys "ExtGState" object
+        properties  = getResourceKeys "Properties" object
+
+    (return . concat . catMaybes)
+      [colorspaces, fonts, xobjects, extGStates, properties]
+
+  getResourceKeys :: BS.ByteString -> PDFObject -> Maybe [BS.ByteString]
+  getResourceKeys key object = do
+    resources <- getValueForKey "Resources" object
+    getValueForKey key resources >>= \case
+      PDFDictionary dict -> Just $ Map.keys dict
+      _                  -> Nothing
+
+{- |
 Given a list of PDF objects, generate the PDF file content.
 
 This function recreates the XRef table in the old format.
@@ -277,15 +308,28 @@ pdfEncode objects = do
   when (pdfTrailer == PDFTrailer PDFNull) (throwE EncodeNoTrailer)
   when (hasKey "Encrypt" pdfTrailer) (throwE EncodeEncrypted)
 
+  sayF context "Finding resource names"
+  let resourceNames    = getAllResourceNames (ppObjectsWithoutStream partition)
+      nameTranslations = renameStrings resourceNames
+      rObjectsWithStream = fmap (renameResources nameTranslations)
+                                (ppObjectsWithStream partition)
+      rObjectsWithoutStream = fmap (renameResources nameTranslations)
+                                   (ppObjectsWithoutStream partition)
+      rPartition = partition { ppObjectsWithStream    = rObjectsWithStream
+                             , ppObjectsWithoutStream = rObjectsWithoutStream
+                             }
+
   sayF context "Optimizing PDF"
 
-  oObjectsWithStream    <- pMapM optimize (ppObjectsWithStream partition)
-  oObjectsWithoutStream <- pMapM optimize (ppObjectsWithoutStream partition)
+  oObjectsWithStream    <- pMapM (optimize nameTranslations)
+                                 (ppObjectsWithStream rPartition)
+  oObjectsWithoutStream <- pMapM (optimize nameTranslations)
+                                 (ppObjectsWithoutStream rPartition)
 
-  let oPartition = partition { ppObjectsWithStream    = oObjectsWithStream
-                             , ppObjectsWithoutStream = oObjectsWithoutStream
-                             , ppTrailers             = singleton pdfTrailer
-                             }
+  let oPartition = rPartition { ppObjectsWithStream    = oObjectsWithStream
+                              , ppObjectsWithoutStream = oObjectsWithoutStream
+                              , ppTrailers             = singleton pdfTrailer
+                              }
 
   sayF context "Last cleaning"
   cleaned <- cleanPartition context oPartition
@@ -300,7 +344,7 @@ pdfEncode objects = do
   objectStream <- insert objectsWithoutStream (lastObjectNumber + 1)
 
   sayF context "Encoding PDF"
-  encodedObjStm  <- optimize objectStream >>= encodeObject
+  encodedObjStm  <- optimize nameTranslations objectStream >>= encodeObject
   encodedStreams <- pMapM encodeObject (ppObjectsWithStream cleaned)
   let
     encodedAll = IM.insert (lastObjectNumber + 1) encodedObjStm encodedStreams
@@ -316,7 +360,7 @@ pdfEncode objects = do
                                (BS.length pdfHead)
                                encodedAll
 
-    optimize xrefst >>= updateXRefStm pdfTrailer
+    optimize nameTranslations xrefst >>= updateXRefStm pdfTrailer
 
   let
     encodedXRef = fromPDFObject xref

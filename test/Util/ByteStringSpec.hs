@@ -5,10 +5,17 @@ module Util.ByteStringSpec
 import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
+import Data.Map (Map, fromList)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-import Util.ByteString (groupComponents, separateComponents, splitRaw)
+import Util.ByteString
+    ( groupComponents
+    , renameStrings
+    , separateComponents
+    , splitRaw
+    , toNameBase
+    )
 
 splitRawExamples :: [(BS.ByteString, Int, [BS.ByteString])]
 splitRawExamples =
@@ -32,6 +39,40 @@ groupComponentsExamples =
   , (["ABCD"]        , "ABCD")
   , (["AD", "B", "C"], "ABCD")
   , ([""]            , "")
+  ]
+
+toNameBaseExamples :: [(Int, BS.ByteString)]
+toNameBaseExamples =
+  [ (0, "0")
+  , (1, "1")
+  , (2, "2")
+  , (3, "3")
+  , (10, "a")
+  , (11, "b")
+  , (61, "Z")
+  , (62, "10")
+  , (72, "1a")
+  , (123, "1Z")
+  , (124, "20")
+  , (3843, "ZZ")
+  , (3844, "100")
+  ]
+
+renameStringsExamples :: [([BS.ByteString], Map BS.ByteString BS.ByteString)]
+renameStringsExamples =
+  [ ([], mempty)
+  , (["A", "B", "C"], fromList [("A", "0"), ("B", "1"), ("C", "2")])
+  , ( [ "A10", "A11", "A12", "A13", "A14"
+      , "A0", "A1", "A2", "A3", "A4"
+      , "A00", "A01", "A02", "A03", "A04"
+      , "A0", "A1", "A2", "A3", "A4"
+      ]
+    , fromList
+      [ ("A0","0"), ("A1","1"), ("A2","2"), ("A3","3"), ("A4","4")
+      , ("A00","5"), ("A01","6"), ("A02","7"), ("A03","8"), ("A04","9")
+      , ("A10","a"), ("A11","b"), ("A12","c"), ("A13","d"), ("A14","e")
+      ]
+    )
   ]
 
 spec :: Spec
@@ -63,4 +104,18 @@ spec = do
     $ \(example, expected) ->
         it ("should group components strings " ++ show example)
           $          groupComponents example
+          `shouldBe` expected
+
+  describe "toNameBase"
+    $ forM_ toNameBaseExamples
+    $ \(example, expected) ->
+        it ("should convert " ++ show example ++ " to " ++ show expected)
+          $          toNameBase example
+          `shouldBe` expected
+
+  describe "renameStrings"
+    $ forM_ renameStringsExamples
+    $ \(example, expected) ->
+        it ("should rename strings " ++ show example)
+          $          renameStrings example
           `shouldBe` expected

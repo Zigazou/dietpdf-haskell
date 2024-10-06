@@ -14,13 +14,16 @@ import Pdf.Graphics.Interpreter.Program
     )
 import Pdf.Graphics.Object (separateGfx)
 import Pdf.Graphics.Parser.Stream (gfxParse)
+import Data.TranslationTable (TranslationTable)
+import Pdf.Graphics.RenameResources (renameResourcesInObject)
 
 optimizeGFX
   :: Logging m
   => Context
+  -> TranslationTable
   -> BS.ByteString
   -> FallibleT m BS.ByteString
-optimizeGFX context stream = if indices "/CIDInit" stream /= []
+optimizeGFX context nameTranslations stream = if indices "/CIDInit" stream /= []
   then return stream
   else
     case gfxParse stream of
@@ -28,6 +31,7 @@ optimizeGFX context stream = if indices "/CIDInit" stream /= []
 
       Right objects -> do
         let optimizedStream = separateGfx
+                            . fmap (renameResourcesInObject nameTranslations)
                             . extractObjects
                             . optimizeProgram
                             . parseProgram

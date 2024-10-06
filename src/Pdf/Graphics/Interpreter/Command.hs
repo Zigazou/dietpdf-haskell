@@ -70,22 +70,22 @@ optimizeCommand command = case (operator, parameters) of
   -- Set current transformation matrix
   (GSSetCTM, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
     applyGraphicsMatrixS (TransformationMatrix a b c d e f)
-    return command
+    usefulGraphicsPrecisionS <&> optimizeParameters command . (+ 2)
 
   -- Set text transformation matrix
   (GSSetTextMatrix, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
     applyTextMatrixS (TransformationMatrix a b c d e f)
-    return command
+    usefulTextPrecisionS <&> optimizeParameters command
 
   -- Set text font and size
   (GSSetTextFont, GFXName fontName :<| GFXNumber fontSize :<| Empty) -> do
     setFontS fontName fontSize
-    return command
+    usefulGraphicsPrecisionS <&> optimizeParameters command
 
   -- Set text horizontal scaling
   (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) -> do
     setHorizontalScalingS scaling
-    return command
+    usefulGraphicsPrecisionS <&> optimizeParameters command
 
   -- Set text rise
   (GSSetTextRise, GFXNumber rise :<| Empty) -> do
