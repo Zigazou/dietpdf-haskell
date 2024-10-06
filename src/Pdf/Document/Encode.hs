@@ -249,14 +249,35 @@ getAllResourceNames allObjects = concat (getAllResourceNames' allObjects)
   getAllResourceNames' :: IM.IntMap PDFObject -> [[BS.ByteString]]
   getAllResourceNames' objects = do
     (_, object) <- IM.toList objects
-    let colorspaces = getResourceKeys "ColorSpace" object
-        fonts       = getResourceKeys "Font" object
-        xobjects    = getResourceKeys "XObject" object
-        extGStates  = getResourceKeys "ExtGState" object
-        properties  = getResourceKeys "Properties" object
+    let resourceColorspaces = getResourceKeys "ColorSpace" object
+        resourceFonts       = getResourceKeys "Font" object
+        resourceXObjects    = getResourceKeys "XObject" object
+        resourceExtGStates  = getResourceKeys "ExtGState" object
+        resourceProperties  = getResourceKeys "Properties" object
+        colorspaces         = getKeys "ColorSpace" object
+        fonts               = getKeys "Font" object
+        xObjects            = getKeys "XObject" object
+        extGStates          = getKeys "ExtGState" object
+        properties          = getKeys "Properties" object
 
     (return . concat . catMaybes)
-      [colorspaces, fonts, xobjects, extGStates, properties]
+      [ colorspaces
+      , fonts
+      , xObjects
+      , extGStates
+      , properties
+      , resourceColorspaces
+      , resourceFonts
+      , resourceXObjects
+      , resourceExtGStates
+      , resourceProperties
+      ]
+
+  getKeys :: BS.ByteString -> PDFObject -> Maybe [BS.ByteString]
+  getKeys key object = do
+    getValueForKey key object >>= \case
+      PDFDictionary dict -> Just $ Map.keys dict
+      _                  -> Nothing
 
   getResourceKeys :: BS.ByteString -> PDFObject -> Maybe [BS.ByteString]
   getResourceKeys key object = do
@@ -308,7 +329,6 @@ pdfEncode objects = do
   when (pdfTrailer == PDFTrailer PDFNull) (throwE EncodeNoTrailer)
   when (hasKey "Encrypt" pdfTrailer) (throwE EncodeEncrypted)
 
-  sayF context "Finding resource names"
   let resourceNames    = getAllResourceNames (ppObjectsWithoutStream partition)
       nameTranslations = renameStrings resourceNames
       rObjectsWithStream = fmap (renameResources nameTranslations)
@@ -318,6 +338,10 @@ pdfEncode objects = do
       rPartition = partition { ppObjectsWithStream    = rObjectsWithStream
                              , ppObjectsWithoutStream = rObjectsWithoutStream
                              }
+  sayF context $ T.concat [ "Found "
+                          , T.pack . show $ Map.size nameTranslations
+                          , " resource names"
+                          ]
 
   sayF context "Optimizing PDF"
 
