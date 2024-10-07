@@ -5,14 +5,10 @@ module Util.ByteString
   , groupComponents
   , sndLengthCompare
   , toNameBase
-  , renameStrings
   ) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.List (sortBy)
-import Data.List.Extra (nubOrd)
-import Data.TranslationTable (TranslationTable, mkTranslationTable)
 
 {- |
 Split a `ByteString` in `ByteString` of specific length.
@@ -61,19 +57,3 @@ toNameBase value = toNameBase' value ""
     toNameBase' n acc =
       let (quotient, remainder) = n `divMod` BS.length baseDigits
       in toNameBase' quotient (BS.index baseDigits remainder `BS.cons` acc)
-
-{- |
-Rename a list of `ByteString`.
-The corresponding `Map` is returned.
-
-Shortest `ByteString` are renamed first, giving them the shortest name.
--}
-renameStrings :: [ByteString] -> TranslationTable
-renameStrings names = mkTranslationTable
-                    $ zip ((sortBy shortFirst . nubOrd) names)
-                          (fmap toNameBase [0..])
-  where
-    shortFirst :: ByteString -> ByteString -> Ordering
-    shortFirst x y = if BS.length x /= BS.length y
-      then compare (BS.length x) (BS.length y)
-      else compare x y

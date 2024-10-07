@@ -6,12 +6,12 @@ import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
 import Data.Map (Map, fromList)
+import Data.TranslationTable (getTranslationTable)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.ByteString
     ( groupComponents
-    , renameStrings
     , separateComponents
     , splitRaw
     , toNameBase
@@ -113,9 +113,9 @@ spec = do
           $          toNameBase example
           `shouldBe` expected
 
-  describe "renameStrings"
+  describe "getTranslationTable"
     $ forM_ renameStringsExamples
     $ \(example, expected) ->
         it ("should rename strings " ++ show example)
-          $          renameStrings example
+          $          getTranslationTable toNameBase example
           `shouldBe` expected

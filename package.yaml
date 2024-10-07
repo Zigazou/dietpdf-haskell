@@ -91,6 +91,7 @@ library:
   - temporary
   - async
   - extra
+  - base64-bytestring
 
 executables:
   dietpdf:
@@ -181,3 +182,5 @@ tests:
     - extra
     - mtl
     - vector
+    - xml
+    - utf8-string

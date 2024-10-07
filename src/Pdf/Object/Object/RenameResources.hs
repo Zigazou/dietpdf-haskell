@@ -3,6 +3,7 @@ module Pdf.Object.Object.RenameResources
   ) where
 
 import Data.Bifunctor (bimap)
+import Data.ByteString (ByteString)
 import Data.Map qualified as Map
 import Data.TranslationTable (TranslationTable, convert)
 
@@ -14,7 +15,7 @@ import Util.Dictionary (Dictionary)
 
 
 renameResourcesInDictionary
-  :: TranslationTable
+  :: TranslationTable ByteString
   -> Dictionary PDFObject
   -> Dictionary PDFObject
 renameResourcesInDictionary table
@@ -22,7 +23,10 @@ renameResourcesInDictionary table
   . fmap (bimap (convert table) (renameResources table))
   . Map.toList
 
-renameResources :: TranslationTable -> PDFObject -> PDFObject
+renameResources
+  :: TranslationTable ByteString
+  -> PDFObject
+  -> PDFObject
 renameResources table (PDFName name) = PDFName (convert table name)
 renameResources table (PDFArray objects) =
   PDFArray (renameResources table <$> objects)

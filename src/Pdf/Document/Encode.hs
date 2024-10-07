@@ -21,6 +21,7 @@ import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
+import Data.TranslationTable (getTranslationTable)
 import Data.UnifiedError
     ( UnifiedError (EncodeEncrypted, EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
     )
@@ -50,15 +51,15 @@ import Pdf.Object.Object.Properties
     , isIndirect
     , isTrailer
     )
+import Pdf.Object.Object.RenameResources (renameResources)
 import Pdf.Object.Optimize (optimize)
 import Pdf.Object.State (getValue, setMaybe)
 
 import System.IO (hSetBuffering, stderr)
 
-import Util.ByteString (renameStrings)
+import Util.ByteString (toNameBase)
 import Util.Dictionary (mkDictionary)
 import Util.Sequence (mapMaybe)
-import Pdf.Object.Object.RenameResources (renameResources)
 
 {- |
 Encodes a PDF object and keeps track of its number and length.
@@ -330,7 +331,7 @@ pdfEncode objects = do
   when (hasKey "Encrypt" pdfTrailer) (throwE EncodeEncrypted)
 
   let resourceNames    = getAllResourceNames (ppObjectsWithoutStream partition)
-      nameTranslations = renameStrings resourceNames
+      nameTranslations = getTranslationTable toNameBase resourceNames
       rObjectsWithStream = fmap (renameResources nameTranslations)
                                 (ppObjectsWithStream partition)
       rObjectsWithoutStream = fmap (renameResources nameTranslations)

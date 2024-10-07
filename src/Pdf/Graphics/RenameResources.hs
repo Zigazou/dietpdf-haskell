@@ -3,6 +3,7 @@ module Pdf.Graphics.RenameResources
   ) where
 
 import Data.Bifunctor (bimap)
+import Data.ByteString (ByteString)
 import Data.Map qualified as Map
 import Data.TranslationTable (TranslationTable, convert)
 
@@ -11,7 +12,7 @@ import Pdf.Graphics.Object (GFXObject (GFXArray, GFXDictionary, GFXName))
 import Util.Dictionary (Dictionary)
 
 renameResourcesInDictionary
-  :: TranslationTable
+  :: TranslationTable ByteString
   -> Dictionary GFXObject
   -> Dictionary GFXObject
 renameResourcesInDictionary table
@@ -19,7 +20,10 @@ renameResourcesInDictionary table
   . fmap (bimap (convert table) (renameResourcesInObject table))
   . Map.toList
 
-renameResourcesInObject :: TranslationTable -> GFXObject -> GFXObject
+renameResourcesInObject
+  :: TranslationTable ByteString
+  -> GFXObject
+  -> GFXObject
 renameResourcesInObject table (GFXName name) =
   GFXName (convert table name)
 renameResourcesInObject table (GFXArray objects) =

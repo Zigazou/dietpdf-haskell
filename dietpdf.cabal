@@ -45,6 +45,7 @@ library
       Data.Context
       Data.ErrorType
       Data.Fallible
+      Data.HasLength
       Data.Logging
       Data.TranslationTable
       Data.UnifiedError
@@ -161,6 +162,7 @@ library
       Util.SimpleTiff
       Util.String
       Util.Text
+      Util.XML
   other-modules:
       Paths_dietpdf
   hs-source-dirs:
@@ -188,6 +190,7 @@ library
   build-depends:
       async
     , base >=4.7 && <5
+    , base64-bytestring
     , binary
     , binary-parsers
     , bytestring
@@ -321,6 +324,7 @@ test-suite dietpdf-test
       Util.ParserHelper
       Util.SimpleTiffSpec
       Util.StringSpec
+      Util.XMLSpec
       Paths_dietpdf
   hs-source-dirs:
       test
@@ -354,6 +358,8 @@ test-suite dietpdf-test
     , mtl
     , text
     , transformers
+    , utf8-string
     , vector
+    , xml
     , zlib
   default-language: Haskell2010

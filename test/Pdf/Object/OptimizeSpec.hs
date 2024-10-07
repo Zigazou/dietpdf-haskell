@@ -42,5 +42,5 @@ objectExamples =
 spec :: Spec
 spec = describe "optimize" $ forM_ objectExamples $ \(example, expected) ->
   it ("should be optimized " ++ show example) $ do
-    optimized <- runExceptT (optimize example)
+    optimized <- runExceptT (optimize mempty example)
     optimized `shouldBe` Right expected

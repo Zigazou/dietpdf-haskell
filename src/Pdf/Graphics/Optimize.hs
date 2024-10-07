@@ -1,11 +1,13 @@
 module Pdf.Graphics.Optimize (optimizeGFX) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
 import Data.Context (Context)
 import Data.Fallible (FallibleT)
 import Data.Logging (Logging, sayComparisonF, sayF)
 import Data.Sequence qualified as SQ
+import Data.TranslationTable (TranslationTable)
 
 import Pdf.Graphics.Interpreter.Program
     ( extractObjects
@@ -14,15 +16,14 @@ import Pdf.Graphics.Interpreter.Program
     )
 import Pdf.Graphics.Object (separateGfx)
 import Pdf.Graphics.Parser.Stream (gfxParse)
-import Data.TranslationTable (TranslationTable)
 import Pdf.Graphics.RenameResources (renameResourcesInObject)
 
 optimizeGFX
   :: Logging m
   => Context
-  -> TranslationTable
-  -> BS.ByteString
-  -> FallibleT m BS.ByteString
+  -> TranslationTable ByteString
+  -> ByteString
+  -> FallibleT m ByteString
 optimizeGFX context nameTranslations stream = if indices "/CIDInit" stream /= []
   then return stream
   else

@@ -5,10 +5,12 @@ module Codec.Compression.XMLSpec
 import Codec.Compression.XML (optimizeXML)
 
 import Control.Monad (forM_)
+import Control.Monad.Trans.Except (runExceptT)
 
 import Data.ByteString qualified as BS
 
 import Test.Hspec (Spec, describe, it, shouldBe)
+
 
 xmlExamples :: [(BS.ByteString, BS.ByteString)]
 xmlExamples =
@@ -94,6 +96,6 @@ xmlExamples =
 spec :: Spec
 spec = describe "optimizeXML" $ do
   forM_ xmlExamples $ \(example, expected) ->
-    it ("should work with " ++ show example)
-      $          optimizeXML example
-      `shouldBe` Right expected
+    it ("should work with " ++ show example) $ do
+      optimized <- runExceptT (optimizeXML example)
+      optimized `shouldBe` Right expected

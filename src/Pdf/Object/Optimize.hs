@@ -7,8 +7,7 @@ module Pdf.Object.Optimize
 
 import Codec.Compression.XML (optimizeXML)
 
-import Control.Monad.Trans.Except (except)
-
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.Fallible (FallibleT, ifFail, tryF)
@@ -58,7 +57,7 @@ optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
 
 streamOptimize
   :: Logging IO
-  => TranslationTable
+  => TranslationTable ByteString
   -> PDFObject
   -> FallibleT IO PDFObject
 streamOptimize nameTranslations object =
@@ -67,7 +66,7 @@ streamOptimize nameTranslations object =
     XMLOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "XML stream optimization"
                                                 object
-                                                (except . optimizeXML)
+                                                optimizeXML
       setStream optimizedStream object
 
     GfxOptimization -> do
@@ -95,7 +94,7 @@ It also optimized nested strings and XML streams.
 -}
 refilter
   :: Logging IO
-  => TranslationTable
+  => TranslationTable ByteString
   -> PDFObject
   -> FallibleT IO PDFObject
 refilter nameTranslations object = do
@@ -154,7 +153,7 @@ ineffective, it is returned as is.
 -}
 optimize
   :: Logging IO
-  => TranslationTable
+  => TranslationTable ByteString
   -> PDFObject
   -> FallibleT IO PDFObject
 optimize nameTranslations object = optimizable object >>= \case
