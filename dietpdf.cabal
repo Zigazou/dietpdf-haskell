@@ -74,6 +74,7 @@ library
       Pdf.Document.Parser
       Pdf.Document.Partition
       Pdf.Document.PDFObjects
+      Pdf.Document.Stat
       Pdf.Document.Uncompress
       Pdf.Document.XRef
       Pdf.Graphics.Interpreter.Command
@@ -228,6 +229,7 @@ executable dietpdf
       Command.Info
       Command.Optimize
       Command.Predict
+      Command.Stat
       Command.Unpredict
       Paths_dietpdf
   hs-source-dirs:
@@ -253,6 +255,7 @@ executable dietpdf
     , bytestring
     , containers
     , dietpdf
+    , filepath
     , formatting
     , optparse-applicative
     , pretty-hex

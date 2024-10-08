@@ -7,6 +7,9 @@ module Pdf.Document.Partition
   , firstVersion
   , lastTrailer
   , removeUnused
+  , partitionDocument
+  , objectToEmbed
+  , objectWithContent
   ) where
 
 import Data.Context (Contextual (ctx))
@@ -17,13 +20,15 @@ import Data.Kind (Type)
 import Data.Logging (Logging, sayF)
 import Data.Maybe (fromMaybe)
 
-import Pdf.Document.Document (PDFDocument, deepFind, member)
-import Pdf.Document.PDFObjects (PDFObjects, toPDFDocument)
+import Pdf.Document.Document (PDFDocument, cFilter, deepFind, member)
+import Pdf.Document.PDFObjects (PDFObjects, fromPDFDocument, toPDFDocument)
 import Pdf.Document.Uncompress (uncompressDocument, uncompressObjects)
 import Pdf.Object.Object
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFReference, PDFTrailer, PDFVersion)
     , hasKey
+    , isTrailer
     )
+import Pdf.Object.Object.Properties (hasStream, isHeader, isIndirect)
 
 -- | A partition separates numbered objects from PDF versions and trailers.
 type PDFPartition :: Type
@@ -123,3 +128,34 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
   isReference :: PDFObject -> Bool
   isReference PDFReference{}  = True
   isReference _anyOtherObject = False
+
+{- |
+Determines if a PDF object should be embedded in an object stream (ObjStm).
+
+Returns `True` for indirect objects that do not have a stream.
+-}
+objectToEmbed :: PDFObject -> Bool
+objectToEmbed object = isIndirect object && not (hasStream object)
+
+{- |
+Checks if a PDF object contains content (i.e., it has a stream but is not a
+trailer).
+
+Returns `True` if the object has a stream and is not a trailer.
+-}
+objectWithContent :: PDFObject -> Bool
+objectWithContent object = hasStream object && not (isTrailer object)
+
+{- |
+Partitions a collection of PDF objects (`PDFDocument`) into a `PDFPartition`,
+separating objects with streams, objects without streams, header objects, and
+trailers.
+-}
+partitionDocument :: PDFDocument -> PDFPartition
+partitionDocument objs =
+  PDFPartition
+    { ppObjectsWithStream    = fromPDFDocument $ cFilter objectWithContent objs
+    , ppObjectsWithoutStream = fromPDFDocument $ cFilter objectToEmbed objs
+    , ppHeads                = cFilter isHeader objs
+    , ppTrailers             = cFilter isTrailer objs
+    }

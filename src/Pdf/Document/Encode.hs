@@ -9,7 +9,7 @@ module Pdf.Document.Encode
 import Control.Concurrent.Async (mapConcurrently)
 import Control.Monad (when)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Trans.Except (runExcept, runExceptT, throwE)
+import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString qualified as BS
 import Data.Context (Context, Contextual (ctx))
@@ -28,28 +28,27 @@ import Data.UnifiedError
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
-import Pdf.Document.Document (PDFDocument, cFilter, fromList, singleton)
+import Pdf.Document.Document (PDFDocument, fromList, singleton)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Pdf.Document.ObjectStream (explodeDocument, explodeList, insert)
 import Pdf.Document.Partition
-    ( PDFPartition (PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
+    ( PDFPartition (ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
     , lastTrailer
+    , partitionDocument
     , removeUnused
     )
-import Pdf.Document.PDFObjects (findLast, fromPDFDocument)
+import Pdf.Document.PDFObjects (findLast)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)
 import Pdf.Object.Object.PDFObject
-    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion, PDFXRefStream)
+    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion, PDFXRefStream)
     )
 import Pdf.Object.Object.Properties
     ( getObjectNumber
     , getValueForKey
     , hasKey
-    , hasStream
-    , isHeader
-    , isIndirect
-    , isTrailer
+    , isCatalog
+    , isInfo
     )
 import Pdf.Object.Object.RenameResources (renameResources)
 import Pdf.Object.Optimize (optimize)
@@ -86,7 +85,6 @@ encodeObject object@(PDFObjectStream number _ _ _) = do
 encodeObject object = return $ EncodedObject 0 (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
 
-
 {- |
 Updates an XRef stream object by copying certain fields ("Root", "Info", "ID")
 from a given trailer object.
@@ -102,29 +100,6 @@ updateXRefStm trailer xRefStm = do
   setMaybe "Root" mRoot xRefStm
     >>= setMaybe "Info" mInfo
     >>= setMaybe "ID" mID
-
-{- |
-Checks if the given PDF object is a Catalog object by verifying that its "Type"
-key is set to "Catalog".
-
-Returns `True` if it is a Catalog, `False` otherwise.
--}
-isCatalog :: PDFObject -> Bool
-isCatalog object@PDFIndirectObject{} =
-  case runExcept (getValue "Type" object) of
-    Left  _     -> False
-    Right value -> value == Just (PDFName "Catalog")
-isCatalog _anyOtherObject = False
-
-{- |
-Checks if the given PDF object contains document information (e.g., has an
-"Author" key).
-
-Returns `True` if the object contains document info, `False` otherwise.
--}
-isInfo :: PDFObject -> Bool
-isInfo object@PDFIndirectObject{} = hasKey "Author" object
-isInfo _anyOtherObject            = False
 
 {- |
 Retrieves the trailer object from a `PDFPartition`. If a valid trailer object is
@@ -166,24 +141,6 @@ getTrailer partition = case lastTrailer partition of
           _anyOtherCase -> PDFTrailer PDFNull
   validTrailer -> validTrailer
 
-
-{- |
-Determines if a PDF object should be embedded in an object stream (ObjStm).
-
-Returns `True` for indirect objects that do not have a stream.
--}
-objectToEmbed :: PDFObject -> Bool
-objectToEmbed object = isIndirect object && not (hasStream object)
-
-{- |
-Checks if a PDF object contains content (i.e., it has a stream but is not a
-trailer).
-
-Returns `True` if the object has a stream and is not a trailer.
--}
-objectWithContent :: PDFObject -> Bool
-objectWithContent object = hasStream object && not (isTrailer object)
-
 {- |
 Parallel map function that applies a given transformation to each element of a
 traversable structure (e.g., list) using concurrency.
@@ -198,21 +155,6 @@ pMapM
 pMapM transform items =
   liftIO (mapConcurrently (runExceptT . transform) items)
     >>= either throwE return . sequence
-
-{- |
-Partitions a collection of PDF objects (`PDFDocument`) into a `PDFPartition`,
-separating objects with streams, objects without streams, header objects, and
-trailers.
--}
-partitionDocument :: PDFDocument -> PDFPartition
-partitionDocument objs =
-  PDFPartition
-    { ppObjectsWithStream    = fromPDFDocument $ cFilter objectWithContent objs
-    , ppObjectsWithoutStream = fromPDFDocument $ cFilter objectToEmbed objs
-    , ppHeads                = cFilter isHeader objs
-    , ppTrailers             = cFilter isTrailer objs
-    }
-
 
 {- |
 Cleans a `PDFPartition` by removing unused objects and logs the number of

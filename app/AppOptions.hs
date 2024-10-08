@@ -9,6 +9,7 @@ module AppOptions
     , PredictOptions
     , UnpredictOptions
     , HumanOptions
+    , StatOptions
     )
   , appOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
@@ -19,7 +20,8 @@ import Codec.Compression.Predict (Predictor)
 import Data.Kind (Type)
 
 import Options.Applicative
-    ( CommandFields
+    ( Alternative (some)
+    , CommandFields
     , Mod
     , Parser
     , argument
@@ -66,6 +68,7 @@ data AppOptions
   | PredictOptions !Predictor !Int !Int !(Maybe FilePath)
   | UnpredictOptions !Predictor !Int !Int !(Maybe FilePath)
   | HumanOptions !(Maybe FilePath)
+  | StatOptions ![FilePath]
 
 commandInfo :: Mod CommandFields AppOptions
 commandInfo = command
@@ -166,6 +169,14 @@ commandHuman = command
     (progDesc "Print graphics code in a readable human form")
   )
 
+commandStat :: Mod CommandFields AppOptions
+commandStat = command
+  "stat"
+  (info
+    (StatOptions <$> some (argument str (metavar "<input_pdf_files>" <> help "PDF files to analyze")))
+    (progDesc "Print statistics about a PDF file")
+  )
+
 appOptions :: Parser AppOptions
 appOptions =
   subparser
@@ -178,3 +189,4 @@ appOptions =
     <> commandPredict
     <> commandUnpredict
     <> commandHuman
+    <> commandStat

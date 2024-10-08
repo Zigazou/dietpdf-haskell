@@ -10,6 +10,8 @@ module Pdf.Object.Object.Properties
   , isHeader
   , isTrailer
   , objectType
+  , isInfo
+  , isCatalog
   ) where
 
 import Data.ByteString qualified as BS
@@ -141,3 +143,26 @@ isTrailer :: PDFObject -> Bool
 isTrailer PDFTrailer{}    = True
 isTrailer PDFXRefStream{} = True
 isTrailer _anyOtherObject = False
+
+{- |
+Checks if the given PDF object is a Catalog object by verifying that its "Type"
+key is set to "Catalog".
+
+Returns `True` if it is a Catalog, `False` otherwise.
+-}
+isCatalog :: PDFObject -> Bool
+isCatalog (PDFIndirectObject _ _ (PDFDictionary dict)) =
+  case Map.lookup "Type" dict of
+    Just (PDFName "Catalog") -> True
+    _anyOtherValue           -> False
+isCatalog _anyOtherObject = False
+
+{- |
+Checks if the given PDF object contains document information (e.g., has an
+"Author" key).
+
+Returns `True` if the object contains document info, `False` otherwise.
+-}
+isInfo :: PDFObject -> Bool
+isInfo object@PDFIndirectObject{} = hasKey "Author" object
+isInfo _anyOtherObject            = False

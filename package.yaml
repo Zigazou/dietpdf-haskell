@@ -135,6 +135,7 @@ executables:
     - containers
     - temporary
     - unix
+    - filepath
 
 tests:
   dietpdf-test:

@@ -3,7 +3,7 @@ module Main
   ) where
 
 import AppOptions
-    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, HashOptions, InfoOptions, OptimizeOptions, PredictOptions, UnpredictOptions, HumanOptions)
+    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions)
     , appOptions
     )
 
@@ -15,6 +15,7 @@ import Command.Human (humanByteString)
 import Command.Info (showInfo)
 import Command.Optimize (optimize)
 import Command.Predict (predictByteString)
+import Command.Stat (showStat)
 import Command.Unpredict (unpredictByteString)
 
 import Control.Exception (tryJust)
@@ -46,6 +47,7 @@ import Options.Applicative
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Parser (pdfParse)
 
+import System.FilePath (takeFileName)
 import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
 import System.IO.Temp (withSystemTempFile)
@@ -133,6 +135,12 @@ runApp (UnpredictOptions predictor width components inputFile) =
   readByteString inputFile >>= unpredictByteString predictor width components
 
 runApp (HumanOptions inputFile) = readByteString inputFile >>= humanByteString
+
+runApp (StatOptions inputPDF) = do
+  let filenames = takeFileName <$> inputPDF
+  pdfs <- mapM readPDF inputPDF
+  pdfSizes <- mapM (lift . getFileSize) inputPDF
+  showStat (zip3 filenames pdfSizes pdfs)
 
 options :: ParserInfo AppOptions
 options = info
