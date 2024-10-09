@@ -4,6 +4,9 @@ module Data.TranslationTable
   , convert
   , shortFirst
   , getTranslationTable
+  , getTranslationTableFrom
+  , mergeTranslationTables
+  , nextFreeIndex
   ) where
 
 import Data.HasLength (HasLength (objectLength))
@@ -52,6 +55,36 @@ getTranslationTable
   => (Int -> a)
   -> [a]
   -> TranslationTable a
-getTranslationTable toNameBase names =
+getTranslationTable = getTranslationTableFrom 0
+
+{- |
+Rename a list of strings.
+The corresponding `Map` is returned.
+
+Shortest strings are renamed first, giving them the shortest name.
+-}
+getTranslationTableFrom
+  :: (Ord a, HasLength a)
+  => Int
+  -> (Int -> a)
+  -> [a]
+  -> TranslationTable a
+getTranslationTableFrom from toNameBase names =
   mkTranslationTable $ zip ((sortBy shortFirst . nubOrd) names)
-                           (fmap toNameBase [0..])
+                           (fmap toNameBase [from..])
+
+{- |
+Merge two translation tables.
+-}
+mergeTranslationTables
+  :: Ord a
+  => TranslationTable a
+  -> TranslationTable a
+  -> TranslationTable a
+mergeTranslationTables = Map.union
+
+{- |
+Get the next free index in a translation table.
+-}
+nextFreeIndex :: TranslationTable a -> Int
+nextFreeIndex = Map.size

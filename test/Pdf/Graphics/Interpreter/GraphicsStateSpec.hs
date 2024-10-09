@@ -5,7 +5,8 @@ module Pdf.Graphics.Interpreter.GraphicsStateSpec
 import Control.Monad (forM_)
 
 import Pdf.Graphics.Interpreter.GraphicsState
-    ( GraphicsState (GraphicsState, gsCTM, gsScaleX, gsScaleY, gsStack, gsTextState, gsUserUnit)
+    ( GraphicsState (gsCTM, gsScaleX, gsScaleY, gsStack, gsTextState, gsUserUnit)
+    , defaultGraphicsState
     , usefulGraphicsPrecision
     )
 import Pdf.Graphics.Interpreter.TextState (defaultTextState)
@@ -17,7 +18,7 @@ import Test.Hspec (Spec, describe, it, shouldBe)
 
 stateExamples :: [(GraphicsState, Int)]
 stateExamples =
-  [ ( GraphicsState
+  [ ( defaultGraphicsState
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 1.0 0.0 0.0 1.0 0.0 0.0
       , gsTextState = defaultTextState
@@ -27,7 +28,7 @@ stateExamples =
       }
     , 2
     )
-  , ( GraphicsState
+  , ( defaultGraphicsState
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 0.0 1.0 (-1.0) 0.0 1.0 1.0
       , gsTextState = defaultTextState
@@ -37,7 +38,7 @@ stateExamples =
       }
     , 2
     )
-  , ( GraphicsState
+  , ( defaultGraphicsState
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 100.0 0.0 0.0 100.0 0.0 0.0
       , gsTextState = defaultTextState
@@ -47,7 +48,7 @@ stateExamples =
       }
     , 4
     )
-  , ( GraphicsState
+  , ( defaultGraphicsState
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 10.0 0.0 0.0 10.0 0.0 0.0
       , gsTextState = defaultTextState

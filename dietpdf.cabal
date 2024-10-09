@@ -45,6 +45,7 @@ library
       Data.Context
       Data.ErrorType
       Data.Fallible
+      Data.FoldableWithRest
       Data.HasLength
       Data.Logging
       Data.TranslationTable
@@ -82,6 +83,8 @@ library
       Pdf.Graphics.Interpreter.GraphicsState
       Pdf.Graphics.Interpreter.Human
       Pdf.Graphics.Interpreter.OperatorCategory
+      Pdf.Graphics.Interpreter.OptimizeCommand
+      Pdf.Graphics.Interpreter.OptimizeProgram
       Pdf.Graphics.Interpreter.Program
       Pdf.Graphics.Interpreter.TextState
       Pdf.Graphics.Interpreter.TransformationMatrix
@@ -276,6 +279,7 @@ test-suite dietpdf-test
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
       Data.BitsArraySpec
+      Data.FoldableWithRestSpec
       Data.LoggingSpec
       External.JpegToJpeg2kSpec
       Font.TrueType.Parser.FontSpec
@@ -285,6 +289,7 @@ test-suite dietpdf-test
       Pdf.Document.ObjectStreamSpec
       Pdf.Document.XRefSpec
       Pdf.Graphics.Interpreter.GraphicsStateSpec
+      Pdf.Graphics.Interpreter.OptimizeProgramSpec
       Pdf.Graphics.Interpreter.ProgramSpec
       Pdf.Graphics.Interpreter.TransformationMatrixSpec
       Pdf.Graphics.Parser.ArraySpec

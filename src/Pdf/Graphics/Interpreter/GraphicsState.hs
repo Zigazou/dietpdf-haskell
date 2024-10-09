@@ -21,10 +21,34 @@ module Pdf.Graphics.Interpreter.GraphicsState
   , setHorizontalScalingS
   , setTextRise
   , setTextRiseS
+  , setPathStart
+  , setPathStartS
+  , setNonStrokeAlpha
+  , setNonStrokeAlphaS
+  , setStrokeAlpha
+  , setStrokeAlphaS
+  , setFlatness
+  , setFlatnessS
+  , setRenderingIntent
+  , setRenderingIntentS
+  , setDashPattern
+  , setDashPatternS
+  , setMiterLimit
+  , setMiterLimitS
+  , setLineJoin
+  , setLineJoinS
+  , setLineCap
+  , setLineCapS
+  , setLineWidth
+  , setLineWidthS
+  , setCurrentPoint
+  , setCurrentPointS
+  , getPathStartS
   ) where
 
 import Control.Monad.State (MonadState (get), State, gets, put)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 
@@ -49,12 +73,26 @@ graphics context. The graphics state includes the following parameters:
 -}
 type GraphicsState :: Type
 data GraphicsState = GraphicsState
-  { gsUserUnit  :: !Double
-  , gsCTM       :: !TransformationMatrix
-  , gsScaleX    :: !Double
-  , gsScaleY    :: !Double
-  , gsTextState :: !TextState
-  , gsStack     :: ![GraphicsState]
+  { gsUserUnit       :: !Double
+  , gsCTM            :: !TransformationMatrix
+  , gsScaleX         :: !Double
+  , gsScaleY         :: !Double
+  , gsTextState      :: !TextState
+  , gsStack          :: ![GraphicsState]
+  , gsLineWidth      :: !Double
+  , gsLineCap        :: !Double
+  , gsLineJoin       :: !Double
+  , gsMiterLimit     :: !Double
+  , gsDashArray      :: ![Double]
+  , gsDashPhase      :: !Double
+  , gsIntent         :: !ByteString
+  , gsFlatness       :: !Double
+  , gsStrokeAlpha    :: !Double
+  , gsNonStrokeAlpha :: !Double
+  , gsPathStartX     :: !Double
+  , gsPathStartY     :: !Double
+  , gsCurrentPointX  :: !Double
+  , gsCurrentPointY  :: !Double
   } deriving stock (Eq, Show)
 
 {- |
@@ -67,12 +105,26 @@ following parameters:
 -}
 defaultGraphicsState :: GraphicsState
 defaultGraphicsState = GraphicsState
-  { gsUserUnit  = 1.0
-  , gsCTM       = mempty
-  , gsScaleX    = 1.0
-  , gsScaleY    = 1.0
-  , gsTextState = defaultTextState
-  , gsStack     = []
+  { gsUserUnit       = 1.0
+  , gsCTM            = mempty
+  , gsScaleX         = 1.0
+  , gsScaleY         = 1.0
+  , gsTextState      = defaultTextState
+  , gsStack          = []
+  , gsLineWidth      = 1.0
+  , gsLineCap        = 0.0
+  , gsLineJoin       = 1.0
+  , gsMiterLimit     = 10.0
+  , gsDashArray      = []
+  , gsDashPhase      = 0.0
+  , gsIntent         = "RelativeColorimetric"
+  , gsFlatness       = 1.0
+  , gsStrokeAlpha    = 1.0
+  , gsNonStrokeAlpha = 1.0
+  , gsPathStartX     = 0.0
+  , gsPathStartY     = 0.0
+  , gsCurrentPointX  = 0.0
+  , gsCurrentPointY  = 0.0
   }
 
 {- |
@@ -229,3 +281,109 @@ setTextRise rise state = state
 
 setTextRiseS :: Double -> State GraphicsState ()
 setTextRiseS rise = get >>= put . setTextRise rise
+
+{- |
+Set the line width of the current graphics state.
+-}
+setLineWidth :: Double -> GraphicsState -> GraphicsState
+setLineWidth lineWidth state = state { gsLineWidth = lineWidth }
+
+setLineWidthS :: Double -> State GraphicsState ()
+setLineWidthS lineWidth = get >>= put . setLineWidth lineWidth
+
+{- |
+Set the line cap of the current graphics state.
+-}
+setLineCap :: Double -> GraphicsState -> GraphicsState
+setLineCap lineCap state = state { gsLineCap = lineCap }
+
+setLineCapS :: Double -> State GraphicsState ()
+setLineCapS lineCap = get >>= put . setLineCap lineCap
+
+{- |
+Set the line join of the current graphics state.
+-}
+setLineJoin :: Double -> GraphicsState -> GraphicsState
+setLineJoin lineJoin state = state { gsLineJoin = lineJoin }
+
+setLineJoinS :: Double -> State GraphicsState ()
+setLineJoinS lineJoin = get >>= put . setLineJoin lineJoin
+
+{- |
+Set the miter limit of the current graphics state.
+-}
+setMiterLimit :: Double -> GraphicsState -> GraphicsState
+setMiterLimit miterLimit state = state { gsMiterLimit = miterLimit }
+
+setMiterLimitS :: Double -> State GraphicsState ()
+setMiterLimitS miterLimit = get >>= put . setMiterLimit miterLimit
+
+{- |
+Set the dash pattern of the current graphics state.
+-}
+setDashPattern :: Double -> [Double] -> GraphicsState -> GraphicsState
+setDashPattern dashPhase dashArray state = state
+  { gsDashArray = dashArray
+  , gsDashPhase = dashPhase
+  }
+
+setDashPatternS :: Double -> [Double] -> State GraphicsState ()
+setDashPatternS dashPhase dashArray =
+  get >>= put . setDashPattern dashPhase dashArray
+
+{- |
+Set the rendering intent of the current graphics state.
+-}
+setRenderingIntent :: ByteString -> GraphicsState -> GraphicsState
+setRenderingIntent intent state = state { gsIntent = intent }
+
+setRenderingIntentS :: ByteString -> State GraphicsState ()
+setRenderingIntentS intent = get >>= put . setRenderingIntent intent
+
+{- |
+Set the flatness of the current graphics state.
+-}
+setFlatness :: Double -> GraphicsState -> GraphicsState
+setFlatness flatness state = state { gsFlatness = flatness }
+
+setFlatnessS :: Double -> State GraphicsState ()
+setFlatnessS flatness = get >>= put . setFlatness flatness
+
+{- |
+Set the stroke alpha of the current graphics state.
+-}
+setStrokeAlpha :: Double -> GraphicsState -> GraphicsState
+setStrokeAlpha alpha state = state { gsStrokeAlpha = alpha }
+
+setStrokeAlphaS :: Double -> State GraphicsState ()
+setStrokeAlphaS alpha = get >>= put . setStrokeAlpha alpha
+
+{- |
+Set the non-stroke alpha of the current graphics state.
+-}
+setNonStrokeAlpha :: Double -> GraphicsState -> GraphicsState
+setNonStrokeAlpha alpha state = state { gsNonStrokeAlpha = alpha }
+
+setNonStrokeAlphaS :: Double -> State GraphicsState ()
+setNonStrokeAlphaS alpha = get >>= put . setNonStrokeAlpha alpha
+
+{- |
+Set the start of the current path.
+-}
+setPathStart :: Double -> Double -> GraphicsState -> GraphicsState
+setPathStart x y state = state { gsPathStartX = x, gsPathStartY = y }
+
+setPathStartS :: Double -> Double -> State GraphicsState ()
+setPathStartS x y = get >>= put . setPathStart x y >> setCurrentPointS x y
+
+getPathStartS :: State GraphicsState (Double, Double)
+getPathStartS = gets $ \state -> (gsPathStartX state, gsPathStartY state)
+
+{- |
+Set the current point of the current path.
+-}
+setCurrentPoint :: Double -> Double -> GraphicsState -> GraphicsState
+setCurrentPoint x y state = state { gsCurrentPointX = x, gsCurrentPointY = y }
+
+setCurrentPointS :: Double -> Double -> State GraphicsState ()
+setCurrentPointS x y = get >>= put . setCurrentPoint x y

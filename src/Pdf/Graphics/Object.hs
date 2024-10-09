@@ -385,6 +385,8 @@ data GSOperator
     GSEndInlineImage
   | -- | Unknown operator
     GSUnknown !BS.ByteString
+  | -- | No-op operator
+    GSNone
   deriving stock (Eq, Show)
 
 {- |
@@ -544,6 +546,7 @@ fromGSOperator GSBeginInlineImage             = "BI"
 fromGSOperator GSInlineImageData              = "ID"
 fromGSOperator GSEndInlineImage               = "EI"
 fromGSOperator (GSUnknown unknown)            = unknown
+fromGSOperator GSNone                         = ""
 
 {-|
 A GFX is a collection of objects, here named GFX objects.
@@ -623,36 +626,38 @@ Indicates whether the `GFXObject` ends with a delimiter when converted to a
 `ByteString`.
 -}
 endsWithDelimiter :: GFXObject -> Bool
-endsWithDelimiter GFXComment{}     = True
-endsWithDelimiter GFXNumber{}      = False
-endsWithDelimiter GFXName{}        = False
-endsWithDelimiter GFXString{}      = True
-endsWithDelimiter GFXHexString{}   = True
-endsWithDelimiter GFXReference{}   = False
-endsWithDelimiter GFXArray{}       = True
-endsWithDelimiter GFXDictionary{}  = True
-endsWithDelimiter GFXBool{}        = False
-endsWithDelimiter GFXNull          = False
-endsWithDelimiter GFXInlineImage{} = False
-endsWithDelimiter GFXOperator{}    = False
+endsWithDelimiter GFXComment{}         = True
+endsWithDelimiter GFXNumber{}          = False
+endsWithDelimiter GFXName{}            = False
+endsWithDelimiter GFXString{}          = True
+endsWithDelimiter GFXHexString{}       = True
+endsWithDelimiter GFXReference{}       = False
+endsWithDelimiter GFXArray{}           = True
+endsWithDelimiter GFXDictionary{}      = True
+endsWithDelimiter GFXBool{}            = False
+endsWithDelimiter GFXNull              = False
+endsWithDelimiter GFXInlineImage{}     = False
+endsWithDelimiter (GFXOperator GSNone) = True
+endsWithDelimiter GFXOperator{}        = False
 
 {- |
 Indicates whether the `GFXObject` starts with a delimiter when converted to a
 `ByteString`.
 -}
 startsWithDelimiter :: GFXObject -> Bool
-startsWithDelimiter GFXComment{}     = True
-startsWithDelimiter GFXNumber{}      = False
-startsWithDelimiter GFXName{}        = True
-startsWithDelimiter GFXString{}      = True
-startsWithDelimiter GFXHexString{}   = True
-startsWithDelimiter GFXReference{}   = False
-startsWithDelimiter GFXArray{}       = True
-startsWithDelimiter GFXDictionary{}  = True
-startsWithDelimiter GFXBool{}        = False
-startsWithDelimiter GFXNull          = False
-startsWithDelimiter GFXInlineImage{} = False
-startsWithDelimiter GFXOperator{}    = False
+startsWithDelimiter GFXComment{}         = True
+startsWithDelimiter GFXNumber{}          = False
+startsWithDelimiter GFXName{}            = True
+startsWithDelimiter GFXString{}          = True
+startsWithDelimiter GFXHexString{}       = True
+startsWithDelimiter GFXReference{}       = False
+startsWithDelimiter GFXArray{}           = True
+startsWithDelimiter GFXDictionary{}      = True
+startsWithDelimiter GFXBool{}            = False
+startsWithDelimiter GFXNull              = False
+startsWithDelimiter GFXInlineImage{}     = False
+startsWithDelimiter (GFXOperator GSNone) = True
+startsWithDelimiter GFXOperator{}        = False
 
 {- |
 Tells if a space must be inserted between 2 `GFXObject` when converted to
@@ -714,8 +719,12 @@ Takes an `Array` of `GFXObject`, converts them to the `ByteString`
 representation and inserts spaces between them if necessary.
 -}
 separateGfx :: Array GFXObject -> BS.ByteString
-separateGfx objects = BS.concat $ buildBS (toList objects)
+separateGfx objects = BS.concat $ buildBS (filter notNull $ toList objects)
   where
+    notNull :: GFXObject -> Bool
+    notNull (GFXOperator GSNone) = False
+    notNull _otherObject         = True
+
     buildBS :: [GFXObject] -> [BS.ByteString]
     buildBS [] = []
     buildBS [object1] = [fromGFXObject object1]

@@ -9,11 +9,8 @@ import Data.Logging (Logging, sayComparisonF, sayF)
 import Data.Sequence qualified as SQ
 import Data.TranslationTable (TranslationTable)
 
-import Pdf.Graphics.Interpreter.Program
-    ( extractObjects
-    , optimizeProgram
-    , parseProgram
-    )
+import Pdf.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
+import Pdf.Graphics.Interpreter.Program (extractObjects, parseProgram)
 import Pdf.Graphics.Object (separateGfx)
 import Pdf.Graphics.Parser.Stream (gfxParse)
 import Pdf.Graphics.RenameResources (renameResourcesInObject)
