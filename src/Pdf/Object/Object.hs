@@ -38,7 +38,6 @@ module Pdf.Object.Object
   , ToPDFNumber
 
     -- * Getting info about a `PDFObject`
-  , objectInfo
   , hasKey
   , hasDictionary
   , hasStream
@@ -75,7 +74,6 @@ module Pdf.Object.Object
 
 import Pdf.Object.Object.Delimiter (spaceIfNeeded)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)
-import Pdf.Object.Object.ObjectInfo (objectInfo)
 import Pdf.Object.Object.PDFCharacter
     ( isDelimiter
     , isKeywordCharacter

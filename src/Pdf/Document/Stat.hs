@@ -1,7 +1,5 @@
 module Pdf.Document.Stat
   ( stat
-  , Statistics(..)
-  , initStatistics
   ) where
 
 import Control.Monad (foldM)
@@ -9,87 +7,22 @@ import Control.Monad (foldM)
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
 import Data.Functor ((<&>))
-import Data.Kind (Type)
 import Data.Logging (Logging)
-import Data.Map qualified as Map
+import Data.ObjectCategory
+    ( ObjectCategory (Bitmap, File, Font, Other, Vector, XML)
+    )
+import Data.Statistics
+    ( Statistics (bitmapCount, bitmapTotal, fileCount, fileTotal, fontCount, fontTotal, otherTotal, vectorCount, vectorTotal, xmlCount, xmlTotal)
+    )
 
 import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Partition
     ( PDFPartition (ppObjectsWithStream)
     , partitionDocument
     )
-import Pdf.Object.Object (PDFObject (PDFName))
-import Pdf.Object.OptimizationType
-    ( OptimizationType (GfxOptimization, JPGOptimization, TTFOptimization, XMLOptimization)
-    , whatOptimizationFor
-    )
-import Pdf.Object.State (getDictionary, getStream)
-import Pdf.Object.Unfilter (unfilter)
-
-type Statistics :: Type
-data Statistics = Statistics
-  { pdfTotal    :: Int
-  , bitmapTotal :: Int
-  , bitmapCount :: Int
-  , vectorTotal :: Int
-  , vectorCount :: Int
-  , fontTotal   :: Int
-  , fontCount   :: Int
-  , fileTotal   :: Int
-  , fileCount   :: Int
-  , xmlTotal    :: Int
-  , xmlCount    :: Int
-  , otherTotal  :: Int
-  } deriving stock (Show)
-
-type ObjectCategory :: Type
-data ObjectCategory
-  = Bitmap
-  | Vector
-  | Font
-  | File
-  | XML
-  | Other
-  deriving stock (Eq, Show)
-
-initStatistics :: Int -> Statistics
-initStatistics total = Statistics
-  { pdfTotal    = total
-  , bitmapTotal = 0
-  , bitmapCount = 0
-  , vectorTotal = 0
-  , vectorCount = 0
-  , fontTotal   = 0
-  , fontCount   = 0
-  , fileTotal   = 0
-  , fileCount   = 0
-  , xmlTotal    = 0
-  , xmlCount    = 0
-  , otherTotal  = 0
-  }
-
-objectCategory :: Logging IO => PDFObject -> FallibleT IO ObjectCategory
-objectCategory object = do
-    dict <- getDictionary object
-    optimization <- unfilter object >>= whatOptimizationFor
-    case optimization of
-      XMLOptimization -> return XML
-      GfxOptimization -> return Vector
-      JPGOptimization -> return Bitmap
-      TTFOptimization -> return Font
-      _noOptimization -> case Map.lookup "Type" dict of
-        (Just (PDFName "EmbeddedFile")) -> return File
-        (Just (PDFName "XObject")) ->
-          case Map.lookup "Subtype" dict of
-            (Just (PDFName "Image"))        -> return Bitmap
-            (Just (PDFName "Form"))         -> return Vector
-            (Just (PDFName "Type1"))        -> return Font
-            (Just (PDFName "EmbeddedFile")) -> return File
-            (Just (PDFName "XML"))          -> return XML
-            _anyOtherSubType                -> return Other
-        (Just (PDFName "Font")) -> return Font
-        (Just (PDFName "XML"))  -> return XML
-        _anyOtherType           -> return Other
+import Pdf.Object.Object (PDFObject)
+import Pdf.Object.ObjectCategory (objectCategory)
+import Pdf.Object.State (getStream)
 
 updateStatistics
   :: Logging IO

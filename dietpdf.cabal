@@ -48,6 +48,9 @@ library
       Data.FoldableWithRest
       Data.HasLength
       Data.Logging
+      Data.ObjectCategory
+      Data.ObjectInfo
+      Data.Statistics
       Data.TranslationTable
       Data.UnifiedError
       External.ExternalCommand
@@ -125,7 +128,6 @@ library
       Pdf.Object.Object.Delimiter
       Pdf.Object.Object.FromPDFObject
       Pdf.Object.Object.FromXRef
-      Pdf.Object.Object.ObjectInfo
       Pdf.Object.Object.PDFCharacter
       Pdf.Object.Object.PDFObject
       Pdf.Object.Object.Properties
@@ -134,6 +136,8 @@ library
       Pdf.Object.Object.XRefEntry
       Pdf.Object.Object.XRefState
       Pdf.Object.Object.XRefSubsection
+      Pdf.Object.ObjectCategory
+      Pdf.Object.ObjectInfo
       Pdf.Object.OptimizationType
       Pdf.Object.Optimize
       Pdf.Object.Parser.Comment
@@ -157,6 +161,7 @@ library
       Util.Ascii
       Util.ByteString
       Util.Dictionary
+      Util.Display
       Util.Hex
       Util.Name
       Util.Number

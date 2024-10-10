@@ -2,18 +2,41 @@ module Command.Info
   ( showInfo
   ) where
 
-import Data.Context (ctx)
-import Data.Fallible (FallibleT)
-import Data.Logging (sayF)
-import Data.Text.Lazy qualified as T
+import Control.Monad (forM_)
 
-import Formatting (format, int, (%))
+import Data.Fallible (FallibleT)
+import Data.ObjectInfo
+    ( ObjectInfo (oCategory, oDescription, oNumber, oOffset, oStream)
+    , StreamInfo (sFilteredSize, sUnfilteredSize)
+    )
+import Data.Text qualified as T
 
 import Pdf.Document.Document (PDFDocument)
-import Pdf.Object.Object (objectInfo)
+import Pdf.Object.ObjectInfo (objectInfo)
+
+import Util.Display (disp)
+
+header :: [String]
+header = [ "type"
+         , "id"
+         , "offset"
+         , "compressed"
+         , "uncompressed"
+         , "description"
+         ]
 
 showInfo :: PDFDocument -> FallibleT IO ()
 showInfo document = do
-  let context = ctx ("showinfo" :: String)
-  sayF context . T.toStrict $ format ("Found " % int % " objects") (length document)
-  mapM_ (sayF context . T.toStrict . objectInfo) document
+  disp header
+
+  forM_ document $ \object -> do
+    info <- objectInfo object Nothing
+
+    disp
+      [ show (oCategory info)
+      , maybe "" show (oNumber info)
+      , maybe "" show (oOffset info)
+      , maybe "" (show . sFilteredSize) (oStream info)
+      , maybe "" (show . sUnfilteredSize) (oStream info)
+      , T.unpack (oDescription info)
+      ]
