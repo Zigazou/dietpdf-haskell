@@ -89,7 +89,7 @@ unfilterStream colors (filters@(pdfFilter :<| otherFilters), stream)
 unfilterStream _colors (filters, stream) = Right (filters, stream)
 
 getColorSpace :: Logging m => PDFObject -> FallibleT m Int
-getColorSpace params = case runExcept (getValueDefault "ColorSpace" (PDFName "DeviceRGB") params) of
+getColorSpace params = case runExcept (getValueDefault "ColorSpace" (PDFName "DeviceGray") params) of
   Right (Just (PDFName "DeviceGray")) -> return 1
   Right (Just (PDFName "DeviceRGB"))  -> return 3
   Right (Just (PDFName "DeviceCMYK")) -> return 4
