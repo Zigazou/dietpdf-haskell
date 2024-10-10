@@ -11,7 +11,7 @@ import Pdf.Graphics.Interpreter.Command
     ( Command (Command, cOperator, cParameters)
     )
 import Pdf.Graphics.Interpreter.GraphicsState
-    ( GraphicsState (gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit)
+    ( GraphicsState (gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsIntent, gsFlatness)
     , applyGraphicsMatrixS
     , applyTextMatrixS
     , getPathStartS
@@ -28,7 +28,7 @@ import Pdf.Graphics.Interpreter.GraphicsState
     , setTextRiseS
     , usefulColorPrecisionS
     , usefulGraphicsPrecisionS
-    , usefulTextPrecisionS
+    , usefulTextPrecisionS, setRenderingIntentS, setFlatnessS
     )
 import Pdf.Graphics.Interpreter.OperatorCategory
     ( OperatorCategory (ClippingPathOperator, ColorOperator, PathConstructionOperator, PathPaintingOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
@@ -40,7 +40,7 @@ import Pdf.Graphics.Interpreter.TransformationMatrix
     )
 import Pdf.Graphics.Object
     ( GFXObject (GFXName, GFXNull, GFXNumber)
-    , GSOperator (GSCloseSubpath, GSEndPath, GSLineTo, GSMoveTo, GSNone, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetTextRise)
+    , GSOperator (GSCloseSubpath, GSEndPath, GSLineTo, GSMoveTo, GSNone, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetTextRise, GSSetColourRenderingIntent, GSSetFlatnessTolerance)
     , reducePrecision
     )
 import Pdf.Graphics.Objects (Objects)
@@ -180,6 +180,23 @@ optimizeCommand command rest = case (operator, parameters) of
       then return (Command GSNone mempty)
       else do
         setMiterLimitS miterLimit'
+        usefulGraphicsPrecisionS <&> optimizeParameters command
+
+  (GSSetColourRenderingIntent, GFXName intent :<| Empty) -> do
+    currentIntent <- gets gsIntent
+    if intent == currentIntent
+      then return (Command GSNone mempty)
+      else do
+        setRenderingIntentS intent
+        return command
+
+  (GSSetFlatnessTolerance, GFXNumber flatness :<| Empty) -> do
+    flatness' <- usefulGraphicsPrecisionS <&> flip roundAndAHalf flatness
+    currentFlatness <- gets gsFlatness
+    if flatness' == currentFlatness
+      then return (Command GSNone mempty)
+      else do
+        setFlatnessS flatness'
         usefulGraphicsPrecisionS <&> optimizeParameters command
 
   -- Other operators
