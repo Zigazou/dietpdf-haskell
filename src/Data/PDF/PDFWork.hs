@@ -21,6 +21,7 @@ module Data.PDF.PDFWork
   , sayComparisonP
   , sayErrorP
   , fallibleP
+  , setTranslationTable
   )
 where
 
@@ -29,6 +30,7 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except (runExceptT, throwE)
 import Control.Monad.Trans.State (evalStateT)
 
+import Data.ByteString (ByteString)
 import Data.Context (Context (NoContext))
 import Data.Fallible (Fallible, FallibleT)
 import Data.IntMap qualified as IM
@@ -44,8 +46,12 @@ import Data.PDF.PDFPartition
     ( PDFPartition (ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
     , lastTrailer
     )
-import Data.PDF.WorkData (WorkData (wContexts, wPDF), emptyWorkData)
+import Data.PDF.WorkData
+    ( WorkData (wContexts, wNameTranslations, wPDF)
+    , emptyWorkData
+    )
 import Data.Text (Text)
+import Data.TranslationTable (TranslationTable)
 import Data.UnifiedError (UnifiedError)
 
 import PDF.Object.Object.Properties (isCatalog, isInfo)
@@ -147,6 +153,10 @@ putObject object = modifyPDF $ \pdf ->
                                             (ppObjectsWithStream pdf)
           }
     _anythingElse -> pdf
+
+setTranslationTable :: Monad m => TranslationTable ByteString -> PDFWork m ()
+setTranslationTable translationTable = modifyWorkData $
+  \workData -> workData { wNameTranslations = translationTable }
 
 isEmptyPDF :: Monad m => PDFWork m Bool
 isEmptyPDF = do

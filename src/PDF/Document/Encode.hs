@@ -17,6 +17,7 @@ import Data.IntMap qualified as IM
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (catMaybes)
+import Data.PDF.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Data.PDF.PDFDocument (PDFDocument, fromList)
 import Data.PDF.PDFObject
     ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFStartXRef, PDFTrailer, PDFVersion)
@@ -34,6 +35,7 @@ import Data.PDF.PDFWork
     , pushContext
     , sayP
     , setTrailer
+    , setTranslationTable
     , throwError
     , withStreamCount
     , withoutStreamCount
@@ -48,7 +50,6 @@ import Data.UnifiedError
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
-import Data.PDF.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
@@ -197,6 +198,8 @@ pdfEncode objects = do
   resourceNames <- getAllResourceNames
 
   let nameTranslations = getTranslationTable toNameBase resourceNames
+
+  setTranslationTable nameTranslations
 
   modifyIndirectObjects (renameResources nameTranslations)
 
