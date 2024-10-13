@@ -1,8 +1,8 @@
 {- |
-Module: Pdf.Document.ObjectOffset
+Module: Data.PDF.ObjectOffset
 Description: Object offset in a PDF file
 -}
-module Pdf.Document.ObjectOffset
+module Data.PDF.ObjectOffset
   ( ObjectOffset (DirectOffset, InObjectStream, FreeEntry),
     getOffsetValue,
     ooObjectNumber,

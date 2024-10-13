@@ -30,15 +30,15 @@ import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as SQ
 import Data.UnifiedError (UnifiedError (XRefStreamNoW))
 
-import Pdf.Document.EncodedObject
+import Data.PDF.EncodedObject
     ( EncodedObject (EncodedObject, eoBinaryData, eoObjectLength, eoObjectNumber)
     )
-import Pdf.Document.EncodedObjects (EncodedObjects)
-import Pdf.Document.ObjectOffset
+import Data.PDF.EncodedObjects (EncodedObjects)
+import Data.PDF.ObjectOffset
     ( ObjectOffset (DirectOffset, FreeEntry, InObjectStream)
     , getOffsetValue
     )
-import Pdf.Document.ObjectOffsets (ObjectOffsets, indexRange, insertFreeEntries)
+import Data.PDF.ObjectOffsets (ObjectOffsets, indexRange, insertFreeEntries)
 import Pdf.Object.Object.ToPDFNumber (ToPDFNumber (mkPDFNumber))
 import Pdf.Object.State (getValue)
 

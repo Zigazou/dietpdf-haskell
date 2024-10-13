@@ -7,10 +7,10 @@ import Control.Monad (forM_)
 import Data.IntMap.Strict qualified as IM
 import Data.Sequence (Seq (Empty), fromList)
 
-import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))
-import Pdf.Document.EncodedObjects (EncodedObjects)
-import Pdf.Document.ObjectOffset (ObjectOffset (DirectOffset))
-import Pdf.Document.ObjectOffsets (ObjectOffsets)
+import Data.PDF.EncodedObject (EncodedObject (EncodedObject))
+import Data.PDF.EncodedObjects (EncodedObjects)
+import Data.PDF.ObjectOffset (ObjectOffset (DirectOffset))
+import Data.PDF.ObjectOffsets (ObjectOffsets)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable, xrefTable)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFXRef, PDFXRefStream)

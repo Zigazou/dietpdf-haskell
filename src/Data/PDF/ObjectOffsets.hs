@@ -1,24 +1,24 @@
-module Pdf.Document.ObjectOffsets
+module Data.PDF.ObjectOffsets
   ( ObjectOffsets
   , indexRange
   , insertFreeEntries
   )
 where
 
-import Data.IntMap.Strict qualified as IM
+import Data.IntMap.Strict (IntMap, findMax, findMin, fromAscList, toAscList)
 import Data.Kind (Type)
 
-import Pdf.Document.ObjectOffset (ObjectOffset (FreeEntry))
+import Data.PDF.ObjectOffset (ObjectOffset (FreeEntry))
 
 -- | A collection of object offsets indexed by the object number
 type ObjectOffsets :: Type
-type ObjectOffsets = IM.IntMap ObjectOffset
+type ObjectOffsets = IntMap ObjectOffset
 
 indexRange :: ObjectOffsets -> (Int, Int)
-indexRange offsets = (fst $ IM.findMin offsets, fst $ IM.findMax offsets)
+indexRange offsets = (fst $ findMin offsets, fst $ findMax offsets)
 
 insertFreeEntries :: ObjectOffsets -> ObjectOffsets
-insertFreeEntries offsets = IM.fromAscList $ go (IM.toAscList offsets)
+insertFreeEntries offsets = fromAscList $ go (toAscList offsets)
   where
     go [] = []
     go [(number, offset)] = [(number, offset)]

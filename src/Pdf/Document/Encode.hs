@@ -48,7 +48,7 @@ import Data.UnifiedError
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
-import Pdf.Document.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
+import Data.PDF.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Pdf.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import Pdf.Document.XRef (calcOffsets, xrefStreamTable)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)

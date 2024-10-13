@@ -48,10 +48,14 @@ library
       Data.FoldableWithRest
       Data.HasLength
       Data.Logging
+      Data.PDF.EncodedObject
+      Data.PDF.EncodedObjects
       Data.PDF.GFXObject
       Data.PDF.GFXObjects
       Data.PDF.ObjectCategory
       Data.PDF.ObjectInfo
+      Data.PDF.ObjectOffset
+      Data.PDF.ObjectOffsets
       Data.PDF.OptimizationType
       Data.PDF.PDFDocument
       Data.PDF.PDFObject
@@ -81,10 +85,6 @@ library
       Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
       Pdf.Document.Encode
-      Pdf.Document.EncodedObject
-      Pdf.Document.EncodedObjects
-      Pdf.Document.ObjectOffset
-      Pdf.Document.ObjectOffsets
       Pdf.Document.ObjectStream
       Pdf.Document.Parser
       Pdf.Document.PDFObjects

@@ -1,11 +1,11 @@
-module Pdf.Document.EncodedObject
-  ( objectCount,
-    objectNumbers,
-    EncodedObject (EncodedObject, eoObjectNumber, eoObjectLength, eoBinaryData, eoEmbeddedObjects),
+module Data.PDF.EncodedObject
+  ( EncodedObject (EncodedObject, eoObjectNumber, eoObjectLength, eoBinaryData, eoEmbeddedObjects)
+  , objectCount
+  , objectNumbers
   )
 where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.Sequence (Seq ((:<|)))
 
@@ -14,7 +14,7 @@ type EncodedObject :: Type
 data EncodedObject = EncodedObject
   { eoObjectNumber    :: !Int -- ^ Object number
   , eoObjectLength    :: !Int -- ^ Object length (in bytes)
-  , eoBinaryData      :: !BS.ByteString   -- ^ Encoded object
+  , eoBinaryData      :: !ByteString   -- ^ Encoded object
   , eoEmbeddedObjects :: !(Seq Int) -- ^ Object numbers embedded in this object
   }
   deriving stock (Show)

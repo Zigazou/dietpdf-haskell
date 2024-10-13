@@ -5,6 +5,7 @@ module Pdf.Document.EncodeSpec
 import Control.Monad (forM_)
 
 import Data.Fallible (Fallible)
+import Data.PDF.EncodedObject (EncodedObject (EncodedObject))
 import Data.PDF.PDFObject
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream, PDFString)
     )
@@ -12,7 +13,6 @@ import Data.PDF.PDFWork (evalPDFWorkT)
 import Data.Sequence (Seq (Empty), fromList)
 
 import Pdf.Document.Encode (encodeObject)
-import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
