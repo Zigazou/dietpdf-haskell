@@ -6,14 +6,11 @@ module PDF.Object.ContainerSpec
 
 import Control.Monad (forM_)
 
+import Data.PDF.Filter (Filter (Filter))
+import Data.PDF.FilterList (FilterList, mkFilterList)
 import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
 
-import PDF.Object.Container
-    ( Filter (Filter)
-    , FilterList
-    , mkFilterList
-    , setFilters
-    )
+import PDF.Object.Container (setFilters)
 import PDF.Object.Object
     ( PDFObject (PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFString)
     , mkEmptyPDFDictionary
