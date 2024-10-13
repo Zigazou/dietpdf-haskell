@@ -3,8 +3,7 @@ module Pdf.Object.Object.Delimiter
   ) where
 
 import Data.ByteString qualified as BS
-
-import Pdf.Object.Object.PDFObject
+import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
     )
 

@@ -5,11 +5,10 @@ module Pdf.Object.Object.RenameResources
 import Data.Bifunctor (bimap)
 import Data.ByteString (ByteString)
 import Data.Map qualified as Map
-import Data.TranslationTable (TranslationTable, convert)
-
-import Pdf.Object.Object.PDFObject
+import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
     )
+import Data.TranslationTable (TranslationTable, convert)
 
 import Util.Dictionary (Dictionary)
 

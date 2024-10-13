@@ -9,8 +9,8 @@ import Control.Monad (when)
 import Data.Binary.Parser (Get, label, manyTill, satisfy, sepBy, string, word8)
 import Data.ByteString qualified as BS
 import Data.Map.Strict (fromList)
+import Data.PDF.GFXObject (GFXObject (GFXInlineImage), isWhiteSpace)
 
-import Pdf.Graphics.Object (GFXObject (GFXInlineImage), isWhiteSpace)
 import Pdf.Graphics.Parser.Container (dictionaryKeyValueP)
 import Pdf.Graphics.Parser.EmptyContent (emptyContentP)
 

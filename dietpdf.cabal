@@ -48,9 +48,21 @@ library
       Data.FoldableWithRest
       Data.HasLength
       Data.Logging
-      Data.ObjectCategory
-      Data.ObjectInfo
-      Data.Statistics
+      Data.PDF.GFXObject
+      Data.PDF.GFXObjects
+      Data.PDF.ObjectCategory
+      Data.PDF.ObjectInfo
+      Data.PDF.OptimizationType
+      Data.PDF.PDFDocument
+      Data.PDF.PDFObject
+      Data.PDF.PDFObjects
+      Data.PDF.PDFPartition
+      Data.PDF.PDFWork
+      Data.PDF.Statistics
+      Data.PDF.WorkData
+      Data.PDF.XRefEntry
+      Data.PDF.XRefState
+      Data.PDF.XRefSubsection
       Data.TranslationTable
       Data.UnifiedError
       External.ExternalCommand
@@ -68,7 +80,6 @@ library
       Font.TrueType.ScalerType
       Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
-      Pdf.Document.Document
       Pdf.Document.Encode
       Pdf.Document.EncodedObject
       Pdf.Document.EncodedObjects
@@ -76,8 +87,8 @@ library
       Pdf.Document.ObjectOffsets
       Pdf.Document.ObjectStream
       Pdf.Document.Parser
-      Pdf.Document.Partition
       Pdf.Document.PDFObjects
+      Pdf.Document.PDFPartition
       Pdf.Document.Stat
       Pdf.Document.Uncompress
       Pdf.Document.XRef
@@ -91,8 +102,6 @@ library
       Pdf.Graphics.Interpreter.Program
       Pdf.Graphics.Interpreter.TextState
       Pdf.Graphics.Interpreter.TransformationMatrix
-      Pdf.Graphics.Object
-      Pdf.Graphics.Objects
       Pdf.Graphics.Optimize
       Pdf.Graphics.Parser.Comment
       Pdf.Graphics.Parser.Container
@@ -108,20 +117,6 @@ library
       Pdf.Graphics.Parser.String
       Pdf.Graphics.RenameResources
       Pdf.Object.Container
-      Pdf.Object.Filter
-      Pdf.Object.FilterCombine.Deflate
-      Pdf.Object.FilterCombine.FilterCombination
-      Pdf.Object.FilterCombine.Jpeg2k
-      Pdf.Object.FilterCombine.Lzw
-      Pdf.Object.FilterCombine.PredDeflate
-      Pdf.Object.FilterCombine.PredLzw
-      Pdf.Object.FilterCombine.PredRleZopfli
-      Pdf.Object.FilterCombine.PredZopfli
-      Pdf.Object.FilterCombine.Rle
-      Pdf.Object.FilterCombine.RleLzw
-      Pdf.Object.FilterCombine.RleZopfli
-      Pdf.Object.FilterCombine.Zopfli
-      Pdf.Object.FilterCombine.ZopfliRle
       Pdf.Object.Format
       Pdf.Object.Linearization
       Pdf.Object.Object
@@ -129,17 +124,9 @@ library
       Pdf.Object.Object.FromPDFObject
       Pdf.Object.Object.FromXRef
       Pdf.Object.Object.PDFCharacter
-      Pdf.Object.Object.PDFObject
       Pdf.Object.Object.Properties
       Pdf.Object.Object.RenameResources
       Pdf.Object.Object.ToPDFNumber
-      Pdf.Object.Object.XRefEntry
-      Pdf.Object.Object.XRefState
-      Pdf.Object.Object.XRefSubsection
-      Pdf.Object.ObjectCategory
-      Pdf.Object.ObjectInfo
-      Pdf.Object.OptimizationType
-      Pdf.Object.Optimize
       Pdf.Object.Parser.Comment
       Pdf.Object.Parser.Container
       Pdf.Object.Parser.EmptyContent
@@ -157,11 +144,31 @@ library
       Pdf.Object.Signature
       Pdf.Object.State
       Pdf.Object.String
-      Pdf.Object.Unfilter
+      Pdf.Processing.Filter
+      Pdf.Processing.FilterCombine.Deflate
+      Pdf.Processing.FilterCombine.FilterCombination
+      Pdf.Processing.FilterCombine.Jpeg2k
+      Pdf.Processing.FilterCombine.Lzw
+      Pdf.Processing.FilterCombine.PredDeflate
+      Pdf.Processing.FilterCombine.PredLzw
+      Pdf.Processing.FilterCombine.PredRleZopfli
+      Pdf.Processing.FilterCombine.PredZopfli
+      Pdf.Processing.FilterCombine.Rle
+      Pdf.Processing.FilterCombine.RleLzw
+      Pdf.Processing.FilterCombine.RleZopfli
+      Pdf.Processing.FilterCombine.Zopfli
+      Pdf.Processing.FilterCombine.ZopfliRle
+      Pdf.Processing.ObjectCategory
+      Pdf.Processing.ObjectInfo
+      Pdf.Processing.OptimizationType
+      Pdf.Processing.Optimize
+      Pdf.Processing.PDFWork
+      Pdf.Processing.Unfilter
       Util.Ascii
       Util.ByteString
       Util.Dictionary
       Util.Display
+      Util.Graphics
       Util.Hex
       Util.Name
       Util.Number
@@ -265,6 +272,7 @@ executable dietpdf
     , dietpdf
     , filepath
     , formatting
+    , mtl
     , optparse-applicative
     , pretty-hex
     , temporary

@@ -3,16 +3,16 @@ module Pdf.Graphics.Parser.NameSpec
   ) where
 
 import Data.Binary.Parser (parseDetail)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
+import Data.PDF.GFXObject (GFXObject (GFXName))
 
-import Pdf.Graphics.Object (GFXObject (GFXName))
 import Pdf.Graphics.Parser.Name (nameP)
 
 import Test.Hspec (Spec, describe, it)
 
 import Util.ParserHelper (itWith, shouldBeFullyParsed, shouldBeParsedAs)
 
-nameExamples :: [(BS.ByteString, GFXObject)]
+nameExamples :: [(ByteString, GFXObject)]
 nameExamples =
   [ ("/Name1"              , GFXName "Name1")
   , ("/ASomewhatLongerName", GFXName "ASomewhatLongerName")

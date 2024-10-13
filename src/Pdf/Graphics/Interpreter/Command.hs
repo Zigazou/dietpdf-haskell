@@ -5,10 +5,9 @@ module Pdf.Graphics.Interpreter.Command
 where
 
 import Data.Kind (Type)
+import Data.PDF.GFXObject (GFXObject, GSOperator)
+import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence (fromList)
-
-import Pdf.Graphics.Object (GFXObject, GSOperator)
-import Pdf.Graphics.Objects (Objects)
 
 {- |
 The 'Command' type represents a graphics state operator and its parameters.
@@ -16,7 +15,7 @@ The 'Command' type represents a graphics state operator and its parameters.
 type Command :: Type
 data Command = Command
   { cOperator   :: !GSOperator
-  , cParameters :: !Objects
+  , cParameters :: !GFXObjects
   }
   deriving stock (Eq, Show)
 

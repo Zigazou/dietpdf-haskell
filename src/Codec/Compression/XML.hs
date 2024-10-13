@@ -5,6 +5,8 @@ module Codec.Compression.XML
   ( optimizeXML
   ) where
 
+import Control.Monad.State (lift)
+
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Base64 (decode, encode)
@@ -12,9 +14,9 @@ import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Search (replace)
 import Data.ByteString.UTF8 qualified as BSU
 import Data.Char (isSpace)
-import Data.Fallible (FallibleT)
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
+import Data.PDF.PDFWork (PDFWork)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeLatin1, decodeUtf8')
 import Data.TranslationTable (getTranslationTable)
@@ -31,7 +33,7 @@ import Text.XML.Light
     , showContent
     )
 
-import Util.Number (roundAndAHalf)
+import Util.Number (round')
 import Util.XML (getAllPrefixes, renamePrefixes, toNameBase)
 
 toText :: ByteString -> Text
@@ -71,7 +73,7 @@ It:
 optimizeXML
   :: Logging IO
   => ByteString
-  -> FallibleT IO ByteString
+  -> PDFWork IO ByteString
 optimizeXML xml = do
   let spaceRemoved = optimizePrefixes
                    . cleanNumbers
@@ -97,7 +99,7 @@ optimizeXML xml = do
   cleanNumbers :: [Content] -> [Content]
   cleanNumbers (content@(Text (CData kind string mline)):remain) =
     case parseNumber string of
-      Just number -> Text (CData kind (show (roundAndAHalf 3 number)) mline)
+      Just number -> Text (CData kind (show (round' 3 number)) mline)
                    : cleanNumbers remain
       Nothing     -> content : cleanNumbers remain
   cleanNumbers (Elem element@(Element _ _ content _) : remain) =
@@ -105,17 +107,17 @@ optimizeXML xml = do
   cleanNumbers (other : remain) = other : cleanNumbers remain
   cleanNumbers []               = []
 
-  optimizeImage :: String -> FallibleT IO String
+  optimizeImage :: String -> PDFWork IO String
   optimizeImage content =
     let content' = (toStrict . replace "&#xA;" ("" :: ByteString))
                  $ (toStrict . replace "\n" ("" :: ByteString))
                  $ (toStrict . replace "\r" ("" :: ByteString))
                    (BSU.fromString content)
     in case decode content' of
-      Right image -> jpegtranOptimize image <&> BSU.toString . encode
+      Right image -> lift (jpegtranOptimize image) <&> BSU.toString . encode
       Left  _     -> return content
 
-  optimizeImages :: [Content] -> FallibleT IO [Content]
+  optimizeImages :: [Content] -> PDFWork IO [Content]
   optimizeImages [] = return []
   optimizeImages ( Elem (Element (QName "image" uri prefix)
                                  attrs

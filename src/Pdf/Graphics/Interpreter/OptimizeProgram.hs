@@ -8,6 +8,7 @@ import Control.Monad.State (State, evalState)
 
 import Data.FoldableWithRest (FoldableWithRest (foldMWithRest))
 import Data.Functor ((<&>))
+import Data.PDF.GFXObject (GSOperator (GSRestoreGS, GSSaveGS))
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), breakl, singleton, (<|), (|>))
 
 import Pdf.Graphics.Interpreter.Command (Command (Command))
@@ -17,7 +18,6 @@ import Pdf.Graphics.Interpreter.GraphicsState
     )
 import Pdf.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
 import Pdf.Graphics.Interpreter.Program (Program)
-import Pdf.Graphics.Object (GSOperator (GSRestoreGS, GSSaveGS))
 
 onRestore :: Command -> Bool
 onRestore (Command GSRestoreGS _params) = True

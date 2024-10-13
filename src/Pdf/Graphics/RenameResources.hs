@@ -5,9 +5,8 @@ module Pdf.Graphics.RenameResources
 import Data.Bifunctor (bimap)
 import Data.ByteString (ByteString)
 import Data.Map qualified as Map
+import Data.PDF.GFXObject (GFXObject (GFXArray, GFXDictionary, GFXName))
 import Data.TranslationTable (TranslationTable, convert)
-
-import Pdf.Graphics.Object (GFXObject (GFXArray, GFXDictionary, GFXName))
 
 import Util.Dictionary (Dictionary)
 

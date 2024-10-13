@@ -3,20 +3,17 @@ module Pdf.Object.Object.FromXRef
   ) where
 
 import Data.ByteString qualified as BS
+import Data.PDF.XRefEntry (XRefEntry (xreGeneration, xreOffset, xreState))
+import Data.PDF.XRefState (XRefState (InUseEntry))
+import Data.PDF.XRefSubsection
+    ( XRefSubsection (xrssCount, xrssEntries, xrssStart)
+    )
 import Data.Text qualified as TS
 import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Lazy qualified as TL
 
 import Formatting (format, int, left, (%))
 import Formatting.ByteStringFormatter (utf8)
-
-import Pdf.Object.Object.XRefEntry
-    ( XRefEntry (xreGeneration, xreOffset, xreState)
-    )
-import Pdf.Object.Object.XRefState (XRefState (InUseEntry))
-import Pdf.Object.Object.XRefSubsection
-    ( XRefSubsection (xrssCount, xrssEntries, xrssStart)
-    )
 
 fromXRefEntry :: XRefEntry -> BS.ByteString
 fromXRefEntry xre = encodeUtf8 . TL.toStrict $ format

@@ -7,15 +7,15 @@ import Data.ByteString qualified as BS
 import Data.ByteString.UTF8 qualified as BSU
 import Data.Foldable (toList)
 import Data.Map qualified as Map
-
-import Pdf.Graphics.Object (separateGfx)
-import Pdf.Graphics.Objects (Objects)
-import Pdf.Object.Object.Delimiter (spaceIfNeeded)
-import Pdf.Object.Object.FromXRef (fromXRef)
-import Pdf.Object.Object.PDFObject
+import Data.PDF.GFXObject (separateGfx)
+import Data.PDF.GFXObjects (GFXObjects)
+import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
     , mkEmptyPDFDictionary
     )
+
+import Pdf.Object.Object.Delimiter (spaceIfNeeded)
+import Pdf.Object.Object.FromXRef (fromXRef)
 
 import Util.Dictionary (Dictionary)
 import Util.Name (fromName)
@@ -110,7 +110,7 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   ]
 
 fromIndirectObjectWithGraphics
-  :: Int -> Int -> Dictionary PDFObject -> Objects -> BS.ByteString
+  :: Int -> Int -> Dictionary PDFObject -> GFXObjects -> BS.ByteString
 fromIndirectObjectWithGraphics number revision dict gfx = BS.concat
   [ BSU.fromString (show number)
   , " "

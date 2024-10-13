@@ -5,14 +5,12 @@ module Pdf.Object.ContainerSpec
   ) where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Except (runExceptT)
 
-import Data.Fallible (FallibleT)
+import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
 
 import Pdf.Object.Container
     ( Filter (Filter)
     , FilterList
-    , deepMap
     , mkFilterList
     , setFilters
     )
@@ -22,11 +20,12 @@ import Pdf.Object.Object
     , mkPDFArray
     , mkPDFDictionary
     )
+import Pdf.Processing.PDFWork (deepMapP)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 deepMapExamples
-  :: [(PDFObject, PDFObject -> FallibleT IO PDFObject, PDFObject)]
+  :: [(PDFObject, PDFObject -> PDFWork IO PDFObject, PDFObject)]
 deepMapExamples =
   [ ( mkPDFArray [mkEmptyPDFDictionary, PDFNumber 3.0, PDFName "ABCD"]
     , addOneToAnyNumber
@@ -54,7 +53,7 @@ deepMapExamples =
     )
   ]
  where
-  addOneToAnyNumber :: PDFObject -> FallibleT IO PDFObject
+  addOneToAnyNumber :: PDFObject -> PDFWork IO PDFObject
   addOneToAnyNumber (PDFNumber x) = return (PDFNumber (x + 1.0))
   addOneToAnyNumber object        = return object
 
@@ -95,7 +94,7 @@ spec :: Spec
 spec = do
   describe "deepMap" $ forM_ deepMapExamples $ \(example, fn, expected) ->
     it ("should give right result for " ++ show example) $ do
-      result <- runExceptT $ deepMap fn example
+      result <- evalPDFWorkT $ deepMapP fn example
       result `shouldBe` Right expected
 
   describe "setFilters"
@@ -103,5 +102,5 @@ spec = do
     $ \(filters, example, expected) ->
         it ("should give right result for " ++ show filters)
           $ do
-            result <- runExceptT $ setFilters filters example
+            result <- evalPDFWorkT $ setFilters filters example
             result `shouldBe` Right expected

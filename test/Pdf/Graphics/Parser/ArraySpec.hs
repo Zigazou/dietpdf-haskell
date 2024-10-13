@@ -2,19 +2,19 @@ module Pdf.Graphics.Parser.ArraySpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
-
-import Pdf.Graphics.Object
+import Data.ByteString (ByteString)
+import Data.PDF.GFXObject
     ( GFXObject (GFXName, GFXNumber, GFXReference, GFXString)
     , mkGFXArray
     )
+
 import Pdf.Graphics.Parser.Container (arrayP)
 
 import Test.Hspec (Spec, describe)
 
 import Util.ParserHelper (itWith)
 
-arrayExamples :: [(BS.ByteString, GFXObject)]
+arrayExamples :: [(ByteString, GFXObject)]
 arrayExamples =
   [ ("[1   2   3]", mkGFXArray [GFXNumber 1.0, GFXNumber 2.0, GFXNumber 3.0])
   , ("[ 1 2 3 ]"  , mkGFXArray [GFXNumber 1.0, GFXNumber 2.0, GFXNumber 3.0])

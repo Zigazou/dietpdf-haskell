@@ -10,9 +10,9 @@ module Pdf.Graphics.Parser.Reference
   ) where
 
 import Data.Binary.Parser (Get, isDigit, label, satisfy, some', takeWhile1)
+import Data.PDF.GFXObject (GFXObject (GFXReference), isKeywordCharacter)
 import Data.Word (Word8)
 
-import Pdf.Graphics.Object (GFXObject (GFXReference), isKeywordCharacter)
 import Pdf.Graphics.Parser.EmptyContent (emptyContentP)
 
 import Util.Number (toNumber)

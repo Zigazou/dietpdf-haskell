@@ -5,6 +5,11 @@ module Pdf.Graphics.Interpreter.OptimizeProgramSpec
 import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
+import Data.PDF.GFXObject
+    ( GFXObject (GFXName, GFXNumber, GFXString)
+    , GSOperator (GSBeginText, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText, GSUnknown)
+    , mkGFXArray
+    )
 
 import Pdf.Graphics.Interpreter.Command (Command, mkCommand)
 import Pdf.Graphics.Interpreter.OptimizeProgram
@@ -12,11 +17,6 @@ import Pdf.Graphics.Interpreter.OptimizeProgram
     , optimizeProgram
     )
 import Pdf.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
-import Pdf.Graphics.Object
-    ( GFXObject (GFXName, GFXNumber, GFXString)
-    , GSOperator (GSBeginText, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText, GSUnknown)
-    , mkGFXArray
-    )
 import Pdf.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -71,8 +71,8 @@ optimizeProgramExamples =
             ]
         , mkCommand GSShowManyText
             [ mkGFXArray
-                [ GFXString "A", GFXNumber (-4.33875)
-                , GFXString "B", GFXNumber 6.5373
+                [ GFXString "A", GFXNumber (-4.33874)
+                , GFXString "B", GFXNumber 6.53732
                 ]
             ]
         ]

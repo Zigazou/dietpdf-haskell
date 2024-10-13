@@ -10,8 +10,8 @@ import Control.Applicative ((<|>))
 import Data.Binary.Parser (Get, label, sepBy, word8)
 import Data.ByteString qualified as BS
 import Data.Map.Strict (fromList)
+import Data.PDF.GFXObject (GFXObject (GFXDictionary, GFXName), mkGFXArray)
 
-import Pdf.Graphics.Object (GFXObject (GFXDictionary, GFXName), mkGFXArray)
 import Pdf.Graphics.Parser.EmptyContent (emptyContentP)
 import Pdf.Graphics.Parser.HexString (hexStringP)
 import Pdf.Graphics.Parser.Keyword (keywordP)

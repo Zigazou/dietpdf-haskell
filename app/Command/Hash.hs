@@ -6,13 +6,13 @@ import Data.Context (ctx)
 import Data.Fallible (FallibleT)
 import Data.Foldable (foldrM)
 import Data.Kind (Type)
-import Data.Logging (sayF)
 import Data.Maybe (mapMaybe)
+import Data.PDF.PDFDocument (PDFDocument, toList)
+import Data.PDF.PDFObject (PDFObject (PDFIndirectObjectWithStream))
+import Data.PDF.PDFWork (PDFWork, evalPDFWork, sayP, withContext)
 import Data.Set (Set, empty, insert, member)
 import Data.Text qualified as T
 
-import Pdf.Document.Document (PDFDocument, toList)
-import Pdf.Object.Object (PDFObject (PDFIndirectObjectWithStream))
 import Pdf.Object.Signature (streamHash)
 
 type ObjectHash :: Type
@@ -27,7 +27,7 @@ instance Ord ObjectHash where
   (ObjectHash _ hash1) `compare` (ObjectHash _ hash2) = hash1 `compare` hash2
 
 objectHashes :: PDFDocument -> FallibleT IO ()
-objectHashes document = do
+objectHashes document = evalPDFWork $ do
   let
     hashes :: [ObjectHash]
     hashes = mapMaybe objectHash (toList document)
@@ -41,13 +41,13 @@ objectHashes document = do
   objectHash _anyOtherObject = Nothing
 
   printHashForObject
-    :: ObjectHash -> Set ObjectHash -> FallibleT IO (Set ObjectHash)
+    :: ObjectHash -> Set ObjectHash -> PDFWork IO (Set ObjectHash)
   printHashForObject oHash@(ObjectHash number hash) hashFound =
-    let context = ctx ("objecthashes" :: String)
-    in if member oHash hashFound
-      then do
-        sayF context $ T.concat [hash, "\t", T.pack (show number), " duplicate!"]
-        return hashFound
-      else do
-        sayF context $ T.concat [hash, "\t", T.pack (show number)]
-        return (insert oHash hashFound)
+    withContext (ctx ("objecthashes" :: String)) $ do
+      if member oHash hashFound
+        then do
+          sayP $ T.concat [hash, "\t", T.pack (show number), " duplicate!"]
+          return hashFound
+        else do
+          sayP $ T.concat [hash, "\t", T.pack (show number)]
+          return (insert oHash hashFound)

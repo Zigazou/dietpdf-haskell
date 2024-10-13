@@ -5,12 +5,13 @@ module Command.Stat
 import Control.Monad (forM_)
 
 import Data.Fallible (FallibleT)
-import Data.Statistics
+import Data.PDF.PDFDocument (PDFDocument)
+import Data.PDF.PDFWork (evalPDFWork)
+import Data.PDF.Statistics
     ( Statistics (bitmapCount, bitmapTotal, fileCount, fileTotal, fontCount, fontTotal, otherTotal, pdfTotal, vectorCount, vectorTotal, xmlCount, xmlTotal)
     , initStatistics
     )
 
-import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Stat (stat)
 
 import Util.Display (disp)
@@ -32,7 +33,7 @@ showStat documents = do
   disp header
 
   forM_ documents $ \(filename, documentSize, document) -> do
-    statistics <- stat document (initStatistics documentSize)
+    statistics <- evalPDFWork (stat document (initStatistics documentSize))
 
     let subtotals = sum ([ bitmapTotal
                          , vectorTotal

@@ -8,11 +8,11 @@ import Data.Array (mkArray)
 import Data.Binary.Parser (Get, label, many', parseDetail, peek, satisfy, sepBy)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
+import Data.PDF.GFXObject (GFXObject, isWhiteSpace)
+import Data.PDF.GFXObjects (GFXObjects)
 import Data.UnifiedError (UnifiedError (ParseError))
 import Data.Word (Word8)
 
-import Pdf.Graphics.Object (GFXObject, isWhiteSpace)
-import Pdf.Graphics.Objects (Objects)
 import Pdf.Graphics.Parser.Comment (commentP)
 import Pdf.Graphics.Parser.Container (arrayP, dictionaryP)
 import Pdf.Graphics.Parser.EmptyContent (emptyContentP)
@@ -61,7 +61,7 @@ returning errors.
 -}
 gfxParse
   :: BS.ByteString -- ^ The bytestring to parse coming from a file.
-  -> Fallible Objects -- ^ Error or a `List of `GFXObject`.
+  -> Fallible GFXObjects -- ^ Error or a `List of `GFXObject`.
 gfxParse source = case parseDetail gfxRawP source of
   Left  err                      -> Left (ParseError err)
   Right (""    , _     , result) -> Right (mkArray result)

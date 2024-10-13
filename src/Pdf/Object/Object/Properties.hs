@@ -17,12 +17,12 @@ module Pdf.Object.Object.Properties
 import Data.ByteString qualified as BS
 import Data.List (foldl')
 import Data.Map.Strict qualified as Map
-
-import Pdf.Object.Object.PDFObject
+import Data.PDF.PDFObject
     ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
     )
+import Data.PDF.XRefSubsection (xrssCount)
+
 import Pdf.Object.Object.ToPDFNumber (mkPDFNumber)
-import Pdf.Object.Object.XRefSubsection (xrssCount)
 
 import Util.Dictionary (Dictionary, dictHasKey)
 

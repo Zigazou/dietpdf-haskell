@@ -3,9 +3,9 @@ module Pdf.Object.DictionarySpec
   ) where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Except (runExceptT)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
+import Data.PDF.PDFWork (evalPDFWorkT)
 
 import Pdf.Object.Object
     ( PDFObject (PDFBool, PDFIndirectObject, PDFName, PDFNumber, PDFTrailer)
@@ -18,7 +18,7 @@ import Pdf.Object.State (getValue)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-dictionaryExamples :: [(PDFObject, BS.ByteString)]
+dictionaryExamples :: [(PDFObject, ByteString)]
 dictionaryExamples =
   [ (mkEmptyPDFDictionary, "<<>>")
   , ( mkPDFDictionary
@@ -99,5 +99,5 @@ spec = describe "PDFDictionary" $ do
 
   forM_ getValueExamples $ \(example, expected) ->
     it ("should get value from Dictionary " ++ show example) $ do
-      result <- runExceptT $ getValue "Test" example
+      result <- evalPDFWorkT $ getValue "Test" example
       result `shouldBe` Right expected

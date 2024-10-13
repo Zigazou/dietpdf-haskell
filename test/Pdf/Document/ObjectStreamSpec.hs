@@ -3,19 +3,19 @@ module Pdf.Document.ObjectStreamSpec
   ) where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Except (runExceptT)
 
 import Data.Array (mkArray)
 import Data.Fallible (Fallible)
-import Data.UnifiedError (UnifiedError (NoObjectToEncode))
-
-import Pdf.Document.Document (PDFDocument, fromList)
-import Pdf.Document.ObjectStream (explodeList, insert)
-import Pdf.Object.Object
+import Data.PDF.PDFDocument (PDFDocument, fromList)
+import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFDictionary, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFString)
     , mkPDFArray
     , mkPDFDictionary
     )
+import Data.PDF.PDFWork (evalPDFWorkT)
+import Data.UnifiedError (UnifiedError (NoObjectToEncode))
+
+import Pdf.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -230,11 +230,11 @@ spec = do
   describe "extract" $ do
     forM_ fromObjectStreamExamples $ \(example, expected) ->
       it ("should decode " ++ show example)
-        $   runExceptT (explodeList [example])
+        $   evalPDFWorkT (explodeList [example])
         >>= (`shouldBe` expected)
 
-  describe "insert" $ do
+  describe "makeObjectStreamFromObjects" $ do
     forM_ toObjectStreamExamples $ \(example, expected) ->
       it ("should encode " ++ show example)
-        $   runExceptT (insert example 1)
+        $   evalPDFWorkT (makeObjectStreamFromObjects example 1)
         >>= (`shouldBe` expected)

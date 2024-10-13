@@ -133,7 +133,7 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulGraphicsPrecision :: GraphicsState -> Int
-usefulGraphicsPrecision state = max 0 (round (logBase 10 scale) + 1)
+usefulGraphicsPrecision state = max 0 (ceiling (logBase 10 scale) + 2)
  where
   userUnit = gsUserUnit state
   scaleX   = userUnit * abs (gsScaleX state)
@@ -149,11 +149,15 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulTextPrecision :: GraphicsState -> Int
-usefulTextPrecision state = max 0 (round (logBase 10 scale) + 3)
+usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
  where
   userUnit = gsUserUnit state
-  scaleX   = userUnit * abs ((tsScaleX . gsTextState) state)
-  scaleY   = userUnit * abs ((tsScaleY . gsTextState) state)
+  scaleTX  = abs ((tsScaleX . gsTextState) state)
+  scaleTY  = abs ((tsScaleY . gsTextState) state)
+  scaleGX  = abs (gsScaleX state)
+  scaleGY  = abs (gsScaleY state)
+  scaleX   = userUnit * scaleTX * scaleGX
+  scaleY   = userUnit * scaleTY * scaleGY
   scale    = max scaleX scaleY
 
 usefulTextPrecisionS :: State GraphicsState Int

@@ -6,16 +6,16 @@ import Codec.Compression.RunLength qualified as RL
 import Codec.Compression.Zlib qualified as ZL
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Except (runExceptT)
 
 import Data.ByteString.Lazy qualified as BL
 import Data.Either.Extra (fromRight)
 import Data.Map.Strict qualified as Map
-
-import Pdf.Object.Object
+import Data.PDF.PDFObject
     ( PDFObject (PDFIndirectObjectWithStream, PDFName, PDFNumber)
     )
-import Pdf.Object.Optimize (optimize)
+import Data.PDF.PDFWork (evalPDFWorkT)
+
+import Pdf.Processing.Optimize (optimize)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -42,5 +42,5 @@ objectExamples =
 spec :: Spec
 spec = describe "optimize" $ forM_ objectExamples $ \(example, expected) ->
   it ("should be optimized " ++ show example) $ do
-    optimized <- runExceptT (optimize mempty example)
+    optimized <- evalPDFWorkT (optimize example)
     optimized `shouldBe` Right expected

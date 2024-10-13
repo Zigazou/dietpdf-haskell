@@ -12,15 +12,20 @@ module Pdf.Document.XRef
   )
 where
 
-import Control.Monad.Trans.Except (throwE)
-
 import Data.ByteString qualified as BS
-import Data.Fallible (FallibleT)
 import Data.Foldable (foldl', toList)
 import Data.IntMap.Strict qualified as IM
 import Data.Ix (range, rangeSize)
 import Data.Logging (Logging)
 import Data.Maybe (fromMaybe)
+import Data.PDF.PDFObject
+    ( PDFObject (PDFArray, PDFName, PDFNumber, PDFXRef, PDFXRefStream)
+    , mkPDFArray
+    )
+import Data.PDF.PDFObjects (PDFObjects)
+import Data.PDF.PDFWork (PDFWork, throwError)
+import Data.PDF.XRefEntry (freeEntry, inUseEntry)
+import Data.PDF.XRefSubsection (XRefSubsection (XRefSubsection))
 import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as SQ
 import Data.UnifiedError (UnifiedError (XRefStreamNoW))
@@ -34,14 +39,7 @@ import Pdf.Document.ObjectOffset
     , getOffsetValue
     )
 import Pdf.Document.ObjectOffsets (ObjectOffsets, indexRange, insertFreeEntries)
-import Pdf.Document.PDFObjects (PDFObjects)
-import Pdf.Object.Object.PDFObject
-    ( PDFObject (PDFArray, PDFName, PDFNumber, PDFXRef, PDFXRefStream)
-    , mkPDFArray
-    )
 import Pdf.Object.Object.ToPDFNumber (ToPDFNumber (mkPDFNumber))
-import Pdf.Object.Object.XRefEntry (freeEntry, inUseEntry)
-import Pdf.Object.Object.XRefSubsection (XRefSubsection (XRefSubsection))
 import Pdf.Object.State (getValue)
 
 import Util.Dictionary (Dictionary, mkDictionary)
@@ -118,14 +116,14 @@ xrefTable startOffset objects
       ]
     xrefSubsection = XRefSubsection (fst numRange) (rangeSize numRange) entries
 
-xrefStreamWidth :: (Logging m) => PDFObject -> FallibleT m Int
+xrefStreamWidth :: (Logging m) => PDFObject -> PDFWork m Int
 xrefStreamWidth object@PDFXRefStream {} = do
   w <- getValue "W" object
   case w of
     Just w' -> case getWidth w' of
       Just width     -> return width
-      _anyOtherValue -> throwE (XRefStreamNoW "Cannot decode entries")
-    Nothing -> throwE (XRefStreamNoW "No W field")
+      _anyOtherValue -> throwError (XRefStreamNoW "Cannot decode entries")
+    Nothing -> throwError (XRefStreamNoW "No W field")
   where
     getWidth :: PDFObject -> Maybe Int
     getWidth (PDFArray array) = do
@@ -137,7 +135,7 @@ xrefStreamWidth object@PDFXRefStream {} = do
           return $ round (typeWidth' + offsetWidth' + numberWidth')
         _anyOtherCase -> Nothing
     getWidth _anyOtherCase = Nothing
-xrefStreamWidth _anyOtherCase = throwE (XRefStreamNoW "Not a PDFXRefStream")
+xrefStreamWidth _anyOtherCase = throwError (XRefStreamNoW "Not a PDFXRefStream")
 
 mkBinary :: [(Int, Int)] -> BS.ByteString
 mkBinary = BS.concat . fmap (uncurry encodeIntToBytes)

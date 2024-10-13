@@ -3,46 +3,46 @@ module Pdf.Graphics.Optimize (optimizeGFX) where
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
-import Data.Context (Context)
-import Data.Fallible (FallibleT)
-import Data.Logging (Logging, sayComparisonF, sayF)
+import Data.Context (ctx)
+import Data.Logging (Logging)
+import Data.PDF.GFXObject (separateGfx)
+import Data.PDF.PDFWork (PDFWork, sayComparisonP, sayP, withContext)
 import Data.Sequence qualified as SQ
 import Data.TranslationTable (TranslationTable)
 
 import Pdf.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
 import Pdf.Graphics.Interpreter.Program (extractObjects, parseProgram)
-import Pdf.Graphics.Object (separateGfx)
 import Pdf.Graphics.Parser.Stream (gfxParse)
 import Pdf.Graphics.RenameResources (renameResourcesInObject)
 
 optimizeGFX
   :: Logging m
-  => Context
-  -> TranslationTable ByteString
+  => TranslationTable ByteString
   -> ByteString
-  -> FallibleT m ByteString
-optimizeGFX context nameTranslations stream = if indices "/CIDInit" stream /= []
-  then return stream
-  else
-    case gfxParse stream of
-      Right SQ.Empty -> return stream
+  -> PDFWork m ByteString
+optimizeGFX nameTranslations stream =
+  withContext (ctx ("optimizeGFX" :: String)) $ do
+    if indices "/CIDInit" stream /= []
+    then return stream
+    else
+      case gfxParse stream of
+        Right SQ.Empty -> return stream
 
-      Right objects -> do
-        let optimizedStream = separateGfx
-                            . fmap (renameResourcesInObject nameTranslations)
-                            . extractObjects
-                            . optimizeProgram
-                            . parseProgram
-                            $ objects
+        Right objects -> do
+          let optimizedStream = separateGfx
+                              . fmap (renameResourcesInObject nameTranslations)
+                              . extractObjects
+                              . optimizeProgram
+                              . parseProgram
+                              $ objects
 
-        sayComparisonF
-          context
-          "GFX stream optimization"
-          (BS.length stream)
-          (BS.length optimizedStream)
+          sayComparisonP
+            "GFX stream optimization"
+            (BS.length stream)
+            (BS.length optimizedStream)
 
-        return optimizedStream
+          return optimizedStream
 
-      _error -> do
-          sayF context "GFX stream could not be parsed"
-          return stream
+        _error -> do
+            sayP "GFX stream could not be parsed"
+            return stream

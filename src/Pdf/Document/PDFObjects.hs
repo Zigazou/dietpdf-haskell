@@ -14,10 +14,10 @@ where
 import Data.IntMap.Strict qualified as IM
 import Data.Kind (Type)
 import Data.List (find)
-import Pdf.Document.Document (PDFDocument, fromList, toList)
-import Pdf.Object.Object
-  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream),
-  )
+import Data.PDF.PDFDocument (PDFDocument, fromList, toList)
+import Data.PDF.PDFObject
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream)
+    )
 
 -- | A collection of objects indexed by the object number
 type PDFObjects :: Type

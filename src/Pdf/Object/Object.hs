@@ -72,6 +72,23 @@ module Pdf.Object.Object
   , isTrailer
   ) where
 
+import Data.PDF.PDFObject
+    ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
+    , mkEmptyPDFArray
+    , mkEmptyPDFDictionary
+    , mkPDFArray
+    , mkPDFDictionary
+    )
+import Data.PDF.XRefEntry
+    ( XRefEntry (XRefEntry, xreGeneration, xreOffset, xreState)
+    , freeEntry
+    , inUseEntry
+    )
+import Data.PDF.XRefState (XRefState (FreeEntry, InUseEntry))
+import Data.PDF.XRefSubsection
+    ( XRefSubsection (XRefSubsection, xrssCount, xrssEntries, xrssStart)
+    )
+
 import Pdf.Object.Object.Delimiter (spaceIfNeeded)
 import Pdf.Object.Object.FromPDFObject (fromPDFObject)
 import Pdf.Object.Object.PDFCharacter
@@ -85,13 +102,6 @@ import Pdf.Object.Object.PDFCharacter
     , isStringRegularChar
     , isWhiteSpace
     )
-import Pdf.Object.Object.PDFObject
-    ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
-    , mkEmptyPDFArray
-    , mkEmptyPDFDictionary
-    , mkPDFArray
-    , mkPDFDictionary
-    )
 import Pdf.Object.Object.Properties
     ( getObjectNumber
     , hasDictionary
@@ -104,12 +114,3 @@ import Pdf.Object.Object.Properties
     , xrefCount
     )
 import Pdf.Object.Object.ToPDFNumber (ToPDFNumber, mkPDFNumber)
-import Pdf.Object.Object.XRefEntry
-    ( XRefEntry (XRefEntry, xreGeneration, xreOffset, xreState)
-    , freeEntry
-    , inUseEntry
-    )
-import Pdf.Object.Object.XRefState (XRefState (FreeEntry, InUseEntry))
-import Pdf.Object.Object.XRefSubsection
-    ( XRefSubsection (XRefSubsection, xrssCount, xrssEntries, xrssStart)
-    )

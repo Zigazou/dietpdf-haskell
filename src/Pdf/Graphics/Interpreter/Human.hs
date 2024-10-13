@@ -7,16 +7,16 @@ import Data.Double.Conversion.Text (toShortest)
 import Data.Foldable (foldl', toList)
 import Data.Kind (Constraint, Type)
 import Data.Map (assocs)
+import Data.PDF.GFXObject
+    ( GFXObject (GFXArray, GFXBool, GFXComment, GFXDictionary, GFXHexString, GFXInlineImage, GFXName, GFXNull, GFXNumber, GFXOperator, GFXReference, GFXString)
+    , GSOperator (GSBeginText, GSEndText, GSRestoreGS, GSSaveGS)
+    )
+import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 
 import Pdf.Graphics.Interpreter.Command (Command (Command))
 import Pdf.Graphics.Interpreter.Program (Program)
-import Pdf.Graphics.Object
-    ( GFXObject (GFXArray, GFXBool, GFXComment, GFXDictionary, GFXHexString, GFXInlineImage, GFXName, GFXNull, GFXNumber, GFXOperator, GFXReference, GFXString)
-    , GSOperator (GSBeginText, GSEndText, GSRestoreGS, GSSaveGS)
-    )
-import Pdf.Graphics.Objects (Objects)
 
 import Util.Dictionary (Dictionary)
 
@@ -40,8 +40,8 @@ instance Human GSOperator where
   human :: Int -> GSOperator -> T.Text
   human level value = indent level $ (T.pack . drop 2 . show) value
 
-instance Human Objects where
-  human :: Int -> Objects -> T.Text
+instance Human GFXObjects where
+  human :: Int -> GFXObjects -> T.Text
   human level objects = indent level $ T.concat
     [ "["
     , T.intercalate ", " (human 0 <$> toList objects)

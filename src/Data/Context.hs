@@ -30,7 +30,7 @@ instance Semigroup Context where
   NoContext <> NoContext               = NoContext
   NoContext <> Context message         = Context message
   Context message <> NoContext         = Context message
-  Context message1 <> Context message2 = Context (message1 <> message2)
+  Context message1 <> Context message2 = Context (message1 <> " " <> message2)
 
 instance Monoid Context where
   mempty :: Context

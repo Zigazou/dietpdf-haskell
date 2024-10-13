@@ -3,16 +3,17 @@ module Pdf.Object.StringSpec
   ) where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Except (runExceptT)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
+import Data.PDF.PDFObject (PDFObject (PDFHexString, PDFString))
+import Data.PDF.PDFWork (evalPDFWorkT)
 
-import Pdf.Object.Object (PDFObject (PDFHexString, PDFString), fromPDFObject)
+import Pdf.Object.Object (fromPDFObject)
 import Pdf.Object.String (optimizeString)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-stringExamples :: [(PDFObject, BS.ByteString)]
+stringExamples :: [(PDFObject, ByteString)]
 stringExamples =
   [ (PDFString ""             , "()")
   , (PDFString "()"           , "(\\(\\))")
@@ -73,5 +74,5 @@ spec = describe "PDFString" $ do
 
   forM_ optimizeStringExamples $ \(example, expected) ->
     it ("should convert to PDFString " ++ show example) $ do
-      result <- runExceptT (optimizeString example)
+      result <- evalPDFWorkT (optimizeString example)
       result `shouldBe` Right expected

@@ -4,8 +4,8 @@ module Pdf.Document.DocumentSpec
 
 import Control.Monad (forM_)
 
-import Pdf.Document.Document (deepFind, fromList)
-import Pdf.Object.Object
+import Data.PDF.PDFDocument (deepFind, fromList)
+import Data.PDF.PDFObject
     ( PDFObject (PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFTrailer, PDFVersion)
     , mkPDFArray
     , mkPDFDictionary

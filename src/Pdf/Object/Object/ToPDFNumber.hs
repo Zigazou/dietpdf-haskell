@@ -8,8 +8,7 @@ module Pdf.Object.Object.ToPDFNumber
   ) where
 
 import Data.Kind (Constraint, Type)
-
-import Pdf.Object.Object.PDFObject (PDFObject (PDFNumber))
+import Data.PDF.PDFObject (PDFObject (PDFNumber))
 
 {- |
 Allow easy creation of `PDFNumber` objects with auto conversion.

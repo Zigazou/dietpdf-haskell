@@ -4,19 +4,19 @@ module Pdf.Graphics.Interpreter.ProgramSpec
 
 import Control.Monad (forM_)
 
+import Data.PDF.GFXObject
+    ( GFXObject (GFXNumber, GFXOperator)
+    , GSOperator (GSRestoreGS, GSSaveGS, GSSetCTM)
+    )
+import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence qualified as SQ
 
 import Pdf.Graphics.Interpreter.Command (mkCommand)
 import Pdf.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
-import Pdf.Graphics.Object
-    ( GFXObject (GFXNumber, GFXOperator)
-    , GSOperator (GSRestoreGS, GSSaveGS, GSSetCTM)
-    )
-import Pdf.Graphics.Objects (Objects)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-parseProgramExamples :: [(Objects, Program)]
+parseProgramExamples :: [(GFXObjects, Program)]
 parseProgramExamples =
   [ ( SQ.fromList []
     , mkProgram []

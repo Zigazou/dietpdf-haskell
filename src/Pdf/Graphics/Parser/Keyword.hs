@@ -12,8 +12,7 @@ module Pdf.Graphics.Parser.Keyword
   ) where
 
 import Data.Binary.Parser (Get, label, takeWhile1)
-
-import Pdf.Graphics.Object
+import Data.PDF.GFXObject
     ( GFXObject (GFXBool, GFXNull, GFXOperator)
     , isKeywordCharacter
     , toGSOperator

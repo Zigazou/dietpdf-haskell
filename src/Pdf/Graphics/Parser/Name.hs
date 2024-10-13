@@ -33,9 +33,8 @@ import Control.Applicative ((<|>))
 
 import Data.Binary.Parser (Get, isHexDigit, label, satisfy, some', word8)
 import Data.ByteString qualified as BS
+import Data.PDF.GFXObject (GFXObject (GFXName), isNameRegularChar)
 import Data.Word (Word8)
-
-import Pdf.Graphics.Object (GFXObject (GFXName), isNameRegularChar)
 
 import Util.Ascii
     ( asciiDIGITNINE

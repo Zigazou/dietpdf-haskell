@@ -3,16 +3,16 @@ module Pdf.Graphics.Parser.StringSpec
   ) where
 
 import Data.Binary.Parser (parseDetail)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
+import Data.PDF.GFXObject (GFXObject (GFXString))
 
-import Pdf.Graphics.Object (GFXObject (GFXString))
 import Pdf.Graphics.Parser.String (stringP)
 
 import Test.Hspec (Spec, describe, it)
 
 import Util.ParserHelper (itWith, shouldFail)
 
-stringExamples :: [(BS.ByteString, GFXObject)]
+stringExamples :: [(ByteString, GFXObject)]
 stringExamples =
   [ ("()"                , GFXString "")
   , ("(abc)"             , GFXString "abc")

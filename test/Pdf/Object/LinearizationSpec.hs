@@ -10,8 +10,8 @@ import Control.Monad.Trans.Except (runExceptT)
 
 import Data.ByteString qualified as BS
 import Data.Logging (Logging)
+import Data.PDF.PDFDocument (PDFDocument)
 
-import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Parser (pdfParse)
 import Pdf.Object.Linearization
     ( Linearization (Linearization, lnFileLength, lnFirstPageEndOffset, lnFirstPageNumber, lnFirstPageObjectNumber, lnNumberOfPages, lnOverflowHintLength, lnOverflowHintOffset, lnPrimaryHintLength, lnPrimaryHintOffset, lnVersion, lnXRefFirstEntryOffset)

@@ -6,8 +6,8 @@ module Pdf.Graphics.Parser.Comment
   ) where
 
 import Data.Binary.Parser (Get, label, takeTill, word8)
+import Data.PDF.GFXObject (GFXObject (GFXComment))
 
-import Pdf.Graphics.Object (GFXObject (GFXComment))
 import Pdf.Graphics.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
 
 import Util.Ascii (asciiPERCENTSIGN)

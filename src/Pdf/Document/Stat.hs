@@ -5,30 +5,28 @@ module Pdf.Document.Stat
 import Control.Monad (foldM)
 
 import Data.ByteString qualified as BS
-import Data.Fallible (FallibleT)
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
-import Data.ObjectCategory
+import Data.PDF.ObjectCategory
     ( ObjectCategory (Bitmap, File, Font, Other, Vector, XML)
     )
-import Data.Statistics
+import Data.PDF.PDFDocument (PDFDocument)
+import Data.PDF.PDFObject (PDFObject)
+import Data.PDF.PDFPartition (PDFPartition (ppObjectsWithStream))
+import Data.PDF.PDFWork (PDFWork)
+import Data.PDF.Statistics
     ( Statistics (bitmapCount, bitmapTotal, fileCount, fileTotal, fontCount, fontTotal, otherTotal, vectorCount, vectorTotal, xmlCount, xmlTotal)
     )
 
-import Pdf.Document.Document (PDFDocument)
-import Pdf.Document.Partition
-    ( PDFPartition (ppObjectsWithStream)
-    , partitionDocument
-    )
-import Pdf.Object.Object (PDFObject)
-import Pdf.Object.ObjectCategory (objectCategory)
+import Pdf.Document.PDFPartition (partitionDocument)
 import Pdf.Object.State (getStream)
+import Pdf.Processing.ObjectCategory (objectCategory)
 
 updateStatistics
   :: Logging IO
   => Statistics
   -> PDFObject
-  -> FallibleT IO Statistics
+  -> PDFWork IO Statistics
 updateStatistics statistics object = do
   objectSize <- getStream object <&> BS.length
 
@@ -65,7 +63,7 @@ stat
   :: Logging IO
   => PDFDocument
   -> Statistics
-  -> FallibleT IO Statistics
+  -> PDFWork IO Statistics
 stat objects statistics = do
   let partition = partitionDocument objects
   foldM updateStatistics statistics (ppObjectsWithStream partition)

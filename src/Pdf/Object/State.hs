@@ -20,20 +20,22 @@ module Pdf.Object.State
   ) where
 
 import Control.Monad.Identity (Identity (runIdentity))
-import Control.Monad.Trans.Except (runExceptT, throwE)
+import Control.Monad.State (evalStateT)
+import Control.Monad.Trans.Except (runExceptT)
 
 import Data.ByteString qualified as BS
-import Data.Fallible (FallibleT)
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
+import Data.PDF.PDFObject
+    ( PDFObject (PDFArray, PDFComment, PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFStartXRef, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
+    )
+import Data.PDF.PDFWork (PDFWork, throwError)
+import Data.PDF.WorkData (emptyWorkData)
 import Data.UnifiedError
     ( UnifiedError (InvalidObjectToEmbed, NoDictionary, NoStream)
     )
 
-import Pdf.Object.Object
-    ( PDFObject (PDFArray, PDFComment, PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFStartXRef, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
-    , ToPDFNumber (mkPDFNumber)
-    )
+import Pdf.Object.Object.ToPDFNumber (ToPDFNumber (mkPDFNumber))
 
 import Util.Dictionary (Dictionary)
 
@@ -45,12 +47,12 @@ of the monad.
 
 Only `PDFIndirectObjectWithStream` and `PDFObjectStream` have stream embedded.
 -}
-getStream :: Logging m => PDFObject -> FallibleT m BS.ByteString
+getStream :: Logging m => PDFObject -> PDFWork m BS.ByteString
 getStream object = case object of
   (PDFIndirectObjectWithStream _ _ _ stream) -> return stream
   (PDFObjectStream             _ _ _ stream) -> return stream
   (PDFXRefStream               _ _ _ stream) -> return stream
-  _anyOtherObject                            -> throwE (NoStream "")
+  _anyOtherObject                            -> throwError (NoStream "")
 
 {- |
 Returns the dictionary embedded in a `PDFObject`.
@@ -58,14 +60,14 @@ Returns the dictionary embedded in a `PDFObject`.
 If the object has no dictionary, a `UnifiedError` `NoDictionary` stops the
 evaluation of the monad.
 -}
-getDictionary :: Logging m => PDFObject -> FallibleT m (Dictionary PDFObject)
+getDictionary :: Logging m => PDFObject -> PDFWork m (Dictionary PDFObject)
 getDictionary object = case object of
   (PDFIndirectObjectWithStream _ _ dict _    ) -> return dict
   (PDFObjectStream             _ _ dict _    ) -> return dict
   (PDFDictionary dict                        ) -> return dict
   (PDFIndirectObject _ _ (PDFDictionary dict)) -> return dict
   (PDFTrailer (PDFDictionary dict)           ) -> return dict
-  _anyOtherObject                              -> throwE (NoDictionary "")
+  _anyOtherObject                              -> throwError (NoDictionary "")
 
 {- |
 Get value in a dictionary from a `PDFObject`.
@@ -78,7 +80,7 @@ getValue
   :: Logging m
   => BS.ByteString -- ^ Key of the value to retrieve
   -> PDFObject
-  -> FallibleT m (Maybe PDFObject)
+  -> PDFWork m (Maybe PDFObject)
 getValue name object = case object of
   (PDFDictionary dict                        ) -> return $ dict Map.!? name
   (PDFIndirectObjectWithStream _ _ dict _    ) -> return $ dict Map.!? name
@@ -100,7 +102,7 @@ getValueDefault
   => BS.ByteString -- ^ Key of the value to retrieve
   -> PDFObject
   -> PDFObject
-  -> FallibleT m (Maybe PDFObject)
+  -> PDFWork m (Maybe PDFObject)
 getValueDefault name defaultValue object = getValue name object >>= \case
   Just value -> return $ Just value
   Nothing    -> return $ Just defaultValue
@@ -115,7 +117,7 @@ setValue
   => BS.ByteString -- ^ The key in a dictionary
   -> PDFObject -- ^ The value
   -> PDFObject -- ^ The PDFObject to modify
-  -> FallibleT m PDFObject
+  -> PDFWork m PDFObject
 setValue name value object = case object of
   (PDFDictionary dict) -> return $ PDFDictionary (Map.insert name value dict)
   (PDFIndirectObjectWithStream num gen dict stream) ->
@@ -141,7 +143,7 @@ removeValue
   :: Logging m
   => BS.ByteString -- ^ The key in a dictionary to remove
   -> PDFObject -- ^ The PDFObject to modify
-  -> FallibleT m PDFObject
+  -> PDFWork m PDFObject
 removeValue name object = case object of
   (PDFDictionary dict) -> return $ PDFDictionary (Map.delete name dict)
   (PDFIndirectObjectWithStream num gen dict stream) ->
@@ -168,7 +170,7 @@ setMaybe
   => BS.ByteString -- ^ The key in a dictionary
   -> Maybe PDFObject -- ^ The `Maybe` value
   -> PDFObject
-  -> FallibleT m PDFObject
+  -> PDFWork m PDFObject
 setMaybe _    Nothing      object = return object
 setMaybe name (Just value) object = setValue name value object
 
@@ -184,7 +186,7 @@ updateValue
   => BS.ByteString -- ^ The key in a dictionary
   -> Maybe PDFObject -- ^ The `Maybe` value
   -> PDFObject
-  -> FallibleT m PDFObject
+  -> PDFWork m PDFObject
 updateValue name Nothing      object = removeValue name object
 updateValue name (Just value) object = setValue name value object
 
@@ -197,7 +199,7 @@ This function works only on `PDFIndirectObjectStream` and `PDFObjectStream`.
 
 It has no effect on any other `PDFObject`.
 -}
-setStream :: Logging m => BS.ByteString -> PDFObject -> FallibleT m PDFObject
+setStream :: Logging m => BS.ByteString -> PDFObject -> PDFWork m PDFObject
 setStream newStream object = case object of
   (PDFIndirectObjectWithStream number revision dict _) ->
     setValue "Length" newLength
@@ -220,7 +222,12 @@ This function works only on `PDFIndirectObjectStream` and `PDFObjectStream`.
 
 It has no effect on any other `PDFObject`.
 -}
-setStream1 :: Logging m => Int -> BS.ByteString -> PDFObject -> FallibleT m PDFObject
+setStream1
+  :: Logging m
+  => Int
+  -> BS.ByteString
+  -> PDFObject
+  -> PDFWork m PDFObject
 setStream1 uncompressedLength newStream object =
   setStream newStream object >>=
     setValue "Length1" (mkPDFNumber uncompressedLength)
@@ -255,7 +262,7 @@ These `PDFObject` cannot be embedded in other `PDFObject`:
 - `PDFStartXRef`
 
 -}
-embedObject :: Logging m => PDFObject -> PDFObject -> FallibleT m PDFObject
+embedObject :: Logging m => PDFObject -> PDFObject -> PDFWork m PDFObject
 embedObject toEmbed@(PDFDictionary dict) object = case object of
   (PDFIndirectObjectWithStream num gen _ stream) ->
     return $ PDFIndirectObjectWithStream num gen dict stream
@@ -286,16 +293,17 @@ embedObject toEmbed (PDFIndirectObject num gen _) =
   return $ PDFIndirectObject num gen toEmbed
 embedObject toEmbed object = cannotEmbed toEmbed object
 
-cannotEmbed :: Logging m => PDFObject -> PDFObject -> FallibleT m PDFObject
-cannotEmbed source destination = throwE
+cannotEmbed :: Logging m => PDFObject -> PDFObject -> PDFWork m PDFObject
+cannotEmbed source destination = throwError
   (InvalidObjectToEmbed
     (show source ++ " cannot be embedded in " ++ show destination)
   )
 
 maybeQuery
-  :: (PDFObject -> FallibleT Identity (Maybe PDFObject))
+  :: (PDFObject -> PDFWork Identity (Maybe PDFObject))
   -> PDFObject
   -> Maybe PDFObject
-maybeQuery fn object = case runIdentity . runExceptT $ fn object of
-  Right value     -> value
-  Left  _anyError -> Nothing
+maybeQuery fn object =
+  case runIdentity . runExceptT $ evalStateT (fn object) emptyWorkData of
+    Right value     -> value
+    Left  _anyError -> Nothing

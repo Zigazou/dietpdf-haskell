@@ -23,14 +23,14 @@ import Control.Applicative ((<|>))
 import Data.Binary.Parser (Get, label, many', satisfy, some', word8)
 import Data.ByteString qualified as BS
 import Data.Maybe (catMaybes)
-import Data.Word (Word8)
-
-import Pdf.Graphics.Object
+import Data.PDF.GFXObject
     ( GFXObject (GFXString)
     , isOctal
     , isStringEscapeSequence
     , isStringRegularChar
     )
+import Data.Word (Word8)
+
 import Pdf.Graphics.Parser.LooseEndOfLine (looseEndOfLineP)
 
 import Util.Ascii

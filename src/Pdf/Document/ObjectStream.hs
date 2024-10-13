@@ -17,13 +17,14 @@ actually encoded with a compression filter.
 module Pdf.Document.ObjectStream
   ( explodeObjects
   , explodeDocument
-  , insert
+  , makeObjectStreamFromObjects
   , isObjectStreamable
   , explodeList
   ) where
 
 import Control.Applicative ((<|>))
 import Control.Monad (forM)
+import Control.Monad.State (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.Binary.Parser
@@ -41,12 +42,13 @@ import Data.Functor ((<&>))
 import Data.IntMap (fromList, singleton, union)
 import Data.Kind (Type)
 import Data.Logging (Logging)
+import Data.PDF.PDFDocument (PDFDocument, cFilter)
+import Data.PDF.PDFDocument qualified as D
+import Data.PDF.PDFWork (PDFWork, throwError)
 import Data.UnifiedError
     ( UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError)
     )
 
-import Pdf.Document.Document (PDFDocument, cFilter)
-import Pdf.Document.Document qualified as D
 import Pdf.Document.PDFObjects (PDFObjects)
 import Pdf.Object.Object
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream)
@@ -62,7 +64,7 @@ import Pdf.Object.Parser.Number (numberP)
 import Pdf.Object.Parser.Reference (referenceP)
 import Pdf.Object.Parser.String (stringP)
 import Pdf.Object.State (getStream, getValue)
-import Pdf.Object.Unfilter (unfilter)
+import Pdf.Processing.Unfilter (unfilter)
 
 import Util.Ascii (asciiDIGITZERO)
 import Util.Dictionary (Dictionary, mkDictionary)
@@ -130,7 +132,7 @@ Look for every object stream and extract the objects from these object streams.
 
 Any other object is kept as is.
 -}
-explodeDocument :: Logging m => PDFDocument -> FallibleT m PDFDocument
+explodeDocument :: Logging m => PDFDocument -> PDFWork m PDFDocument
 explodeDocument = (<&> D.fromList) . explodeList . D.toList
 
 extractList :: Logging m => ObjectStream -> FallibleT m [PDFObject]
@@ -142,9 +144,9 @@ extractList (ObjectStream _ _ indices objects) = do
       Right object -> return $! PDFIndirectObject objectNumber 0 object
   return $! exploded
 
-explodeList :: Logging m => [PDFObject] -> FallibleT m [PDFObject]
+explodeList :: Logging m => [PDFObject] -> PDFWork m [PDFObject]
 explodeList (objstm@PDFObjectStream{} : xs) = do
-  extracted <- getObjectStream objstm >>= extractList
+  extracted <- getObjectStream objstm >>= lift . extractList
   remains   <- explodeList xs
   return (extracted ++ remains)
 explodeList (object : xs) = do
@@ -152,7 +154,7 @@ explodeList (object : xs) = do
   return (object : remains)
 explodeList [] = return []
 
-getObjectStream :: Logging m => PDFObject -> FallibleT m ObjectStream
+getObjectStream :: Logging m => PDFObject -> PDFWork m ObjectStream
 getObjectStream object = do
   objectN      <- getValue "N" object
   objectOffset <- getValue "First" object
@@ -166,27 +168,27 @@ getObjectStream object = do
                             , osIndices = indices
                             , osObjects = objects
                             }
-    _anyOtherValue -> throwE ObjectStreamNotFound
+    _anyOtherValue -> throwError ObjectStreamNotFound
 
 {- |
 Look for every object stream and extract the objects from these object streams.
 
 Any other object is kept as is.
 -}
-explodeObjects :: Logging m => PDFObjects -> FallibleT m PDFObjects
+explodeObjects :: Logging m => PDFObjects -> PDFWork m PDFObjects
 explodeObjects objects = mapM explodeObject objects <&> foldr union mempty
  where
-  extractObjects :: Logging m => ObjectStream -> FallibleT m PDFObjects
+  extractObjects :: Logging m => ObjectStream -> PDFWork m PDFObjects
   extractObjects (ObjectStream _ _ indices objects') = do
-    numOffsets <- parseObjectNumberOffsets indices
+    numOffsets <- lift (parseObjectNumberOffsets indices)
     exploded   <- forM numOffsets $ \(NumberOffset objectNumber offset) -> do
       case parseOnly oneObjectP (BS.drop offset objects') of
-        Left msg -> throwE $! ParseError ("", fromIntegral offset, msg)
+        Left msg -> throwError $! ParseError ("", fromIntegral offset, msg)
         Right object ->
           return (objectNumber, PDFIndirectObject objectNumber 0 object)
     return $! fromList exploded
 
-  explodeObject :: Logging m => PDFObject -> FallibleT m PDFObjects
+  explodeObject :: Logging m => PDFObject -> PDFWork m PDFObjects
   explodeObject objstm@PDFObjectStream{} =
     getObjectStream objstm >>= extractObjects
   explodeObject object@(PDFIndirectObject number _ _) =
@@ -235,14 +237,15 @@ Object which are not streamable are simply ignored.
 
 The object stream is uncompressed. It can be compressed later.
 -}
-insert
+makeObjectStreamFromObjects
   :: Logging m
   => PDFDocument -- ^ A `CollectionOf` `PDFObject` to embed in the object stream
   -> Int -- ^ The number of the resulting `PDFObjectStream`
-  -> FallibleT m PDFObject
-insert objects num | objects == mempty = throwE NoObjectToEncode
-                   | osCount objStm == 0 = throwE NoObjectToEncode
-                   | otherwise = return $ PDFObjectStream num 0 dict stream
+  -> PDFWork m PDFObject
+makeObjectStreamFromObjects objects num
+  | objects == mempty   = throwError NoObjectToEncode
+  | osCount objStm == 0 = throwError NoObjectToEncode
+  | otherwise           = return $ PDFObjectStream num 0 dict stream
  where
   objStm = insertObjects (cFilter isObjectStreamable objects)
   dict :: Dictionary PDFObject

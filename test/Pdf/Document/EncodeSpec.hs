@@ -3,17 +3,16 @@ module Pdf.Document.EncodeSpec
   ) where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Except (runExceptT)
 
 import Data.Fallible (Fallible)
+import Data.PDF.PDFObject
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream, PDFString)
+    )
+import Data.PDF.PDFWork (evalPDFWorkT)
 import Data.Sequence (Seq (Empty), fromList)
 
 import Pdf.Document.Encode (encodeObject)
 import Pdf.Document.EncodedObject (EncodedObject (EncodedObject))
-import Pdf.Object.Object
-    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFString)
-    )
-import Pdf.Object.Object.PDFObject (PDFObject (PDFNumber))
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -105,5 +104,5 @@ spec = do
   describe "encodeObject" $ do
     forM_ encodeObjectExamples $ \(example, expected) ->
       it ("should encode object " ++ show example)
-        $   runExceptT (encodeObject example)
+        $   evalPDFWorkT (encodeObject example)
         >>= (`shouldBe` expected)

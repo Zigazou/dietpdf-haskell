@@ -23,12 +23,11 @@ import Control.Monad (msum)
 
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
-import Data.Sequence qualified as SQ
-
-import Pdf.Document.Document (PDFDocument, lMap)
-import Pdf.Object.Object
+import Data.PDF.PDFDocument (PDFDocument, lMap)
+import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFNumber)
     )
+import Data.Sequence qualified as SQ
 
 type Linearization :: Type
 data Linearization = Linearization

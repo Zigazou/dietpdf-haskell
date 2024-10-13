@@ -4,9 +4,9 @@ module Pdf.Object.String
 
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
-import Data.Fallible (FallibleT)
-import Data.Logging (Logging, sayComparisonF)
+import Data.Logging (Logging)
 import Data.Map qualified as Map
+import Data.PDF.PDFWork (PDFWork, sayComparisonP, withContext)
 
 import Pdf.Object.Object (PDFObject (PDFHexString, PDFString))
 
@@ -50,50 +50,48 @@ isASCIIEncoded = BS.all (<= asciiDELETE)
 {- |
 Optimize `PDFHexString` into `PDFString`.
 -}
-optimizeString :: Logging m => PDFObject -> FallibleT m PDFObject
-optimizeString object = case object of
-  (PDFHexString values)
-    | isASCIIEncoded encoded -> do
-        -- If the hex string contains only ASCII characters, converts it to a
-        -- PDFString which will be twice shorter.
-        sayComparisonF
-          (ctx object)
-          "Hex string optimization (ASCII)"
-          (BS.length values)
-          (BS.length encoded)
-        return $ PDFString encoded
-    | isUTF16Encoded encoded -> case utf16beToPdfDocEncoding encoded of
-        -- If the PDFHexString is UTF-16 but only contains PDFDocEncoding
-        -- characters, converts it to a PDFString which will be four times
-        -- shorter.
-        Just pdfDocEncoded -> do
-          sayComparisonF
-            (ctx object)
-            "Hex string optimization (PDFDocEncoding)"
+optimizeString :: Logging m => PDFObject -> PDFWork m PDFObject
+optimizeString object =
+  withContext (ctx ("optimizeString" :: String) <> ctx object) $
+    case object of
+    (PDFHexString values)
+      | isASCIIEncoded encoded -> do
+          -- If the hex string contains only ASCII characters, converts it to a
+          -- PDFString which will be twice shorter.
+          sayComparisonP
+            "Hex string optimization (ASCII)"
             (BS.length values)
-            (BS.length pdfDocEncoded)
-          return $ PDFString pdfDocEncoded
-        Nothing -> do
-          let utf16beEncoded = hexStringToString values
-          sayComparisonF
-            (ctx object)
-            "Hex string optimization (UTF-16BE)"
-            (BS.length values)
-            (BS.length utf16beEncoded)
-          return $ PDFString utf16beEncoded
-    | otherwise -> return object
-    where encoded = hexStringToString values
-  (PDFString encoded)
-    | isUTF16Encoded encoded -> case utf16beToPdfDocEncoding encoded of
-        -- If the PDFHexString is UTF-16 but only contains ASCII characters,
-        -- converts it to a PDFString which will be four times shorter.
-        Just pdfDocEncoded -> do
-          sayComparisonF
-            (ctx object)
-            "Hex string optimization (PDFDocEncoding)"
             (BS.length encoded)
-            (BS.length pdfDocEncoded)
-          return $ PDFString pdfDocEncoded
-        Nothing -> return object
-    | otherwise -> return object
-  _anyOtherObject -> return object
+          return $ PDFString encoded
+      | isUTF16Encoded encoded -> case utf16beToPdfDocEncoding encoded of
+          -- If the PDFHexString is UTF-16 but only contains PDFDocEncoding
+          -- characters, converts it to a PDFString which will be four times
+          -- shorter.
+          Just pdfDocEncoded -> do
+            sayComparisonP
+              "Hex string optimization (PDFDocEncoding)"
+              (BS.length values)
+              (BS.length pdfDocEncoded)
+            return $ PDFString pdfDocEncoded
+          Nothing -> do
+            let utf16beEncoded = hexStringToString values
+            sayComparisonP
+              "Hex string optimization (UTF-16BE)"
+              (BS.length values)
+              (BS.length utf16beEncoded)
+            return $ PDFString utf16beEncoded
+      | otherwise -> return object
+      where encoded = hexStringToString values
+    (PDFString encoded)
+      | isUTF16Encoded encoded -> case utf16beToPdfDocEncoding encoded of
+          -- If the PDFHexString is UTF-16 but only contains ASCII characters,
+          -- converts it to a PDFString which will be four times shorter.
+          Just pdfDocEncoded -> do
+            sayComparisonP
+              "Hex string optimization (PDFDocEncoding)"
+              (BS.length encoded)
+              (BS.length pdfDocEncoded)
+            return $ PDFString pdfDocEncoded
+          Nothing -> return object
+      | otherwise -> return object
+    _anyOtherObject -> return object

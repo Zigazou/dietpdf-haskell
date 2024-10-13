@@ -27,6 +27,7 @@ import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.Fallible (FallibleT, tryF)
 import Data.Logging (sayComparisonF)
+import Data.PDF.PDFDocument (PDFDocument)
 import Data.UnifiedError (UnifiedError (ParseError, UnableToOpenFile))
 
 import External.GhostScriptOptimize (ghostScriptOptimize)
@@ -44,7 +45,6 @@ import Options.Applicative
     , (<**>)
     )
 
-import Pdf.Document.Document (PDFDocument)
 import Pdf.Document.Parser (pdfParse)
 
 import System.FilePath (takeFileName)

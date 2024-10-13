@@ -25,8 +25,7 @@ module Pdf.Graphics.Parser.HexString
   ) where
 
 import Data.Binary.Parser (Get, isHexDigit, label, takeWhile1, word8)
-
-import Pdf.Graphics.Object (GFXObject (GFXHexString), isWhiteSpace)
+import Data.PDF.GFXObject (GFXObject (GFXHexString), isWhiteSpace)
 
 import Util.Ascii (asciiGREATERTHANSIGN, asciiLESSTHANSIGN)
 import Util.String (normalizeHexString)

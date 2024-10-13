@@ -6,17 +6,17 @@ import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
 import Data.Array (mkArray)
-import Data.Fallible (Fallible)
 import Data.ByteString qualified as BS
-
-import Pdf.Document.Document (PDFDocument, fromList)
-import Pdf.Document.Parser (pdfParse)
-import Pdf.Object.Object
+import Data.Fallible (Fallible)
+import Data.PDF.PDFDocument (PDFDocument, fromList)
+import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFNumber, PDFReference, PDFTrailer, PDFVersion, PDFXRef)
-    , XRefEntry (XRefEntry)
-    , XRefState (InUseEntry)
-    , XRefSubsection (XRefSubsection)
     )
+import Data.PDF.XRefEntry (XRefEntry (XRefEntry))
+import Data.PDF.XRefState (XRefState (InUseEntry))
+import Data.PDF.XRefSubsection (XRefSubsection (XRefSubsection))
+
+import Pdf.Document.Parser (pdfParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

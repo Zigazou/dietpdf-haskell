@@ -3,11 +3,10 @@ module Pdf.Object.StateSpec
   ) where
 
 import Control.Monad (forM_)
-import Control.Monad.Trans.Except (runExceptT)
 
-import Data.Fallible (FallibleT)
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
+import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
 
 import Pdf.Object.Object
     ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream)
@@ -23,7 +22,7 @@ import Test.Hspec (Spec, describe, it, shouldBe)
 import Util.Dictionary (mkDictionary, mkEmptyDictionary)
 
 setMaybeExamples
-  :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]
+  :: Logging m => [(PDFObject, PDFObject -> PDFWork m PDFObject, PDFObject)]
 setMaybeExamples =
   [ (mkEmptyPDFArray, setMaybe "Num" (Just $ PDFNumber 1.0), mkEmptyPDFArray)
   , (mkEmptyPDFArray, setMaybe "Num" Nothing               , mkEmptyPDFArray)
@@ -44,7 +43,7 @@ setMaybeExamples =
   ]
 
 setStreamExamples
-  :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]
+  :: Logging m => [(PDFObject, PDFObject -> PDFWork m PDFObject, PDFObject)]
 setStreamExamples =
   [ (mkEmptyPDFArray     , setStream "abc", mkEmptyPDFArray)
   , (PDFEndOfFile        , setStream "abc", PDFEndOfFile)
@@ -63,7 +62,7 @@ setStreamExamples =
   ]
 
 embedObjectExamples
-  :: Logging m => [(PDFObject, PDFObject -> FallibleT m PDFObject, PDFObject)]
+  :: Logging m => [(PDFObject, PDFObject -> PDFWork m PDFObject, PDFObject)]
 embedObjectExamples =
   [ ( mkEmptyPDFArray
     , embedObject (mkPDFArray [PDFName "a"])
@@ -83,16 +82,16 @@ spec :: Spec
 spec = do
   describe "setMaybe" $ forM_ setMaybeExamples $ \(example, fn, expected) ->
     it ("should work on " ++ show example) $ do
-      result <- runExceptT (fn example)
+      result <- evalPDFWorkT (fn example)
       result `shouldBe` Right expected
 
   describe "setStream" $ forM_ setStreamExamples $ \(example, fn, expected) ->
     it ("should work on " ++ show example) $ do
-      result <- runExceptT (fn example)
+      result <- evalPDFWorkT (fn example)
       result `shouldBe` Right expected
 
   describe "embedObject"
     $ forM_ embedObjectExamples
     $ \(example, fn, expected) -> it ("should work on " ++ show example) $ do
-        result <- runExceptT (fn example)
+        result <- evalPDFWorkT (fn example)
         result `shouldBe` Right expected
