@@ -4,23 +4,17 @@ This module contains functions facilitating container manipulation (`PDFArray`,
 -}
 module Pdf.Object.Container
   ( deepMap
-  , Filter(Filter, fDecodeParms, fFilter)
-  , FilterList
-  , mkFilterList
   , setFilters
-  , filtersFilter
-  , filtersParms
   , getFilters
-  , hasFilter
   ) where
 
-import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
-import Data.Kind (Type)
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
+import Data.PDF.Filter (Filter (Filter))
+import Data.PDF.FilterList (FilterList, filtersFilter, filtersParms)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFName, PDFNull, PDFIndirectObjectWithStream, PDFObjectStream)
+    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream)
     )
 import Data.PDF.PDFWork (PDFWork, throwError)
 import Data.Sequence qualified as SQ
@@ -50,27 +44,6 @@ deepMap fn container = case container of
       .   PDFDictionary
   PDFArray items -> mapM (deepMap fn) items <&> PDFArray
   object         -> fn object
-
-{- |
-A filter with its parameters.
--}
-type Filter :: Type
-data Filter = Filter
-  { fFilter      :: !PDFObject
-  , fDecodeParms :: !PDFObject
-  }
-  deriving stock Show
-
-hasNoDecodeParms :: Filter -> Bool
-hasNoDecodeParms = (== PDFNull) . fDecodeParms
-
--- | A list of `Filter`.
-type FilterList :: Type
-type FilterList = SQ.Seq Filter
-
--- | Create a `FilterList`.
-mkFilterList :: [Filter] -> FilterList
-mkFilterList = SQ.fromList
 
 {- |
 Return a list of filters contained in a `PDFDictionary`.
@@ -105,37 +78,6 @@ getFilters container = do
     (ps SQ.>< SQ.replicate (SQ.length fs - SQ.length ps) PDFNull)
 
 {- |
-Given a list of `Filter`, return the corresponding `PDFObject` of filter names.
-
-If the list is empty, it returns `Nothing`.
-
-If the list contains only one `Filter`, it returns `Just` a `PDFName`.
-
-In any other cases, it returns `Just` a `PDFArray`.
--}
-filtersFilter :: FilterList -> Maybe PDFObject
-filtersFilter SQ.Empty = Nothing
-filtersFilter (Filter aName@(PDFName _) _ SQ.:<| SQ.Empty) = Just aName
-filtersFilter filters  = Just (PDFArray $ fFilter <$> filters)
-
-{- |
-Given a list of `Filter`, return the corresponding `PDFObject` of filters
-decoding parameters.
-
-If the list is empty, it returns `Nothing`.
-
-If the list contains only one `Filter`, it returns `Just` a `PDFObject`.
-
-In any other cases, it returns `Just` a `PDFArray`.
--}
-filtersParms :: FilterList -> Maybe PDFObject
-filtersParms SQ.Empty = Nothing
-filtersParms (Filter _ PDFNull SQ.:<| SQ.Empty) = Nothing
-filtersParms (Filter _ aDecodeParms SQ.:<| SQ.Empty) = Just aDecodeParms
-filtersParms filters | all hasNoDecodeParms filters = Nothing
-                     | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
-
-{- |
 Update the Filter and DecodeParms dictionary entries according to a
 `FilterList`.
 
@@ -149,10 +91,3 @@ setFilters filters object = if hasDictionary object
   then updateValue "Filter" (filtersFilter filters) object
           >>= updateValue "DecodeParms" (filtersParms filters)
   else return object
-
-hasFilter :: BS.ByteString -> FilterList -> Bool
-hasFilter name = any (has name)
-  where
-    has :: BS.ByteString -> Filter -> Bool
-    has value (Filter (PDFName n) _) = n == value
-    has _ _                          = False

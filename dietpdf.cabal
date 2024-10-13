@@ -50,6 +50,9 @@ library
       Data.Logging
       Data.PDF.EncodedObject
       Data.PDF.EncodedObjects
+      Data.PDF.Filter
+      Data.PDF.FilterCombination
+      Data.PDF.FilterList
       Data.PDF.GFXObject
       Data.PDF.GFXObjects
       Data.PDF.ObjectCategory
@@ -146,7 +149,6 @@ library
       Pdf.Object.String
       Pdf.Processing.Filter
       Pdf.Processing.FilterCombine.Deflate
-      Pdf.Processing.FilterCombine.FilterCombination
       Pdf.Processing.FilterCombine.Jpeg2k
       Pdf.Processing.FilterCombine.Lzw
       Pdf.Processing.FilterCombine.PredDeflate

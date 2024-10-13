@@ -10,14 +10,12 @@ import Codec.Compression.Predict
 
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
+import Data.PDF.Filter (Filter (Filter))
+import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
+import Data.PDF.PDFObject (PDFObject (PDFName), mkPDFDictionary)
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
-import Pdf.Object.Container (Filter (Filter))
-import Pdf.Object.Object (PDFObject (PDFName), mkPDFDictionary, mkPDFNumber)
-import Pdf.Processing.FilterCombine.FilterCombination
-    ( FilterCombination
-    , mkFCAppend
-    )
+import Pdf.Object.Object.ToPDFNumber (mkPDFNumber)
 
 predLzw
   :: Maybe (Int, Int)

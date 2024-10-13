@@ -9,17 +9,13 @@ import Data.ByteString qualified as BS
 import Data.ColorSpace (ColorSpace)
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
+import Data.PDF.Filter (Filter (Filter))
+import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
+import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 import Data.PDF.PDFWork (PDFWork)
 import Data.UnifiedError (UnifiedError (UnsupportedFeature))
 
 import External.TiffToJpeg2k (tiffToJpeg2k)
-
-import Pdf.Object.Container (Filter (Filter))
-import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
-import Pdf.Processing.FilterCombine.FilterCombination
-    ( FilterCombination
-    , mkFCAppend
-    )
 
 jpeg2k
   :: Logging IO

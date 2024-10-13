@@ -13,18 +13,12 @@ import Codec.Compression.RunLength qualified as RL
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
+import Data.PDF.Filter (Filter (Filter))
+import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
+import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull), mkPDFDictionary)
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
-import Pdf.Object.Container (Filter (Filter))
-import Pdf.Object.Object
-    ( PDFObject (PDFName, PDFNull)
-    , mkPDFDictionary
-    , mkPDFNumber
-    )
-import Pdf.Processing.FilterCombine.FilterCombination
-    ( FilterCombination
-    , mkFCAppend
-    )
+import Pdf.Object.Object.ToPDFNumber (mkPDFNumber)
 
 predRleZopfli
   :: Maybe (Int, Int)

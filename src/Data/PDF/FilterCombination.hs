@@ -1,4 +1,4 @@
-module Pdf.Processing.FilterCombine.FilterCombination
+module Data.PDF.FilterCombination
   ( FilterCombination (FilterCombination, fcList, fcBytes, fcReplace)
   , mkFCAppend
   , mkFCReplace
@@ -7,15 +7,16 @@ module Pdf.Processing.FilterCombine.FilterCombination
 where
 
 import Data.Array (mkArray)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
-
-import Pdf.Object.Container (Filter, FilterList)
+import Data.PDF.Filter (Filter)
+import Data.PDF.FilterList (FilterList)
 
 type FilterCombination :: Type
 data FilterCombination = FilterCombination
   { fcList    :: !FilterList
-  , fcBytes   :: !BS.ByteString
+  , fcBytes   :: !ByteString
   , fcReplace :: !Bool
   }
   deriving stock (Show)
@@ -23,8 +24,8 @@ data FilterCombination = FilterCombination
 fcLength :: FilterCombination -> Int
 fcLength = BS.length . fcBytes
 
-mkFCAppend :: [Filter] -> BS.ByteString -> FilterCombination
+mkFCAppend :: [Filter] -> ByteString -> FilterCombination
 mkFCAppend fList bytes = FilterCombination (mkArray fList) bytes False
 
-mkFCReplace :: [Filter] -> BS.ByteString -> FilterCombination
+mkFCReplace :: [Filter] -> ByteString -> FilterCombination
 mkFCReplace fList bytes = FilterCombination (mkArray fList) bytes True

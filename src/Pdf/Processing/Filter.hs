@@ -15,6 +15,16 @@ import Data.Context (Contextual (ctx))
 import Data.Foldable (minimumBy)
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
+import Data.PDF.Filter (Filter (Filter))
+import Data.PDF.FilterCombination
+    ( FilterCombination (FilterCombination)
+    , fcBytes
+    , fcLength
+    , fcList
+    , fcReplace
+    , mkFCAppend
+    , mkFCReplace
+    )
 import Data.PDF.OptimizationType
     ( OptimizationType (JPGOptimization, XRefStreamOptimization)
     )
@@ -28,19 +38,10 @@ import Data.Text qualified as T
 import External.JpegToJpeg2k (jpegToJpeg2k)
 
 import Pdf.Document.XRef (xrefStreamWidth)
-import Pdf.Object.Container (Filter (Filter), getFilters, setFilters)
+import Pdf.Object.Container (getFilters, setFilters)
 import Pdf.Object.Object (fromPDFObject)
 import Pdf.Object.Object.Properties (hasStream)
 import Pdf.Object.State (getStream, getValue, setStream)
-import Pdf.Processing.FilterCombine.FilterCombination
-    ( FilterCombination (FilterCombination)
-    , fcBytes
-    , fcLength
-    , fcList
-    , fcReplace
-    , mkFCAppend
-    , mkFCReplace
-    )
 import Pdf.Processing.FilterCombine.Jpeg2k (jpeg2k)
 import Pdf.Processing.FilterCombine.PredRleZopfli (predRleZopfli)
 import Pdf.Processing.FilterCombine.PredZopfli (predZopfli)

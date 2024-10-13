@@ -7,13 +7,9 @@ import Codec.Compression.LZW qualified as LZW
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
-
-import Pdf.Object.Container (Filter (Filter))
-import Pdf.Object.Object (PDFObject (PDFName, PDFNull))
-import Pdf.Processing.FilterCombine.FilterCombination
-    ( FilterCombination
-    , mkFCAppend
-    )
+import Data.PDF.Filter (Filter (Filter))
+import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
+import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 
 lzw
   :: Maybe (Int, Int)

@@ -15,16 +15,13 @@ import Codec.Filter.AsciiHex qualified as AH
 
 import Data.ByteString (ByteString)
 import Data.Logging (Logging)
+import Data.PDF.Filter (Filter (fDecodeParms, fFilter))
+import Data.PDF.FilterList (FilterList)
 import Data.PDF.PDFWork (PDFWork, fallibleP, throwError, tryP)
 import Data.Sequence as SQ (Seq ((:<|)))
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
-import Pdf.Object.Container
-    ( Filter (fDecodeParms, fFilter)
-    , FilterList
-    , getFilters
-    , setFilters
-    )
+import Pdf.Object.Container (getFilters, setFilters)
 import Pdf.Object.Object
     ( PDFObject (PDFName, PDFNumber)
     , ToPDFNumber (mkPDFNumber)

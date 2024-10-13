@@ -13,8 +13,12 @@ import Control.Monad.State.Class (gets)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.Logging (Logging)
+import Data.PDF.Filter (Filter (fFilter))
 import Data.PDF.OptimizationType
     ( OptimizationType (GfxOptimization, JPGOptimization, TTFOptimization, XMLOptimization)
+    )
+import Data.PDF.PDFObject
+    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
     )
 import Data.PDF.PDFWork
     ( PDFWork
@@ -32,11 +36,8 @@ import External.JpegTran (jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)
 
 import Pdf.Graphics.Optimize (optimizeGFX)
-import Pdf.Object.Container (Filter (fFilter), getFilters)
-import Pdf.Object.Object
-    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
-    , hasStream
-    )
+import Pdf.Object.Container (getFilters)
+import Pdf.Object.Object.Properties (hasStream)
 import Pdf.Object.State (getStream, setStream, setStream1)
 import Pdf.Object.String (optimizeString)
 import Pdf.Processing.Filter (filterOptimize)
