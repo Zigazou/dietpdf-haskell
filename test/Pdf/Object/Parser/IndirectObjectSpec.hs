@@ -1,14 +1,14 @@
-module Pdf.Object.Parser.IndirectObjectSpec
+module PDF.Object.Parser.IndirectObjectSpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 import Data.Map.Strict (fromList)
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFReference)
     )
-import Pdf.Object.Parser.IndirectObject (indirectObjectP)
+import PDF.Object.Parser.IndirectObject (indirectObjectP)
 
 import Test.Hspec (Spec, describe)
 

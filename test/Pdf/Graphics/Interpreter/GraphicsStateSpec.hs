@@ -1,16 +1,16 @@
-module Pdf.Graphics.Interpreter.GraphicsStateSpec
+module PDF.Graphics.Interpreter.GraphicsStateSpec
   ( spec
   ) where
 
 import Control.Monad (forM_)
 
-import Pdf.Graphics.Interpreter.GraphicsState
+import PDF.Graphics.Interpreter.GraphicsState
     ( GraphicsState (gsCTM, gsScaleX, gsScaleY, gsStack, gsTextState, gsUserUnit)
     , defaultGraphicsState
     , usefulGraphicsPrecision
     )
-import Pdf.Graphics.Interpreter.TextState (defaultTextState)
-import Pdf.Graphics.Interpreter.TransformationMatrix
+import PDF.Graphics.Interpreter.TextState (defaultTextState)
+import PDF.Graphics.Interpreter.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix)
     )
 

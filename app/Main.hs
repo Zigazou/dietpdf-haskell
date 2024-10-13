@@ -45,7 +45,7 @@ import Options.Applicative
     , (<**>)
     )
 
-import Pdf.Document.Parser (pdfParse)
+import PDF.Document.Parser (pdfParse)
 
 import System.FilePath (takeFileName)
 import System.IO (hClose)

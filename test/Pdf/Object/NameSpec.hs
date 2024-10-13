@@ -1,4 +1,4 @@
-module Pdf.Object.NameSpec
+module PDF.Object.NameSpec
   ( spec
   )
 where
@@ -7,7 +7,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFName), fromPDFObject)
+import PDF.Object.Object (PDFObject (PDFName), fromPDFObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

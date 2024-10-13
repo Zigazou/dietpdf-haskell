@@ -14,8 +14,8 @@ import Data.PDF.PDFObject
 import Data.PDF.PDFWork (evalPDFWork, throwError)
 import Data.UnifiedError (UnifiedError (ObjectNotFound, ObjectStreamNotFound))
 
-import Pdf.Object.State (getStream)
-import Pdf.Processing.Unfilter (unfilter)
+import PDF.Object.State (getStream)
+import PDF.Processing.Unfilter (unfilter)
 
 objectWithNumber :: Int -> PDFObject -> Bool
 objectWithNumber n (PDFIndirectObjectWithStream num _ _ _) = n == num

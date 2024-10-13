@@ -1,14 +1,14 @@
-module Pdf.Object.Parser.ArraySpec
+module PDF.Object.Parser.ArraySpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFName, PDFNumber, PDFReference, PDFString)
     , mkPDFArray
     )
-import Pdf.Object.Parser.Container (arrayP)
+import PDF.Object.Parser.Container (arrayP)
 
 import Test.Hspec (Spec, describe)
 

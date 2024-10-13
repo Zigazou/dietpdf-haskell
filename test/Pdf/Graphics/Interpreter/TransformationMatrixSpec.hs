@@ -1,10 +1,10 @@
-module Pdf.Graphics.Interpreter.TransformationMatrixSpec
+module PDF.Graphics.Interpreter.TransformationMatrixSpec
   ( spec
   ) where
 
 import Control.Monad (forM_)
 
-import Pdf.Graphics.Interpreter.TransformationMatrix
+import PDF.Graphics.Interpreter.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix)
     , prod
     )

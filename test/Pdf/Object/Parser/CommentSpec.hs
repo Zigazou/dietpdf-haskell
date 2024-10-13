@@ -1,12 +1,12 @@
-module Pdf.Object.Parser.CommentSpec
+module PDF.Object.Parser.CommentSpec
   ( spec
   ) where
 
 import Data.Binary.Parser (endOfInput)
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFComment, PDFEndOfFile, PDFVersion))
-import Pdf.Object.Parser.Comment (commentP)
+import PDF.Object.Object (PDFObject (PDFComment, PDFEndOfFile, PDFVersion))
+import PDF.Object.Parser.Comment (commentP)
 
 import Test.Hspec (Spec, describe)
 

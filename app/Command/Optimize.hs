@@ -13,7 +13,7 @@ import Data.Text.Lazy.IO qualified as T
 
 import Formatting (format, int, (%))
 
-import Pdf.Document.Encode (pdfEncode)
+import PDF.Document.Encode (pdfEncode)
 
 optimize :: FilePath -> PDFDocument -> FallibleT IO ()
 optimize outputPDF objects = do

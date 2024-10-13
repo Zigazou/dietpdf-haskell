@@ -1,4 +1,4 @@
-module Pdf.Object.StateSpec
+module PDF.Object.StateSpec
   ( spec
   ) where
 
@@ -8,14 +8,14 @@ import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
 import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream)
     , mkEmptyPDFArray
     , mkEmptyPDFDictionary
     , mkPDFArray
     , mkPDFDictionary
     )
-import Pdf.Object.State (embedObject, setMaybe, setStream)
+import PDF.Object.State (embedObject, setMaybe, setStream)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

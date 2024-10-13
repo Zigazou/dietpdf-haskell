@@ -1,4 +1,4 @@
-module Pdf.Parser.ParserSpec
+module PDF.Parser.ParserSpec
   ( spec
   ) where
 
@@ -16,7 +16,7 @@ import Data.PDF.XRefEntry (XRefEntry (XRefEntry))
 import Data.PDF.XRefState (XRefState (InUseEntry))
 import Data.PDF.XRefSubsection (XRefSubsection (XRefSubsection))
 
-import Pdf.Document.Parser (pdfParse)
+import PDF.Document.Parser (pdfParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

@@ -1,11 +1,11 @@
-module Pdf.Graphics.Parser.NumberSpec
+module PDF.Graphics.Parser.NumberSpec
   ( spec
   ) where
 
 import Data.ByteString (ByteString)
 import Data.PDF.GFXObject (GFXObject (GFXNumber))
 
-import Pdf.Graphics.Parser.Number (numberP)
+import PDF.Graphics.Parser.Number (numberP)
 
 import Test.Hspec (Spec, describe)
 

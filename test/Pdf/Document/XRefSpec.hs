@@ -1,4 +1,4 @@
-module Pdf.Document.XRefSpec
+module PDF.Document.XRefSpec
   ( spec
   ) where
 
@@ -11,8 +11,8 @@ import Data.PDF.EncodedObject (EncodedObject (EncodedObject))
 import Data.PDF.EncodedObjects (EncodedObjects)
 import Data.PDF.ObjectOffset (ObjectOffset (DirectOffset))
 import Data.PDF.ObjectOffsets (ObjectOffsets)
-import Pdf.Document.XRef (calcOffsets, xrefStreamTable, xrefTable)
-import Pdf.Object.Object
+import PDF.Document.XRef (calcOffsets, xrefStreamTable, xrefTable)
+import PDF.Object.Object
     ( PDFObject (PDFName, PDFXRef, PDFXRefStream)
     , ToPDFNumber (mkPDFNumber)
     , XRefEntry (XRefEntry)

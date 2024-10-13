@@ -1,11 +1,11 @@
-module Pdf.Object.Parser.NumberSpec
+module PDF.Object.Parser.NumberSpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFNumber))
-import Pdf.Object.Parser.Number (numberP)
+import PDF.Object.Object (PDFObject (PDFNumber))
+import PDF.Object.Parser.Number (numberP)
 
 import Test.Hspec (Spec, describe)
 

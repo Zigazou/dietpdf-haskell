@@ -1,4 +1,4 @@
-module Pdf.Object.ArraySpec
+module PDF.Object.ArraySpec
   ( spec
   ) where
 
@@ -6,7 +6,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFBool, PDFName, PDFNumber)
     , fromPDFObject
     , mkEmptyPDFArray

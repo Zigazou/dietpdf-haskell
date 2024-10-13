@@ -1,16 +1,16 @@
-module Pdf.Object.Parser.DictionarySpec
+module PDF.Object.Parser.DictionarySpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFHexString, PDFName, PDFNumber, PDFReference, PDFString)
     , mkEmptyPDFDictionary
     , mkPDFArray
     , mkPDFDictionary
     )
-import Pdf.Object.Parser.Container (dictionaryP)
+import PDF.Object.Parser.Container (dictionaryP)
 
 import Test.Hspec (Spec, describe)
 

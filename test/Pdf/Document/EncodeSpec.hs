@@ -1,4 +1,4 @@
-module Pdf.Document.EncodeSpec
+module PDF.Document.EncodeSpec
   ( spec
   ) where
 
@@ -12,7 +12,7 @@ import Data.PDF.PDFObject
 import Data.PDF.PDFWork (evalPDFWorkT)
 import Data.Sequence (Seq (Empty), fromList)
 
-import Pdf.Document.Encode (encodeObject)
+import PDF.Document.Encode (encodeObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

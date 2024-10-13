@@ -9,9 +9,9 @@ import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
 import Data.Text.IO qualified as TIO
 
-import Pdf.Graphics.Interpreter.Human (human)
-import Pdf.Graphics.Interpreter.Program (parseProgram)
-import Pdf.Graphics.Parser.Stream (gfxParse)
+import PDF.Graphics.Interpreter.Human (human)
+import PDF.Graphics.Interpreter.Program (parseProgram)
+import PDF.Graphics.Parser.Stream (gfxParse)
 
 humanByteString :: BS.ByteString -> FallibleT IO ()
 humanByteString code = case gfxParse code of

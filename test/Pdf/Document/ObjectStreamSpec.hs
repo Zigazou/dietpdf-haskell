@@ -1,4 +1,4 @@
-module Pdf.Document.ObjectStreamSpec
+module PDF.Document.ObjectStreamSpec
   ( spec
   ) where
 
@@ -15,7 +15,7 @@ import Data.PDF.PDFObject
 import Data.PDF.PDFWork (evalPDFWorkT)
 import Data.UnifiedError (UnifiedError (NoObjectToEncode))
 
-import Pdf.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
+import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

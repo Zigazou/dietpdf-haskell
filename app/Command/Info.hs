@@ -13,7 +13,7 @@ import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.PDFWork (evalPDFWork)
 import Data.Text qualified as T
 
-import Pdf.Processing.ObjectInfo (objectInfo)
+import PDF.Processing.ObjectInfo (objectInfo)
 
 import Util.Display (disp)
 

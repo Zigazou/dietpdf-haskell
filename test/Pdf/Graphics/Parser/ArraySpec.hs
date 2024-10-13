@@ -1,4 +1,4 @@
-module Pdf.Graphics.Parser.ArraySpec
+module PDF.Graphics.Parser.ArraySpec
   ( spec
   ) where
 
@@ -8,7 +8,7 @@ import Data.PDF.GFXObject
     , mkGFXArray
     )
 
-import Pdf.Graphics.Parser.Container (arrayP)
+import PDF.Graphics.Parser.Container (arrayP)
 
 import Test.Hspec (Spec, describe)
 

@@ -1,11 +1,11 @@
-module Pdf.Object.Parser.HexStringSpec
+module PDF.Object.Parser.HexStringSpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFHexString))
-import Pdf.Object.Parser.HexString (hexStringP)
+import PDF.Object.Object (PDFObject (PDFHexString))
+import PDF.Object.Parser.HexString (hexStringP)
 
 import Test.Hspec (Spec, describe)
 

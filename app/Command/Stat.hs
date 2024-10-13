@@ -12,7 +12,7 @@ import Data.PDF.Statistics
     , initStatistics
     )
 
-import Pdf.Document.Stat (stat)
+import PDF.Document.Stat (stat)
 
 import Util.Display (disp)
 

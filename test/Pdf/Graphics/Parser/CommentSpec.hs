@@ -1,4 +1,4 @@
-module Pdf.Graphics.Parser.CommentSpec
+module PDF.Graphics.Parser.CommentSpec
   ( spec
   ) where
 
@@ -6,7 +6,7 @@ import Data.Binary.Parser (endOfInput)
 import Data.ByteString (ByteString)
 import Data.PDF.GFXObject (GFXObject (GFXComment))
 
-import Pdf.Graphics.Parser.Comment (commentP)
+import PDF.Graphics.Parser.Comment (commentP)
 
 import Test.Hspec (Spec, describe)
 

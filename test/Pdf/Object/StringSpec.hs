@@ -1,4 +1,4 @@
-module Pdf.Object.StringSpec
+module PDF.Object.StringSpec
   ( spec
   ) where
 
@@ -8,8 +8,8 @@ import Data.ByteString (ByteString)
 import Data.PDF.PDFObject (PDFObject (PDFHexString, PDFString))
 import Data.PDF.PDFWork (evalPDFWorkT)
 
-import Pdf.Object.Object (fromPDFObject)
-import Pdf.Object.String (optimizeString)
+import PDF.Object.Object (fromPDFObject)
+import PDF.Object.String (optimizeString)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

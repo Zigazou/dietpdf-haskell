@@ -1,4 +1,4 @@
-module Pdf.Graphics.Interpreter.OptimizeProgramSpec
+module PDF.Graphics.Interpreter.OptimizeProgramSpec
   ( spec
   ) where
 
@@ -11,13 +11,13 @@ import Data.PDF.GFXObject
     , mkGFXArray
     )
 
-import Pdf.Graphics.Interpreter.Command (Command, mkCommand)
-import Pdf.Graphics.Interpreter.OptimizeProgram
+import PDF.Graphics.Interpreter.Command (Command, mkCommand)
+import PDF.Graphics.Interpreter.OptimizeProgram
     ( findRelatedSave
     , optimizeProgram
     )
-import Pdf.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
-import Pdf.Graphics.Parser.Stream (gfxParse)
+import PDF.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
+import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

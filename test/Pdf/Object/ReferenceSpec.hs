@@ -1,4 +1,4 @@
-module Pdf.Object.ReferenceSpec
+module PDF.Object.ReferenceSpec
   ( spec
   )
 where
@@ -7,7 +7,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFReference), fromPDFObject)
+import PDF.Object.Object (PDFObject (PDFReference), fromPDFObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

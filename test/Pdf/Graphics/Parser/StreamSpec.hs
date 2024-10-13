@@ -1,4 +1,4 @@
-module Pdf.Graphics.Parser.StreamSpec
+module PDF.Graphics.Parser.StreamSpec
   ( spec
   ) where
 
@@ -13,7 +13,7 @@ import Data.PDF.GFXObject
     )
 import Data.PDF.GFXObjects (GFXObjects)
 
-import Pdf.Graphics.Parser.Stream (gfxParse)
+import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

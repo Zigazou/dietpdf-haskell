@@ -48,7 +48,7 @@ import Data.PDF.WorkData (WorkData (wContexts, wPDF), emptyWorkData)
 import Data.Text (Text)
 import Data.UnifiedError (UnifiedError)
 
-import Pdf.Object.Object.Properties (isCatalog, isInfo)
+import PDF.Object.Object.Properties (isCatalog, isInfo)
 
 import Util.Dictionary (mkDictionary)
 

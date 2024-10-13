@@ -1,4 +1,4 @@
-module Pdf.Graphics.Interpreter.ProgramSpec
+module PDF.Graphics.Interpreter.ProgramSpec
   ( spec
   ) where
 
@@ -11,8 +11,8 @@ import Data.PDF.GFXObject
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence qualified as SQ
 
-import Pdf.Graphics.Interpreter.Command (mkCommand)
-import Pdf.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
+import PDF.Graphics.Interpreter.Command (mkCommand)
+import PDF.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

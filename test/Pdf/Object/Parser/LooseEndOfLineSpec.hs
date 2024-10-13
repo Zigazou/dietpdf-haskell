@@ -1,11 +1,11 @@
-module Pdf.Object.Parser.LooseEndOfLineSpec
+module PDF.Object.Parser.LooseEndOfLineSpec
   ( spec
   ) where
 
 import Data.Binary.Parser (sepBy, some', takeTill)
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
+import PDF.Object.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
 
 import Test.Hspec (Spec, describe)
 

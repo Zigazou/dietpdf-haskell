@@ -65,7 +65,7 @@ import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidAscii85Stream))
 import Data.Word (Word8)
 
-import Pdf.Object.Object (isWhiteSpace)
+import PDF.Object.Object (isWhiteSpace)
 
 import Util.Ascii
     ( asciiEXCLAMATIONMARK

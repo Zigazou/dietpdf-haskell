@@ -1,4 +1,4 @@
-module Pdf.Object.DictionarySpec
+module PDF.Object.DictionarySpec
   ( spec
   ) where
 
@@ -7,14 +7,14 @@ import Control.Monad (forM_)
 import Data.ByteString (ByteString)
 import Data.PDF.PDFWork (evalPDFWorkT)
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFBool, PDFIndirectObject, PDFName, PDFNumber, PDFTrailer)
     , fromPDFObject
     , mkEmptyPDFDictionary
     , mkPDFArray
     , mkPDFDictionary
     )
-import Pdf.Object.State (getValue)
+import PDF.Object.State (getValue)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

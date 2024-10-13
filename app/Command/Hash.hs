@@ -13,7 +13,7 @@ import Data.PDF.PDFWork (PDFWork, evalPDFWork, sayP, withContext)
 import Data.Set (Set, empty, insert, member)
 import Data.Text qualified as T
 
-import Pdf.Object.Signature (streamHash)
+import PDF.Object.Signature (streamHash)
 
 type ObjectHash :: Type
 data ObjectHash = ObjectHash !Int !T.Text

@@ -1,4 +1,4 @@
-module Pdf.Object.HexStringSpec
+module PDF.Object.HexStringSpec
   ( spec
   )
 where
@@ -7,7 +7,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFHexString), fromPDFObject)
+import PDF.Object.Object (PDFObject (PDFHexString), fromPDFObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

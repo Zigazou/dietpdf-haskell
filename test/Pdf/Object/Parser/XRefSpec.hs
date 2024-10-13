@@ -1,16 +1,16 @@
-module Pdf.Object.Parser.XRefSpec
+module PDF.Object.Parser.XRefSpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFXRef)
     , XRefEntry (XRefEntry)
     , XRefState (FreeEntry, InUseEntry)
     , XRefSubsection (XRefSubsection)
     )
-import Pdf.Object.Parser.XRef (xrefP)
+import PDF.Object.Parser.XRef (xrefP)
 
 import Test.Hspec (Spec, describe)
 

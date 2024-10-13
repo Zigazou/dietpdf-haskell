@@ -1,4 +1,4 @@
-module Pdf.Graphics.Parser.DictionarySpec
+module PDF.Graphics.Parser.DictionarySpec
   ( spec
   ) where
 
@@ -10,7 +10,7 @@ import Data.PDF.GFXObject
     , mkGFXDictionary
     )
 
-import Pdf.Graphics.Parser.Container (dictionaryP)
+import PDF.Graphics.Parser.Container (dictionaryP)
 
 import Test.Hspec (Spec, describe)
 

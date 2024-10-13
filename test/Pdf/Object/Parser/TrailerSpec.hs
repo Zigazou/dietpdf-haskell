@@ -1,12 +1,12 @@
-module Pdf.Object.Parser.TrailerSpec
+module PDF.Object.Parser.TrailerSpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 import Data.Map.Strict (empty, fromList)
 
-import Pdf.Object.Object (PDFObject (PDFDictionary, PDFReference, PDFTrailer))
-import Pdf.Object.Parser.Trailer (trailerP)
+import PDF.Object.Object (PDFObject (PDFDictionary, PDFReference, PDFTrailer))
+import PDF.Object.Parser.Trailer (trailerP)
 
 import Test.Hspec (Spec, describe)
 

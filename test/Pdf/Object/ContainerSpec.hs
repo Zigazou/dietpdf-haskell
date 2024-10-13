@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Pdf.Object.ContainerSpec
+module PDF.Object.ContainerSpec
   ( spec
   ) where
 
@@ -8,19 +8,19 @@ import Control.Monad (forM_)
 
 import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
 
-import Pdf.Object.Container
+import PDF.Object.Container
     ( Filter (Filter)
     , FilterList
     , mkFilterList
     , setFilters
     )
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFString)
     , mkEmptyPDFDictionary
     , mkPDFArray
     , mkPDFDictionary
     )
-import Pdf.Processing.PDFWork (deepMapP)
+import PDF.Processing.PDFWork (deepMapP)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

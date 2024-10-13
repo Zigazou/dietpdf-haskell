@@ -1,4 +1,4 @@
-module Pdf.Object.OptimizeSpec
+module PDF.Object.OptimizeSpec
   ( spec
   ) where
 
@@ -15,7 +15,7 @@ import Data.PDF.PDFObject
     )
 import Data.PDF.PDFWork (evalPDFWorkT)
 
-import Pdf.Processing.Optimize (optimize)
+import PDF.Processing.Optimize (optimize)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

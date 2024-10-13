@@ -1,12 +1,12 @@
-module Pdf.Object.Parser.StringSpec
+module PDF.Object.Parser.StringSpec
   ( spec
   ) where
 
 import Data.Binary.Parser (parseDetail)
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFString))
-import Pdf.Object.Parser.String (stringP)
+import PDF.Object.Object (PDFObject (PDFString))
+import PDF.Object.Parser.String (stringP)
 
 import Test.Hspec (Spec, describe, it)
 

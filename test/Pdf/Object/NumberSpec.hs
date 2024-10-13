@@ -1,4 +1,4 @@
-module Pdf.Object.NumberSpec
+module PDF.Object.NumberSpec
   ( spec
   )
 where
@@ -7,7 +7,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFNumber), fromPDFObject)
+import PDF.Object.Object (PDFObject (PDFNumber), fromPDFObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

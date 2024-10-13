@@ -1,4 +1,4 @@
-module Pdf.Object.IndirectObjectSpec
+module PDF.Object.IndirectObjectSpec
   ( spec
   ) where
 
@@ -6,7 +6,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object
+import PDF.Object.Object
     ( PDFObject (PDFIndirectObject, PDFNumber)
     , fromPDFObject
     )

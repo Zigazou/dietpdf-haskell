@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Pdf.Object.LinearizationSpec
+module PDF.Object.LinearizationSpec
   ( spec
   ) where
 
@@ -12,8 +12,8 @@ import Data.ByteString qualified as BS
 import Data.Logging (Logging)
 import Data.PDF.PDFDocument (PDFDocument)
 
-import Pdf.Document.Parser (pdfParse)
-import Pdf.Object.Linearization
+import PDF.Document.Parser (pdfParse)
+import PDF.Object.Linearization
     ( Linearization (Linearization, lnFileLength, lnFirstPageEndOffset, lnFirstPageNumber, lnFirstPageObjectNumber, lnNumberOfPages, lnOverflowHintLength, lnOverflowHintOffset, lnPrimaryHintLength, lnPrimaryHintOffset, lnVersion, lnXRefFirstEntryOffset)
     , getLinearization
     )

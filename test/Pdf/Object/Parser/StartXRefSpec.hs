@@ -1,11 +1,11 @@
-module Pdf.Object.Parser.StartXRefSpec
+module PDF.Object.Parser.StartXRefSpec
   ( spec
   ) where
 
 import Data.ByteString qualified as BS
 
-import Pdf.Object.Object (PDFObject (PDFStartXRef))
-import Pdf.Object.Parser.StartXRef (startXRefP)
+import PDF.Object.Object (PDFObject (PDFStartXRef))
+import PDF.Object.Parser.StartXRef (startXRefP)
 
 import Test.Hspec (Spec, describe)
 

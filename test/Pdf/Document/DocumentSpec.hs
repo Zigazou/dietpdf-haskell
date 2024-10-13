@@ -1,4 +1,4 @@
-module Pdf.Document.DocumentSpec
+module PDF.Document.DocumentSpec
   ( spec
   ) where
 

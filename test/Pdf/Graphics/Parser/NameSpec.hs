@@ -1,4 +1,4 @@
-module Pdf.Graphics.Parser.NameSpec
+module PDF.Graphics.Parser.NameSpec
   ( spec
   ) where
 
@@ -6,7 +6,7 @@ import Data.Binary.Parser (parseDetail)
 import Data.ByteString (ByteString)
 import Data.PDF.GFXObject (GFXObject (GFXName))
 
-import Pdf.Graphics.Parser.Name (nameP)
+import PDF.Graphics.Parser.Name (nameP)
 
 import Test.Hspec (Spec, describe, it)
 
