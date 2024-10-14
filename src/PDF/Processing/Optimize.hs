@@ -8,7 +8,6 @@ module PDF.Processing.Optimize
 import Codec.Compression.XML (optimizeXML)
 
 import Control.Monad.State (lift)
-import Control.Monad.State.Class (gets)
 
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
@@ -28,7 +27,6 @@ import Data.PDF.PDFWork
     , tryP
     , withContext
     )
-import Data.PDF.WorkData (wNameTranslations)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 
@@ -41,9 +39,9 @@ import PDF.Object.Object.Properties (hasStream)
 import PDF.Object.State (getStream, setStream, setStream1)
 import PDF.Object.String (optimizeString)
 import PDF.Processing.Filter (filterOptimize)
-import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 import PDF.Processing.PDFWork (deepMapP)
 import PDF.Processing.Unfilter (unfilter)
+import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 
 optimizeStreamOrIgnore
@@ -66,7 +64,6 @@ optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
 
 streamOptimize :: PDFObject -> PDFWork IO PDFObject
 streamOptimize object = do
-  nameTranslations <- gets wNameTranslations
   whatOptimizationFor object >>= \case
     XMLOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "XML stream optimization"
@@ -75,7 +72,7 @@ streamOptimize object = do
       setStream optimizedStream object
 
     GfxOptimization -> do
-      stream <- getStream object >>= optimizeGFX nameTranslations
+      stream <- getStream object >>= optimizeGFX
       setStream stream object
 
     JPGOptimization -> do
@@ -146,6 +143,9 @@ Optimize a PDF object.
 - using Zopfli instead of Zlib
 - combining Zopfli and RLE
 - removing unneeded spaces in XML stream
+- optimizing JPG images
+- optimizing TTF fonts
+- optimizing graphics streams
 
 Optimization of spaces is done at the `PDFObject` level, not by this function.
 

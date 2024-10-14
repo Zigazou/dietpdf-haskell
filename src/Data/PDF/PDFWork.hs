@@ -22,6 +22,7 @@ module Data.PDF.PDFWork
   , sayErrorP
   , fallibleP
   , setTranslationTable
+  , getTranslationTable
   )
 where
 
@@ -157,6 +158,9 @@ putObject object = modifyPDF $ \pdf ->
 setTranslationTable :: Monad m => TranslationTable ByteString -> PDFWork m ()
 setTranslationTable translationTable = modifyWorkData $
   \workData -> workData { wNameTranslations = translationTable }
+
+getTranslationTable :: Monad m => PDFWork m (TranslationTable ByteString)
+getTranslationTable = gets wNameTranslations
 
 isEmptyPDF :: Monad m => PDFWork m Bool
 isEmptyPDF = do
