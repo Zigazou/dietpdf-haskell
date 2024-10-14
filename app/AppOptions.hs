@@ -18,6 +18,14 @@ module AppOptions
 import Codec.Compression.Predict (Predictor)
 
 import Data.Kind (Type)
+import Data.PDF.Settings
+    ( OptimizeGFX
+    , UseGhostScript
+    , UseZopfli
+    , toOptimizeGFX
+    , toUseGhostScript
+    , toUseZopfli
+    )
 
 import Options.Applicative
     ( Alternative (some)
@@ -59,7 +67,7 @@ predictorsHelp =
 
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !FilePath !Bool
+  = OptimizeOptions !FilePath !FilePath !UseGhostScript !UseZopfli !OptimizeGFX
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -99,7 +107,9 @@ commandOptimize = command
     (   OptimizeOptions
     <$> argument str (metavar "<input_pdf_file>" <> help "PDF file to process")
     <*> argument str (metavar "<output_pdf_file>" <> help "PDF file to create")
-    <*> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing")
+    <*> (toUseGhostScript <$> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing"))
+    <*> (toUseZopfli . not <$> switch (long "no-zopfli" <> short 'z' <> help "Do not use Zopfli"))
+    <*> (toOptimizeGFX . not <$> switch (long "no-gfx-optimize" <> short 'x' <> help "Do not optimize graphics stream"))
     )
     (progDesc "Optimize a PDF file")
   )

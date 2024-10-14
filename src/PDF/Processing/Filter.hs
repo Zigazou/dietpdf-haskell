@@ -5,7 +5,7 @@ module PDF.Processing.Filter
   ( filterOptimize
   ) where
 
-import Control.Monad.State (lift)
+import Control.Monad.State (gets, lift)
 import Control.Monad.Trans.Except (except)
 
 import Data.Array (mkArray)
@@ -32,6 +32,8 @@ import Data.PDF.PDFObject
     ( PDFObject (PDFName, PDFNull, PDFNumber, PDFNumber, PDFXRefStream)
     )
 import Data.PDF.PDFWork (PDFWork, sayComparisonP, withContext)
+import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli), sZopfli)
+import Data.PDF.WorkData (wSettings)
 import Data.Sequence ((><))
 import Data.Text qualified as T
 
@@ -67,6 +69,8 @@ applyEveryFilterGeneric
   -> PDFWork IO [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
+  useZopfli <- gets (sZopfli . wSettings)
+
   let rNothing = mkFCAppend [] stream
       jpeg2kParameters =
         Just ( width
@@ -80,41 +84,56 @@ applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
   rRle <- lift (except $ rle widthComponents stream)
   filterInfo "RLE" stream (fcBytes rRle)
 
-  rZopfli <- lift (except $ zopfli widthComponents stream)
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  rZopfli <- lift (except $ zopfli widthComponents stream useZopfli)
+
+  case useZopfli of
+    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
+    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
 
   rleCombine <- if fcLength rRle < BS.length stream
     then do
-      rRleZopfli <- lift (except $ rleZopfli widthComponents stream)
-      filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
+      rRleZopfli <- lift (except $ rleZopfli widthComponents stream useZopfli)
+      case useZopfli of
+        UseZopfli  -> filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
+        UseDeflate -> filterInfo "RLE+Deflate" stream (fcBytes rRleZopfli)
 
       return [rRle, rRleZopfli]
     else
       return []
 
-  rPredZopfli <- lift (except $ predZopfli widthComponents stream)
-  filterInfo "Predictor/Zopfli" stream (fcBytes rPredZopfli)
+  rPredZopfli <- lift (except $ predZopfli widthComponents stream useZopfli)
+  case useZopfli of
+    UseZopfli  -> filterInfo "Predictor/Zopfli" stream (fcBytes rPredZopfli)
+    UseDeflate -> filterInfo "Predictor/Deflate" stream (fcBytes rPredZopfli)
 
-  rPredRleZopfli <- lift (except $ predRleZopfli widthComponents stream)
-  filterInfo "Predictor/Store+RLE+Zopfli" stream (fcBytes rPredRleZopfli)
+  rPredRleZopfli <- lift (except $ predRleZopfli widthComponents stream useZopfli)
+  case useZopfli of
+    UseZopfli  -> filterInfo "Predictor/RLE+Zopfli" stream (fcBytes rPredRleZopfli)
+    UseDeflate -> filterInfo "Predictor/Store+RLE+Deflate" stream (fcBytes rPredRleZopfli)
 
   return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli, rJpeg2k]
         ++ rleCombine
 
 -- The stream has no width nor components information.
 applyEveryFilterGeneric Nothing stream = do
+  useZopfli <- gets (sZopfli . wSettings)
+
   let rNothing = mkFCAppend [] stream
 
   rRle <- lift (except $ rle Nothing stream)
   filterInfo "RLE" stream (fcBytes rRle)
 
-  rZopfli <- lift (except $ zopfli Nothing stream)
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
+  case useZopfli of
+    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
+    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
 
   if fcLength rRle < BS.length stream
     then do
-      rRleZopfli <- lift (except $ rleZopfli Nothing stream)
-      filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
+      rRleZopfli <- lift (except $ rleZopfli Nothing stream useZopfli)
+      case useZopfli of
+        UseZopfli  -> filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
+        UseDeflate -> filterInfo "RLE+Deflate" stream (fcBytes rRleZopfli)
 
       return [rNothing, rRle, rZopfli, rRleZopfli]
     else
@@ -127,10 +146,13 @@ applyEveryFilterJPG
   -> PDFWork IO [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterJPG (Just _imageProperty) stream = do
+  useZopfli <- gets (sZopfli . wSettings)
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream)
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
+  case useZopfli of
+    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
+    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
 
   -- Try Jpeg2000 for images with less than 4 components.
   let jpeg2kQuality = 40 :: Int
@@ -142,10 +164,13 @@ applyEveryFilterJPG (Just _imageProperty) stream = do
   return [rNothing, rZopfli, rJpeg2k]
 
 applyEveryFilterJPG Nothing stream = do
+  useZopfli <- gets (sZopfli . wSettings)
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream)
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
+  case useZopfli of
+    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
+    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
 
   return [rNothing, rZopfli]
 
@@ -156,14 +181,20 @@ applyEveryFilterXRef
   -> PDFWork m [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterXRef widthComponents@(Just (_width, _components)) stream = do
-  rPredZopfli <- lift (except $ predZopfli widthComponents stream)
-  filterInfo "Predictor+Zopfli" stream (fcBytes rPredZopfli)
+  useZopfli <- gets (sZopfli . wSettings)
+  rPredZopfli <- lift (except $ predZopfli widthComponents stream useZopfli)
+  case useZopfli of
+    UseZopfli  -> filterInfo "Predictor+Zopfli" stream (fcBytes rPredZopfli)
+    UseDeflate -> filterInfo "Predictor+Deflate" stream (fcBytes rPredZopfli)
   return [rPredZopfli]
 applyEveryFilterXRef Nothing stream = do
+  useZopfli <- gets (sZopfli . wSettings)
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream)
-  filterInfo "Zopfli" stream (fcBytes rZopfli)
+  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
+  case useZopfli of
+    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
+    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
   return [rNothing, rZopfli]
 
 getWidthComponents :: Logging m => PDFObject -> PDFWork m (Maybe (Int, Int))

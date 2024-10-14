@@ -15,21 +15,29 @@ import Data.Functor ((<&>))
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
 import Data.PDF.PDFObject (PDFObject (PDFName), mkPDFDictionary)
+import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli))
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
+
+getCompressor :: UseZopfli -> (BS.ByteString -> Fallible BS.ByteString)
+getCompressor UseZopfli  = FL.compress
+getCompressor UseDeflate = FL.fastCompress
 
 predZopfli
   :: Maybe (Int, Int)
   -> BS.ByteString
+  -> UseZopfli
   -> Fallible FilterCombination
-predZopfli (Just (width, components)) stream = do
+predZopfli (Just (width, components)) stream useZopfli = do
+  let compressor = getCompressor useZopfli
+
   -- Try finding optimal predictors with Shannon entropy function
   compressedS <-
-    predict EntropyShannon PNGOptimum width components stream >>= FL.compress
+    predict EntropyShannon PNGOptimum width components stream >>= compressor
 
   -- Try finding optimal predictors with Deflate "entropy" function
   compressedD <-
-    predict EntropyDeflate PNGOptimum width components stream >>= FL.compress
+    predict EntropyDeflate PNGOptimum width components stream >>= compressor
 
   let compressed = if BS.length compressedD < BS.length compressedS
         then compressedD
@@ -47,8 +55,9 @@ predZopfli (Just (width, components)) stream = do
     ]
     compressed
 
-predZopfli Nothing stream =  do
+predZopfli Nothing stream useZopfli =  do
   let
+    compressor = getCompressor useZopfli
     width      = BS.length stream
     components = 1 :: Int
 
@@ -57,7 +66,7 @@ predZopfli Nothing stream =  do
           width
           components
           stream
-    >>= FL.compress
+    >>= compressor
     <&> mkFCAppend
           [ Filter
               (PDFName "FlateDecode")

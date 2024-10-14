@@ -65,6 +65,7 @@ library
       Data.PDF.PDFObjects
       Data.PDF.PDFPartition
       Data.PDF.PDFWork
+      Data.PDF.Settings
       Data.PDF.Statistics
       Data.PDF.WorkData
       Data.PDF.XRefEntry

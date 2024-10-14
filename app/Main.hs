@@ -28,6 +28,10 @@ import Data.Context (Contextual (ctx))
 import Data.Fallible (FallibleT, tryF)
 import Data.Logging (sayComparisonF)
 import Data.PDF.PDFDocument (PDFDocument)
+import Data.PDF.Settings
+    ( Settings (Settings, sOptimizeGFX, sUseGhostScript, sZopfli)
+    , UseGhostScript (DoNotUseGhostScript, UseGhostScript)
+    )
 import Data.UnifiedError (UnifiedError (ParseError, UnableToOpenFile))
 
 import External.GhostScriptOptimize (ghostScriptOptimize)
@@ -89,9 +93,13 @@ runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 
-runApp (OptimizeOptions inputPDF outputPDF useGS) = do
-  if useGS
-    then withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
+runApp (OptimizeOptions inputPDF outputPDF useGS useZopfli optimizeGFX) = do
+  let settings = Settings { sOptimizeGFX    = optimizeGFX
+                          , sZopfli         = useZopfli
+                          , sUseGhostScript = useGS
+                          }
+  case useGS of
+    UseGhostScript -> withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
       -- Close the handles so external programs can use the files.
       lift $ hClose ghostscriptHandle
 
@@ -99,22 +107,22 @@ runApp (OptimizeOptions inputPDF outputPDF useGS) = do
       ghostScriptOptimize inputPDF ghostscriptPDF
 
       -- Compare the sizes of the original and GhostScript PDFs.
-      originalSize <- lift $ getFileSize inputPDF
+      originalSize    <- lift $ getFileSize inputPDF
       ghostScriptSize <- lift $ getFileSize ghostscriptPDF
 
       sayComparisonF (ctx ("ghostscript" :: String))
                      "GhostScripted PDF" originalSize ghostScriptSize
 
-      if ghostScriptSize < originalSize then go ghostscriptPDF
-                                        else go inputPDF
-    else
-      go inputPDF
+      if ghostScriptSize < originalSize then go ghostscriptPDF settings
+                                        else go inputPDF settings
+
+    DoNotUseGhostScript -> go inputPDF settings
  where
-  go :: FilePath -> FallibleT IO ()
-  go pdfToOptimize = do
+  go :: FilePath -> Settings -> FallibleT IO ()
+  go pdfToOptimize settings = do
     -- Read the optimized PDF and optimize it further.
     tryF (readPDF pdfToOptimize) >>= \case
-      Right document                            -> optimize outputPDF document
+      Right document -> optimize outputPDF document settings
       Left  anError@(ParseError (_, offset, _)) -> do
         lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
         throwE anError
