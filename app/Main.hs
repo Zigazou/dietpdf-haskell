@@ -3,13 +3,14 @@ module Main
   ) where
 
 import AppOptions
-    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions)
+    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, GetOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions)
     , appOptions
     )
 
 import Command.Decode (decodeByteString)
 import Command.Encode (encodeByteString)
 import Command.Extract (extract)
+import Command.GetObjectByNumber (getObjectByNumber)
 import Command.Hash (objectHashes)
 import Command.Human (humanByteString)
 import Command.Info (showInfo)
@@ -149,6 +150,9 @@ runApp (StatOptions inputPDF) = do
   pdfs <- mapM readPDF inputPDF
   pdfSizes <- mapM (lift . getFileSize) inputPDF
   showStat (zip3 filenames pdfSizes pdfs)
+
+runApp (GetOptions objectNumber inputPDF) =
+  readPDF inputPDF >>= getObjectByNumber objectNumber
 
 options :: ParserInfo AppOptions
 options = info

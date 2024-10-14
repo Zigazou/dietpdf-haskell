@@ -242,6 +242,7 @@ executable dietpdf
       Command.Decode
       Command.Encode
       Command.Extract
+      Command.GetObjectByNumber
       Command.Hash
       Command.Human
       Command.Info

@@ -40,7 +40,11 @@ import Data.PDF.PDFWork
     , withStreamCount
     , withoutStreamCount
     )
-import Data.PDF.WorkData (WorkData (wPDF))
+import Data.PDF.Settings
+    ( OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX)
+    , Settings (sOptimizeGFX)
+    )
+import Data.PDF.WorkData (WorkData (wPDF, wSettings))
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 import Data.TranslationTable (getTranslationTable)
@@ -197,7 +201,11 @@ pdfEncode objects = do
 
   resourceNames <- getAllResourceNames
 
-  let nameTranslations = getTranslationTable toNameBase resourceNames
+  -- Do not create a translation table if GFX won't be optimized.
+  optGFX <- gets (sOptimizeGFX . wSettings)
+  let nameTranslations = case optGFX of
+        OptimizeGFX      -> getTranslationTable toNameBase resourceNames
+        DoNotOptimizeGFX -> Map.empty
 
   setTranslationTable nameTranslations
 

@@ -10,6 +10,7 @@ module Data.PDF.PDFWork
   , setTrailer
   , withoutStreamCount
   , getTrailer
+  , getObject
   , putObject
   , isEmptyPDF
   , hasNoVersion

@@ -10,6 +10,7 @@ module AppOptions
     , UnpredictOptions
     , HumanOptions
     , StatOptions
+    , GetOptions
     )
   , appOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
@@ -77,6 +78,7 @@ data AppOptions
   | UnpredictOptions !Predictor !Int !Int !(Maybe FilePath)
   | HumanOptions !(Maybe FilePath)
   | StatOptions ![FilePath]
+  | GetOptions !Int !FilePath
 
 commandInfo :: Mod CommandFields AppOptions
 commandInfo = command
@@ -187,6 +189,17 @@ commandStat = command
     (progDesc "Print statistics about a PDF file")
   )
 
+commandGet :: Mod CommandFields AppOptions
+commandGet = command
+  "get"
+  (info
+    (   GetOptions
+    <$> argument auto (metavar "<object_number>" <> help "Object number")
+    <*> argument str  (metavar "<input_pdf_file>" <> help "PDF file to query")
+    )
+    (progDesc "Get object from a PDF file")
+  )
+
 appOptions :: Parser AppOptions
 appOptions =
   subparser
@@ -200,3 +213,4 @@ appOptions =
     <> commandUnpredict
     <> commandHuman
     <> commandStat
+    <> commandGet
