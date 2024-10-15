@@ -72,8 +72,7 @@ streamOptimize object = do
       setStream optimizedStream object
 
     GfxOptimization -> do
-      stream <- getStream object >>= optimizeGFX
-      setStream stream object
+      getStream object >>= optimizeGFX >>= flip setStream object
 
     JPGOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "JPG stream optimization"

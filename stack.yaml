@@ -17,7 +17,8 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-22.35
+#resolver: lts-22.35
+resolver: nightly-2024-10-11
 compiler: ghc-9.8.2
 
 # User packages to be built.
@@ -43,6 +44,7 @@ packages:
 extra-deps:
 - binary-parsers-0.2.4.0@sha256:8c3a436df2d721cb3268c3c56f9ce982bc5dbcd6e6db4cce24e96d1d48078678,3595
 - spool-0.1@sha256:77780cbfc2c0be23ff2ea9e474062f3df97fcd9db946ee0b3508280a923b83e2,1461
+- hopfli-0.2.2.1@sha256:6a4abed1bf041c875cb66a0c53c63826dff13902a35f1e7b5a3a941a8bb6d284,2539
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

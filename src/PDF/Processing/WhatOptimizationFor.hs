@@ -29,6 +29,13 @@ whatOptimizationFor object =
       if BS.take 2 stream == "\xff\xd8"
         then return JPGOptimization
         else return NoOptimization
+    Just (PDFName "Form") -> do
+        tryP (getStream object) >>= \case
+          Right stream -> case gfxParse stream of
+              Right SQ.Empty -> return NoOptimization
+              Right _        -> return GfxOptimization
+              _notGfx        -> return NoOptimization
+          _noStream -> return NoOptimization
     _notXMLorImage -> getValue "Type" object >>= \case
       Just (PDFName "ObjStm")     -> return ObjectStreamOptimization
       Just (PDFName "XRef")       -> return XRefStreamOptimization
