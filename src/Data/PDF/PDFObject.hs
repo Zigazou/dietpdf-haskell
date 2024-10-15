@@ -31,6 +31,13 @@ module Data.PDF.PDFObject
   , mkEmptyPDFDictionary
   , mkPDFArray
   , mkPDFDictionary
+  , hasDictionary
+  , hasStream
+  , isIndirect
+  , getObjectNumber
+  , isHeader
+  , isTrailer
+  , isReference
   ) where
 
 import Data.Array (Array, mkArray, mkEmptyArray)
@@ -220,3 +227,53 @@ instance Contextual PDFObject where
   ctx (PDFTrailer   _)                            = Context "trail"
   ctx (PDFStartXRef _)                            = Context "startxref"
   ctx PDFEndOfFile                                = Context "eof"
+
+{- |
+Determine if a `PDFObject` has a dictionary.
+-}
+hasDictionary :: PDFObject -> Bool
+hasDictionary (PDFIndirectObject _ _ (PDFDictionary _)) = True
+hasDictionary PDFIndirectObjectWithStream{}             = True
+hasDictionary PDFObjectStream{}                         = True
+hasDictionary PDFXRefStream{}                           = True
+hasDictionary PDFDictionary{}                           = True
+hasDictionary (PDFTrailer (PDFDictionary _))            = True
+hasDictionary _anyOtherObject                           = False
+
+{- |
+Determine if a `PDFObject` has a stream.
+-}
+hasStream :: PDFObject -> Bool
+hasStream PDFIndirectObjectWithStream{} = True
+hasStream PDFObjectStream{}             = True
+hasStream PDFXRefStream{}               = True
+hasStream _anyOtherObject               = False
+
+isIndirect :: PDFObject -> Bool
+isIndirect PDFIndirectObject{}             = True
+isIndirect PDFIndirectObjectWithStream{}   = True
+isIndirect PDFIndirectObjectWithGraphics{} = True
+isIndirect PDFObjectStream{}               = True
+isIndirect PDFXRefStream{}                 = True
+isIndirect _anyOtherObject                 = False
+
+getObjectNumber :: PDFObject -> Maybe Int
+getObjectNumber (PDFIndirectObject number _ _)               = Just number
+getObjectNumber (PDFIndirectObjectWithStream number _ _ _)   = Just number
+getObjectNumber (PDFIndirectObjectWithGraphics number _ _ _) = Just number
+getObjectNumber (PDFObjectStream number _ _ _)               = Just number
+getObjectNumber (PDFXRefStream number _ _ _)                 = Just number
+getObjectNumber _anyOtherObject                              = Nothing
+
+isHeader :: PDFObject -> Bool
+isHeader PDFVersion{}    = True
+isHeader _anyOtherObject = False
+
+isTrailer :: PDFObject -> Bool
+isTrailer PDFTrailer{}    = True
+isTrailer PDFXRefStream{} = True
+isTrailer _anyOtherObject = False
+
+isReference :: PDFObject -> Bool
+isReference PDFReference{}  = True
+isReference _anyOtherObject = False

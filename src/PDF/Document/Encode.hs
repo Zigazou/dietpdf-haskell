@@ -21,6 +21,7 @@ import Data.PDF.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Data.PDF.PDFDocument (PDFDocument, fromList)
 import Data.PDF.PDFObject
     ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFStartXRef, PDFTrailer, PDFVersion)
+    , getObjectNumber
     )
 import Data.PDF.PDFPartition
     ( PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream)
@@ -57,7 +58,7 @@ import GHC.IO.Handle (BufferMode (LineBuffering))
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
-import PDF.Object.Object.Properties (getObjectNumber, getValueForKey, hasKey)
+import PDF.Object.Object.Properties (getValueForKey, hasKey)
 import PDF.Object.Object.RenameResources (renameResources)
 import PDF.Object.State (getValue, setMaybe)
 import PDF.Processing.Optimize (optimize)

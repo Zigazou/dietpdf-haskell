@@ -15,6 +15,11 @@ import Data.Logging (Logging)
 import Data.PDF.PDFDocument (PDFDocument, cFilter, deepFind, member)
 import Data.PDF.PDFObject
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFReference)
+    , hasStream
+    , isHeader
+    , isIndirect
+    , isReference
+    , isTrailer
     )
 import Data.PDF.PDFObjects (fromPDFDocument, toPDFDocument)
 import Data.PDF.PDFPartition
@@ -23,13 +28,7 @@ import Data.PDF.PDFPartition
 import Data.PDF.PDFWork (PDFWork, sayP, withContext)
 
 import PDF.Document.Uncompress (uncompressDocument, uncompressObjects)
-import PDF.Object.Object.Properties
-    ( hasKey
-    , hasStream
-    , isHeader
-    , isIndirect
-    , isTrailer
-    )
+import PDF.Object.Object.Properties (hasKey)
 
 removeUnused :: Logging m => PDFPartition -> PDFWork m PDFPartition
 removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers) =
@@ -73,10 +72,6 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
 
   used :: PDFDocument -> PDFObject -> Bool
   used refs object = isNotLinearized object && isReferenced refs object
-
-  isReference :: PDFObject -> Bool
-  isReference PDFReference{}  = True
-  isReference _anyOtherObject = False
 
 {- |
 Determines if a PDF object should be embedded in an object stream (ObjStm).

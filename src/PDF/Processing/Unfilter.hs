@@ -17,6 +17,7 @@ import Data.ByteString (ByteString)
 import Data.Logging (Logging)
 import Data.PDF.Filter (Filter (fDecodeParms, fFilter))
 import Data.PDF.FilterList (FilterList)
+import Data.PDF.PDFObject (hasStream)
 import Data.PDF.PDFWork (PDFWork, fallibleP, throwError, tryP)
 import Data.Sequence as SQ (Seq ((:<|)))
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
@@ -26,7 +27,6 @@ import PDF.Object.Object
     ( PDFObject (PDFName, PDFNumber)
     , ToPDFNumber (mkPDFNumber)
     , hasKey
-    , hasStream
     )
 import PDF.Object.State (getStream, getValue, getValueDefault, setStream)
 

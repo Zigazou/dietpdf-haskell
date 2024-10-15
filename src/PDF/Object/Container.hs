@@ -15,12 +15,12 @@ import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterList (FilterList, filtersFilter, filtersParms)
 import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream)
+    , hasDictionary
     )
 import Data.PDF.PDFWork (PDFWork, throwError)
 import Data.Sequence qualified as SQ
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
-import PDF.Object.Object (hasDictionary)
 import PDF.Object.State (embedObject, getValue, updateValue)
 
 {- |

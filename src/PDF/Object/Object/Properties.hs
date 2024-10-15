@@ -1,14 +1,8 @@
 module PDF.Object.Object.Properties
   ( hasKey
   , getValueForKey
-  , hasDictionary
-  , hasStream
   , updateStream
-  , getObjectNumber
   , xrefCount
-  , isIndirect
-  , isHeader
-  , isTrailer
   , objectType
   , isInfo
   , isCatalog
@@ -18,7 +12,7 @@ import Data.ByteString qualified as BS
 import Data.List (foldl')
 import Data.Map.Strict qualified as Map
 import Data.PDF.PDFObject
-    ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
+    ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRef, PDFXRefStream)
     )
 import Data.PDF.XRefSubsection (xrssCount)
 
@@ -99,50 +93,14 @@ getValueForKey key (PDFTrailer (PDFDictionary dict)) = Map.lookup key dict
 getValueForKey _ _ = Nothing
 
 {- |
-Determine if a `PDFObject` has a dictionary.
+Checks if the given PDF object contains document information (e.g., has an
+"Author" key).
+
+Returns `True` if the object contains document info, `False` otherwise.
 -}
-hasDictionary :: PDFObject -> Bool
-hasDictionary (PDFIndirectObject _ _ (PDFDictionary _)) = True
-hasDictionary PDFIndirectObjectWithStream{}             = True
-hasDictionary PDFObjectStream{}                         = True
-hasDictionary PDFXRefStream{}                           = True
-hasDictionary PDFDictionary{}                           = True
-hasDictionary (PDFTrailer (PDFDictionary _))            = True
-hasDictionary _anyOtherObject                           = False
-
-{- |
-Determine if a `PDFObject` has a stream.
--}
-hasStream :: PDFObject -> Bool
-hasStream PDFIndirectObjectWithStream{} = True
-hasStream PDFObjectStream{}             = True
-hasStream PDFXRefStream{}               = True
-hasStream _anyOtherObject               = False
-
-isIndirect :: PDFObject -> Bool
-isIndirect PDFIndirectObject{}             = True
-isIndirect PDFIndirectObjectWithStream{}   = True
-isIndirect PDFIndirectObjectWithGraphics{} = True
-isIndirect PDFObjectStream{}               = True
-isIndirect PDFXRefStream{}                 = True
-isIndirect _anyOtherObject                 = False
-
-getObjectNumber :: PDFObject -> Maybe Int
-getObjectNumber (PDFIndirectObject number _ _)               = Just number
-getObjectNumber (PDFIndirectObjectWithStream number _ _ _)   = Just number
-getObjectNumber (PDFIndirectObjectWithGraphics number _ _ _) = Just number
-getObjectNumber (PDFObjectStream number _ _ _)               = Just number
-getObjectNumber (PDFXRefStream number _ _ _)                 = Just number
-getObjectNumber _anyOtherObject                              = Nothing
-
-isHeader :: PDFObject -> Bool
-isHeader PDFVersion{}    = True
-isHeader _anyOtherObject = False
-
-isTrailer :: PDFObject -> Bool
-isTrailer PDFTrailer{}    = True
-isTrailer PDFXRefStream{} = True
-isTrailer _anyOtherObject = False
+isInfo :: PDFObject -> Bool
+isInfo object@PDFIndirectObject{} = hasKey "Author" object
+isInfo _anyOtherObject            = False
 
 {- |
 Checks if the given PDF object is a Catalog object by verifying that its "Type"
@@ -156,13 +114,3 @@ isCatalog (PDFIndirectObject _ _ (PDFDictionary dict)) =
     Just (PDFName "Catalog") -> True
     _anyOtherValue           -> False
 isCatalog _anyOtherObject = False
-
-{- |
-Checks if the given PDF object contains document information (e.g., has an
-"Author" key).
-
-Returns `True` if the object contains document info, `False` otherwise.
--}
-isInfo :: PDFObject -> Bool
-isInfo object@PDFIndirectObject{} = hasKey "Author" object
-isInfo _anyOtherObject            = False

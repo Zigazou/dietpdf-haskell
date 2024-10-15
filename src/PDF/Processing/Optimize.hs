@@ -18,6 +18,7 @@ import Data.PDF.OptimizationType
     )
 import Data.PDF.PDFObject
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
+    , hasStream
     )
 import Data.PDF.PDFWork
     ( PDFWork
@@ -35,7 +36,6 @@ import External.TtfAutoHint (ttfAutoHintOptimize)
 
 import PDF.Graphics.Optimize (optimizeGFX)
 import PDF.Object.Container (getFilters)
-import PDF.Object.Object.Properties (hasStream)
 import PDF.Object.State (getStream, setStream, setStream1)
 import PDF.Object.String (optimizeString)
 import PDF.Processing.Filter (filterOptimize)

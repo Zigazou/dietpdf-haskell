@@ -30,6 +30,7 @@ import Data.PDF.OptimizationType
     )
 import Data.PDF.PDFObject
     ( PDFObject (PDFName, PDFNull, PDFNumber, PDFNumber, PDFXRefStream)
+    , hasStream
     )
 import Data.PDF.PDFWork (PDFWork, sayComparisonP, withContext)
 import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli), sZopfli)
@@ -42,7 +43,6 @@ import External.JpegToJpeg2k (jpegToJpeg2k)
 import PDF.Document.XRef (xrefStreamWidth)
 import PDF.Object.Container (getFilters, setFilters)
 import PDF.Object.Object (fromPDFObject)
-import PDF.Object.Object.Properties (hasStream)
 import PDF.Object.State (getStream, getValue, setStream)
 import PDF.Processing.FilterCombine.Jpeg2k (jpeg2k)
 import PDF.Processing.FilterCombine.PredRleZopfli (predRleZopfli)

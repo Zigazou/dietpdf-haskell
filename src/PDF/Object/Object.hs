@@ -39,12 +39,9 @@ module PDF.Object.Object
 
     -- * Getting info about a `PDFObject`
   , hasKey
-  , hasDictionary
-  , hasStream
 
     -- * PDF indirect object
   , updateStream
-  , getObjectNumber
 
     -- * PDF characters
   , isDelimiter
@@ -65,11 +62,6 @@ module PDF.Object.Object
   , XRefState(InUseEntry, FreeEntry)
   , XRefEntry(XRefEntry, xreOffset, xreGeneration, xreState)
   , XRefSubsection(XRefSubsection, xrssStart, xrssCount, xrssEntries)
-
-    -- * Partitioning
-  , isIndirect
-  , isHeader
-  , isTrailer
   ) where
 
 import Data.PDF.PDFObject
@@ -103,13 +95,7 @@ import PDF.Object.Object.PDFCharacter
     , isWhiteSpace
     )
 import PDF.Object.Object.Properties
-    ( getObjectNumber
-    , hasDictionary
-    , hasKey
-    , hasStream
-    , isHeader
-    , isIndirect
-    , isTrailer
+    ( hasKey
     , updateStream
     , xrefCount
     )
