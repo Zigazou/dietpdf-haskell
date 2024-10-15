@@ -5,6 +5,7 @@ module PDF.Processing.ObjectInfo
 import Data.ByteString qualified as BS
 import Data.Logging (Logging)
 import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.PDF.ObjectCategory (ObjectCategory (Other))
 import Data.PDF.ObjectInfo
     ( ObjectInfo (ObjectInfo, oCategory, oDescription, oNumber, oOffset, oStream)
@@ -14,6 +15,8 @@ import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
     )
 import Data.PDF.PDFWork (PDFWork)
+import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8Lenient)
 import Data.Text.Lazy (toStrict)
 
 import Formatting (format, int, (%))
@@ -24,6 +27,24 @@ import PDF.Processing.ObjectCategory (objectCategory)
 import PDF.Processing.Unfilter (unfilter)
 
 import Util.Number (fromNumber)
+
+getTypeSubType :: PDFObject -> Maybe Text
+getTypeSubType object = getTypeSubType' object >>= Just . decodeUtf8Lenient
+
+getTypeSubType' :: PDFObject -> Maybe BS.ByteString
+getTypeSubType' (PDFDictionary dict) =
+  case (Map.lookup "Type" dict, Map.lookup "Subtype" dict) of
+  (Just (PDFName objectType), Just (PDFName objectSubType)) ->
+    Just (objectType <> "/" <> objectSubType)
+  (Just (PDFName objectType), Nothing) -> Just objectType
+  (Nothing, Just (PDFName objectSubType)) -> Just objectSubType
+  _anyOtherCase -> Nothing
+getTypeSubType' (PDFIndirectObject _major _minor object) = getTypeSubType' object
+getTypeSubType' (PDFIndirectObjectWithStream _major _minor object _stream) =
+  getTypeSubType' (PDFDictionary object)
+getTypeSubType' (PDFIndirectObjectWithGraphics _major _minor object _stream) =
+  getTypeSubType' (PDFDictionary object)
+getTypeSubType' _anyOtherObject = Nothing
 
 objectInfo :: Logging IO => PDFObject -> Maybe Int -> PDFWork IO ObjectInfo
 objectInfo (PDFComment comment) offset = return ObjectInfo
@@ -114,9 +135,9 @@ objectInfo (PDFDictionary dictionary) offset = return ObjectInfo
   , oOffset      = offset
   }
 
-objectInfo (PDFIndirectObject number _revision _object) offset = return ObjectInfo
+objectInfo (PDFIndirectObject number _revision object) offset = return ObjectInfo
   { oNumber      = Just number
-  , oDescription = "indirect object"
+  , oDescription = fromMaybe "indirect object" (getTypeSubType object)
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
@@ -128,7 +149,7 @@ objectInfo object@(PDFIndirectObjectWithStream number _revision _dict stream) of
 
   return ObjectInfo
     { oNumber      = Just number
-    , oDescription = "object with stream"
+    , oDescription = fromMaybe "object with stream" (getTypeSubType object)
     , oCategory    = category
     , oStream      = Just StreamInfo
       { sFilteredSize   = BS.length stream
@@ -137,9 +158,9 @@ objectInfo object@(PDFIndirectObjectWithStream number _revision _dict stream) of
     , oOffset      = offset
     }
 
-objectInfo (PDFIndirectObjectWithGraphics number _revision _dict _objects) offset = return ObjectInfo
+objectInfo (PDFIndirectObjectWithGraphics number _revision dict _objects) offset = return ObjectInfo
     { oNumber      = Just number
-    , oDescription = "object with graphics"
+    , oDescription = fromMaybe "object with graphics" (getTypeSubType (PDFDictionary dict))
     , oCategory    = Other
     , oStream      = Nothing
     , oOffset      = offset
@@ -151,7 +172,7 @@ objectInfo object@(PDFObjectStream number _revision _object stream) offset = do
 
   return ObjectInfo
     { oNumber      = Just number
-    , oDescription = "object stream"
+    , oDescription = fromMaybe "object stream" (getTypeSubType object)
     , oCategory    = category
     , oStream      = Just StreamInfo
       { sFilteredSize   = BS.length stream
@@ -166,7 +187,7 @@ objectInfo object@(PDFXRefStream number _revision _object stream) offset = do
 
   return ObjectInfo
     { oNumber      = Just number
-    , oDescription = "xref stream"
+    , oDescription = fromMaybe "xref stream" (getTypeSubType object)
     , oCategory    = category
     , oStream      = Just StreamInfo
       { sFilteredSize   = BS.length stream
