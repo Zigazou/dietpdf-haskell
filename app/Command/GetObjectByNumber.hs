@@ -38,6 +38,7 @@ hide (Level level _display) = Level level False
 disp :: Level -> Level
 disp (Level level _display) = Level level True
 
+infixl 9 %>
 (%>) :: Level -> BS.ByteString -> BS.ByteString
 (%>) (Level _level False) bytestring = bytestring
 (%>) (Level level True) bytestring = BS.replicate level 32

@@ -155,14 +155,14 @@ getAllResourceNames =
   getKeys key object = do
     getValueForKey key object >>= \case
       PDFDictionary dict -> Just $ Map.keys dict
-      _                  -> Nothing
+      _notADictionary    -> Nothing
 
   getResourceKeys :: BS.ByteString -> PDFObject -> Maybe [BS.ByteString]
   getResourceKeys key object = do
     resources <- getValueForKey "Resources" object
     getValueForKey key resources >>= \case
       PDFDictionary dict -> Just $ Map.keys dict
-      _                  -> Nothing
+      _notADictionary    -> Nothing
 
 {- |
 Given a list of PDF objects, generate the PDF file content.

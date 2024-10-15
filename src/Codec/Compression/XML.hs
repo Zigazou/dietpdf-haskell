@@ -52,7 +52,7 @@ Nothing
 parseNumber :: String -> Maybe Double
 parseNumber string = case reads string of
   [(number, "")] -> Just number
-  _              -> Nothing
+  _notANumber    -> Nothing
 
 optimizePrefixes :: [Content] -> [Content]
 optimizePrefixes contents =
