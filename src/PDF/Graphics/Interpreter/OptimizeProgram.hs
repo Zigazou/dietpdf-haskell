@@ -67,8 +67,15 @@ removeUselessSaveRestore program = case breakl onRestore program of
 
   -- Found a restore command not followed by another restore command.
   (beforeRestore, Command GSRestoreGS _params :<| afterRestore) ->
-       beforeRestore
-    <> (Command GSRestoreGS mempty <| removeUselessSaveRestore afterRestore)
+    -- Look for the save command associated with the restore command.
+    case findRelatedSave beforeRestore of
+      -- If there is no command between save and restore, remove both.
+      Just (beforeSave, Command GSSaveGS _params :<| Empty) ->
+           beforeSave
+        <> removeUselessSaveRestore afterRestore
+      _anythingElse ->
+           beforeRestore
+        <> (Command GSRestoreGS mempty <| removeUselessSaveRestore afterRestore)
 
   -- For any other case, just keep the program as is.
   _anyOtherCase -> program
