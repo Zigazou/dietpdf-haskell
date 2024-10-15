@@ -87,7 +87,9 @@ pretty processed level (PDFDictionary dict) = do
   children <- mapM
     ( \(key, value) -> do
         pKey <- pretty processed (inc level) (PDFName key)
-        pValue <- pretty processed (hide (inc level)) value
+        pValue <- if key == "Parent"
+                    then return $ hide level %> fromPDFObject value <> "\n"
+                    else pretty processed (hide (inc level)) value
         return $ BS.dropEnd 1 pKey <> " " <> pValue
     )
     (Map.toList dict)
