@@ -107,13 +107,21 @@ optimizeCommand command rest = case (operator, parameters) of
   -- End text object
   (GSEndText, _params) -> return command
 
+  -- Identity matrix can be ignored
+  (GSSetCTM, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| Empty) -> do
+    return (Command GSNone mempty)
+
   -- Set current transformation matrix
   (GSSetCTM, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
     applyGraphicsMatrixS (TransformationMatrix a b c d e f)
     usefulGraphicsPrecisionS <&> optimizeParameters command . (+ 2)
 
+  -- Identity text matrix can be ignored
+  (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| Empty) ->
+    return (Command GSNone mempty)
+
   -- Set text transformation matrix
-  (GSSetTextMatrix, GFXNumber 1.0 :<| GFXNumber 0.0 :<| GFXNumber 0.0 :<| GFXNumber 1.0 :<| GFXNumber tx :<| GFXNumber ty :<| Empty) -> do
+  (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber tx :<| GFXNumber ty :<| Empty) -> do
     precision <- usefulTextPrecisionS
     if hasTextmoveBeforeEndText rest
       then return $ optimizeParameters command precision
