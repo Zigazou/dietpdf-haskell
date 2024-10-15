@@ -246,7 +246,7 @@ objectInfo (PDFTrailer _) offset = return ObjectInfo
 
 objectInfo (PDFStartXRef startOffset) offset = return ObjectInfo
   { oNumber      = Nothing
-  , oDescription = toStrict $ format ("startxref=" % int % "]") startOffset
+  , oDescription = toStrict $ format ("startxref=" % int) startOffset
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
