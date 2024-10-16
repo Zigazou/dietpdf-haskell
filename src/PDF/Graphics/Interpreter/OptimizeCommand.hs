@@ -18,9 +18,13 @@ import PDF.Graphics.Interpreter.Command
     )
 import PDF.Graphics.Interpreter.GraphicsState
     ( GraphicsState (gsCurrentPointX, gsCurrentPointY, gsFlatness, gsIntent, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsPathStartX, gsPathStartY)
+    )
+import PDF.Graphics.Interpreter.InterpreterState
+    ( InterpreterState (iGraphicsState)
     , applyGraphicsMatrixS
     , applyTextMatrixS
     , getPathStartS
+    , resetTextStateS
     , restoreStateS
     , saveStateS
     , setCurrentPointS
@@ -93,7 +97,7 @@ hasTextmoveBeforeEndText Empty = False
 The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}
-optimizeCommand :: Command -> Program -> State GraphicsState Command
+optimizeCommand :: Command -> Program -> State InterpreterState Command
 optimizeCommand command rest = case (operator, parameters) of
   -- Save graphics state
   (GSSaveGS, _params) -> saveStateS >> return command
@@ -102,7 +106,7 @@ optimizeCommand command rest = case (operator, parameters) of
   (GSRestoreGS, _params) -> restoreStateS >> return command
 
   -- Begin text object
-  (GSBeginText, _params) -> applyTextMatrixS mempty >> return command
+  (GSBeginText, _params) -> resetTextStateS >> applyTextMatrixS mempty >> return command
 
   -- End text object
   (GSEndText, _params) -> return command
@@ -124,7 +128,9 @@ optimizeCommand command rest = case (operator, parameters) of
   (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber tx :<| GFXNumber ty :<| Empty) -> do
     precision <- usefulTextPrecisionS
     if hasTextmoveBeforeEndText rest
-      then return $ optimizeParameters command precision
+      then do
+        applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
+        return $ optimizeParameters command precision
       else
         return $ optimizeParameters
                   (Command GSMoveToNextLine (GFXNumber tx :<| GFXNumber ty :<| Empty))
@@ -163,10 +169,10 @@ optimizeCommand command rest = case (operator, parameters) of
 
   -- Optimize LineTo operator
   (GSLineTo, GFXNumber x :<| GFXNumber y :<| Empty) -> do
-    currentX <- gets gsCurrentPointX
-    currentY <- gets gsCurrentPointY
-    startX   <- gets gsPathStartX
-    startY   <- gets gsPathStartY
+    currentX <- gets (gsCurrentPointX . iGraphicsState)
+    currentY <- gets (gsCurrentPointY . iGraphicsState)
+    startX   <- gets (gsPathStartX . iGraphicsState)
+    startY   <- gets (gsPathStartY . iGraphicsState)
 
     -- Calculate next coordinates.
     let lineIsNotNeeded =
@@ -216,7 +222,7 @@ optimizeCommand command rest = case (operator, parameters) of
 
   (GSSetLineWidth, GFXNumber width :<| Empty) -> do
     width' <- usefulGraphicsPrecisionS <&> flip round' width
-    currentWidth <- gets gsLineWidth
+    currentWidth <- gets (gsLineWidth . iGraphicsState)
     if width' == currentWidth
       then return (Command GSNone mempty)
       else do
@@ -225,7 +231,7 @@ optimizeCommand command rest = case (operator, parameters) of
 
   (GSSetLineCap, GFXNumber lineCap :<| Empty) -> do
     lineCap' <- usefulGraphicsPrecisionS <&> flip round' lineCap
-    currentLineCap <- gets gsLineCap
+    currentLineCap <- gets (gsLineCap . iGraphicsState)
     if lineCap' == currentLineCap
       then return (Command GSNone mempty)
       else do
@@ -234,7 +240,7 @@ optimizeCommand command rest = case (operator, parameters) of
 
   (GSSetLineJoin, GFXNumber lineJoin :<| Empty) -> do
     lineJoin' <- usefulGraphicsPrecisionS <&> flip round' lineJoin
-    currentLineJoin <- gets gsLineJoin
+    currentLineJoin <- gets (gsLineJoin . iGraphicsState)
     if lineJoin' == currentLineJoin
       then return (Command GSNone mempty)
       else do
@@ -243,7 +249,7 @@ optimizeCommand command rest = case (operator, parameters) of
 
   (GSSetMiterLimit, GFXNumber miterLimit :<| Empty) -> do
     miterLimit' <- usefulGraphicsPrecisionS <&> flip round' miterLimit
-    currentMiterLimit <- gets gsMiterLimit
+    currentMiterLimit <- gets (gsMiterLimit . iGraphicsState)
     if miterLimit' == currentMiterLimit
       then return (Command GSNone mempty)
       else do
@@ -251,7 +257,7 @@ optimizeCommand command rest = case (operator, parameters) of
         usefulGraphicsPrecisionS <&> optimizeParameters command
 
   (GSSetColourRenderingIntent, GFXName intent :<| Empty) -> do
-    currentIntent <- gets gsIntent
+    currentIntent <- gets (gsIntent . iGraphicsState)
     if intent == currentIntent
       then return (Command GSNone mempty)
       else do
@@ -260,7 +266,7 @@ optimizeCommand command rest = case (operator, parameters) of
 
   (GSSetFlatnessTolerance, GFXNumber flatness :<| Empty) -> do
     flatness' <- usefulGraphicsPrecisionS <&> flip round' flatness
-    currentFlatness <- gets gsFlatness
+    currentFlatness <- gets (gsFlatness . iGraphicsState)
     if flatness' == currentFlatness
       then return (Command GSNone mempty)
       else do

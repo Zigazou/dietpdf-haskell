@@ -12,9 +12,9 @@ import Data.PDF.GFXObject (GSOperator (GSRestoreGS, GSSaveGS))
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), breakl, singleton, (<|), (|>))
 
 import PDF.Graphics.Interpreter.Command (Command (Command))
-import PDF.Graphics.Interpreter.GraphicsState
-    ( GraphicsState
-    , defaultGraphicsState
+import PDF.Graphics.Interpreter.InterpreterState
+    ( InterpreterState
+    , defaultInterpreterState
     )
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
 import PDF.Graphics.Interpreter.Program (Program)
@@ -85,9 +85,9 @@ The 'optimizeProgram' function takes a 'Program' and returns an optimized
 'Program'.
 -}
 optimizeProgram :: Program -> Program
-optimizeProgram = flip evalState defaultGraphicsState
+optimizeProgram = flip evalState defaultInterpreterState
                 . foldMWithRest go mempty
                 . removeUselessSaveRestore
   where
-    go :: Program -> Command -> Program -> State GraphicsState Program
+    go :: Program -> Command -> Program -> State InterpreterState Program
     go program command rest = optimizeCommand command rest <&> (program |>)

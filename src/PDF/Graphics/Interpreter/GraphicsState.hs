@@ -1,52 +1,27 @@
 module PDF.Graphics.Interpreter.GraphicsState
   ( GraphicsState (..)
   , defaultGraphicsState
-  , saveState
-  , saveStateS
-  , restoreState
-  , restoreStateS
   , usefulGraphicsPrecision
-  , usefulGraphicsPrecisionS
   , usefulTextPrecision
-  , usefulTextPrecisionS
   , usefulColorPrecision
-  , usefulColorPrecisionS
   , applyGraphicsMatrix
-  , applyGraphicsMatrixS
   , applyTextMatrix
-  , applyTextMatrixS
   , setFont
-  , setFontS
   , setHorizontalScaling
-  , setHorizontalScalingS
   , setTextRise
-  , setTextRiseS
   , setPathStart
-  , setPathStartS
   , setNonStrokeAlpha
-  , setNonStrokeAlphaS
   , setStrokeAlpha
-  , setStrokeAlphaS
   , setFlatness
-  , setFlatnessS
   , setRenderingIntent
-  , setRenderingIntentS
   , setDashPattern
-  , setDashPatternS
   , setMiterLimit
-  , setMiterLimitS
   , setLineJoin
-  , setLineJoinS
   , setLineCap
-  , setLineCapS
   , setLineWidth
-  , setLineWidthS
   , setCurrentPoint
-  , setCurrentPointS
-  , getPathStartS
+  , resetTextState
   ) where
-
-import Control.Monad.State (MonadState (get), State, gets, put)
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -78,7 +53,6 @@ data GraphicsState = GraphicsState
   , gsScaleX         :: !Double
   , gsScaleY         :: !Double
   , gsTextState      :: !TextState
-  , gsStack          :: ![GraphicsState]
   , gsLineWidth      :: !Double
   , gsLineCap        :: !Double
   , gsLineJoin       :: !Double
@@ -110,7 +84,6 @@ defaultGraphicsState = GraphicsState
   , gsScaleX         = 1.0
   , gsScaleY         = 1.0
   , gsTextState      = defaultTextState
-  , gsStack          = []
   , gsLineWidth      = 1.0
   , gsLineCap        = 0.0
   , gsLineJoin       = 1.0
@@ -133,15 +106,12 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulGraphicsPrecision :: GraphicsState -> Int
-usefulGraphicsPrecision state = max 0 (ceiling (logBase 10 scale) + 2)
+usefulGraphicsPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
  where
   userUnit = gsUserUnit state
   scaleX   = userUnit * abs (gsScaleX state)
   scaleY   = userUnit * abs (gsScaleY state)
   scale    = max scaleX scaleY
-
-usefulGraphicsPrecisionS :: State GraphicsState Int
-usefulGraphicsPrecisionS = gets usefulGraphicsPrecision
 
 {- |
 Calculates the useful precision of the current graphics state. The useful
@@ -160,9 +130,6 @@ usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
   scaleY   = userUnit * scaleTY * scaleGY
   scale    = max scaleX scaleY
 
-usefulTextPrecisionS :: State GraphicsState Int
-usefulTextPrecisionS = gets usefulTextPrecision
-
 {- |
 Calculates the useful precision of the current graphics state. The useful
 precision is the number of decimal places that are useful for rendering
@@ -170,29 +137,6 @@ purposes.
 -}
 usefulColorPrecision :: GraphicsState -> Int
 usefulColorPrecision _state = 2
-
-usefulColorPrecisionS :: State GraphicsState Int
-usefulColorPrecisionS = gets usefulColorPrecision
-
-{- |
-Saves the current graphics state to the graphics state stack.
--}
-saveState :: GraphicsState -> GraphicsState
-saveState state = state { gsStack = state : gsStack state}
-
-saveStateS :: State GraphicsState ()
-saveStateS = get >>= put . saveState
-
-{- |
-Restores the previous graphics state from the graphics state stack.
--}
-restoreState :: GraphicsState -> GraphicsState
-restoreState state = case gsStack state of
-  []                       -> defaultGraphicsState
-  (prevState : prevStates) -> prevState { gsStack = prevStates }
-
-restoreStateS :: State GraphicsState ()
-restoreStateS = get >>= put . restoreState
 
 {- |
 Applies a transformation matrix to the current transformation matrix (CTM) of
@@ -205,21 +149,9 @@ applyGraphicsMatrix matrix state = state
   , gsScaleY = scaleY
   }
  where
-  tsState          = gsTextState state
   graphicsMatrix   = gsCTM state <> matrix
-  renderingMatrix  = graphicsMatrix <> (TransformationMatrix
-    { tmA = tsFontSize tsState * tsHorizontalScaling tsState
-    , tmB = 0.0
-    , tmC = 0.0
-    , tmD = tsFontSize tsState
-    , tmE = 0.0
-    , tmF = tsRise tsState
-    })
-  (scaleX, scaleY) = matrixScale renderingMatrix
+  (scaleX, scaleY) = matrixScale graphicsMatrix
                                  (gsScaleX state, gsScaleY state)
-
-applyGraphicsMatrixS :: TransformationMatrix -> State GraphicsState ()
-applyGraphicsMatrixS matrix = get >>= put . applyGraphicsMatrix matrix
 
 {- |
 Set the text matrix of the current text state.
@@ -237,11 +169,18 @@ applyTextMatrix matrix state = state
       }
   }
  where
+  tsState          = gsTextState state
   textMatrix = gsCTM state <> matrix
-  (scaleX, scaleY) = matrixScale textMatrix (gsScaleX state, gsScaleY state)
-
-applyTextMatrixS :: TransformationMatrix -> State GraphicsState ()
-applyTextMatrixS matrix = get >>= put . applyTextMatrix matrix
+  renderingMatrix  = textMatrix <> (TransformationMatrix
+    { tmA = tsFontSize tsState * tsHorizontalScaling tsState
+    , tmB = 0.0
+    , tmC = 0.0
+    , tmD = tsFontSize tsState
+    , tmE = 0.0
+    , tmF = tsRise tsState
+    })
+  (scaleX, scaleY) = matrixScale renderingMatrix
+                                 (gsScaleX state, gsScaleY state)
 
 {- |
 Set the font and font size of the current text state.
@@ -257,9 +196,6 @@ setFont fontName fontSize state = state
       }
   }
 
-setFontS :: BS.ByteString -> Double -> State GraphicsState ()
-setFontS fontName fontSize = get >>= put . setFont fontName fontSize
-
 {- |
 Set the horizontal scaling of the current text state.
 
@@ -269,9 +205,6 @@ percentages (0..100).
 setHorizontalScaling :: Double -> GraphicsState -> GraphicsState
 setHorizontalScaling scaling state = state
   { gsTextState = (gsTextState state) { tsHorizontalScaling = scaling / 100 } }
-
-setHorizontalScalingS :: Double -> State GraphicsState ()
-setHorizontalScalingS scaling = get >>= put . setHorizontalScaling scaling
 
 {- |
 Set the rise of the current text state.
@@ -283,17 +216,11 @@ setTextRise :: Double -> GraphicsState -> GraphicsState
 setTextRise rise state = state
   { gsTextState = (gsTextState state) { tsRise = rise } }
 
-setTextRiseS :: Double -> State GraphicsState ()
-setTextRiseS rise = get >>= put . setTextRise rise
-
 {- |
 Set the line width of the current graphics state.
 -}
 setLineWidth :: Double -> GraphicsState -> GraphicsState
 setLineWidth lineWidth state = state { gsLineWidth = lineWidth }
-
-setLineWidthS :: Double -> State GraphicsState ()
-setLineWidthS lineWidth = get >>= put . setLineWidth lineWidth
 
 {- |
 Set the line cap of the current graphics state.
@@ -301,26 +228,17 @@ Set the line cap of the current graphics state.
 setLineCap :: Double -> GraphicsState -> GraphicsState
 setLineCap lineCap state = state { gsLineCap = lineCap }
 
-setLineCapS :: Double -> State GraphicsState ()
-setLineCapS lineCap = get >>= put . setLineCap lineCap
-
 {- |
 Set the line join of the current graphics state.
 -}
 setLineJoin :: Double -> GraphicsState -> GraphicsState
 setLineJoin lineJoin state = state { gsLineJoin = lineJoin }
 
-setLineJoinS :: Double -> State GraphicsState ()
-setLineJoinS lineJoin = get >>= put . setLineJoin lineJoin
-
 {- |
 Set the miter limit of the current graphics state.
 -}
 setMiterLimit :: Double -> GraphicsState -> GraphicsState
 setMiterLimit miterLimit state = state { gsMiterLimit = miterLimit }
-
-setMiterLimitS :: Double -> State GraphicsState ()
-setMiterLimitS miterLimit = get >>= put . setMiterLimit miterLimit
 
 {- |
 Set the dash pattern of the current graphics state.
@@ -331,18 +249,11 @@ setDashPattern dashPhase dashArray state = state
   , gsDashPhase = dashPhase
   }
 
-setDashPatternS :: Double -> [Double] -> State GraphicsState ()
-setDashPatternS dashPhase dashArray =
-  get >>= put . setDashPattern dashPhase dashArray
-
 {- |
 Set the rendering intent of the current graphics state.
 -}
 setRenderingIntent :: ByteString -> GraphicsState -> GraphicsState
 setRenderingIntent intent state = state { gsIntent = intent }
-
-setRenderingIntentS :: ByteString -> State GraphicsState ()
-setRenderingIntentS intent = get >>= put . setRenderingIntent intent
 
 {- |
 Set the flatness of the current graphics state.
@@ -350,17 +261,11 @@ Set the flatness of the current graphics state.
 setFlatness :: Double -> GraphicsState -> GraphicsState
 setFlatness flatness state = state { gsFlatness = flatness }
 
-setFlatnessS :: Double -> State GraphicsState ()
-setFlatnessS flatness = get >>= put . setFlatness flatness
-
 {- |
 Set the stroke alpha of the current graphics state.
 -}
 setStrokeAlpha :: Double -> GraphicsState -> GraphicsState
 setStrokeAlpha alpha state = state { gsStrokeAlpha = alpha }
-
-setStrokeAlphaS :: Double -> State GraphicsState ()
-setStrokeAlphaS alpha = get >>= put . setStrokeAlpha alpha
 
 {- |
 Set the non-stroke alpha of the current graphics state.
@@ -368,20 +273,11 @@ Set the non-stroke alpha of the current graphics state.
 setNonStrokeAlpha :: Double -> GraphicsState -> GraphicsState
 setNonStrokeAlpha alpha state = state { gsNonStrokeAlpha = alpha }
 
-setNonStrokeAlphaS :: Double -> State GraphicsState ()
-setNonStrokeAlphaS alpha = get >>= put . setNonStrokeAlpha alpha
-
 {- |
 Set the start of the current path.
 -}
 setPathStart :: Double -> Double -> GraphicsState -> GraphicsState
 setPathStart x y state = state { gsPathStartX = x, gsPathStartY = y }
-
-setPathStartS :: Double -> Double -> State GraphicsState ()
-setPathStartS x y = get >>= put . setPathStart x y >> setCurrentPointS x y
-
-getPathStartS :: State GraphicsState (Double, Double)
-getPathStartS = gets $ \state -> (gsPathStartX state, gsPathStartY state)
 
 {- |
 Set the current point of the current path.
@@ -389,5 +285,5 @@ Set the current point of the current path.
 setCurrentPoint :: Double -> Double -> GraphicsState -> GraphicsState
 setCurrentPoint x y state = state { gsCurrentPointX = x, gsCurrentPointY = y }
 
-setCurrentPointS :: Double -> Double -> State GraphicsState ()
-setCurrentPointS x y = get >>= put . setCurrentPoint x y
+resetTextState :: GraphicsState -> GraphicsState
+resetTextState state = state { gsTextState = defaultTextState }
