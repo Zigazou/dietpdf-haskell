@@ -1,4 +1,4 @@
-module PDF.Graphics.Interpreter.Program
+module Data.PDF.Program
   ( Program
   , mkProgram
   , parseProgram
@@ -9,6 +9,7 @@ where
 import Data.Array (Array)
 import Data.Foldable (foldl')
 import Data.Kind (Type)
+import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
     ( GFXObject (GFXInlineImage, GFXOperator)
     , GSOperator (GSBeginInlineImage, GSUnknown)
@@ -16,8 +17,6 @@ import Data.PDF.GFXObject
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence ((|>))
 import Data.Sequence qualified as SQ
-
-import PDF.Graphics.Interpreter.Command (Command (Command))
 
 {- |
 The 'Program' type represents a sequence of 'Command's.

@@ -1,4 +1,4 @@
-module PDF.Graphics.Interpreter.GraphicsState
+module Data.PDF.GraphicsState
   ( GraphicsState (..)
   , defaultGraphicsState
   , usefulGraphicsPrecision
@@ -26,14 +26,13 @@ module PDF.Graphics.Interpreter.GraphicsState
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
-
-import PDF.Graphics.Interpreter.TextState
+import Data.PDF.TextState
     ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsMatrix, tsRise)
     , defaultTextState
     , tsScaleX
     , tsScaleY
     )
-import PDF.Graphics.Interpreter.TransformationMatrix
+import Data.PDF.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
     , matrixScale
     )

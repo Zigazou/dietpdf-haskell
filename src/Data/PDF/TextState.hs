@@ -1,13 +1,12 @@
-module PDF.Graphics.Interpreter.TextState
+module Data.PDF.TextState
   ( TextState (..)
   , defaultTextState
   )
 where
 
-import Data.Kind (Type)
-
-import PDF.Graphics.Interpreter.TransformationMatrix (TransformationMatrix)
 import Data.ByteString qualified as BS
+import Data.Kind (Type)
+import Data.PDF.TransformationMatrix (TransformationMatrix)
 
 {- |
 The text state is a collection of parameters that define the current page's text

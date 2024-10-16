@@ -5,21 +5,20 @@ module PDF.Graphics.Interpreter.OptimizeCommand
 import Control.Monad.State (State, gets)
 
 import Data.Functor ((<&>))
+import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
     ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNull, GFXNumber, GFXString)
-    , GSOperator (GSBeginText, GSCloseSubpath, GSEndPath, GSEndText, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSNone, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetTextRise, GSShowManyText, GSShowText)
+    , GSOperator (GSBeginText, GSCloseSubpath, GSEndPath, GSEndText, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetTextRise, GSShowManyText, GSShowText)
     , reducePrecision
     )
 import Data.PDF.GFXObjects (GFXObjects)
-import Data.Sequence (Seq (Empty, (:<|)))
-
-import PDF.Graphics.Interpreter.Command
-    ( Command (Command, cOperator, cParameters)
-    )
-import PDF.Graphics.Interpreter.GraphicsState
+import Data.PDF.GraphicsState
     ( GraphicsState (gsCurrentPointX, gsCurrentPointY, gsFlatness, gsIntent, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsPathStartX, gsPathStartY)
     )
-import PDF.Graphics.Interpreter.InterpreterState
+import Data.PDF.InterpreterAction
+    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
+    )
+import Data.PDF.InterpreterState
     ( InterpreterState (iGraphicsState)
     , applyGraphicsMatrixS
     , applyTextMatrixS
@@ -42,14 +41,15 @@ import PDF.Graphics.Interpreter.InterpreterState
     , usefulGraphicsPrecisionS
     , usefulTextPrecisionS
     )
-import PDF.Graphics.Interpreter.OperatorCategory
+import Data.PDF.OperatorCategory
     ( OperatorCategory (ClippingPathOperator, ColorOperator, PathConstructionOperator, PathPaintingOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
     , category
     )
-import PDF.Graphics.Interpreter.Program (Program)
-import PDF.Graphics.Interpreter.TransformationMatrix
+import Data.PDF.Program (Program)
+import Data.PDF.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix)
     )
+import Data.Sequence (Seq (Empty, (:<|)))
 
 import Util.Graphics (areAligned)
 import Util.Number (round')
@@ -97,32 +97,43 @@ hasTextmoveBeforeEndText Empty = False
 The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}
-optimizeCommand :: Command -> Program -> State InterpreterState Command
+optimizeCommand
+  :: Command
+  -> Program
+  -> State InterpreterState InterpreterAction
 optimizeCommand command rest = case (operator, parameters) of
   -- Save graphics state
-  (GSSaveGS, _params) -> saveStateS >> return command
+  (GSSaveGS, _params) -> do
+    saveStateS
+    return KeepCommand
 
   -- Restore graphics state
-  (GSRestoreGS, _params) -> restoreStateS >> return command
+  (GSRestoreGS, _params) -> do
+    restoreStateS
+    return KeepCommand
 
   -- Begin text object
-  (GSBeginText, _params) -> resetTextStateS >> applyTextMatrixS mempty >> return command
+  (GSBeginText, _params) -> do
+    resetTextStateS
+    applyTextMatrixS mempty
+    return KeepCommand
 
   -- End text object
-  (GSEndText, _params) -> return command
+  (GSEndText, _params) -> return KeepCommand
 
   -- Identity matrix can be ignored
   (GSSetCTM, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| Empty) -> do
-    return (Command GSNone mempty)
+    return DeleteCommand
 
   -- Set current transformation matrix
   (GSSetCTM, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
     applyGraphicsMatrixS (TransformationMatrix a b c d e f)
-    usefulGraphicsPrecisionS <&> optimizeParameters command . (+ 1)
+    precision <- usefulGraphicsPrecisionS <&> (+ 1)
+    return $ ReplaceCommand (optimizeParameters command precision)
 
   -- Identity text matrix can be ignored
   (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| Empty) ->
-    return (Command GSNone mempty)
+    return DeleteCommand
 
   -- Set text transformation matrix
   (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber tx :<| GFXNumber ty :<| Empty) -> do
@@ -130,42 +141,47 @@ optimizeCommand command rest = case (operator, parameters) of
     if hasTextmoveBeforeEndText rest
       then do
         applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
-        return $ optimizeParameters command precision
+        return $ ReplaceCommand (optimizeParameters command precision)
       else
-        return $ optimizeParameters
-                  (Command GSMoveToNextLine (GFXNumber tx :<| GFXNumber ty :<| Empty))
-                  precision
+        return $ ReplaceCommand
+                  ( optimizeParameters
+                    (Command GSMoveToNextLine (GFXNumber tx :<| GFXNumber ty :<| Empty))
+                    precision
+                  )
 
   (GSSetTextMatrix, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
     applyTextMatrixS (TransformationMatrix a b c d e f)
-    usefulTextPrecisionS <&> optimizeParameters command
+    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
 
   -- Set text font and size
   (GSSetTextFont, GFXName fontName :<| GFXNumber fontSize :<| Empty) -> do
     setFontS fontName fontSize
-    usefulGraphicsPrecisionS <&> optimizeParameters command
+    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   -- Set text horizontal scaling
   (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) -> do
     setHorizontalScalingS scaling
-    usefulGraphicsPrecisionS <&> optimizeParameters command
+    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   -- Set text rise
   (GSSetTextRise, GFXNumber rise :<| Empty) -> do
     setTextRiseS rise
-    usefulTextPrecisionS <&> optimizeParameters command
+    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
 
   -- Replace ShowManyText by ShowText when there is only one text
   (GSShowManyText, GFXArray items :<| Empty) -> do
     case items of
-      str@(GFXString _string :<| Empty) -> return (Command GSShowText str)
-      str@(GFXHexString _string :<| Empty) -> return (Command GSShowText str)
-      _otherContent -> usefulTextPrecisionS <&> optimizeParameters command
+      str@(GFXString _string :<| Empty) ->
+        return $ ReplaceCommand (Command GSShowText str)
+      str@(GFXHexString _string :<| Empty) ->
+        return $ ReplaceCommand (Command GSShowText str)
+      _otherContent ->
+        ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
 
   -- MoveTo operator
   (GSMoveTo, GFXNumber x :<| GFXNumber y :<| Empty) -> do
     setPathStartS x y
-    usefulGraphicsPrecisionS <&> optimizeParameters command
+    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   -- Optimize LineTo operator
   (GSLineTo, GFXNumber x :<| GFXNumber y :<| Empty) -> do
@@ -190,7 +206,7 @@ optimizeCommand command rest = case (operator, parameters) of
     -- If the LineTo operator has coordinates on the line between the current
     -- point and the next coordinates, then remove the LineTo operator.
     if lineIsNotNeeded
-      then return (Command GSNone mempty)
+      then return DeleteCommand
       else do
         optimized <- usefulGraphicsPrecisionS <&> optimizeParameters command
 
@@ -201,90 +217,100 @@ optimizeCommand command rest = case (operator, parameters) of
           (Command GSEndPath _params :<| _tail) -> do
             start <- getPathStartS
             if (x, y) == start
-              then return (Command GSCloseSubpath mempty)
-              else return optimized
+              then return $ ReplaceCommand (Command GSCloseSubpath mempty)
+              else return $ ReplaceCommand optimized
           (Command GSCloseSubpath _params :<| _tail) -> do
             start <- getPathStartS
             if (x, y) == start
-              then return (Command GSNone mempty)
-              else return optimized
-          _otherCommand -> return optimized
+              then return DeleteCommand
+              else return $ ReplaceCommand optimized
+          _otherCommand -> return $ ReplaceCommand optimized
 
   -- EndPath operator
   (GSEndPath, _params) -> do
     setPathStartS 0 0
-    return command
+    return KeepCommand
 
   -- CloseSubpath operator
   (GSCloseSubpath, _params) -> do
     setPathStartS 0 0
-    return command
+    return KeepCommand
 
   (GSSetLineWidth, GFXNumber width :<| Empty) -> do
     width' <- usefulGraphicsPrecisionS <&> flip round' width
     currentWidth <- gets (gsLineWidth . iGraphicsState)
     if width' == currentWidth
-      then return (Command GSNone mempty)
+      then return DeleteCommand
       else do
         setLineWidthS width'
-        usefulGraphicsPrecisionS <&> optimizeParameters command
+        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   (GSSetLineCap, GFXNumber lineCap :<| Empty) -> do
     lineCap' <- usefulGraphicsPrecisionS <&> flip round' lineCap
     currentLineCap <- gets (gsLineCap . iGraphicsState)
     if lineCap' == currentLineCap
-      then return (Command GSNone mempty)
+      then return DeleteCommand
       else do
         setLineCapS lineCap'
-        usefulGraphicsPrecisionS <&> optimizeParameters command
+        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   (GSSetLineJoin, GFXNumber lineJoin :<| Empty) -> do
     lineJoin' <- usefulGraphicsPrecisionS <&> flip round' lineJoin
     currentLineJoin <- gets (gsLineJoin . iGraphicsState)
     if lineJoin' == currentLineJoin
-      then return (Command GSNone mempty)
+      then return DeleteCommand
       else do
         setLineJoinS lineJoin'
-        usefulGraphicsPrecisionS <&> optimizeParameters command
+        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   (GSSetMiterLimit, GFXNumber miterLimit :<| Empty) -> do
     miterLimit' <- usefulGraphicsPrecisionS <&> flip round' miterLimit
     currentMiterLimit <- gets (gsMiterLimit . iGraphicsState)
     if miterLimit' == currentMiterLimit
-      then return (Command GSNone mempty)
+      then return DeleteCommand
       else do
         setMiterLimitS miterLimit'
-        usefulGraphicsPrecisionS <&> optimizeParameters command
+        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   (GSSetColourRenderingIntent, GFXName intent :<| Empty) -> do
     currentIntent <- gets (gsIntent . iGraphicsState)
     if intent == currentIntent
-      then return (Command GSNone mempty)
+      then return DeleteCommand
       else do
         setRenderingIntentS intent
-        return command
+        return KeepCommand
 
   (GSSetFlatnessTolerance, GFXNumber flatness :<| Empty) -> do
     flatness' <- usefulGraphicsPrecisionS <&> flip round' flatness
     currentFlatness <- gets (gsFlatness . iGraphicsState)
     if flatness' == currentFlatness
-      then return (Command GSNone mempty)
+      then return DeleteCommand
       else do
         setFlatnessS flatness'
-        usefulGraphicsPrecisionS <&> optimizeParameters command
+        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   -- Other operators
   _otherOperator -> case category operator of
-    PathConstructionOperator -> usefulGraphicsPrecisionS <&> optimizeParameters command
-    PathPaintingOperator     -> usefulGraphicsPrecisionS <&> optimizeParameters command
-    ClippingPathOperator     -> usefulGraphicsPrecisionS <&> optimizeParameters command
-    TextStateOperator        -> usefulTextPrecisionS <&> optimizeParameters command
-    Type3FontOperator        -> usefulTextPrecisionS <&> optimizeParameters command
-    TextPositioningOperator  -> usefulTextPrecisionS <&> optimizeParameters command
-    TextShowingOperator      -> usefulTextPrecisionS <&> optimizeParameters command
-    ColorOperator            -> usefulColorPrecisionS <&> optimizeColorCommand . optimizeParameters command
+    PathConstructionOperator ->
+      ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    PathPaintingOperator ->
+      ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    ClippingPathOperator ->
+      ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    TextStateOperator ->
+      ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    Type3FontOperator ->
+      ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    TextPositioningOperator ->
+      ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    TextShowingOperator ->
+      ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    ColorOperator -> ReplaceCommand
+                   . optimizeColorCommand
+                   . optimizeParameters command
+                 <$> usefulColorPrecisionS
 
-    _otherOperatorCategory   -> return command
+    _otherOperatorCategory -> return KeepCommand
  where
   operator   = cOperator command
   parameters = cParameters command

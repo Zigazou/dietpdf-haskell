@@ -1,4 +1,4 @@
-module PDF.Graphics.Interpreter.InterpreterState
+module Data.PDF.InterpreterState
   ( InterpreterState (InterpreterState, iGraphicsState, iStack)
   , defaultInterpreterState
   , saveState
@@ -33,8 +33,7 @@ import Control.Monad.State (State, get, gets, put)
 
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
-
-import PDF.Graphics.Interpreter.GraphicsState
+import Data.PDF.GraphicsState
     ( GraphicsState
     , applyGraphicsMatrix
     , applyTextMatrix
@@ -60,7 +59,7 @@ import PDF.Graphics.Interpreter.GraphicsState
     , usefulGraphicsPrecision
     , usefulTextPrecision
     )
-import PDF.Graphics.Interpreter.TransformationMatrix (TransformationMatrix)
+import Data.PDF.TransformationMatrix (TransformationMatrix)
 
 type InterpreterState :: Type
 data InterpreterState = InterpreterState

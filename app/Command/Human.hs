@@ -7,10 +7,10 @@ import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
+import Data.PDF.Program (parseProgram)
 import Data.Text.IO qualified as TIO
 
 import PDF.Graphics.Interpreter.Human (human)
-import PDF.Graphics.Interpreter.Program (parseProgram)
 import PDF.Graphics.Parser.Stream (gfxParse)
 
 humanByteString :: BS.ByteString -> FallibleT IO ()

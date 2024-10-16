@@ -1,4 +1,4 @@
-module PDF.Graphics.Interpreter.Command
+module Data.PDF.Command
   ( Command (Command, cOperator, cParameters)
   , mkCommand
   )

@@ -6,18 +6,16 @@ where
 
 import Control.Monad.State (State, evalState)
 
-import Data.FoldableWithRest (FoldableWithRest (foldMWithRest))
-import Data.Functor ((<&>))
+import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject (GSOperator (GSRestoreGS, GSSaveGS))
+import Data.PDF.InterpreterAction
+    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand)
+    )
+import Data.PDF.InterpreterState (InterpreterState, defaultInterpreterState)
+import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), breakl, singleton, (<|), (|>))
 
-import PDF.Graphics.Interpreter.Command (Command (Command))
-import PDF.Graphics.Interpreter.InterpreterState
-    ( InterpreterState
-    , defaultInterpreterState
-    )
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
-import PDF.Graphics.Interpreter.Program (Program)
 
 onRestore :: Command -> Bool
 onRestore (Command GSRestoreGS _params) = True
@@ -86,8 +84,19 @@ The 'optimizeProgram' function takes a 'Program' and returns an optimized
 -}
 optimizeProgram :: Program -> Program
 optimizeProgram = flip evalState defaultInterpreterState
-                . foldMWithRest go mempty
+                . optimizeCommands mempty
                 . removeUselessSaveRestore
   where
-    go :: Program -> Command -> Program -> State InterpreterState Program
-    go program command rest = optimizeCommand command rest <&> (program |>)
+    optimizeCommands
+      :: Program
+      -> Program
+      -> State InterpreterState Program
+    optimizeCommands program Empty = return program
+    optimizeCommands program (command :<| rest) =
+      optimizeCommand command rest >>= \case
+        KeepCommand -> optimizeCommands (program |> command) rest
+        DeleteCommand -> optimizeCommands program rest
+        ReplaceCommand optimizedCommand' ->
+          optimizeCommands (program |> optimizedCommand') rest
+        ReplaceAndDeleteNextCommand optimizedCommand' ->
+          optimizeCommands (program |> optimizedCommand') rest

@@ -48,6 +48,7 @@ library
       Data.FoldableWithRest
       Data.HasLength
       Data.Logging
+      Data.PDF.Command
       Data.PDF.EncodedObject
       Data.PDF.EncodedObjects
       Data.PDF.Filter
@@ -55,18 +56,26 @@ library
       Data.PDF.FilterList
       Data.PDF.GFXObject
       Data.PDF.GFXObjects
+      Data.PDF.GraphicsObject
+      Data.PDF.GraphicsState
+      Data.PDF.InterpreterAction
+      Data.PDF.InterpreterState
       Data.PDF.ObjectCategory
       Data.PDF.ObjectInfo
       Data.PDF.ObjectOffset
       Data.PDF.ObjectOffsets
+      Data.PDF.OperatorCategory
       Data.PDF.OptimizationType
       Data.PDF.PDFDocument
       Data.PDF.PDFObject
       Data.PDF.PDFObjects
       Data.PDF.PDFPartition
       Data.PDF.PDFWork
+      Data.PDF.Program
       Data.PDF.Settings
       Data.PDF.Statistics
+      Data.PDF.TextState
+      Data.PDF.TransformationMatrix
       Data.PDF.WorkData
       Data.PDF.XRefEntry
       Data.PDF.XRefState
@@ -96,17 +105,9 @@ library
       PDF.Document.Stat
       PDF.Document.Uncompress
       PDF.Document.XRef
-      PDF.Graphics.Interpreter.Command
-      PDF.Graphics.Interpreter.GraphicsObject
-      PDF.Graphics.Interpreter.GraphicsState
       PDF.Graphics.Interpreter.Human
-      PDF.Graphics.Interpreter.InterpreterState
-      PDF.Graphics.Interpreter.OperatorCategory
       PDF.Graphics.Interpreter.OptimizeCommand
       PDF.Graphics.Interpreter.OptimizeProgram
-      PDF.Graphics.Interpreter.Program
-      PDF.Graphics.Interpreter.TextState
-      PDF.Graphics.Interpreter.TransformationMatrix
       PDF.Graphics.Optimize
       PDF.Graphics.Parser.Comment
       PDF.Graphics.Parser.Container

@@ -1,4 +1,4 @@
-module PDF.Graphics.Interpreter.OperatorCategory
+module Data.PDF.OperatorCategory
   ( OperatorCategory (GeneralGraphicsStateOperator, SpecialGraphicsStateOperator, PathConstructionOperator, PathPaintingOperator, ClippingPathOperator, TextObjectOperator, TextStateOperator, TextPositioningOperator, TextShowingOperator, Type3FontOperator, ColorOperator, ShadingOperator, InlineImageOperator, XObjectOperator, MarkedContentOperator, CompatibilityOperator)
   , category
   )

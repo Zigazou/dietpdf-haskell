@@ -1,4 +1,4 @@
-module PDF.Graphics.Interpreter.TransformationMatrix
+module Data.PDF.TransformationMatrix
 ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
 , transform
 , matrixScale

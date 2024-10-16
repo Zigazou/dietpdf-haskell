@@ -15,6 +15,7 @@ import Data.PDF.PDFWork
     , sayP
     , withContext
     )
+import Data.PDF.Program (extractObjects, parseProgram)
 import Data.PDF.Settings
     ( OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX)
     , Settings (sOptimizeGFX)
@@ -23,7 +24,6 @@ import Data.PDF.WorkData (wSettings)
 import Data.Sequence qualified as SQ
 
 import PDF.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
-import PDF.Graphics.Interpreter.Program (extractObjects, parseProgram)
 import PDF.Graphics.Parser.Stream (gfxParse)
 import PDF.Graphics.RenameResources (renameResourcesInObject)
 

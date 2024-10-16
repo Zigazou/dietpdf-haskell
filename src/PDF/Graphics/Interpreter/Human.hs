@@ -7,16 +7,15 @@ import Data.Double.Conversion.Text (toShortest)
 import Data.Foldable (foldl', toList)
 import Data.Kind (Constraint, Type)
 import Data.Map (assocs)
+import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
     ( GFXObject (GFXArray, GFXBool, GFXComment, GFXDictionary, GFXHexString, GFXInlineImage, GFXName, GFXNull, GFXNumber, GFXOperator, GFXReference, GFXString)
     , GSOperator (GSBeginText, GSEndText, GSRestoreGS, GSSaveGS)
     )
 import Data.PDF.GFXObjects (GFXObjects)
+import Data.PDF.Program (Program)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
-
-import PDF.Graphics.Interpreter.Command (Command (Command))
-import PDF.Graphics.Interpreter.Program (Program)
 
 import Util.Dictionary (Dictionary)
 
