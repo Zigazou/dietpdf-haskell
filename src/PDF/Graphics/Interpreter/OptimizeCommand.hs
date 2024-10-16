@@ -118,7 +118,7 @@ optimizeCommand command rest = case (operator, parameters) of
   -- Set current transformation matrix
   (GSSetCTM, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
     applyGraphicsMatrixS (TransformationMatrix a b c d e f)
-    usefulGraphicsPrecisionS <&> optimizeParameters command . (+ 2)
+    usefulGraphicsPrecisionS <&> optimizeParameters command . (+ 1)
 
   -- Identity text matrix can be ignored
   (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| Empty) ->
