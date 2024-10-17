@@ -7,7 +7,9 @@ where
 import Control.Monad.State (State, evalState)
 
 import Data.PDF.Command (Command (Command))
-import Data.PDF.GFXObject (GSOperator (GSRestoreGS, GSSaveGS))
+import Data.PDF.GFXObject
+    ( GSOperator (GSBeginMarkedContentSequence, GSBeginMarkedContentSequencePL, GSEndMarkedContentSequence, GSRestoreGS, GSSaveGS)
+    )
 import Data.PDF.InterpreterAction
     ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand)
     )
@@ -49,7 +51,9 @@ Remove useless save/restore commands.
 removeUselessSaveRestore :: Program -> Program
 removeUselessSaveRestore program = case breakl onRestore program of
   -- Two consecutive restore commands means a save/restore pair is useless.
-  (beforeRestore, Command GSRestoreGS _params1 :<| Command GSRestoreGS _params2 :<| afterRestore) ->
+  (beforeRestore, Command GSRestoreGS _params1
+              :<| Command GSRestoreGS _params2
+              :<| afterRestore) ->
     -- Look for the save command associated with the restore command.
     case findRelatedSave beforeRestore of
       Just (beforeSave, Command GSSaveGS _params :<| afterSave) ->
@@ -64,19 +68,46 @@ removeUselessSaveRestore program = case breakl onRestore program of
         <> removeUselessSaveRestore afterRestore
 
   -- Found a restore command not followed by another restore command.
-  (beforeRestore, Command GSRestoreGS _params :<| afterRestore) ->
-    -- Look for the save command associated with the restore command.
-    case findRelatedSave beforeRestore of
-      -- If there is no command between save and restore, remove both.
-      Just (beforeSave, Command GSSaveGS _params :<| Empty) ->
-           beforeSave
-        <> removeUselessSaveRestore afterRestore
-      _anythingElse ->
-           beforeRestore
-        <> (Command GSRestoreGS mempty <| removeUselessSaveRestore afterRestore)
+  (beforeRestore, Command GSRestoreGS _params
+              :<| afterRestore) ->
+    if nextRestoreWithoutNewState afterRestore
+    then
+      case findRelatedSave beforeRestore of
+        Just (beforeSave, Command GSSaveGS _params :<| afterSave) ->
+            beforeSave
+          <> afterSave
+          <> removeUselessSaveRestore afterRestore
+        _anythingElse ->
+            beforeRestore
+          <> singleton (Command GSRestoreGS mempty)
+          <> singleton (Command GSRestoreGS mempty)
+          <> removeUselessSaveRestore afterRestore
+    else
+      -- Look for the save command associated with the restore command.
+      case findRelatedSave beforeRestore of
+        -- If there is no command between save and restore, remove both.
+        Just (beforeSave, Command GSSaveGS _params :<| Empty) ->
+            beforeSave
+          <> removeUselessSaveRestore afterRestore
+        _anythingElse ->
+            beforeRestore
+          <> (Command GSRestoreGS mempty <| removeUselessSaveRestore afterRestore)
 
   -- For any other case, just keep the program as is.
   _anyOtherCase -> program
+ where
+  nextRestoreWithoutNewState :: Program -> Bool
+  nextRestoreWithoutNewState Empty = False
+  nextRestoreWithoutNewState (command :<| rest) = case command of
+    Command GSRestoreGS _params -> True
+    Command GSBeginMarkedContentSequence _params ->
+      nextRestoreWithoutNewState rest
+    Command GSBeginMarkedContentSequencePL _params ->
+      nextRestoreWithoutNewState rest
+    Command GSEndMarkedContentSequence _params ->
+      nextRestoreWithoutNewState rest
+    _anyOtherCommand -> False
+
 
 {- |
 The 'optimizeProgram' function takes a 'Program' and returns an optimized
