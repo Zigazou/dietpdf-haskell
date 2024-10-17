@@ -5,18 +5,18 @@ module PDF.Graphics.Interpreter.OptimizeProgramSpec
 import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
+import Data.PDF.Command (Command, mkCommand)
 import Data.PDF.GFXObject
     ( GFXObject (GFXName, GFXNumber, GFXString)
     , GSOperator (GSBeginText, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText, GSUnknown)
     , mkGFXArray
     )
+import Data.PDF.Program (Program, mkProgram, parseProgram)
 
-import PDF.Graphics.Interpreter.Command (Command, mkCommand)
 import PDF.Graphics.Interpreter.OptimizeProgram
     ( findRelatedSave
     , optimizeProgram
     )
-import PDF.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
 import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)

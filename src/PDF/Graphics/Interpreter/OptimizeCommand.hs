@@ -4,19 +4,22 @@ module PDF.Graphics.Interpreter.OptimizeCommand
 
 import Control.Monad.State (State, gets)
 
+import Data.Foldable (toList)
 import Data.Functor ((<&>))
+import Data.PDF.Color (Color (ColorCMYK, ColorGeneric, ColorGray, ColorRGB))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
     ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNull, GFXNumber, GFXString)
-    , GSOperator (GSBeginText, GSCloseSubpath, GSEndPath, GSEndText, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetTextRise, GSShowManyText, GSShowText)
+    , GSOperator (GSBeginText, GSCloseSubpath, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSEndPath, GSEndText, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetTextRise, GSShowManyText, GSShowText)
     , reducePrecision
     )
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.GraphicsState
-    ( GraphicsState (gsCurrentPointX, gsCurrentPointY, gsFlatness, gsIntent, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsPathStartX, gsPathStartY)
+    ( GraphicsState (gsCurrentPointX, gsCurrentPointY, gsFlatness, gsIntent, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsPathStartX, gsPathStartY, gsStrokeColor)
+    , gsNonStrokeColor
     )
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
+    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand)
     )
 import Data.PDF.InterpreterState
     ( InterpreterState (iGraphicsState)
@@ -34,8 +37,10 @@ import Data.PDF.InterpreterState
     , setLineJoinS
     , setLineWidthS
     , setMiterLimitS
+    , setNonStrokeColorS
     , setPathStartS
     , setRenderingIntentS
+    , setStrokeColorS
     , setTextRiseS
     , usefulColorPrecisionS
     , usefulGraphicsPrecisionS
@@ -49,7 +54,7 @@ import Data.PDF.Program (Program)
 import Data.PDF.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix)
     )
-import Data.Sequence (Seq (Empty, (:<|)))
+import Data.Sequence (Seq (Empty, (:<|), (:|>)), fromList)
 
 import Util.Graphics (areAligned)
 import Util.Number (round')
@@ -64,11 +69,19 @@ optimizeColorCommand command
   | isGray (cParameters command) = case cOperator command of
       GSSetStrokeRGBColorspace ->
         command { cOperator = GSSetStrokeGrayColorspace
-                , cParameters = first parameters :<| Empty
+                , cParameters = grayLevel parameters :<| Empty
                 }
       GSSetNonStrokeRGBColorspace ->
         command { cOperator = GSSetNonStrokeGrayColorspace
-                , cParameters = first parameters :<| Empty
+                , cParameters = grayLevel parameters :<| Empty
+                }
+      GSSetStrokeCMYKColorspace ->
+        command { cOperator = GSSetStrokeGrayColorspace
+                , cParameters = grayLevel parameters :<| Empty
+                }
+      GSSetNonStrokeCMYKColorspace ->
+        command { cOperator = GSSetNonStrokeGrayColorspace
+                , cParameters = grayLevel parameters :<| Empty
                 }
       _anyOtherOperator -> command
   | otherwise = command
@@ -76,13 +89,145 @@ optimizeColorCommand command
     parameters :: GFXObjects
     parameters = cParameters command
 
-    first :: GFXObjects -> GFXObject
-    first (firstItem :<| _remain) = firstItem
-    first _otherParameters        = GFXNull
+    grayLevel :: GFXObjects -> GFXObject
+    grayLevel (red
+           :<| _green
+           :<| _blue
+           :<| Empty) = red
+    grayLevel (GFXNumber 0
+           :<| GFXNumber 0
+           :<| GFXNumber 0
+           :<| GFXNumber black
+           :<| Empty) = GFXNumber (1.0 - black)
+    grayLevel _otherParameters = GFXNull
 
     isGray :: GFXObjects -> Bool
     isGray (a :<| b :<| c :<| Empty) = a == b && b == c
-    isGray _otherParameters          = False
+    isGray (GFXNumber 0
+        :<| GFXNumber 0
+        :<| GFXNumber 0
+        :<| _black
+        :<| Empty) = True
+    isGray _otherParameters = False
+
+mkColor :: Command -> State InterpreterState Color
+mkColor command = do
+  optimizedCommand' <- usefulColorPrecisionS <&> optimizeParameters command
+  mkColor' optimizedCommand'
+
+ where
+  mkColor' :: Command -> State InterpreterState Color
+  mkColor' (Command GSSetStrokeRGBColorspace (GFXNumber red
+                                          :<| GFXNumber green
+                                          :<| GFXNumber blue
+                                          :<| Empty)) =
+    return $ ColorRGB red green blue
+
+  mkColor' (Command GSSetNonStrokeRGBColorspace (GFXNumber red
+                                             :<| GFXNumber green
+                                             :<| GFXNumber blue
+                                             :<| Empty)) =
+    return $ ColorRGB red green blue
+
+  mkColor' (Command GSSetStrokeCMYKColorspace (GFXNumber cyan
+                                           :<| GFXNumber magenta
+                                           :<| GFXNumber yellow
+                                           :<| GFXNumber black
+                                           :<| Empty)) =
+    return $ ColorCMYK cyan magenta yellow black
+
+  mkColor' (Command GSSetNonStrokeCMYKColorspace (GFXNumber cyan
+                                              :<| GFXNumber magenta
+                                              :<| GFXNumber yellow
+                                              :<| GFXNumber black
+                                              :<| Empty)) =
+    return $ ColorCMYK cyan magenta yellow black
+
+  mkColor' (Command GSSetStrokeGrayColorspace (GFXNumber gray :<| Empty)) =
+    return $ ColorGray gray
+
+  mkColor' (Command GSSetNonStrokeGrayColorspace (GFXNumber gray :<| Empty)) =
+    return $ ColorGray gray
+
+  mkColor' (Command GSSetStrokeColorspace _parameters) =
+    return $ ColorGray 0
+
+  mkColor' (Command GSSetNonStrokeColorspace _parameters) =
+    return $ ColorGray 0
+
+  mkColor' (Command GSSetStrokeColorN (parameters :|> GFXName name)) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) (Just name)
+
+  mkColor' (Command GSSetStrokeColorN parameters) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
+
+  mkColor' (Command GSSetNonStrokeColorN (parameters :|> GFXName name)) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) (Just name)
+
+  mkColor' (Command GSSetNonStrokeColorN parameters) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
+
+  mkColor' (Command GSSetStrokeColor parameters) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
+
+  mkColor' (Command GSSetNonStrokeColor parameters) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
+
+  mkColor' _command = error ("TODO: mkColor' " ++ show command)
+
+  onlyDouble :: [GFXObject] -> [Double]
+  onlyDouble = map (\case GFXNumber x -> x; _ -> 0)
+
+mkStrokeCommand :: Color -> Command
+mkStrokeCommand (ColorRGB red green blue) =
+  Command GSSetStrokeRGBColorspace
+          (   GFXNumber red
+          :<| GFXNumber green
+          :<| GFXNumber blue
+          :<| Empty
+          )
+mkStrokeCommand (ColorCMYK cyan magenta yellow black) =
+  Command GSSetStrokeCMYKColorspace
+          (   GFXNumber cyan
+          :<| GFXNumber magenta
+          :<| GFXNumber yellow
+          :<| GFXNumber black
+          :<| Empty
+          )
+mkStrokeCommand (ColorGray gray) =
+  Command GSSetStrokeGrayColorspace (GFXNumber gray :<| Empty)
+
+mkStrokeCommand (ColorGeneric parameters (Just name)) =
+  Command GSSetStrokeColorN (fromList (GFXNumber <$> parameters) :|> GFXName name)
+
+mkStrokeCommand (ColorGeneric parameters Nothing) =
+  Command GSSetStrokeColor (fromList (GFXNumber <$> parameters))
+
+mkNonStrokeCommand :: Color -> Command
+mkNonStrokeCommand (ColorRGB red green blue) =
+  Command GSSetNonStrokeRGBColorspace
+          (   GFXNumber red
+          :<| GFXNumber green
+          :<| GFXNumber blue
+          :<| Empty
+          )
+mkNonStrokeCommand (ColorCMYK cyan magenta yellow black) =
+  Command GSSetNonStrokeCMYKColorspace
+          (   GFXNumber cyan
+          :<| GFXNumber magenta
+          :<| GFXNumber yellow
+          :<| GFXNumber black
+          :<| Empty
+          )
+mkNonStrokeCommand (ColorGray gray) =
+  Command GSSetNonStrokeGrayColorspace (GFXNumber gray :<| Empty)
+
+mkNonStrokeCommand (ColorGeneric parameters (Just name)) =
+  Command GSSetNonStrokeColorN (fromList (GFXNumber <$> parameters)
+                            :|> GFXName name)
+
+mkNonStrokeCommand (ColorGeneric parameters Nothing) =
+  Command GSSetNonStrokeColor (fromList (GFXNumber <$> parameters))
 
 hasTextmoveBeforeEndText :: Program -> Bool
 hasTextmoveBeforeEndText (Command GSEndPath _params :<| _tail) = False
@@ -122,21 +267,67 @@ optimizeCommand command rest = case (operator, parameters) of
   (GSEndText, _params) -> return KeepCommand
 
   -- Identity matrix can be ignored
-  (GSSetCTM, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| Empty) -> do
+  (GSSetCTM, GFXNumber 1
+         :<| GFXNumber 0
+         :<| GFXNumber 0
+         :<| GFXNumber 1
+         :<| GFXNumber 0
+         :<| GFXNumber 0
+         :<| Empty) -> do
     return DeleteCommand
 
   -- Set current transformation matrix
-  (GSSetCTM, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
-    applyGraphicsMatrixS (TransformationMatrix a b c d e f)
+  (GSSetCTM, GFXNumber a
+         :<| GFXNumber b
+         :<| GFXNumber c
+         :<| GFXNumber d
+         :<| GFXNumber e
+         :<| GFXNumber f
+         :<| Empty) -> do
     precision <- usefulGraphicsPrecisionS <&> (+ 1)
-    return $ ReplaceCommand (optimizeParameters command precision)
+    case rest of
+      (Command GSSetCTM ( GFXNumber a'
+                      :<| GFXNumber b'
+                      :<| GFXNumber c'
+                      :<| GFXNumber d'
+                      :<| GFXNumber e'
+                      :<| GFXNumber f'
+                      :<| Empty)
+                      :<| _tail) -> do
+        -- Merge two consecutive SetCTM operators
+        applyGraphicsMatrixS (TransformationMatrix a b c d e f)
+        applyGraphicsMatrixS (TransformationMatrix a' b' c' d' e' f')
+        let command' = Command GSSetCTM (   GFXNumber (a * a')
+                                        :<| GFXNumber (b * a')
+                                        :<| GFXNumber (c * a')
+                                        :<| GFXNumber (d * a')
+                                        :<| GFXNumber (e * a' + f)
+                                        :<| GFXNumber (f * a' + f')
+                                        :<| Empty
+                                        )
+        return $ ReplaceAndDeleteNextCommand (optimizeParameters command' precision)
+      _anythingElse -> do
+        applyGraphicsMatrixS (TransformationMatrix a b c d e f)
+        return $ ReplaceCommand (optimizeParameters command precision)
 
   -- Identity text matrix can be ignored
-  (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| Empty) ->
+  (GSSetTextMatrix, GFXNumber 1
+                :<| GFXNumber 0
+                :<| GFXNumber 0
+                :<| GFXNumber 1
+                :<| GFXNumber 0
+                :<| GFXNumber 0
+                :<| Empty) ->
     return DeleteCommand
 
   -- Set text transformation matrix
-  (GSSetTextMatrix, GFXNumber 1 :<| GFXNumber 0 :<| GFXNumber 0 :<| GFXNumber 1 :<| GFXNumber tx :<| GFXNumber ty :<| Empty) -> do
+  (GSSetTextMatrix, GFXNumber 1
+                :<| GFXNumber 0
+                :<| GFXNumber 0
+                :<| GFXNumber 1
+                :<| GFXNumber tx
+                :<| GFXNumber ty
+                :<| Empty) -> do
     precision <- usefulTextPrecisionS
     if hasTextmoveBeforeEndText rest
       then do
@@ -145,11 +336,20 @@ optimizeCommand command rest = case (operator, parameters) of
       else
         return $ ReplaceCommand
                   ( optimizeParameters
-                    (Command GSMoveToNextLine (GFXNumber tx :<| GFXNumber ty :<| Empty))
+                    (Command GSMoveToNextLine ( GFXNumber tx
+                                            :<| GFXNumber ty
+                                            :<| Empty)
+                    )
                     precision
                   )
 
-  (GSSetTextMatrix, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) -> do
+  (GSSetTextMatrix, GFXNumber a
+                :<| GFXNumber b
+                :<| GFXNumber c
+                :<| GFXNumber d
+                :<| GFXNumber e
+                :<| GFXNumber f
+                :<| Empty) -> do
     applyTextMatrixS (TransformationMatrix a b c d e f)
     ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
 
@@ -183,6 +383,26 @@ optimizeCommand command rest = case (operator, parameters) of
     setPathStartS x y
     ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
+  -- Keep track of current position
+  (GSCubicBezierCurve, GFXNumber _x1 :<| GFXNumber _y1
+                   :<| GFXNumber _x2 :<| GFXNumber _y2
+                   :<| GFXNumber x3  :<| GFXNumber y3
+                   :<| Empty) -> do
+    setCurrentPointS x3 y3
+    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+
+  (GSCubicBezierCurve1To, GFXNumber _x1 :<| GFXNumber _y1
+                      :<| GFXNumber x3  :<| GFXNumber y3
+                      :<| Empty) -> do
+    setCurrentPointS x3 y3
+    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+
+  (GSCubicBezierCurve2To, GFXNumber _x2 :<| GFXNumber _y2
+                      :<| GFXNumber x3  :<| GFXNumber y3
+                      :<| Empty) -> do
+    setCurrentPointS x3 y3
+    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+
   -- Optimize LineTo operator
   (GSLineTo, GFXNumber x :<| GFXNumber y :<| Empty) -> do
     currentX <- gets (gsCurrentPointX . iGraphicsState)
@@ -191,17 +411,21 @@ optimizeCommand command rest = case (operator, parameters) of
     startY   <- gets (gsPathStartY . iGraphicsState)
 
     -- Calculate next coordinates.
-    let lineIsNotNeeded =
-          case rest of
-            (Command GSEndPath _params :<| _tail) ->
-              areAligned (currentX, currentY) (x, y) (startX, startY) 10
-            (Command GSCloseSubpath _params :<| _tail) ->
-              areAligned (currentX, currentY) (x, y) (startX, startY) 10
-            (Command GSLineTo (GFXNumber nextX :<| GFXNumber nextY :<| Empty) :<| _tail) ->
-              areAligned (currentX, currentY) (x, y) (nextX, nextY) 10
-            _otherCommand -> False
+    let
+      (lineIsNotNeeded, newX, newY) = case rest of
+        (Command GSEndPath _params :<| _tail) ->
+          ( areAligned (currentX, currentY) (x, y) (startX, startY) 0, x, y )
+        (Command GSCloseSubpath _params :<| _tail) ->
+          ( areAligned (currentX, currentY) (x, y) (startX, startY) 0, x, y )
+        (Command GSLineTo (GFXNumber nextX :<| GFXNumber nextY :<| Empty)
+                      :<| _tail) ->
+          ( areAligned (currentX, currentY) (x, y) (nextX, nextY) 0
+          , nextX
+          , nextY
+          )
+        _otherCommand -> (False, x, y)
 
-    setCurrentPointS x y
+    setCurrentPointS newX newY
 
     -- If the LineTo operator has coordinates on the line between the current
     -- point and the next coordinates, then remove the LineTo operator.
@@ -213,18 +437,17 @@ optimizeCommand command rest = case (operator, parameters) of
         -- If the LineTo operator is followed by a CloseSubpath operator and it
         -- goes back to the start of the path, then remove the LineTo operator
         -- because the CloseSubpath operator will close the path.
-        case rest of
-          (Command GSEndPath _params :<| _tail) -> do
-            start <- getPathStartS
+        start <- getPathStartS
+        return $ case rest of
+          (Command GSEndPath _params :<| _tail) ->
             if (x, y) == start
-              then return $ ReplaceCommand (Command GSCloseSubpath mempty)
-              else return $ ReplaceCommand optimized
-          (Command GSCloseSubpath _params :<| _tail) -> do
-            start <- getPathStartS
+              then ReplaceCommand (Command GSCloseSubpath mempty)
+              else ReplaceCommand optimized
+          (Command GSCloseSubpath _params :<| _tail) ->
             if (x, y) == start
-              then return DeleteCommand
-              else return $ ReplaceCommand optimized
-          _otherCommand -> return $ ReplaceCommand optimized
+              then DeleteCommand
+              else ReplaceCommand optimized
+          _otherCommand -> ReplaceCommand optimized
 
   -- EndPath operator
   (GSEndPath, _params) -> do
@@ -288,6 +511,102 @@ optimizeCommand command rest = case (operator, parameters) of
       else do
         setFlatnessS flatness'
         ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+
+  (GSSetStrokeColorspace, _parameters) -> do
+    currentColor <- gets (gsStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkStrokeCommand newColor)
+
+  (GSSetNonStrokeColorspace, _parameters) -> do
+    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setNonStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
+
+  (GSSetStrokeColor, _parameters) -> do
+    currentColor <- gets (gsStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkStrokeCommand newColor)
+
+  (GSSetNonStrokeColor, _parameters) -> do
+    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setNonStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
+
+  (GSSetStrokeColorN, _parameters) -> do
+    currentColor <- gets (gsStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkStrokeCommand newColor)
+
+  (GSSetNonStrokeColorN, _parameters) -> do
+    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setNonStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
+
+  (GSSetStrokeGrayColorspace, _parameters) -> do
+    currentColor <- gets (gsStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkStrokeCommand newColor)
+
+  (GSSetNonStrokeGrayColorspace, _parameters) -> do
+    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setNonStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
+
+  (GSSetStrokeRGBColorspace, _parameters) -> do
+    currentColor <- gets (gsStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkStrokeCommand newColor)
+
+  (GSSetNonStrokeRGBColorspace, _parameters) -> do
+    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setNonStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
+
+  (GSSetStrokeCMYKColorspace, _parameters) -> do
+    currentColor <- gets (gsStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkStrokeCommand newColor)
+
+  (GSSetNonStrokeCMYKColorspace, _parameters) -> do
+    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setNonStrokeColorS newColor
+    if currentColor == newColor
+      then return DeleteCommand
+      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
 
   -- Other operators
   _otherOperator -> case category operator of

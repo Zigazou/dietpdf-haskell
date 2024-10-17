@@ -98,5 +98,7 @@ optimizeProgram = flip evalState defaultInterpreterState
         DeleteCommand -> optimizeCommands program rest
         ReplaceCommand optimizedCommand' ->
           optimizeCommands (program |> optimizedCommand') rest
-        ReplaceAndDeleteNextCommand optimizedCommand' ->
-          optimizeCommands (program |> optimizedCommand') rest
+        ReplaceAndDeleteNextCommand optimizedCommand' -> case rest of
+          Empty -> return program
+          (_commandToDelete :<| rest') ->
+            optimizeCommands (program |> optimizedCommand') rest'

@@ -1,18 +1,17 @@
-module PDF.Graphics.Interpreter.ProgramSpec
+module Data.PDF.ProgramSpec
   ( spec
   ) where
 
 import Control.Monad (forM_)
 
+import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
     ( GFXObject (GFXNumber, GFXOperator)
     , GSOperator (GSRestoreGS, GSSaveGS, GSSetCTM)
     )
 import Data.PDF.GFXObjects (GFXObjects)
+import Data.PDF.Program (Program, mkProgram, parseProgram)
 import Data.Sequence qualified as SQ
-
-import PDF.Graphics.Interpreter.Command (mkCommand)
-import PDF.Graphics.Interpreter.Program (Program, mkProgram, parseProgram)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 

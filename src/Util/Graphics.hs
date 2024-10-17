@@ -6,22 +6,15 @@ areAligned
   -> (Double, Double)
   -> Double
   -> Bool
-areAligned (xa, ya) (xb, yb) (xc, yc) maxArea =
-  let
-    -- Vectors AB and BC
-    (dxAB, dyAB) = (xb - xa, yb - ya)
-    (dxBC, dyBC) = (xc - xb, yc - yb)
-
-    -- Angle between vectors AB and BC
-    dotProduct = (dxAB * dxBC) + (dyAB * dyBC)
-    magnitudeAB = sqrt (dxAB ** 2 + dyAB ** 2)
-    magnitudeBC = sqrt (dxBC ** 2 + dyBC ** 2)
-    cosTheta = dotProduct / (magnitudeAB * magnitudeBC)
-
-    -- Convert the angle to degrees
-    angle = acos (max (-1) (min 1 cosTheta)) * (180 / pi)
-
-    -- Compute the area of the triangle
-    area = abs ((xa * (yb - yc) + xb * (yc - ya) + xc * (ya - yb)) / 2.0)
-
-  in (angle == 180) || ((angle >= 179 && angle < 180) && (area < maxArea))
+areAligned (xa, ya) (xb, yb) (xc, yc) maxDifference
+  | (xa, ya) == (xb, yb)           = False
+  | not (xb >= minX && xb <= maxX) = False
+  | not (yb >= minY && yb <= maxY) = False
+  | vxBC == 0 && vyBC == 0         = True
+  | otherwise                      = abs ((vxAB / vxBC) - (vyAB / vyBC))
+                                     <= maxDifference
+  where
+    (minX, maxX) = (min xa xc, max xa xc)
+    (minY, maxY) = (min ya yc, max ya yc)
+    (vxAB, vyAB) = (xb - xa, yb - ya)
+    (vxBC, vyBC) = (xc - xb, yc - yb)

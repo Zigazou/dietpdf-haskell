@@ -1,16 +1,16 @@
-module PDF.Graphics.Interpreter.GraphicsStateSpec
+module Data.PDF.GraphicsStateSpec
   ( spec
   ) where
 
 import Control.Monad (forM_)
 
-import PDF.Graphics.Interpreter.GraphicsState
-    ( GraphicsState (gsCTM, gsScaleX, gsScaleY, gsStack, gsTextState, gsUserUnit)
+import Data.PDF.GraphicsState
+    ( GraphicsState (gsCTM, gsScaleX, gsScaleY, gsTextState, gsUserUnit)
     , defaultGraphicsState
     , usefulGraphicsPrecision
     )
-import PDF.Graphics.Interpreter.TextState (defaultTextState)
-import PDF.Graphics.Interpreter.TransformationMatrix
+import Data.PDF.TextState (defaultTextState)
+import Data.PDF.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix)
     )
 
@@ -22,7 +22,6 @@ stateExamples =
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 1.0 0.0 0.0 1.0 0.0 0.0
       , gsTextState = defaultTextState
-      , gsStack = []
       , gsScaleX = 1.0
       , gsScaleY = 1.0
       }
@@ -32,7 +31,6 @@ stateExamples =
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 0.0 1.0 (-1.0) 0.0 1.0 1.0
       , gsTextState = defaultTextState
-      , gsStack = []
       , gsScaleX = 1.0
       , gsScaleY = 1.0
       }
@@ -42,7 +40,6 @@ stateExamples =
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 100.0 0.0 0.0 100.0 0.0 0.0
       , gsTextState = defaultTextState
-      , gsStack = []
       , gsScaleX = 100.0
       , gsScaleY = 100.0
       }
@@ -52,7 +49,6 @@ stateExamples =
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 10.0 0.0 0.0 10.0 0.0 0.0
       , gsTextState = defaultTextState
-      , gsStack = []
       , gsScaleX = 10.0
       , gsScaleY = 10.0
       }

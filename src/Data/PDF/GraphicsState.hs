@@ -21,11 +21,14 @@ module Data.PDF.GraphicsState
   , setLineWidth
   , setCurrentPoint
   , resetTextState
+  , setStrokeColor
+  , setNonStrokeColor
   ) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
+import Data.PDF.Color (Color (ColorGray))
 import Data.PDF.TextState
     ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsMatrix, tsRise)
     , defaultTextState
@@ -62,6 +65,8 @@ data GraphicsState = GraphicsState
   , gsFlatness       :: !Double
   , gsStrokeAlpha    :: !Double
   , gsNonStrokeAlpha :: !Double
+  , gsStrokeColor    :: !Color
+  , gsNonStrokeColor :: !Color
   , gsPathStartX     :: !Double
   , gsPathStartY     :: !Double
   , gsCurrentPointX  :: !Double
@@ -93,6 +98,8 @@ defaultGraphicsState = GraphicsState
   , gsFlatness       = 1.0
   , gsStrokeAlpha    = 1.0
   , gsNonStrokeAlpha = 1.0
+  , gsStrokeColor    = ColorGray 0
+  , gsNonStrokeColor = ColorGray 0
   , gsPathStartX     = 0.0
   , gsPathStartY     = 0.0
   , gsCurrentPointX  = 0.0
@@ -286,3 +293,9 @@ setCurrentPoint x y state = state { gsCurrentPointX = x, gsCurrentPointY = y }
 
 resetTextState :: GraphicsState -> GraphicsState
 resetTextState state = state { gsTextState = defaultTextState }
+
+setStrokeColor :: Color -> GraphicsState -> GraphicsState
+setStrokeColor color state = state { gsStrokeColor = color }
+
+setNonStrokeColor :: Color -> GraphicsState -> GraphicsState
+setNonStrokeColor color state = state { gsNonStrokeColor = color }

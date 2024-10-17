@@ -26,6 +26,8 @@ module Data.PDF.InterpreterState
   , getPathStartS
   , setCurrentPointS
   , resetTextStateS
+  , setNonStrokeColorS
+  , setStrokeColorS
   ) where
 
 import Control.Monad.RWS (modify)
@@ -33,6 +35,7 @@ import Control.Monad.State (State, get, gets, put)
 
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
+import Data.PDF.Color (Color)
 import Data.PDF.GraphicsState
     ( GraphicsState
     , applyGraphicsMatrix
@@ -51,9 +54,11 @@ import Data.PDF.GraphicsState
     , setLineWidth
     , setMiterLimit
     , setNonStrokeAlpha
+    , setNonStrokeColor
     , setPathStart
     , setRenderingIntent
     , setStrokeAlpha
+    , setStrokeColor
     , setTextRise
     , usefulColorPrecision
     , usefulGraphicsPrecision
@@ -174,3 +179,9 @@ setCurrentPointS x y = modifyGraphicsStateS (setCurrentPoint x y)
 
 resetTextStateS :: State InterpreterState ()
 resetTextStateS = modifyGraphicsStateS resetTextState
+
+setStrokeColorS :: Color -> State InterpreterState ()
+setStrokeColorS = modifyGraphicsStateS . setStrokeColor
+
+setNonStrokeColorS :: Color -> State InterpreterState ()
+setNonStrokeColorS = modifyGraphicsStateS . setNonStrokeColor

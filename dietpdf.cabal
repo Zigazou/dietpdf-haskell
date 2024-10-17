@@ -48,6 +48,7 @@ library
       Data.FoldableWithRest
       Data.HasLength
       Data.Logging
+      Data.PDF.Color
       Data.PDF.Command
       Data.PDF.EncodedObject
       Data.PDF.EncodedObjects
@@ -300,6 +301,9 @@ test-suite dietpdf-test
       Data.BitsArraySpec
       Data.FoldableWithRestSpec
       Data.LoggingSpec
+      Data.PDF.GraphicsStateSpec
+      Data.PDF.ProgramSpec
+      Data.PDF.TransformationMatrixSpec
       External.JpegToJpeg2kSpec
       Font.TrueType.Parser.FontSpec
       Font.TrueType.Parser.HeadSpec
@@ -307,10 +311,7 @@ test-suite dietpdf-test
       PDF.Document.EncodeSpec
       PDF.Document.ObjectStreamSpec
       PDF.Document.XRefSpec
-      PDF.Graphics.Interpreter.GraphicsStateSpec
       PDF.Graphics.Interpreter.OptimizeProgramSpec
-      PDF.Graphics.Interpreter.ProgramSpec
-      PDF.Graphics.Interpreter.TransformationMatrixSpec
       PDF.Graphics.Parser.ArraySpec
       PDF.Graphics.Parser.CommentSpec
       PDF.Graphics.Parser.DictionarySpec
@@ -346,6 +347,7 @@ test-suite dietpdf-test
       PDF.Parser.IndirectObjectSpec
       PDF.Parser.ParserSpec
       Util.ByteStringSpec
+      Util.GraphicsSpec
       Util.HexSpec
       Util.NumberSpec
       Util.ParserHelper
