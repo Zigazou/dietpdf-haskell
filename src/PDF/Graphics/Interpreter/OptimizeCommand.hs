@@ -4,16 +4,12 @@ module PDF.Graphics.Interpreter.OptimizeCommand
 
 import Control.Monad.State (State, gets)
 
-import Data.Foldable (toList)
 import Data.Functor ((<&>))
-import Data.PDF.Color (Color (ColorCMYK, ColorGeneric, ColorGray, ColorRGB))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNull, GFXNumber, GFXString)
+    ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNumber, GFXString)
     , GSOperator (GSBeginText, GSCloseSubpath, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSEndPath, GSEndText, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetHorizontalScaling, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextMatrix, GSSetTextRise, GSShowManyText, GSShowText)
-    , reducePrecision
     )
-import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.GraphicsState
     ( GraphicsState (gsCurrentPointX, gsCurrentPointY, gsFlatness, gsIntent, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsPathStartX, gsPathStartY, gsStrokeColor)
     , gsNonStrokeColor
@@ -54,180 +50,19 @@ import Data.PDF.Program (Program)
 import Data.PDF.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix)
     )
-import Data.Sequence (Seq (Empty, (:<|), (:|>)), fromList)
+import Data.Sequence (Seq (Empty, (:<|)))
+
+import PDF.Graphics.Interpreter.OptimizeColor
+    ( mkColor
+    , mkNonStrokeCommand
+    , mkStrokeCommand
+    , optimizeColorCommand
+    )
+import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 import Util.Graphics (areAligned)
 import Util.Number (round')
 
-
-optimizeParameters :: Command -> Int -> Command
-optimizeParameters command precision =
-  command { cParameters = reducePrecision precision <$> cParameters command}
-
-optimizeColorCommand :: Command -> Command
-optimizeColorCommand command
-  | isGray (cParameters command) = case cOperator command of
-      GSSetStrokeRGBColorspace ->
-        command { cOperator = GSSetStrokeGrayColorspace
-                , cParameters = grayLevel parameters :<| Empty
-                }
-      GSSetNonStrokeRGBColorspace ->
-        command { cOperator = GSSetNonStrokeGrayColorspace
-                , cParameters = grayLevel parameters :<| Empty
-                }
-      GSSetStrokeCMYKColorspace ->
-        command { cOperator = GSSetStrokeGrayColorspace
-                , cParameters = grayLevel parameters :<| Empty
-                }
-      GSSetNonStrokeCMYKColorspace ->
-        command { cOperator = GSSetNonStrokeGrayColorspace
-                , cParameters = grayLevel parameters :<| Empty
-                }
-      _anyOtherOperator -> command
-  | otherwise = command
-  where
-    parameters :: GFXObjects
-    parameters = cParameters command
-
-    grayLevel :: GFXObjects -> GFXObject
-    grayLevel (red
-           :<| _green
-           :<| _blue
-           :<| Empty) = red
-    grayLevel (GFXNumber 0
-           :<| GFXNumber 0
-           :<| GFXNumber 0
-           :<| GFXNumber black
-           :<| Empty) = GFXNumber (1.0 - black)
-    grayLevel _otherParameters = GFXNull
-
-    isGray :: GFXObjects -> Bool
-    isGray (a :<| b :<| c :<| Empty) = a == b && b == c
-    isGray (GFXNumber 0
-        :<| GFXNumber 0
-        :<| GFXNumber 0
-        :<| _black
-        :<| Empty) = True
-    isGray _otherParameters = False
-
-mkColor :: Command -> State InterpreterState Color
-mkColor command = do
-  optimizedCommand' <- usefulColorPrecisionS <&> optimizeParameters command
-  mkColor' optimizedCommand'
-
- where
-  mkColor' :: Command -> State InterpreterState Color
-  mkColor' (Command GSSetStrokeRGBColorspace (GFXNumber red
-                                          :<| GFXNumber green
-                                          :<| GFXNumber blue
-                                          :<| Empty)) =
-    return $ ColorRGB red green blue
-
-  mkColor' (Command GSSetNonStrokeRGBColorspace (GFXNumber red
-                                             :<| GFXNumber green
-                                             :<| GFXNumber blue
-                                             :<| Empty)) =
-    return $ ColorRGB red green blue
-
-  mkColor' (Command GSSetStrokeCMYKColorspace (GFXNumber cyan
-                                           :<| GFXNumber magenta
-                                           :<| GFXNumber yellow
-                                           :<| GFXNumber black
-                                           :<| Empty)) =
-    return $ ColorCMYK cyan magenta yellow black
-
-  mkColor' (Command GSSetNonStrokeCMYKColorspace (GFXNumber cyan
-                                              :<| GFXNumber magenta
-                                              :<| GFXNumber yellow
-                                              :<| GFXNumber black
-                                              :<| Empty)) =
-    return $ ColorCMYK cyan magenta yellow black
-
-  mkColor' (Command GSSetStrokeGrayColorspace (GFXNumber gray :<| Empty)) =
-    return $ ColorGray gray
-
-  mkColor' (Command GSSetNonStrokeGrayColorspace (GFXNumber gray :<| Empty)) =
-    return $ ColorGray gray
-
-  mkColor' (Command GSSetStrokeColorspace _parameters) =
-    return $ ColorGray 0
-
-  mkColor' (Command GSSetNonStrokeColorspace _parameters) =
-    return $ ColorGray 0
-
-  mkColor' (Command GSSetStrokeColorN (parameters :|> GFXName name)) =
-    return $ ColorGeneric (onlyDouble (toList parameters)) (Just name)
-
-  mkColor' (Command GSSetStrokeColorN parameters) =
-    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
-
-  mkColor' (Command GSSetNonStrokeColorN (parameters :|> GFXName name)) =
-    return $ ColorGeneric (onlyDouble (toList parameters)) (Just name)
-
-  mkColor' (Command GSSetNonStrokeColorN parameters) =
-    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
-
-  mkColor' (Command GSSetStrokeColor parameters) =
-    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
-
-  mkColor' (Command GSSetNonStrokeColor parameters) =
-    return $ ColorGeneric (onlyDouble (toList parameters)) Nothing
-
-  mkColor' _command = error ("TODO: mkColor' " ++ show command)
-
-  onlyDouble :: [GFXObject] -> [Double]
-  onlyDouble = map (\case GFXNumber x -> x; _ -> 0)
-
-mkStrokeCommand :: Color -> Command
-mkStrokeCommand (ColorRGB red green blue) =
-  Command GSSetStrokeRGBColorspace
-          (   GFXNumber red
-          :<| GFXNumber green
-          :<| GFXNumber blue
-          :<| Empty
-          )
-mkStrokeCommand (ColorCMYK cyan magenta yellow black) =
-  Command GSSetStrokeCMYKColorspace
-          (   GFXNumber cyan
-          :<| GFXNumber magenta
-          :<| GFXNumber yellow
-          :<| GFXNumber black
-          :<| Empty
-          )
-mkStrokeCommand (ColorGray gray) =
-  Command GSSetStrokeGrayColorspace (GFXNumber gray :<| Empty)
-
-mkStrokeCommand (ColorGeneric parameters (Just name)) =
-  Command GSSetStrokeColorN (fromList (GFXNumber <$> parameters) :|> GFXName name)
-
-mkStrokeCommand (ColorGeneric parameters Nothing) =
-  Command GSSetStrokeColor (fromList (GFXNumber <$> parameters))
-
-mkNonStrokeCommand :: Color -> Command
-mkNonStrokeCommand (ColorRGB red green blue) =
-  Command GSSetNonStrokeRGBColorspace
-          (   GFXNumber red
-          :<| GFXNumber green
-          :<| GFXNumber blue
-          :<| Empty
-          )
-mkNonStrokeCommand (ColorCMYK cyan magenta yellow black) =
-  Command GSSetNonStrokeCMYKColorspace
-          (   GFXNumber cyan
-          :<| GFXNumber magenta
-          :<| GFXNumber yellow
-          :<| GFXNumber black
-          :<| Empty
-          )
-mkNonStrokeCommand (ColorGray gray) =
-  Command GSSetNonStrokeGrayColorspace (GFXNumber gray :<| Empty)
-
-mkNonStrokeCommand (ColorGeneric parameters (Just name)) =
-  Command GSSetNonStrokeColorN (fromList (GFXNumber <$> parameters)
-                            :|> GFXName name)
-
-mkNonStrokeCommand (ColorGeneric parameters Nothing) =
-  Command GSSetNonStrokeColor (fromList (GFXNumber <$> parameters))
 
 hasTextmoveBeforeEndText :: Program -> Bool
 hasTextmoveBeforeEndText (Command GSEndPath _params :<| _tail) = False

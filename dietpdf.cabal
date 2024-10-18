@@ -107,7 +107,9 @@ library
       PDF.Document.Uncompress
       PDF.Document.XRef
       PDF.Graphics.Interpreter.Human
+      PDF.Graphics.Interpreter.OptimizeColor
       PDF.Graphics.Interpreter.OptimizeCommand
+      PDF.Graphics.Interpreter.OptimizeParameters
       PDF.Graphics.Interpreter.OptimizeProgram
       PDF.Graphics.Optimize
       PDF.Graphics.Parser.Comment
