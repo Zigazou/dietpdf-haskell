@@ -1,5 +1,5 @@
 module Data.PDF.InterpreterState
-  ( InterpreterState (InterpreterState, iGraphicsState, iStack)
+  ( InterpreterState (InterpreterState, iGraphicsState, iStack, iWorkData)
   , defaultInterpreterState
   , saveState
   , saveStateS
@@ -28,6 +28,7 @@ module Data.PDF.InterpreterState
   , resetTextStateS
   , setNonStrokeColorS
   , setStrokeColorS
+  , setWorkData
   ) where
 
 import Control.Monad.RWS (modify)
@@ -65,17 +66,20 @@ import Data.PDF.GraphicsState
     , usefulTextPrecision
     )
 import Data.PDF.TransformationMatrix (TransformationMatrix)
+import Data.PDF.WorkData (WorkData, emptyWorkData)
 
 type InterpreterState :: Type
 data InterpreterState = InterpreterState
   { iGraphicsState :: !GraphicsState
   , iStack         :: ![GraphicsState]
+  , iWorkData      :: !WorkData
   }
 
 defaultInterpreterState :: InterpreterState
 defaultInterpreterState = InterpreterState
   { iGraphicsState = defaultGraphicsState
-  , iStack         = []
+  , iStack    = []
+  , iWorkData = emptyWorkData
   }
 
 {- |
@@ -185,3 +189,6 @@ setStrokeColorS = modifyGraphicsStateS . setStrokeColor
 
 setNonStrokeColorS :: Color -> State InterpreterState ()
 setNonStrokeColorS = modifyGraphicsStateS . setNonStrokeColor
+
+setWorkData :: WorkData -> InterpreterState -> InterpreterState
+setWorkData workData state = state { iWorkData = workData }

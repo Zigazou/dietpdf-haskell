@@ -65,13 +65,13 @@ import Util.Number (round')
 
 
 hasTextmoveBeforeEndText :: Program -> Bool
-hasTextmoveBeforeEndText (Command GSEndPath _params :<| _tail) = False
-hasTextmoveBeforeEndText (Command GSCloseSubpath _params :<| _tail) = False
-hasTextmoveBeforeEndText (Command GSMoveToNextLine _params :<| _tail) = True
+hasTextmoveBeforeEndText (Command GSEndPath _params :<| _tail)          = False
+hasTextmoveBeforeEndText (Command GSCloseSubpath _params :<| _tail)     = False
+hasTextmoveBeforeEndText (Command GSMoveToNextLine _params :<| _tail)   = True
 hasTextmoveBeforeEndText (Command GSMoveToNextLineLP _params :<| _tail) = True
-hasTextmoveBeforeEndText (Command GSSetTextMatrix _params :<| _tail) = True
+hasTextmoveBeforeEndText (Command GSSetTextMatrix _params :<| _tail)    = True
+hasTextmoveBeforeEndText Empty                                          = False
 hasTextmoveBeforeEndText (_command :<| rest) = hasTextmoveBeforeEndText rest
-hasTextmoveBeforeEndText Empty = False
 
 {- |
 The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and

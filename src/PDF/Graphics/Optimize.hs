@@ -1,6 +1,6 @@
 module PDF.Graphics.Optimize (optimizeGFX) where
 
-import Control.Monad.State (gets)
+import Control.Monad.State (gets, MonadState (get))
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -39,10 +39,11 @@ optimizeGFX stream = do
 
           Right objects -> do
             nameTranslations <- getTranslationTable
+            workData <- get
             let optimizedStream = separateGfx
                                 . fmap (renameResourcesInObject nameTranslations)
                                 . extractObjects
-                                . optimizeProgram
+                                . optimizeProgram workData
                                 . parseProgram
                                 $ objects
 

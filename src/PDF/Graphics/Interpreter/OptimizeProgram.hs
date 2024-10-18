@@ -13,8 +13,12 @@ import Data.PDF.GFXObject
 import Data.PDF.InterpreterAction
     ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand)
     )
-import Data.PDF.InterpreterState (InterpreterState, defaultInterpreterState)
+import Data.PDF.InterpreterState
+    ( InterpreterState (iWorkData)
+    , defaultInterpreterState
+    )
 import Data.PDF.Program (Program)
+import Data.PDF.WorkData (WorkData)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), breakl, singleton, (<|), (|>))
 
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
@@ -113,10 +117,11 @@ removeUselessSaveRestore program = case breakl onRestore program of
 The 'optimizeProgram' function takes a 'Program' and returns an optimized
 'Program'.
 -}
-optimizeProgram :: Program -> Program
-optimizeProgram = flip evalState defaultInterpreterState
-                . optimizeCommands mempty
-                . removeUselessSaveRestore
+optimizeProgram :: WorkData -> Program -> Program
+optimizeProgram workData
+  = flip evalState defaultInterpreterState { iWorkData = workData }
+  . optimizeCommands mempty
+  . removeUselessSaveRestore
   where
     optimizeCommands
       :: Program
