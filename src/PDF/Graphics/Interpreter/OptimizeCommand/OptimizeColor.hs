@@ -1,5 +1,5 @@
-module PDF.Graphics.Interpreter.OptimizeColor
-  ( optimizeColorCommand
+module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
+  ( optimizeColor
   , mkColor
   , mkStrokeCommand
   , mkNonStrokeCommand
@@ -22,8 +22,8 @@ import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 
 
-optimizeColorCommand :: Command -> Command
-optimizeColorCommand command
+optimizeColor :: Command -> Command
+optimizeColor command
   | isGray (cParameters command) = case cOperator command of
       GSSetStrokeRGBColorspace ->
         command { cOperator = GSSetStrokeGrayColorspace

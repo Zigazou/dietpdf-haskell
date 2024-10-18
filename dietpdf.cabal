@@ -107,8 +107,15 @@ library
       PDF.Document.Uncompress
       PDF.Document.XRef
       PDF.Graphics.Interpreter.Human
-      PDF.Graphics.Interpreter.OptimizeColor
       PDF.Graphics.Interpreter.OptimizeCommand
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeDrawCommand
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGeneric
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGraphicsMatrix
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeStateCommand
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommand
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
       PDF.Graphics.Interpreter.OptimizeParameters
       PDF.Graphics.Interpreter.OptimizeProgram
       PDF.Graphics.Optimize
