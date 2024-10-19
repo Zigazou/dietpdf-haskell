@@ -90,7 +90,7 @@ defaultGraphicsState = GraphicsState
   , gsTextState      = defaultTextState
   , gsLineWidth      = 1.0
   , gsLineCap        = 0.0
-  , gsLineJoin       = 1.0
+  , gsLineJoin       = 0.0
   , gsMiterLimit     = 10.0
   , gsDashArray      = []
   , gsDashPhase      = 0.0
@@ -112,7 +112,7 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulGraphicsPrecision :: GraphicsState -> Int
-usefulGraphicsPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
+usefulGraphicsPrecision state = max 0 (ceiling (logBase 10 scale) + 2)
  where
   userUnit = gsUserUnit state
   scaleX   = userUnit * abs (gsScaleX state)
@@ -125,7 +125,7 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulTextPrecision :: GraphicsState -> Int
-usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
+usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 2)
  where
   userUnit = gsUserUnit state
   scaleTX  = abs ((tsScaleX . gsTextState) state)
@@ -156,8 +156,7 @@ applyGraphicsMatrix matrix state = state
   }
  where
   graphicsMatrix   = gsCTM state <> matrix
-  (scaleX, scaleY) = matrixScale graphicsMatrix
-                                 (gsScaleX state, gsScaleY state)
+  (scaleX, scaleY) = matrixScale graphicsMatrix (1.0, 1.0)
 
 {- |
 Set the text matrix of the current text state.
@@ -185,8 +184,7 @@ applyTextMatrix matrix state = state
     , tmE = 0.0
     , tmF = tsRise tsState
     })
-  (scaleX, scaleY) = matrixScale renderingMatrix
-                                 (gsScaleX state, gsScaleY state)
+  (scaleX, scaleY) = matrixScale renderingMatrix (1.0, 1.0)
 
 {- |
 Set the font and font size of the current text state.

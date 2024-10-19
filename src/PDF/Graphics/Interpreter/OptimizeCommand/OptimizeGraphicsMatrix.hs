@@ -4,7 +4,6 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGraphicsMatrix
 
 import Control.Monad.State (State)
 
-import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject (GFXObject (GFXNumber), GSOperator (GSSetCTM))
 import Data.PDF.InterpreterAction
@@ -51,7 +50,7 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
          :<| GFXNumber e
          :<| GFXNumber f
          :<| Empty) -> do
-    precision <- usefulGraphicsPrecisionS <&> (+ 1)
+    precision <- usefulGraphicsPrecisionS
     case rest of
       (Command GSSetCTM ( GFXNumber a'
                       :<| GFXNumber b'
@@ -72,10 +71,10 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
                                         :<| GFXNumber (f * a' + f')
                                         :<| Empty
                                         )
-        return $ ReplaceAndDeleteNextCommand (optimizeParameters command' precision)
+        return $ ReplaceAndDeleteNextCommand (optimizeParameters command' (precision + 2))
       _anythingElse -> do
         applyGraphicsMatrixS (TransformationMatrix a b c d e f)
-        return $ ReplaceCommand (optimizeParameters command precision)
+        return $ ReplaceCommand (optimizeParameters command (precision + 2))
 
   _anyOtherCommand -> return KeepCommand
  where

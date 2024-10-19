@@ -54,11 +54,20 @@ stateExamples =
       }
     , 3
     )
+  , ( defaultGraphicsState
+      { gsUserUnit = 1.0
+      , gsCTM = TransformationMatrix 10.0 (-2.0) 2.0 10.0 1000.0 500.0
+      , gsTextState = defaultTextState
+      , gsScaleX = 10.0
+      , gsScaleY = 10.0
+      }
+    , 3
+    )
   ]
 
 spec :: Spec
 spec =
-  describe "usefuleGraphicsPrecision" $
+  describe "usefulGraphicsPrecision" $
     forM_ stateExamples $ \(example, expected) -> do
       it ("should work with " ++ show example)
         $ usefulGraphicsPrecision example `shouldBe` expected

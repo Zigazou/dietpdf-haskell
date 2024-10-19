@@ -34,6 +34,21 @@ import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 import Util.Number (round')
 
+deleteIfNothingWillChange
+  :: Command
+  -> Double
+  -> (GraphicsState -> Double)
+  -> (Double -> State InterpreterState ())
+  -> State InterpreterState InterpreterAction
+deleteIfNothingWillChange command newValue getter setter = do
+    newValue' <- usefulGraphicsPrecisionS <&> flip round' newValue
+    currentValue <- gets (getter . iGraphicsState)
+    if newValue' == currentValue
+      then return DeleteCommand
+      else do
+        setter newValue'
+        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+
 {- |
 The 'optimizeStateCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
@@ -53,50 +68,20 @@ optimizeStateCommand command _rest = case (operator, parameters) of
     restoreStateS
     return KeepCommand
 
-  (GSSetLineWidth, GFXNumber width :<| Empty) -> do
-    width' <- usefulGraphicsPrecisionS <&> flip round' width
-    currentWidth <- gets (gsLineWidth . iGraphicsState)
-    if width' == currentWidth
-      then return DeleteCommand
-      else do
-        setLineWidthS width'
-        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+  (GSSetLineWidth, GFXNumber width :<| Empty) ->
+    deleteIfNothingWillChange command width gsLineWidth setLineWidthS
 
-  (GSSetLineCap, GFXNumber lineCap :<| Empty) -> do
-    lineCap' <- usefulGraphicsPrecisionS <&> flip round' lineCap
-    currentLineCap <- gets (gsLineCap . iGraphicsState)
-    if lineCap' == currentLineCap
-      then return DeleteCommand
-      else do
-        setLineCapS lineCap'
-        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+  (GSSetLineCap, GFXNumber lineCap :<| Empty) ->
+    deleteIfNothingWillChange command lineCap gsLineCap setLineCapS
 
-  (GSSetLineJoin, GFXNumber lineJoin :<| Empty) -> do
-    lineJoin' <- usefulGraphicsPrecisionS <&> flip round' lineJoin
-    currentLineJoin <- gets (gsLineJoin . iGraphicsState)
-    if lineJoin' == currentLineJoin
-      then return DeleteCommand
-      else do
-        setLineJoinS lineJoin'
-        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+  (GSSetLineJoin, GFXNumber lineJoin :<| Empty) ->
+    deleteIfNothingWillChange command lineJoin gsLineJoin setLineJoinS
 
-  (GSSetMiterLimit, GFXNumber miterLimit :<| Empty) -> do
-    miterLimit' <- usefulGraphicsPrecisionS <&> flip round' miterLimit
-    currentMiterLimit <- gets (gsMiterLimit . iGraphicsState)
-    if miterLimit' == currentMiterLimit
-      then return DeleteCommand
-      else do
-        setMiterLimitS miterLimit'
-        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+  (GSSetMiterLimit, GFXNumber miterLimit :<| Empty) ->
+    deleteIfNothingWillChange command miterLimit gsMiterLimit setMiterLimitS
 
-  (GSSetFlatnessTolerance, GFXNumber flatness :<| Empty) -> do
-    flatness' <- usefulGraphicsPrecisionS <&> flip round' flatness
-    currentFlatness <- gets (gsFlatness . iGraphicsState)
-    if flatness' == currentFlatness
-      then return DeleteCommand
-      else do
-        setFlatnessS flatness'
-        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+  (GSSetFlatnessTolerance, GFXNumber flatness :<| Empty) ->
+    deleteIfNothingWillChange command flatness gsFlatness setFlatnessS
 
   _anyOtherCommand -> return KeepCommand
  where

@@ -38,7 +38,8 @@ optimizeTextCommand command _rest = case (operator, parameters) of
   -- Set text font and size
   (GSSetTextFont, GFXName fontName :<| GFXNumber fontSize :<| Empty) -> do
     setFontS fontName fontSize
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    precision <- usefulTextPrecisionS
+    return (ReplaceCommand (optimizeParameters command (precision + 1)))
 
   -- Set text horizontal scaling
   (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) -> do

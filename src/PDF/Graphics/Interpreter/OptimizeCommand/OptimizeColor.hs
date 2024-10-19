@@ -134,7 +134,7 @@ mkColor command = do
   mkColor' _command = error ("TODO: mkColor' " ++ show command)
 
   onlyDouble :: [GFXObject] -> [Double]
-  onlyDouble = map (\case GFXNumber x -> x; _ -> 0)
+  onlyDouble = map (\case GFXNumber x -> x; _anyOtherObjectType -> 0)
 
 mkStrokeCommand :: Color -> Command
 mkStrokeCommand (ColorRGB red green blue) =

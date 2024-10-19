@@ -29,6 +29,7 @@ import Data.Sequence (Seq (Empty, (:<|)))
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 import Util.Graphics (areAligned)
+import Util.Number (round')
 
 
 {- |
@@ -46,24 +47,60 @@ optimizeDrawCommand command rest = case (operator, parameters) of
     ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
 
   -- Keep track of current position
-  (GSCubicBezierCurve, GFXNumber _x1 :<| GFXNumber _y1
-                   :<| GFXNumber _x2 :<| GFXNumber _y2
-                   :<| GFXNumber x3  :<| GFXNumber y3
+  (GSCubicBezierCurve, GFXNumber x1 :<| GFXNumber y1
+                   :<| GFXNumber x2 :<| GFXNumber y2
+                   :<| GFXNumber x3 :<| GFXNumber y3
                    :<| Empty) -> do
-    setCurrentPointS x3 y3
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    precision <- usefulGraphicsPrecisionS
+    let x1' = round' (precision - 1) x1
+        y1' = round' (precision - 1) y1
+        x2' = round' (precision - 1) x2
+        y2' = round' (precision - 1) y2
+        x3' = round' precision x3
+        y3' = round' precision y3
+    setCurrentPointS x3' y3'
+    return
+      (ReplaceCommand
+        (Command GSCubicBezierCurve (GFXNumber x1' :<| GFXNumber y1'
+                                 :<| GFXNumber x2' :<| GFXNumber y2'
+                                 :<| GFXNumber x3' :<| GFXNumber y3'
+                                 :<| Empty)
+        )
+      )
 
-  (GSCubicBezierCurve1To, GFXNumber _x1 :<| GFXNumber _y1
-                      :<| GFXNumber x3  :<| GFXNumber y3
+  (GSCubicBezierCurve1To, GFXNumber x1 :<| GFXNumber y1
+                      :<| GFXNumber x3 :<| GFXNumber y3
                       :<| Empty) -> do
-    setCurrentPointS x3 y3
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    precision <- usefulGraphicsPrecisionS
+    let x1' = round' (precision - 1) x1
+        y1' = round' (precision - 1) y1
+        x3' = round' precision x3
+        y3' = round' precision y3
+    setCurrentPointS x3' y3'
+    return
+      (ReplaceCommand
+        (Command GSCubicBezierCurve1To (GFXNumber x1' :<| GFXNumber y1'
+                                    :<| GFXNumber x3' :<| GFXNumber y3'
+                                    :<| Empty)
+        )
+      )
 
-  (GSCubicBezierCurve2To, GFXNumber _x2 :<| GFXNumber _y2
-                      :<| GFXNumber x3  :<| GFXNumber y3
+  (GSCubicBezierCurve2To, GFXNumber x2 :<| GFXNumber y2
+                      :<| GFXNumber x3 :<| GFXNumber y3
                       :<| Empty) -> do
-    setCurrentPointS x3 y3
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    precision <- usefulGraphicsPrecisionS
+    let x2' = round' (precision - 1) x2
+        y2' = round' (precision - 1) y2
+        x3' = round' precision x3
+        y3' = round' precision y3
+    setCurrentPointS x3' y3'
+    return
+      (ReplaceCommand
+        (Command GSCubicBezierCurve2To (GFXNumber x2' :<| GFXNumber y2'
+                                    :<| GFXNumber x3' :<| GFXNumber y3'
+                                    :<| Empty)
+        )
+      )
 
   -- Optimize LineTo operator
   (GSLineTo, GFXNumber x :<| GFXNumber y :<| Empty) -> do

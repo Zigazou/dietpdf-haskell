@@ -79,7 +79,7 @@ import Util.Ascii
     )
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
 import Util.Name (fromName)
-import Util.Number (fromInt, fromNumber, roundAndAHalf)
+import Util.Number (fromInt, fromNumber, roundAndAHalf, round')
 import Util.String (fromHexString, fromString)
 
 {-|
@@ -791,7 +791,7 @@ Any other GFXObject is returned as is.
 -}
 reducePrecision :: Int -> GFXObject -> GFXObject
 reducePrecision precision (GFXNumber value) =
-  GFXNumber (roundAndAHalf precision value)
+  GFXNumber (round' precision value)
 reducePrecision precision (GFXArray items) =
   GFXArray (reducePrecision precision <$> items)
 reducePrecision _anyPrecision gfxObject = gfxObject

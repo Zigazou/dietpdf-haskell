@@ -20,6 +20,7 @@ import PDF.Graphics.Interpreter.OptimizeProgram
 import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
+import Data.PDF.WorkData (emptyWorkData)
 
 optimizeProgramExamples :: [(BS.ByteString, Program)]
 optimizeProgramExamples =
@@ -104,7 +105,7 @@ spec = do
   describe "optimizeProgram" $
     forM_ optimizeProgramExamples $ \(example, expected) -> do
       it ("should work with " ++ show example)
-        $          optimizeProgram . parseProgram <$> gfxParse example
+        $          optimizeProgram emptyWorkData . parseProgram <$> gfxParse example
         `shouldBe` Right expected
 
   describe "findRelatedSave" $
