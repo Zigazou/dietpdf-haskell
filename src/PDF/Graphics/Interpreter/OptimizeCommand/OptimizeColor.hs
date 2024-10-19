@@ -21,7 +21,6 @@ import Data.Sequence (Seq (Empty, (:<|), (:|>)), fromList)
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 
-
 optimizeColor :: Command -> Command
 optimizeColor command
   | isGray (cParameters command) = case cOperator command of
@@ -107,11 +106,11 @@ mkColor command = do
   mkColor' (Command GSSetNonStrokeGrayColorspace (GFXNumber gray :<| Empty)) =
     return $ ColorGray gray
 
-  mkColor' (Command GSSetStrokeColorspace _parameters) =
-    return $ ColorGray 0
+  mkColor' (Command GSSetStrokeColorspace (parameters :|> GFXName name)) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) (Just name)
 
-  mkColor' (Command GSSetNonStrokeColorspace _parameters) =
-    return $ ColorGray 0
+  mkColor' (Command GSSetNonStrokeColorspace (parameters :|> GFXName name)) =
+    return $ ColorGeneric (onlyDouble (toList parameters)) (Just name)
 
   mkColor' (Command GSSetStrokeColorN (parameters :|> GFXName name)) =
     return $ ColorGeneric (onlyDouble (toList parameters)) (Just name)

@@ -34,13 +34,13 @@ import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 import Util.Number (round')
 
-deleteIfNothingWillChange
+deleteIfNoChange
   :: Command
   -> Double
   -> (GraphicsState -> Double)
   -> (Double -> State InterpreterState ())
   -> State InterpreterState InterpreterAction
-deleteIfNothingWillChange command newValue getter setter = do
+deleteIfNoChange command newValue getter setter = do
     newValue' <- usefulGraphicsPrecisionS <&> flip round' newValue
     currentValue <- gets (getter . iGraphicsState)
     if newValue' == currentValue
@@ -69,19 +69,19 @@ optimizeStateCommand command _rest = case (operator, parameters) of
     return KeepCommand
 
   (GSSetLineWidth, GFXNumber width :<| Empty) ->
-    deleteIfNothingWillChange command width gsLineWidth setLineWidthS
+    deleteIfNoChange command width gsLineWidth setLineWidthS
 
   (GSSetLineCap, GFXNumber lineCap :<| Empty) ->
-    deleteIfNothingWillChange command lineCap gsLineCap setLineCapS
+    deleteIfNoChange command lineCap gsLineCap setLineCapS
 
   (GSSetLineJoin, GFXNumber lineJoin :<| Empty) ->
-    deleteIfNothingWillChange command lineJoin gsLineJoin setLineJoinS
+    deleteIfNoChange command lineJoin gsLineJoin setLineJoinS
 
   (GSSetMiterLimit, GFXNumber miterLimit :<| Empty) ->
-    deleteIfNothingWillChange command miterLimit gsMiterLimit setMiterLimitS
+    deleteIfNoChange command miterLimit gsMiterLimit setMiterLimitS
 
   (GSSetFlatnessTolerance, GFXNumber flatness :<| Empty) ->
-    deleteIfNothingWillChange command flatness gsFlatness setFlatnessS
+    deleteIfNoChange command flatness gsFlatness setFlatnessS
 
   _anyOtherCommand -> return KeepCommand
  where

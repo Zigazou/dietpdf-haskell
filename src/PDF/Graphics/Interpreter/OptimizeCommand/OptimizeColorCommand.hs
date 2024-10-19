@@ -31,6 +31,27 @@ import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
     , mkStrokeCommand
     )
 
+strokeDeleteIfNoChange
+  :: Command
+  -> State InterpreterState InterpreterAction
+strokeDeleteIfNoChange command = do
+    currentColor <- gets (gsStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setStrokeColorS newColor
+    return $ if currentColor == newColor
+              then DeleteCommand
+              else ReplaceCommand (mkStrokeCommand newColor)
+
+nonStrokeDeleteIfNoChange
+  :: Command
+  -> State InterpreterState InterpreterAction
+nonStrokeDeleteIfNoChange command = do
+    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
+    newColor <- mkColor command
+    setNonStrokeColorS newColor
+    return $ if currentColor == newColor
+              then DeleteCommand
+              else ReplaceCommand (mkNonStrokeCommand newColor)
 
 {- |
 The 'optimizeColorCommand' function takes a 'GraphicsState' and a 'Command' and
@@ -49,101 +70,18 @@ optimizeColorCommand command _rest = case (operator, parameters) of
         setRenderingIntentS intent
         return KeepCommand
 
-  (GSSetStrokeColorspace, _parameters) -> do
-    currentColor <- gets (gsStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkStrokeCommand newColor)
-
-  (GSSetNonStrokeColorspace, _parameters) -> do
-    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setNonStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
-
-  (GSSetStrokeColor, _parameters) -> do
-    currentColor <- gets (gsStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkStrokeCommand newColor)
-
-  (GSSetNonStrokeColor, _parameters) -> do
-    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setNonStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
-
-  (GSSetStrokeColorN, _parameters) -> do
-    currentColor <- gets (gsStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkStrokeCommand newColor)
-
-  (GSSetNonStrokeColorN, _parameters) -> do
-    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setNonStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
-
-  (GSSetStrokeGrayColorspace, _parameters) -> do
-    currentColor <- gets (gsStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkStrokeCommand newColor)
-
-  (GSSetNonStrokeGrayColorspace, _parameters) -> do
-    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setNonStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
-
-  (GSSetStrokeRGBColorspace, _parameters) -> do
-    currentColor <- gets (gsStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkStrokeCommand newColor)
-
-  (GSSetNonStrokeRGBColorspace, _parameters) -> do
-    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setNonStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
-
-  (GSSetStrokeCMYKColorspace, _parameters) -> do
-    currentColor <- gets (gsStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkStrokeCommand newColor)
-
-  (GSSetNonStrokeCMYKColorspace, _parameters) -> do
-    currentColor <- gets (gsNonStrokeColor . iGraphicsState)
-    newColor <- mkColor command
-    setNonStrokeColorS newColor
-    if currentColor == newColor
-      then return DeleteCommand
-      else return $ ReplaceCommand (mkNonStrokeCommand newColor)
+  (GSSetStrokeColorspace, _params)        -> return KeepCommand
+  (GSSetNonStrokeColorspace, _params)     -> return KeepCommand
+  (GSSetStrokeColor, _params)             -> strokeDeleteIfNoChange command
+  (GSSetNonStrokeColor, _params)          -> nonStrokeDeleteIfNoChange command
+  (GSSetStrokeColorN, _params)            -> strokeDeleteIfNoChange command
+  (GSSetNonStrokeColorN, _params)         -> nonStrokeDeleteIfNoChange command
+  (GSSetStrokeGrayColorspace, _params)    -> strokeDeleteIfNoChange command
+  (GSSetNonStrokeGrayColorspace, _params) -> nonStrokeDeleteIfNoChange command
+  (GSSetStrokeRGBColorspace, _params)     -> strokeDeleteIfNoChange command
+  (GSSetNonStrokeRGBColorspace, _params)  -> nonStrokeDeleteIfNoChange command
+  (GSSetStrokeCMYKColorspace, _params)    -> strokeDeleteIfNoChange command
+  (GSSetNonStrokeCMYKColorspace, _params) -> nonStrokeDeleteIfNoChange command
 
   _anyOtherCommand -> return KeepCommand
  where
