@@ -5,22 +5,19 @@ module PDF.Graphics.Interpreter.OptimizeProgramSpec
 import Control.Monad (forM_)
 
 import Data.ByteString qualified as BS
-import Data.PDF.Command (Command, mkCommand)
+import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
     ( GFXObject (GFXName, GFXNumber, GFXString)
-    , GSOperator (GSBeginText, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText, GSUnknown)
+    , GSOperator (GSBeginText, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText)
     , mkGFXArray
     )
 import Data.PDF.Program (Program, mkProgram, parseProgram)
+import Data.PDF.WorkData (emptyWorkData)
 
-import PDF.Graphics.Interpreter.OptimizeProgram
-    ( findRelatedSave
-    , optimizeProgram
-    )
+import PDF.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
 import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
-import Data.PDF.WorkData (emptyWorkData)
 
 optimizeProgramExamples :: [(BS.ByteString, Program)]
 optimizeProgramExamples =
@@ -80,26 +77,6 @@ optimizeProgramExamples =
     )
   ]
 
-pSave, pRestore, pDummy :: Command
-pSave    = mkCommand GSSaveGS []
-pRestore = mkCommand GSRestoreGS []
-pDummy   = mkCommand (GSUnknown "dummy") []
-
-findRelatedSaveExamples :: [(Program, (Program, Program))]
-findRelatedSaveExamples =
-  [ ( mkProgram [ pSave, pDummy ]
-    , (mempty, mkProgram [ pSave, pDummy ])
-    )
-  , ( mkProgram [ pSave, pSave ]
-    , ( mkProgram [pSave], mkProgram [pSave] )
-    )
-  , ( mkProgram [ pSave, pSave, pDummy, pRestore ]
-    , ( mempty
-      , mkProgram [ pSave, pSave, pDummy, pRestore ]
-      )
-    )
-  ]
-
 spec :: Spec
 spec = do
   describe "optimizeProgram" $
@@ -107,9 +84,3 @@ spec = do
       it ("should work with " ++ show example)
         $          optimizeProgram emptyWorkData . parseProgram <$> gfxParse example
         `shouldBe` Right expected
-
-  describe "findRelatedSave" $
-    forM_ findRelatedSaveExamples $ \(example, expected) -> do
-      it ("should work with " ++ show example)
-        $          findRelatedSave example
-        `shouldBe` Just expected

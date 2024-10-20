@@ -79,7 +79,7 @@ import Util.Ascii
     )
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
 import Util.Name (fromName)
-import Util.Number (fromInt, fromNumber, roundAndAHalf, round')
+import Util.Number (fromInt, fromNumber, round')
 import Util.String (fromHexString, fromString)
 
 {-|

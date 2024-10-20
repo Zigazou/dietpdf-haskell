@@ -15,12 +15,31 @@ import Data.PDF.WorkData (WorkData)
 import Data.Sequence (Seq (Empty, (:<|)), (|>))
 
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
+import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
+    ( optimizeIneffective
+    )
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
     ( optimizeRectangle
     )
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
     ( optimizeSaveRestore
     )
+
+optimizeCommands
+  :: Program
+  -> Program
+  -> State InterpreterState Program
+optimizeCommands program Empty = return program
+optimizeCommands program (command :<| rest) =
+  optimizeCommand command rest >>= \case
+    KeepCommand -> optimizeCommands (program |> command) rest
+    DeleteCommand -> optimizeCommands program rest
+    ReplaceCommand optimizedCommand' ->
+      optimizeCommands (program |> optimizedCommand') rest
+    ReplaceAndDeleteNextCommand optimizedCommand' -> case rest of
+      Empty -> return program
+      (_commandToDelete :<| rest') ->
+        optimizeCommands (program |> optimizedCommand') rest'
 
 {- |
 The 'optimizeProgram' function takes a 'Program' and returns an optimized
@@ -30,21 +49,7 @@ optimizeProgram :: WorkData -> Program -> Program
 optimizeProgram workData
   = flip evalState defaultInterpreterState { iWorkData = workData }
   . optimizeCommands mempty
+  . optimizeSaveRestore
+  . optimizeIneffective
   . optimizeRectangle
   . optimizeSaveRestore
-  where
-    optimizeCommands
-      :: Program
-      -> Program
-      -> State InterpreterState Program
-    optimizeCommands program Empty = return program
-    optimizeCommands program (command :<| rest) =
-      optimizeCommand command rest >>= \case
-        KeepCommand -> optimizeCommands (program |> command) rest
-        DeleteCommand -> optimizeCommands program rest
-        ReplaceCommand optimizedCommand' ->
-          optimizeCommands (program |> optimizedCommand') rest
-        ReplaceAndDeleteNextCommand optimizedCommand' -> case rest of
-          Empty -> return program
-          (_commandToDelete :<| rest') ->
-            optimizeCommands (program |> optimizedCommand') rest'

@@ -11,6 +11,7 @@ import Data.PDF.GFXObject
     )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), breakl, singleton, (<|))
+import Data.Sequence qualified as SQ
 
 
 onRestore :: Command -> Bool
@@ -42,8 +43,8 @@ findRelatedSave program = findRelatedSave' 1 (Just (program, mempty))
 {- |
 Remove useless save/restore commands.
 -}
-optimizeSaveRestore :: Program -> Program
-optimizeSaveRestore program = case breakl onRestore program of
+optimizeSaveRestore' :: Program -> Program
+optimizeSaveRestore' program = case breakl onRestore program of
   -- Two consecutive restore commands means a save/restore pair is useless.
   (beforeRestore, Command GSRestoreGS _params1
               :<| Command GSRestoreGS _params2
@@ -101,3 +102,12 @@ optimizeSaveRestore program = case breakl onRestore program of
     Command GSEndMarkedContentSequence _params ->
       nextRestoreWithoutNewState rest
     _anyOtherCommand -> False
+
+optimizeSaveRestore :: Program -> Program
+optimizeSaveRestore program =
+  let lengthBefore = SQ.length program
+      optimized    = optimizeSaveRestore' program
+      lengthAfter  = SQ.length optimized
+  in  if lengthBefore == lengthAfter
+        then optimized
+        else optimizeSaveRestore optimized
