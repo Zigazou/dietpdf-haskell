@@ -21,6 +21,12 @@ like the following:
       |        v
     x3,y3 <- x2,y2
 
+or:
+    x4,y4
+    x0,y0 -> x1,y1
+      ^        |
+      |        v
+    x3,y3 <- x2,y2
 -}
 optimizeRectangle :: Program -> Program
 optimizeRectangle

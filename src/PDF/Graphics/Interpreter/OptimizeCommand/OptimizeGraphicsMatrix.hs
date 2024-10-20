@@ -16,7 +16,7 @@ import Data.PDF.InterpreterState
     )
 import Data.PDF.Program (Program)
 import Data.PDF.TransformationMatrix
-    ( TransformationMatrix (TransformationMatrix)
+    ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
     )
 import Data.Sequence (Seq (Empty, (:<|)))
 
@@ -61,14 +61,16 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
                       :<| Empty)
                       :<| _tail) -> do
         -- Merge two consecutive SetCTM operators
-        applyGraphicsMatrixS (TransformationMatrix a b c d e f)
-        applyGraphicsMatrixS (TransformationMatrix a' b' c' d' e' f')
-        let command' = Command GSSetCTM (   GFXNumber (a * a')
-                                        :<| GFXNumber (b * a')
-                                        :<| GFXNumber (c * a')
-                                        :<| GFXNumber (d * a')
-                                        :<| GFXNumber (e * a' + f)
-                                        :<| GFXNumber (f * a' + f')
+        let matrix1 = TransformationMatrix a b c d e f
+            matrix2 = TransformationMatrix a' b' c' d' e' f'
+            matrix  = matrix1 <> matrix2
+        applyGraphicsMatrixS matrix
+        let command' = Command GSSetCTM (   GFXNumber (tmA matrix)
+                                        :<| GFXNumber (tmB matrix)
+                                        :<| GFXNumber (tmC matrix)
+                                        :<| GFXNumber (tmD matrix)
+                                        :<| GFXNumber (tmE matrix)
+                                        :<| GFXNumber (tmF matrix)
                                         :<| Empty
                                         )
         return $ ReplaceAndDeleteNextCommand (optimizeParameters command' (precision + 2))
