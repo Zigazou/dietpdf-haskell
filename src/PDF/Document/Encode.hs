@@ -127,28 +127,19 @@ getAllResourceNames =
   getAllResourceNames' :: IM.IntMap PDFObject -> [[BS.ByteString]]
   getAllResourceNames' objects = do
     (_, object) <- IM.toList objects
-    let resourceColorspaces = getResourceKeys "ColorSpace" object
-        resourceFonts       = getResourceKeys "Font" object
-        resourceXObjects    = getResourceKeys "XObject" object
-        resourceExtGStates  = getResourceKeys "ExtGState" object
-        resourceProperties  = getResourceKeys "Properties" object
-        colorspaces         = getKeys "ColorSpace" object
-        fonts               = getKeys "Font" object
-        xObjects            = getKeys "XObject" object
-        extGStates          = getKeys "ExtGState" object
-        properties          = getKeys "Properties" object
-
     (return . concat . catMaybes)
-      [ colorspaces
-      , fonts
-      , xObjects
-      , extGStates
-      , properties
-      , resourceColorspaces
-      , resourceFonts
-      , resourceXObjects
-      , resourceExtGStates
-      , resourceProperties
+      [ getResourceKeys "ColorSpace" object
+      , getResourceKeys "Font"       object
+      , getResourceKeys "XObject"    object
+      , getResourceKeys "ExtGState"  object
+      , getResourceKeys "Properties" object
+      , getResourceKeys "Pattern"    object
+      , getKeys         "ColorSpace" object
+      , getKeys         "Font"       object
+      , getKeys         "XObject"    object
+      , getKeys         "ExtGState"  object
+      , getKeys         "Properties" object
+      , getKeys         "Pattern"    object
       ]
 
   getKeys :: BS.ByteString -> PDFObject -> Maybe [BS.ByteString]

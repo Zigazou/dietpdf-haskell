@@ -39,6 +39,7 @@ whatOptimizationFor object =
     _notXMLorImage -> getValue "Type" object >>= \case
       Just (PDFName "ObjStm")     -> return ObjectStreamOptimization
       Just (PDFName "XRef")       -> return XRefStreamOptimization
+      Just (PDFName "Pattern")    -> return GfxOptimization
       Just (PDFName _unknownType) -> return NoOptimization
       _anyOtherCase -> do
           tryP (getStream object) >>= \case
