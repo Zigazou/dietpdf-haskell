@@ -42,7 +42,7 @@ isDrawingCommand (Command command _params) = case command of
   GSFillStrokePathEOR            -> True
   GSCloseFillStrokeNZWR          -> True
   GSCloseFillStrokeEOR           -> True
-  GSEndPath                      -> False
+  GSEndPath                      -> True
   GSBeginText                    -> True
   GSEndText                      -> True
   GSMoveToNextLine               -> False
