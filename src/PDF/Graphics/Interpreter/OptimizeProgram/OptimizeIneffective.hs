@@ -32,7 +32,7 @@ isDrawingCommand (Command command _params) = case command of
   GSCubicBezierCurve             -> True
   GSCubicBezierCurve1To          -> True
   GSCubicBezierCurve2To          -> True
-  GSCloseSubpath                 -> True
+  GSCloseSubpath                 -> False
   GSRectangle                    -> True
   GSStrokePath                   -> True
   GSCloseStrokePath              -> True
@@ -42,7 +42,7 @@ isDrawingCommand (Command command _params) = case command of
   GSFillStrokePathEOR            -> True
   GSCloseFillStrokeNZWR          -> True
   GSCloseFillStrokeEOR           -> True
-  GSEndPath                      -> True
+  GSEndPath                      -> False
   GSBeginText                    -> True
   GSEndText                      -> True
   GSMoveToNextLine               -> False

@@ -7,7 +7,7 @@ import Control.Monad (forM_)
 import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
     ( GFXObject (GFXNumber)
-    , GSOperator (GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM)
+    , GSOperator (GSEndPath, GSLineTo, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetLineWidth)
     )
 import Data.PDF.Program (Program, mkProgram)
 
@@ -37,6 +37,26 @@ optimizeIneffectiveExamples =
         ]
     , mkProgram
         [ mkCommand GSSaveGS []
+        , mkCommand GSRestoreGS []
+        ]
+    )
+    , ( mkProgram
+        [ mkCommand GSSaveGS []
+        , mkCommand GSLineTo [ GFXNumber 1, GFXNumber 2 ]
+        , mkCommand GSSetCTM [ GFXNumber 1
+                             , GFXNumber 0
+                             , GFXNumber 0
+                             , GFXNumber 1
+                             , GFXNumber 8.613
+                             , GFXNumber (-10.192)
+                             ]
+        , mkCommand GSSetLineWidth [ GFXNumber 0.4 ]
+        , mkCommand GSEndPath []
+        , mkCommand GSRestoreGS []
+        ]
+    , mkProgram
+        [ mkCommand GSSaveGS []
+        , mkCommand GSLineTo [ GFXNumber 1, GFXNumber 2 ]
         , mkCommand GSRestoreGS []
         ]
     )

@@ -11,7 +11,8 @@ import Data.PDF.GFXObject
     )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), breakl, singleton, (<|))
-import Data.Sequence qualified as SQ
+
+import Util.Transform (untilNoChange)
 
 
 onRestore :: Command -> Bool
@@ -43,8 +44,8 @@ findRelatedSave program = findRelatedSave' 1 (Just (program, mempty))
 {- |
 Remove useless save/restore commands.
 -}
-optimizeSaveRestore' :: Program -> Program
-optimizeSaveRestore' program = case breakl onRestore program of
+optimizeSaveRestoreOnePass :: Program -> Program
+optimizeSaveRestoreOnePass program = case breakl onRestore program of
   -- Two consecutive restore commands means a save/restore pair is useless.
   (beforeRestore, Command GSRestoreGS _params1
               :<| Command GSRestoreGS _params2
@@ -55,12 +56,12 @@ optimizeSaveRestore' program = case breakl onRestore program of
            beforeSave
         <> afterSave
         <> singleton (Command GSRestoreGS mempty)
-        <> optimizeSaveRestore afterRestore
+        <> optimizeSaveRestoreOnePass afterRestore
       _anythingElse ->
            beforeRestore
         <> singleton (Command GSRestoreGS mempty)
         <> singleton (Command GSRestoreGS mempty)
-        <> optimizeSaveRestore afterRestore
+        <> optimizeSaveRestoreOnePass afterRestore
 
   -- Found a restore command not followed by another restore command.
   (beforeRestore, Command GSRestoreGS _params
@@ -71,22 +72,24 @@ optimizeSaveRestore' program = case breakl onRestore program of
         Just (beforeSave, Command GSSaveGS _params :<| afterSave) ->
             beforeSave
           <> afterSave
-          <> optimizeSaveRestore afterRestore
+          <> optimizeSaveRestoreOnePass afterRestore
         _anythingElse ->
             beforeRestore
           <> singleton (Command GSRestoreGS mempty)
           <> singleton (Command GSRestoreGS mempty)
-          <> optimizeSaveRestore afterRestore
+          <> optimizeSaveRestoreOnePass afterRestore
     else
       -- Look for the save command associated with the restore command.
       case findRelatedSave beforeRestore of
         -- If there is no command between save and restore, remove both.
         Just (beforeSave, Command GSSaveGS _params :<| Empty) ->
             beforeSave
-          <> optimizeSaveRestore afterRestore
+          <> optimizeSaveRestoreOnePass afterRestore
         _anythingElse ->
             beforeRestore
-          <> (Command GSRestoreGS mempty <| optimizeSaveRestore afterRestore)
+          <> (  Command GSRestoreGS mempty
+             <| optimizeSaveRestoreOnePass afterRestore
+             )
 
   -- For any other case, just keep the program as is.
   _anyOtherCase -> program
@@ -104,10 +107,4 @@ optimizeSaveRestore' program = case breakl onRestore program of
     _anyOtherCommand -> False
 
 optimizeSaveRestore :: Program -> Program
-optimizeSaveRestore program =
-  let lengthBefore = SQ.length program
-      optimized    = optimizeSaveRestore' program
-      lengthAfter  = SQ.length optimized
-  in  if lengthBefore == lengthAfter
-        then optimized
-        else optimizeSaveRestore optimized
+optimizeSaveRestore = untilNoChange optimizeSaveRestoreOnePass

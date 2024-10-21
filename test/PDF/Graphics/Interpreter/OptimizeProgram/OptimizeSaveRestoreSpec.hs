@@ -37,6 +37,16 @@ findRelatedSaveExamples =
       , mkProgram [ pSave, pSave, pDummy, pRestore ]
       )
     )
+  , ( mkProgram [ pSave, pDummy, pSave, pDummy, pRestore, pSave, pRestore]
+    , ( mempty
+      , mkProgram [pSave, pDummy, pSave, pDummy, pRestore, pSave, pRestore]
+      )
+    )
+  , ( mkProgram [ pSave, pDummy, pSave, pSave, pDummy, pRestore, pRestore, pSave, pRestore]
+    , ( mempty
+      , mkProgram [pSave, pDummy, pSave, pSave, pDummy, pRestore, pRestore, pSave, pRestore]
+      )
+    )
   ]
 
 optimizeSaveRestoreExamples :: [(Program, Program)]
@@ -126,13 +136,32 @@ optimizeSaveRestoreExamples =
         ,   mkCommand GSSetStrokeColor []
         ,   mkCommand GSSaveGS []
         ,     mkCommand GSSetStrokeColor []
-        ,     mkCommand GSSaveGS []
-        ,       mkCommand GSSetStrokeColor []
-        ,     mkCommand GSRestoreGS []
+        ,     mkCommand GSSetStrokeColor []
         ,   mkCommand GSRestoreGS []
         ,   mkCommand GSSetStrokeColor []
         ,   mkCommand GSSetStrokeColor []
         ,   mkCommand GSSetStrokeColor []
+        , mkCommand GSRestoreGS []
+        ]
+  )
+  , ( mkProgram
+        [ mkCommand GSSaveGS []
+        , mkCommand GSSaveGS []
+        , mkCommand GSSetStrokeColor []
+        , mkCommand GSRestoreGS []
+        , mkCommand GSRestoreGS []
+        , mkCommand GSSaveGS []
+        , mkCommand GSSaveGS []
+        , mkCommand GSSetStrokeColor []
+        , mkCommand GSRestoreGS []
+        , mkCommand GSRestoreGS []
+        ]
+    , mkProgram
+        [ mkCommand GSSaveGS []
+        , mkCommand GSSetStrokeColor []
+        , mkCommand GSRestoreGS []
+        , mkCommand GSSaveGS []
+        , mkCommand GSSetStrokeColor []
         , mkCommand GSRestoreGS []
         ]
     )

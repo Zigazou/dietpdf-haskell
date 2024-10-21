@@ -25,6 +25,8 @@ import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
     ( optimizeSaveRestore
     )
 
+import Util.Transform (untilNoChange)
+
 optimizeCommands
   :: Program
   -> Program
@@ -41,15 +43,17 @@ optimizeCommands program (command :<| rest) =
       (_commandToDelete :<| rest') ->
         optimizeCommands (program |> optimizedCommand') rest'
 
+optimizeProgramOnePass :: WorkData -> Program -> Program
+optimizeProgramOnePass workData
+  = (flip evalState defaultInterpreterState { iWorkData = workData }
+  . optimizeCommands mempty)
+  . optimizeIneffective
+  . optimizeRectangle
+  . optimizeSaveRestore
+
 {- |
 The 'optimizeProgram' function takes a 'Program' and returns an optimized
 'Program'.
 -}
 optimizeProgram :: WorkData -> Program -> Program
-optimizeProgram workData
-  = flip evalState defaultInterpreterState { iWorkData = workData }
-  . optimizeCommands mempty
-  . optimizeSaveRestore
-  . optimizeIneffective
-  . optimizeRectangle
-  . optimizeSaveRestore
+optimizeProgram workData = untilNoChange (optimizeProgramOnePass workData)
