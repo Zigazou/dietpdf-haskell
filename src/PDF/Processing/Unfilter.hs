@@ -35,26 +35,31 @@ getPredictor params =
   tryP (getValue "Predictor" params) >>= \case
     Right (Just (PDFNumber value)) -> case decodePredictor . round $ value of
       Right predictor -> return predictor
-      _anythingElse   -> throwError InvalidFilterParm
-    _anythingElse                  -> throwError InvalidFilterParm
+      _anythingElse -> throwError
+        $ InvalidFilterParm ("Predictor=" ++ show value)
+    _anythingElse -> throwError
+      $ InvalidFilterParm ("Predictor=" ++ show params)
 
 getColumns :: Logging m => PDFObject -> PDFWork m Int
 getColumns params =
   tryP (getValueDefault "Columns" (PDFNumber 1) params) >>= \case
     Right (Just (PDFNumber value)) -> return . round $ value
-    _anythingElse                  -> throwError InvalidFilterParm
+    _anythingElse -> throwError
+      $ InvalidFilterParm ("Columns=" ++ show params)
 
 getComponents :: Logging m => PDFObject -> PDFWork m Int
 getComponents params =
   tryP (getValueDefault "BitsPerComponent" (PDFNumber 8) params) >>= \case
     Right (Just (PDFNumber value)) -> return . round $ value
-    _anythingElse                  -> throwError InvalidFilterParm
+    _anythingElse -> throwError
+      $ InvalidFilterParm ("BitsPerComponent=" ++ show params)
 
 getColors :: Logging m => Int -> PDFObject -> PDFWork m Int
 getColors defaultColors params =
   tryP (getValueDefault "Colors" (mkPDFNumber defaultColors) params) >>= \case
     Right (Just (PDFNumber value)) -> return . round $ value
-    _anythingElse                  -> throwError InvalidFilterParm
+    _anythingElse                  -> throwError
+      $ InvalidFilterParm ("Colors=" ++ show params)
 
 unpredictStream
   :: Logging m
@@ -72,7 +77,8 @@ unpredictStream defaultColors pdfFilter stream =
       colors     <- getColors defaultColors params
       case unpredict predictor columns (colors * components `div` 8) stream of
         Right unpredictedStream -> return unpredictedStream
-        _anythingElse           -> throwError InvalidFilterParm
+        _anythingElse           -> throwError
+          $ InvalidFilterParm ("Predictor=" ++ show params)
     else return stream
 
 unfilterStream
@@ -108,7 +114,8 @@ getColorSpace params =
     Right (Just (PDFName "DeviceRGB"))  -> return 3
     Right (Just (PDFName "DeviceCMYK")) -> return 4
     Right _anyOtherColorSpace           -> return 1
-    _anythingElse                       -> throwError InvalidFilterParm
+    _anythingElse -> throwError
+      $ InvalidFilterParm ("ColorSpace=" ++ show params)
 
 unfiltered :: Logging m => PDFObject -> PDFWork m (FilterList, ByteString)
 unfiltered object = do

@@ -69,7 +69,11 @@ getFilters container = do
       return $ group (SQ.singleton f) (SQ.singleton p)
 
     (Nothing, _) -> return SQ.empty
-    (_      , _) -> throwError InvalidFilterParm
+    (_      , _) -> throwError (InvalidFilterParm (show filters
+                                                ++ " "
+                                                ++ show parms
+                                                )
+                               )
  where
   group :: SQ.Seq PDFObject -> SQ.Seq PDFObject -> FilterList
   group fs ps = SQ.zipWith

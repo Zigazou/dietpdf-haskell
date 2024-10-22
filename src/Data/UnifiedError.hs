@@ -50,7 +50,7 @@ data UnifiedError
   -- | Number of bytes is invalid according to the predictor (expected, actual)
   | InvalidNumberOfBytes !Int !Int
   -- | Invalid combination of Filter and DecodeParms
-  | InvalidFilterParm
+  | InvalidFilterParm !String
   -- | Invalid Ascii85 stream
   | InvalidAscii85Stream !String
   -- | No stream in the object
@@ -90,7 +90,7 @@ errorType InternalError              = ParsingError
 errorType (InvalidAscii85Stream _  ) = ParsingError
 errorType (InvalidPredictor     _  ) = ParsingError
 errorType (InvalidNumberOfBytes _ _) = ParsingError
-errorType InvalidFilterParm          = EncodingError
+errorType (InvalidFilterParm    _)   = EncodingError
 errorType (NoStream             _)   = StructureError
 errorType (NoDictionary         _)   = StructureError
 errorType (InvalidObjectToEmbed _)   = StructureError
@@ -140,8 +140,8 @@ instance Show UnifiedError where
       , " bytes"
       ]
     )
-  show err@InvalidFilterParm =
-    show' err "Invalid combination of Filter and DecodeParms"
+  show err@(InvalidFilterParm msg) =
+    show' err ("Invalid combination of Filter and DecodeParms: " ++ msg)
   show err@(InvalidAscii85Stream msg) =
     show' err ("Invalid Ascii85 stream: " ++ msg)
   show err@(NoStream     msg) = show' err ("No stream: " ++ msg)

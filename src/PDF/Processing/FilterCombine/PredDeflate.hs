@@ -49,4 +49,5 @@ predDeflate (Just (width, components)) stream = do
     ]
     compressed
 
-predDeflate _noWidth _stream = Left InvalidFilterParm
+predDeflate _noWidth _stream = Left $
+  InvalidFilterParm "no width given to predDeflate"

@@ -46,4 +46,5 @@ predLzw (Just (width, components)) stream = do
     ]
     compressed
 
-predLzw _noWidth _stream = Left InvalidFilterParm
+predLzw _noWidth _stream = Left
+  $ InvalidFilterParm "no width given to predLzw"

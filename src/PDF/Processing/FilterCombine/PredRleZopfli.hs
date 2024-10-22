@@ -51,4 +51,5 @@ predRleZopfli (Just (width, components)) stream useZopfli = do
             )
           ]
 
-predRleZopfli _noWidth _stream _useZopfli = Left InvalidFilterParm
+predRleZopfli _noWidth _stream _useZopfli = Left
+  $ InvalidFilterParm "no width given to predRleZopfli"
