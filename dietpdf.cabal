@@ -118,7 +118,6 @@ library
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
       PDF.Graphics.Interpreter.OptimizeParameters
       PDF.Graphics.Interpreter.OptimizeProgram
-      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeByScaling
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
@@ -325,7 +324,6 @@ test-suite dietpdf-test
       PDF.Document.EncodeSpec
       PDF.Document.ObjectStreamSpec
       PDF.Document.XRefSpec
-      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeByScalingSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffectiveSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestoreSpec
       PDF.Graphics.Interpreter.OptimizeProgramSpec

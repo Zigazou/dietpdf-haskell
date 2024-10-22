@@ -14,10 +14,10 @@ import Data.Map.Strict qualified as Map
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterList (FilterList, filtersFilter, filtersParms)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream)
+    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference)
     , hasDictionary
     )
-import Data.PDF.PDFWork (PDFWork, throwError)
+import Data.PDF.PDFWork (PDFWork, throwError, getReference)
 import Data.Sequence qualified as SQ
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
@@ -67,6 +67,12 @@ getFilters container = do
       return $ group (SQ.singleton f) ps
     (Just f@(PDFName _), Just p) ->
       return $ group (SQ.singleton f) (SQ.singleton p)
+    (Just reference@(PDFReference  _ _), Just p) -> do
+      f <- getReference reference
+      return $ group (SQ.singleton f) (SQ.singleton p)
+    (Just reference@(PDFReference  _ _), Nothing) -> do
+      f <- getReference reference
+      return $ group (SQ.singleton f) SQ.empty
 
     (Nothing, _) -> return SQ.empty
     (_      , _) -> throwError (InvalidFilterParm (show filters

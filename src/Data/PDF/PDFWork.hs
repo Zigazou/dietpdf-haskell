@@ -131,10 +131,24 @@ getObject objectNumber = do
         Just object -> return (Just object)
         Nothing -> return Nothing
 
-getReference :: Monad m => PDFObject -> PDFWork m (Maybe PDFObject)
-getReference (PDFReference objectNumber _anyVersion) = getObject objectNumber
-getReference (PDFNumber objectNumber)                = getObject (round objectNumber)
-getReference _anythingElse                           = return Nothing
+{- |
+Retrieves the object referenced by a reference object.
+
+If the object is not found, it returns `PDFNull` according to PDF
+specifications: "An indirect reference to an undefined object shall not be
+considered an error by a PDF processor; it shall be treated as a reference to
+the null object."
+-}
+getReference :: Monad m => PDFObject -> PDFWork m PDFObject
+getReference (PDFReference objectNumber _anyVersion) =
+  getObject objectNumber >>= \case
+    Just object -> return object
+    Nothing     -> return PDFNull
+getReference (PDFNumber objectNumber) =
+  getObject (round objectNumber) >>= \case
+    Just object -> return object
+    Nothing     -> return PDFNull
+getReference _anythingElse = return PDFNull
 
 putObject :: Monad m => PDFObject -> PDFWork m ()
 putObject object = modifyPDF $ \pdf ->
