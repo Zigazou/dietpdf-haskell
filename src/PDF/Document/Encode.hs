@@ -6,7 +6,7 @@ module PDF.Document.Encode
   , encodeObject
   ) where
 
-import Control.Monad (when)
+import Control.Monad (when, (>=>))
 import Control.Monad.Extra (whenM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (gets)
@@ -20,7 +20,7 @@ import Data.Maybe (catMaybes)
 import Data.PDF.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Data.PDF.PDFDocument (PDFDocument, fromList)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFObjectStream, PDFStartXRef, PDFTrailer, PDFVersion)
+    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion)
     , getObjectNumber
     )
 import Data.PDF.PDFPartition
@@ -34,12 +34,13 @@ import Data.PDF.PDFWork
     , lastObjectNumber
     , modifyIndirectObjects
     , pushContext
+    , putNewObject
     , sayP
     , setTrailer
     , setTranslationTable
     , throwError
     , withStreamCount
-    , withoutStreamCount
+    , withoutStreamCount, putObject
     )
 import Data.PDF.Settings
     ( OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX)
@@ -55,6 +56,7 @@ import Data.UnifiedError
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
+import PDF.Document.MergeVectorStream (mergeVectorStream)
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
@@ -155,6 +157,21 @@ getAllResourceNames =
       PDFDictionary dict -> Just $ Map.keys dict
       _notADictionary    -> Nothing
 
+mergePagesContents :: Logging m => PDFObject -> PDFWork m PDFObject
+mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) = do
+  let mType     = getValueForKey "Type"     object
+      mContents = getValueForKey "Contents" object
+
+  case (mType, mContents) of
+    (Just (PDFName "Page"), Just vectors) -> do
+      streamNumber <- mergeVectorStream vectors >>= putNewObject
+      let newDict = Map.insert "Contents" (PDFReference streamNumber 0) dict
+      return $ PDFIndirectObject major minor (PDFDictionary newDict)
+
+    _anyOtherObject -> return object
+
+mergePagesContents object = return object
+
 {- |
 Given a list of PDF objects, generate the PDF file content.
 
@@ -190,6 +207,12 @@ pdfEncode objects = do
   when (hasKey "Encrypt" pdfTrailer) (throwError EncodeEncrypted)
 
   setTrailer pdfTrailer
+
+  sayP "Merging pages contents"
+  gets (ppObjectsWithoutStream . wPDF)
+    >>= mapM_ (mergePagesContents >=> putObject)
+
+  clean
 
   resourceNames <- getAllResourceNames
 

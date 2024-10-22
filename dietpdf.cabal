@@ -99,6 +99,7 @@ library
       Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
       PDF.Document.Encode
+      PDF.Document.MergeVectorStream
       PDF.Document.ObjectStream
       PDF.Document.Parser
       PDF.Document.PDFObjects

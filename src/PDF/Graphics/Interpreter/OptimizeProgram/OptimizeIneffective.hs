@@ -93,17 +93,19 @@ isDrawingCommand (Command command _params) = case command of
 protectedCommand :: Command -> Bool
 protectedCommand (Command command _params) = case command of
   GSBeginCompatibilitySection    -> True
+  GSEndCompatibilitySection      -> True
   GSBeginInlineImage             -> True
+  GSEndInlineImage               -> True
   GSBeginMarkedContentSequence   -> True
   GSBeginMarkedContentSequencePL -> True
-  GSBeginText                    -> True
-  GSEndCompatibilitySection      -> True
-  GSEndInlineImage               -> True
   GSEndMarkedContentSequence     -> True
+  GSBeginText                    -> True
+  GSEndText                      -> True
   _anyOtherCommand               -> False
 
 anyDrawingCommandBeforeRestore :: Program -> Bool
 anyDrawingCommandBeforeRestore Empty = True
+anyDrawingCommandBeforeRestore (_command :<| Empty) = True
 anyDrawingCommandBeforeRestore (command :<| rest)
   | isRestore command        = False
   | isDrawingCommand command = True

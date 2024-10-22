@@ -24,6 +24,7 @@ module Data.PDF.PDFWork
   , fallibleP
   , setTranslationTable
   , getTranslationTable
+  , putNewObject
   )
 where
 
@@ -169,6 +170,25 @@ putObject object = modifyPDF $ \pdf ->
                                             (ppObjectsWithStream pdf)
           }
     _anythingElse -> pdf
+
+putNewObject :: Monad m => PDFObject -> PDFWork m Int
+putNewObject object = do
+  objectNumber <- (+ 1) <$> lastObjectNumber
+
+  case object of
+    (PDFIndirectObjectWithStream _major _minor dict stream) -> do
+      putObject (PDFIndirectObjectWithStream objectNumber 0 dict stream)
+      return objectNumber
+
+    (PDFIndirectObject _major _minor obj) -> do
+      putObject (PDFIndirectObject objectNumber 0 obj)
+      return objectNumber
+
+    (PDFIndirectObjectWithGraphics _major _minor dict gfxObjects)  -> do
+      putObject (PDFIndirectObjectWithGraphics objectNumber 0 dict gfxObjects)
+      return objectNumber
+
+    _anythingElse -> return 0
 
 setTranslationTable :: Monad m => TranslationTable ByteString -> PDFWork m ()
 setTranslationTable translationTable = modifyWorkData $
