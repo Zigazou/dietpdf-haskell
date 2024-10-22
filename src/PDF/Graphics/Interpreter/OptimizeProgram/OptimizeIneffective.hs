@@ -90,6 +90,18 @@ isDrawingCommand (Command command _params) = case command of
   GSEndInlineImage               -> True
   _anyOtherCommand               -> True
 
+protectedCommand :: Command -> Bool
+protectedCommand (Command command _params) = case command of
+  GSBeginCompatibilitySection    -> True
+  GSBeginInlineImage             -> True
+  GSBeginMarkedContentSequence   -> True
+  GSBeginMarkedContentSequencePL -> True
+  GSBeginText                    -> True
+  GSEndCompatibilitySection      -> True
+  GSEndInlineImage               -> True
+  GSEndMarkedContentSequence     -> True
+  _anyOtherCommand               -> False
+
 anyDrawingCommandBeforeRestore :: Program -> Bool
 anyDrawingCommandBeforeRestore Empty = True
 anyDrawingCommandBeforeRestore (command :<| rest)
@@ -105,6 +117,6 @@ optimizeIneffective Empty = mempty
 optimizeIneffective (command :<| rest)
   | isDrawingCommand command = command <| optimizeIneffective rest
   | otherwise =
-      if anyDrawingCommandBeforeRestore rest
+      if anyDrawingCommandBeforeRestore rest || protectedCommand command
         then command <| optimizeIneffective rest
         else optimizeIneffective rest
