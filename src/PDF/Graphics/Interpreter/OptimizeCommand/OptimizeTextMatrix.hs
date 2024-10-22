@@ -2,23 +2,25 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
   ( optimizeTextMatrix
   ) where
 
-import Control.Monad.State (State)
+import Control.Monad.State (State, gets)
 
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
     ( GFXObject (GFXNumber)
     , GSOperator (GSBeginText, GSCloseSubpath, GSEndPath, GSEndText, GSMoveToNextLine, GSMoveToNextLineLP, GSSetTextMatrix)
     )
+import Data.PDF.GraphicsState (GraphicsState (gsTextState))
 import Data.PDF.InterpreterAction
     ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
     )
 import Data.PDF.InterpreterState
-    ( InterpreterState
+    ( InterpreterState (iGraphicsState)
     , applyTextMatrixS
     , resetTextStateS
     , usefulTextPrecisionS
     )
 import Data.PDF.Program (Program)
+import Data.PDF.TextState (TextState (tsMatrix))
 import Data.PDF.TransformationMatrix
     ( TransformationMatrix (TransformationMatrix)
     )
@@ -73,7 +75,8 @@ optimizeTextMatrix command rest = case (operator, parameters) of
                 :<| GFXNumber ty
                 :<| Empty) -> do
     precision <- usefulTextPrecisionS
-    if hasTextmoveBeforeEndText rest
+    currentTextMatrix <- gets (tsMatrix . gsTextState . iGraphicsState)
+    if hasTextmoveBeforeEndText rest || currentTextMatrix /= mempty
       then do
         applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
         return $ ReplaceCommand (optimizeParameters command precision)
