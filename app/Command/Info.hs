@@ -6,7 +6,7 @@ import Control.Monad (forM_)
 
 import Data.Fallible (FallibleT)
 import Data.PDF.ObjectInfo
-    ( ObjectInfo (oCategory, oDescription, oNumber, oOffset, oStream)
+    ( ObjectInfo (oCategory, oDescription, oEmbedded, oNumber, oOffset, oStream)
     , StreamInfo (sFilteredSize, sUnfilteredSize)
     )
 import Data.PDF.PDFDocument (PDFDocument)
@@ -23,6 +23,7 @@ header = [ "type"
          , "offset"
          , "compressed"
          , "uncompressed"
+         , "container"
          , "description"
          ]
 
@@ -32,12 +33,25 @@ showInfo document = do
 
   forM_ document $ \object -> do
     info <- evalPDFWork (objectInfo object Nothing)
+    let objectNumber = oNumber info
 
     disp
       [ show (oCategory info)
-      , maybe "" show (oNumber info)
+      , maybe "" show objectNumber
       , maybe "" show (oOffset info)
       , maybe "" (show . sFilteredSize) (oStream info)
       , maybe "" (show . sUnfilteredSize) (oStream info)
+      , ""
       , T.unpack (oDescription info)
       ]
+
+    forM_ (oEmbedded info) $ \embeddedObject -> do
+      disp
+        [ show (oCategory embeddedObject)
+        , maybe "" show (oNumber embeddedObject)
+        , maybe "" show (oOffset embeddedObject)
+        , ""
+        , ""
+        , maybe "" show objectNumber
+        , T.unpack (oDescription embeddedObject)
+        ]

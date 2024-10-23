@@ -1,5 +1,5 @@
 module Data.PDF.ObjectInfo
-  ( ObjectInfo(ObjectInfo, oNumber, oDescription, oCategory, oStream, oOffset)
+  ( ObjectInfo(ObjectInfo, oNumber, oDescription, oCategory, oStream, oOffset, oEmbedded)
   , StreamInfo(StreamInfo, sFilteredSize, sUnfilteredSize)
   ) where
 
@@ -20,4 +20,5 @@ data ObjectInfo = ObjectInfo
   , oCategory    :: !ObjectCategory
   , oStream      :: !(Maybe StreamInfo)
   , oOffset      :: !(Maybe Int)
+  , oEmbedded    :: ![ObjectInfo]
   } deriving stock (Show)

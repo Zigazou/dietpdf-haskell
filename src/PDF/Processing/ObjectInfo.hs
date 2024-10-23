@@ -3,12 +3,13 @@ module PDF.Processing.ObjectInfo
   ) where
 
 import Data.ByteString qualified as BS
+import Data.IntMap qualified as IM
 import Data.Logging (Logging)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.PDF.ObjectCategory (ObjectCategory (Other))
 import Data.PDF.ObjectInfo
-    ( ObjectInfo (ObjectInfo, oCategory, oDescription, oNumber, oOffset, oStream)
+    ( ObjectInfo (ObjectInfo, oCategory, oDescription, oEmbedded, oNumber, oOffset, oStream)
     , StreamInfo (StreamInfo, sFilteredSize, sUnfilteredSize)
     )
 import Data.PDF.PDFObject
@@ -22,11 +23,13 @@ import Data.Text.Lazy (toStrict)
 import Formatting (format, int, (%))
 import Formatting.ByteStringFormatter (utf8)
 
+import PDF.Document.ObjectStream (explodeObjects)
 import PDF.Object.State (getStream)
 import PDF.Processing.ObjectCategory (objectCategory)
 import PDF.Processing.Unfilter (unfilter)
 
 import Util.Number (fromNumber)
+import Data.Text qualified as T
 
 getTypeSubType :: PDFObject -> Maybe Text
 getTypeSubType object = getTypeSubType' object >>= Just . decodeUtf8Lenient
@@ -46,6 +49,37 @@ getTypeSubType' (PDFIndirectObjectWithGraphics _major _minor object _stream) =
   getTypeSubType' (PDFDictionary object)
 getTypeSubType' _anyOtherObject = Nothing
 
+getObjectType :: PDFObject -> Text
+getObjectType (PDFComment comment) =
+  toStrict $ format ("{- " % utf8 % " -}") comment
+getObjectType (PDFVersion version) =
+  toStrict $ format ("VERSION=" % utf8) version
+getObjectType PDFEndOfFile = "END-OF-FILE"
+getObjectType (PDFNumber number) =
+  toStrict $ format ("number=" % utf8) (fromNumber number)
+getObjectType (PDFKeyword keyword) =
+  toStrict $ format ("keyword=" % utf8) keyword
+getObjectType (PDFName name) = toStrict $ format ("/" % utf8) name
+getObjectType (PDFString bytes) = toStrict $ format ("string=" % utf8) bytes
+getObjectType (PDFHexString hexstring) =
+  toStrict $ format ("hexstring=" % utf8) hexstring
+getObjectType (PDFReference number revision) =
+  toStrict $ format ("ref=" % int % " " % int) number revision
+getObjectType PDFArray{} = "array"
+getObjectType PDFDictionary{} = "dictionary"
+getObjectType PDFIndirectObject{} = "indirect object"
+getObjectType PDFIndirectObjectWithStream{} = "object with stream"
+getObjectType PDFIndirectObjectWithGraphics{} = "object with graphics"
+getObjectType PDFObjectStream{} = "object stream"
+getObjectType PDFXRefStream{} = "object stream"
+getObjectType (PDFBool True ) = "true"
+getObjectType (PDFBool False) = "false"
+getObjectType PDFNull = "null"
+getObjectType (PDFXRef _xref) = "xref table"
+getObjectType (PDFTrailer (PDFDictionary _dict)) = "trailer"
+getObjectType (PDFTrailer _) = "invalid trailer"
+getObjectType (PDFStartXRef _startOffset) = "startxref"
+
 objectInfo :: Logging IO => PDFObject -> Maybe Int -> PDFWork IO ObjectInfo
 objectInfo (PDFComment comment) offset = return ObjectInfo
   { oNumber      = Nothing
@@ -53,6 +87,7 @@ objectInfo (PDFComment comment) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFVersion version) offset = return ObjectInfo
@@ -61,6 +96,7 @@ objectInfo (PDFVersion version) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo PDFEndOfFile offset = return ObjectInfo
@@ -69,14 +105,16 @@ objectInfo PDFEndOfFile offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFNumber number) offset = return ObjectInfo
-  { oNumber = Nothing
+  { oNumber      = Nothing
   , oDescription = toStrict $ format ("number=" % utf8) (fromNumber number)
-  , oCategory = Other
-  , oStream = Nothing
-  , oOffset = offset
+  , oCategory    = Other
+  , oStream      = Nothing
+  , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFKeyword keyword) offset = return ObjectInfo
@@ -85,6 +123,7 @@ objectInfo (PDFKeyword keyword) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFName name) offset = return ObjectInfo
@@ -93,6 +132,7 @@ objectInfo (PDFName name) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFString bytes) offset = return ObjectInfo
@@ -101,6 +141,7 @@ objectInfo (PDFString bytes) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFHexString hexstring) offset = return ObjectInfo
@@ -109,6 +150,7 @@ objectInfo (PDFHexString hexstring) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFReference number revision) offset = return ObjectInfo
@@ -117,6 +159,7 @@ objectInfo (PDFReference number revision) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFArray objects) offset = return ObjectInfo
@@ -125,6 +168,7 @@ objectInfo (PDFArray objects) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFDictionary dictionary) offset = return ObjectInfo
@@ -133,14 +177,18 @@ objectInfo (PDFDictionary dictionary) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFIndirectObject number _revision object) offset = return ObjectInfo
   { oNumber      = Just number
-  , oDescription = fromMaybe "indirect object" (getTypeSubType object)
+  , oDescription =
+      fromMaybe (T.concat ["indirect object ", getObjectType object])
+                (getTypeSubType object)
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo object@(PDFIndirectObjectWithStream number _revision _dict stream) offset = do
@@ -156,19 +204,23 @@ objectInfo object@(PDFIndirectObjectWithStream number _revision _dict stream) of
       , sUnfilteredSize = BS.length unfiltered
       }
     , oOffset      = offset
+    , oEmbedded    = mempty
     }
 
 objectInfo (PDFIndirectObjectWithGraphics number _revision dict _objects) offset = return ObjectInfo
-    { oNumber      = Just number
-    , oDescription = fromMaybe "object with graphics" (getTypeSubType (PDFDictionary dict))
-    , oCategory    = Other
-    , oStream      = Nothing
-    , oOffset      = offset
-    }
+  { oNumber      = Just number
+  , oDescription = fromMaybe "object with graphics" (getTypeSubType (PDFDictionary dict))
+  , oCategory    = Other
+  , oStream      = Nothing
+  , oOffset      = offset
+  , oEmbedded    = mempty
+  }
 
 objectInfo object@(PDFObjectStream number _revision _object stream) offset = do
   unfiltered <- unfilter object >>= getStream
   category <- objectCategory object
+  embedded <- explodeObjects (IM.singleton 0 object)
+          >>= mapM (`objectInfo` Nothing)
 
   return ObjectInfo
     { oNumber      = Just number
@@ -179,6 +231,7 @@ objectInfo object@(PDFObjectStream number _revision _object stream) offset = do
       , sUnfilteredSize = BS.length unfiltered
       }
     , oOffset      = offset
+    , oEmbedded    = IM.elems embedded
     }
 
 objectInfo object@(PDFXRefStream number _revision _object stream) offset = do
@@ -194,6 +247,7 @@ objectInfo object@(PDFXRefStream number _revision _object stream) offset = do
       , sUnfilteredSize = BS.length unfiltered
       }
     , oOffset      = offset
+    , oEmbedded    = mempty
     }
 
 objectInfo (PDFBool True ) offset = return ObjectInfo
@@ -202,6 +256,7 @@ objectInfo (PDFBool True ) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFBool False) offset = return ObjectInfo
@@ -210,6 +265,7 @@ objectInfo (PDFBool False) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo PDFNull offset = return ObjectInfo
@@ -218,6 +274,7 @@ objectInfo PDFNull offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFXRef _xref) offset = return ObjectInfo
@@ -226,6 +283,7 @@ objectInfo (PDFXRef _xref) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFTrailer (PDFDictionary _dict)) offset = return ObjectInfo
@@ -234,6 +292,7 @@ objectInfo (PDFTrailer (PDFDictionary _dict)) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFTrailer _) offset = return ObjectInfo
@@ -242,6 +301,7 @@ objectInfo (PDFTrailer _) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
 
 objectInfo (PDFStartXRef startOffset) offset = return ObjectInfo
@@ -250,4 +310,5 @@ objectInfo (PDFStartXRef startOffset) offset = return ObjectInfo
   , oCategory    = Other
   , oStream      = Nothing
   , oOffset      = offset
+  , oEmbedded    = mempty
   }
