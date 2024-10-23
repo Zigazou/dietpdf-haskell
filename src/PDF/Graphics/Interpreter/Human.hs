@@ -18,6 +18,7 @@ import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 
 import Util.Dictionary (Dictionary)
+import Data.Sequence (Seq)
 
 indentSpaces :: T.Text
 indentSpaces = "  "
@@ -91,12 +92,12 @@ instance Human Command where
 
 instance Human Program where
   human :: Int -> Program -> T.Text
-  human indentLevel = snd . foldl' go (indentLevel, T.empty)
+  human indentLevel = T.concat . toList . snd . foldl' go (indentLevel, mempty)
     where
-      go :: (Int, T.Text) -> Command -> (Int, T.Text)
+      go :: (Int, Seq T.Text) -> Command -> (Int, Seq T.Text)
       go (level, humanCode) command = case command of
-        (Command GSSaveGS _)    -> (level + 1, humanCode <> human level command <> "\n")
-        (Command GSRestoreGS _) -> (level - 1, humanCode <> human (level - 1) command <> "\n")
-        (Command GSBeginText _) -> (level + 1, humanCode <> human level command <> "\n")
-        (Command GSEndText _)   -> (level - 1, humanCode <> human (level - 1) command <> "\n")
-        _anyOtherCommand        -> (level, humanCode <> human level command <> "\n")
+        (Command GSSaveGS _)    -> (level + 1, humanCode SQ.:|> (human level command <> "\n"))
+        (Command GSRestoreGS _) -> (level - 1, humanCode SQ.:|> (human (level - 1) command <> "\n"))
+        (Command GSBeginText _) -> (level + 1, humanCode SQ.:|> (human level command <> "\n"))
+        (Command GSEndText _)   -> (level - 1, humanCode SQ.:|> (human (level - 1) command <> "\n"))
+        _anyOtherCommand        -> (level, humanCode SQ.:|> (human level command <> "\n"))
