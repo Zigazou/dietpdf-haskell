@@ -8,13 +8,13 @@ import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
     ( GFXObject (GFXNumber)
-    , GSOperator (GSCloseSubpath, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSEndPath, GSLineTo, GSMoveTo)
+    , GSOperator (GSCloseFillStrokeEOR, GSCloseFillStrokeNZWR, GSCloseStrokePath, GSCloseSubpath, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSEndPath, GSFillStrokePathEOR, GSFillStrokePathNZWR, GSLineTo, GSMoveTo, GSStrokePath)
     )
 import Data.PDF.GraphicsState
     ( GraphicsState (gsCurrentPointX, gsCurrentPointY, gsPathStartX, gsPathStartY)
     )
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
+    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand)
     )
 import Data.PDF.InterpreterState
     ( InterpreterState (iGraphicsState)
@@ -52,10 +52,10 @@ optimizeDrawCommand command rest = case (operator, parameters) of
                    :<| GFXNumber x3 :<| GFXNumber y3
                    :<| Empty) -> do
     precision <- usefulGraphicsPrecisionS
-    let x1' = round' (precision - 1) x1
-        y1' = round' (precision - 1) y1
-        x2' = round' (precision - 1) x2
-        y2' = round' (precision - 1) y2
+    let x1' = round' precision x1
+        y1' = round' precision y1
+        x2' = round' precision x2
+        y2' = round' precision y2
         x3' = round' precision x3
         y3' = round' precision y3
     setCurrentPointS x3' y3'
@@ -72,8 +72,8 @@ optimizeDrawCommand command rest = case (operator, parameters) of
                       :<| GFXNumber x3 :<| GFXNumber y3
                       :<| Empty) -> do
     precision <- usefulGraphicsPrecisionS
-    let x1' = round' (precision - 1) x1
-        y1' = round' (precision - 1) y1
+    let x1' = round' precision x1
+        y1' = round' precision y1
         x3' = round' precision x3
         y3' = round' precision y3
     setCurrentPointS x3' y3'
@@ -89,8 +89,8 @@ optimizeDrawCommand command rest = case (operator, parameters) of
                       :<| GFXNumber x3 :<| GFXNumber y3
                       :<| Empty) -> do
     precision <- usefulGraphicsPrecisionS
-    let x2' = round' (precision - 1) x2
-        y2' = round' (precision - 1) y2
+    let x2' = round' precision x2
+        y2' = round' precision y2
         x3' = round' precision x3
         y3' = round' precision y3
     setCurrentPointS x3' y3'
@@ -149,13 +149,42 @@ optimizeDrawCommand command rest = case (operator, parameters) of
           _otherCommand -> ReplaceCommand optimized
 
   -- EndPath operator
-  (GSEndPath, _params) -> do
+  (GSEndPath, _noParameter) -> do
     setPathStartS 0 0
     return KeepCommand
 
   -- CloseSubpath operator
-  (GSCloseSubpath, _params) -> do
-    setPathStartS 0 0
+  (GSCloseSubpath, _noParameter) -> do
+    pathStartX <- gets (gsPathStartX . iGraphicsState)
+    pathStartY <- gets (gsPathStartY . iGraphicsState)
+    setCurrentPointS pathStartX pathStartY
+
+    return $ case rest of
+      (Command GSStrokePath _noParameter :<| _tail) ->
+        ReplaceAndDeleteNextCommand (Command GSCloseStrokePath mempty)
+      (Command GSFillStrokePathEOR _noParameter :<| _tail ) ->
+        ReplaceAndDeleteNextCommand (Command GSCloseFillStrokeEOR mempty)
+      (Command GSFillStrokePathNZWR _noParameter :<| _tail) ->
+        ReplaceAndDeleteNextCommand (Command GSCloseFillStrokeNZWR mempty)
+      _anyOtherCommand -> KeepCommand
+
+  -- Close and stroke the path operator
+  (GSCloseStrokePath, _noParameter) -> do
+    pathStartX <- gets (gsPathStartX . iGraphicsState)
+    pathStartY <- gets (gsPathStartY . iGraphicsState)
+    setCurrentPointS pathStartX pathStartY
+    return KeepCommand
+
+  (GSCloseFillStrokeEOR, _noParameter) -> do
+    pathStartX <- gets (gsPathStartX . iGraphicsState)
+    pathStartY <- gets (gsPathStartY . iGraphicsState)
+    setCurrentPointS pathStartX pathStartY
+    return KeepCommand
+
+  (GSCloseFillStrokeNZWR, _noParameter) -> do
+    pathStartX <- gets (gsPathStartX . iGraphicsState)
+    pathStartY <- gets (gsPathStartY . iGraphicsState)
+    setCurrentPointS pathStartX pathStartY
     return KeepCommand
 
   _anyOtherCommand -> return KeepCommand

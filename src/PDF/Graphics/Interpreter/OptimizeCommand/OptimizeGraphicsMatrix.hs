@@ -73,10 +73,10 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
                                         :<| GFXNumber (tmF matrix)
                                         :<| Empty
                                         )
-        return $ ReplaceAndDeleteNextCommand (optimizeParameters command' (precision + 2))
+        return $ ReplaceAndDeleteNextCommand (optimizeParameters command' precision)
       _anythingElse -> do
         applyGraphicsMatrixS (TransformationMatrix a b c d e f)
-        return $ ReplaceCommand (optimizeParameters command (precision + 2))
+        return $ ReplaceCommand (optimizeParameters command precision)
 
   _anyOtherCommand -> return KeepCommand
  where

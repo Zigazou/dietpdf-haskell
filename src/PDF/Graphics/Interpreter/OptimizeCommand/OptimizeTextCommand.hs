@@ -53,13 +53,15 @@ optimizeTextCommand command _rest = case (operator, parameters) of
 
   -- Replace ShowManyText by ShowText when there is only one text
   (GSShowManyText, GFXArray items :<| Empty) -> do
-    case items of
-      str@(GFXString _string :<| Empty) ->
-        return $ ReplaceCommand (Command GSShowText str)
-      str@(GFXHexString _string :<| Empty) ->
-        return $ ReplaceCommand (Command GSShowText str)
-      _otherContent ->
-        ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    let newCommand = case items of
+          str@(GFXString _string :<| Empty)    -> Command GSShowText str
+          str@(GFXHexString _string :<| Empty) -> Command GSShowText str
+          _otherContent                        -> command
+
+    ReplaceCommand . optimizeParameters newCommand <$> usefulTextPrecisionS
+
+  (GSShowText, _parameters) ->
+    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
 
   _anyOtherCommand -> return KeepCommand
  where
