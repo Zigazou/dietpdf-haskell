@@ -74,7 +74,7 @@ isDrawingCommand (Command command _params) = case command of
   GSSetNonStrokeRGBColorspace    -> False
   GSSetStrokeCMYKColorspace      -> False
   GSSetNonStrokeCMYKColorspace   -> False
-  GSPaintShapeColourShading      -> False
+  GSPaintShapeColourShading      -> True
   GSPaintXObject                 -> True
   GSMarkedContentPoint           -> False
   GSMarkedContentPointPL         -> False
