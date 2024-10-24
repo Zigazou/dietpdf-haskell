@@ -60,6 +60,14 @@ instance Contextual Double where
   ctx :: Double -> Context
   ctx = Context . T.pack . show
 
+instance Contextual (Double, Double) where
+  ctx :: (Double, Double) -> Context
+  ctx (a, b) = Context $ T.pack (show a) <> "." <> T.pack (show b)
+
+instance Contextual (Int, Int) where
+  ctx :: (Int, Int) -> Context
+  ctx (a, b) = Context $ T.pack (show a) <> "." <> T.pack (show b)
+
 instance Contextual BS.ByteString where
   ctx :: BS.ByteString -> Context
   ctx = Context . removeFirstAndLast . T.pack . show
