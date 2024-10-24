@@ -15,6 +15,9 @@ import Data.PDF.WorkData (WorkData)
 import Data.Sequence (Seq (Empty, (:<|)), (|>))
 
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
+import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
+    ( optimizeDuplicates
+    )
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
     ( optimizeIneffective
     )
@@ -47,6 +50,7 @@ optimizeProgramOnePass :: WorkData -> Program -> Program
 optimizeProgramOnePass workData
   = (flip evalState defaultInterpreterState { iWorkData = workData }
   . optimizeCommands mempty)
+  . optimizeDuplicates
   . optimizeIneffective
   . optimizeRectangle
   . optimizeSaveRestore

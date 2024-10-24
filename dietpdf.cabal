@@ -119,6 +119,7 @@ library
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
       PDF.Graphics.Interpreter.OptimizeParameters
       PDF.Graphics.Interpreter.OptimizeProgram
+      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
