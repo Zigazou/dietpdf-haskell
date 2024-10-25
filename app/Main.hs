@@ -115,8 +115,7 @@ runApp (OptimizeOptions inputPDF outputPDF useGS useZopfli optimizeGFX) = do
       sayComparisonF (ctx ("ghostscript" :: String))
                      "GhostScripted PDF" originalSize ghostScriptSize
 
-      if ghostScriptSize < originalSize then go ghostscriptPDF settings
-                                        else go inputPDF settings
+      go ghostscriptPDF settings
 
     DoNotUseGhostScript -> go inputPDF settings
  where
