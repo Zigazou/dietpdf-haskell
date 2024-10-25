@@ -9,6 +9,7 @@ import Codec.Compression.Predict
     , predict
     )
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
@@ -19,13 +20,13 @@ import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli))
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
-getCompressor :: UseZopfli -> (BS.ByteString -> Fallible BS.ByteString)
+getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
 getCompressor UseZopfli  = FL.compress
 getCompressor UseDeflate = FL.fastCompress
 
 predZopfli
   :: Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> UseZopfli
   -> Fallible FilterCombination
 predZopfli (Just (width, components)) stream useZopfli = do

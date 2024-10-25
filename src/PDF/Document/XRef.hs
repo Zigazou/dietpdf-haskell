@@ -12,12 +12,22 @@ module PDF.Document.XRef
   )
 where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (foldl', toList)
 import Data.IntMap.Strict qualified as IM
 import Data.Ix (range, rangeSize)
 import Data.Logging (Logging)
 import Data.Maybe (fromMaybe)
+import Data.PDF.EncodedObject
+    ( EncodedObject (EncodedObject, eoBinaryData, eoObjectLength, eoObjectNumber)
+    )
+import Data.PDF.EncodedObjects (EncodedObjects)
+import Data.PDF.ObjectOffset
+    ( ObjectOffset (DirectOffset, FreeEntry, InObjectStream)
+    , getOffsetValue
+    )
+import Data.PDF.ObjectOffsets (ObjectOffsets, indexRange, insertFreeEntries)
 import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFName, PDFNumber, PDFXRef, PDFXRefStream)
     , mkPDFArray
@@ -30,15 +40,6 @@ import Data.Sequence (Seq ((:<|)))
 import Data.Sequence qualified as SQ
 import Data.UnifiedError (UnifiedError (XRefStreamNoW))
 
-import Data.PDF.EncodedObject
-    ( EncodedObject (EncodedObject, eoBinaryData, eoObjectLength, eoObjectNumber)
-    )
-import Data.PDF.EncodedObjects (EncodedObjects)
-import Data.PDF.ObjectOffset
-    ( ObjectOffset (DirectOffset, FreeEntry, InObjectStream)
-    , getOffsetValue
-    )
-import Data.PDF.ObjectOffsets (ObjectOffsets, indexRange, insertFreeEntries)
 import PDF.Object.Object.ToPDFNumber (ToPDFNumber (mkPDFNumber))
 import PDF.Object.State (getValue)
 
@@ -137,7 +138,7 @@ xrefStreamWidth object@PDFXRefStream {} = do
     getWidth _anyOtherCase = Nothing
 xrefStreamWidth _anyOtherCase = throwError (XRefStreamNoW "Not a PDFXRefStream")
 
-mkBinary :: [(Int, Int)] -> BS.ByteString
+mkBinary :: [(Int, Int)] -> ByteString
 mkBinary = BS.concat . fmap (uncurry encodeIntToBytes)
 
 {- | Create an entry for the cross-reference stream.
@@ -161,7 +162,7 @@ There are three types of entries in a cross-reference stream:
     stored. (The generation number of the object stream is implicitly 0.)
   - column 2: The index of this object within the object stream.
 -}
-mkEntry :: Int -> Int -> Int -> ObjectOffset -> BS.ByteString
+mkEntry :: Int -> Int -> Int -> ObjectOffset -> ByteString
 mkEntry _number offsetWidth numberWidth FreeEntry{} =
   mkBinary [(1, 0), (offsetWidth, 0), (numberWidth, 0)]
 mkEntry _number offsetWidth numberWidth (DirectOffset _ offset) =
@@ -223,7 +224,7 @@ xrefStreamTable number startOffset objects
         ]
 
     -- The stream of the cross-reference stream.
-    mkStream :: BS.ByteString
+    mkStream :: ByteString
     mkStream =
       IM.foldrWithKey
         (\index offset stream -> BS.append
