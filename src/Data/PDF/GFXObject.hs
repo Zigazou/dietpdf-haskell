@@ -60,22 +60,22 @@ import Formatting (format, int, (%))
 import Formatting.ByteStringFormatter (utf8)
 
 import Util.Ascii
-    ( asciiAPOSTROPHE
-    , asciiASTERISK
-    , asciiCR
-    , asciiDIGITSEVEN
+    ( asciiDIGITSEVEN
     , asciiDIGITZERO
-    , asciiFF
-    , asciiHT
-    , asciiLF
     , asciiLOWERA
     , asciiLOWERZ
-    , asciiNUL
-    , asciiNUMBERSIGN
-    , asciiQUOTATIONMARK
-    , asciiSPACE
     , asciiUPPERA
     , asciiUPPERZ
+    , pattern AsciiAPOSTROPHE
+    , pattern AsciiASTERISK
+    , pattern AsciiCR
+    , pattern AsciiFF
+    , pattern AsciiHT
+    , pattern AsciiLF
+    , pattern AsciiNUL
+    , pattern AsciiNUMBERSIGN
+    , pattern AsciiQUOTATIONMARK
+    , pattern AsciiSPACE
     )
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
 import Util.Name (fromName)
@@ -107,12 +107,13 @@ The following characters are considered white spaces:
 - `asciiSPACE`
 -}
 isWhiteSpace :: Word8 -> Bool
-isWhiteSpace byte = byte == asciiSPACE
-                 || byte == asciiLF
-                 || byte == asciiCR
-                 || byte == asciiHT
-                 || byte == asciiNUL
-                 || byte == asciiFF
+isWhiteSpace AsciiSPACE         = True
+isWhiteSpace AsciiLF            = True
+isWhiteSpace AsciiCR            = True
+isWhiteSpace AsciiHT            = True
+isWhiteSpace AsciiNUL           = True
+isWhiteSpace AsciiFF            = True
+isWhiteSpace _anyOtherCharacter = False
 
 {-|
 Test if a byte is a keyword character.
@@ -120,13 +121,12 @@ Test if a byte is a keyword character.
 Keyword characters are either lowercase or uppercase alphabetical characters.
 -}
 isKeywordCharacter :: Word8 -> Bool
-isKeywordCharacter byte
-  | inRange (asciiLOWERA, asciiLOWERZ) byte = True
-  | inRange (asciiUPPERA, asciiUPPERZ) byte = True
-  | byte == asciiASTERISK                   = True
-  | byte == asciiAPOSTROPHE                 = True
-  | byte == asciiQUOTATIONMARK              = True
-  | otherwise                               = False
+isKeywordCharacter AsciiASTERISK                                  = True
+isKeywordCharacter AsciiAPOSTROPHE                                = True
+isKeywordCharacter AsciiQUOTATIONMARK                             = True
+isKeywordCharacter byte | inRange (asciiLOWERA, asciiLOWERZ) byte = True
+                        | inRange (asciiUPPERA, asciiUPPERZ) byte = True
+                        | otherwise                               = False
 
 {-|
 Test if a byte a an octal digit.
@@ -160,9 +160,9 @@ A GFX name may not contain an `asciiNUL` character, white space or delimiter.
 The `asciiNUMBERSIGN` is reserved for escaping.
 -}
 isNameRegularChar :: Word8 -> Bool
-isNameRegularChar byte | byte == asciiNUMBERSIGN = False
-                       | byte == asciiNUL        = False
-                       | isWhiteSpace byte       = False
+isNameRegularChar AsciiNUMBERSIGN                = False
+isNameRegularChar AsciiNUL                       = False
+isNameRegularChar byte | isWhiteSpace byte       = False
                        | isDelimiter byte        = False
                        | otherwise               = True
 

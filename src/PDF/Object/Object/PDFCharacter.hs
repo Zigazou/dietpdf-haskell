@@ -17,19 +17,19 @@ import Data.Maybe (isJust, isNothing)
 import Data.Word (Word8)
 
 import Util.Ascii
-    ( asciiCR
-    , asciiDIGITSEVEN
+    ( asciiDIGITSEVEN
     , asciiDIGITZERO
-    , asciiFF
-    , asciiHT
-    , asciiLF
     , asciiLOWERA
     , asciiLOWERZ
-    , asciiNUL
-    , asciiNUMBERSIGN
-    , asciiSPACE
     , asciiUPPERA
     , asciiUPPERZ
+    , pattern AsciiCR
+    , pattern AsciiFF
+    , pattern AsciiHT
+    , pattern AsciiLF
+    , pattern AsciiNUL
+    , pattern AsciiNUMBERSIGN
+    , pattern AsciiSPACE
     )
 
 {-|
@@ -57,12 +57,13 @@ The following characters are considered white spaces:
 - `asciiSPACE`
 -}
 isWhiteSpace :: Word8 -> Bool
-isWhiteSpace byte = byte == asciiSPACE
-                 || byte == asciiLF
-                 || byte == asciiCR
-                 || byte == asciiHT
-                 || byte == asciiNUL
-                 || byte == asciiFF
+isWhiteSpace AsciiSPACE         = True
+isWhiteSpace AsciiLF            = True
+isWhiteSpace AsciiCR            = True
+isWhiteSpace AsciiHT            = True
+isWhiteSpace AsciiNUL           = True
+isWhiteSpace AsciiFF            = True
+isWhiteSpace _anyOtherCharacter = False
 
 {-|
 Test if a byte is a space.
@@ -82,9 +83,8 @@ Test if a byte is a keyword character.
 Keyword characters are either lowercase or uppercase alphabetical characters.
 -}
 isKeywordCharacter :: Word8 -> Bool
-isKeywordCharacter byte =
-  inRange (asciiLOWERA, asciiLOWERZ) byte
-    || inRange (asciiUPPERA, asciiUPPERZ) byte
+isKeywordCharacter byte = inRange (asciiLOWERA, asciiLOWERZ) byte
+                       || inRange (asciiUPPERA, asciiUPPERZ) byte
 
 {-|
 Test if a byte a an octal digit.
@@ -118,8 +118,8 @@ A PDF name may not contain an `asciiNUL` character, white space or delimiter.
 The `asciiNUMBERSIGN` is reserved for escaping.
 -}
 isNameRegularChar :: Word8 -> Bool
-isNameRegularChar byte | byte == asciiNUMBERSIGN = False
-                       | byte == asciiNUL        = False
-                       | isWhiteSpace byte       = False
-                       | isDelimiter byte        = False
-                       | otherwise               = True
+isNameRegularChar AsciiNUMBERSIGN          = False
+isNameRegularChar AsciiNUL                 = False
+isNameRegularChar byte | isWhiteSpace byte = False
+                       | isDelimiter byte  = False
+                       | otherwise         = True

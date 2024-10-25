@@ -24,27 +24,26 @@ import PDF.Graphics.Parser.Number (numberP)
 import PDF.Graphics.Parser.String (stringP)
 
 import Util.Ascii
-    ( asciiLEFTPARENTHESIS
-    , asciiLEFTSQUAREBRACKET
-    , asciiLESSTHANSIGN
-    , asciiPERCENTSIGN
-    , asciiSOLIDUS
-    , asciiUPPERB
+    ( pattern AsciiLEFTPARENTHESIS
+    , pattern AsciiLEFTSQUAREBRACKET
+    , pattern AsciiLESSTHANSIGN
+    , pattern AsciiPERCENTSIGN
+    , pattern AsciiSOLIDUS
+    , pattern AsciiUPPERB
     )
 
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)
 
 gfxObjectP :: Get GFXObject
-gfxObjectP = do
-  nextChar <- peek
-  if | nextChar == asciiSOLIDUS           -> nameP
-     | nextChar == asciiLESSTHANSIGN      -> dictionaryP <|> hexStringP
-     | nextChar == asciiLEFTPARENTHESIS   -> stringP
-     | nextChar == asciiLEFTSQUAREBRACKET -> arrayP
-     | nextChar == asciiPERCENTSIGN       -> commentP
-     | nextChar == asciiUPPERB            -> inlineImageP <|> keywordP
-     | otherwise                          -> numberP <|> keywordP
+gfxObjectP = peek >>= \case
+  AsciiSOLIDUS           -> nameP
+  AsciiLESSTHANSIGN      -> dictionaryP <|> hexStringP
+  AsciiLEFTPARENTHESIS   -> stringP
+  AsciiLEFTSQUAREBRACKET -> arrayP
+  AsciiPERCENTSIGN       -> commentP
+  AsciiUPPERB            -> inlineImageP <|> keywordP
+  _anyOtherCharacter     -> numberP <|> keywordP
 
 gfxRawP :: Get [GFXObject]
 gfxRawP = label "gfxG" $ do

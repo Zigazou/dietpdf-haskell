@@ -36,9 +36,13 @@ instance Logging IO where
     TIO.hPutStr stderr (T.concat [message, "\n"])
     hFlush stderr
 
+instance Logging (Either a) where
+  say :: Context -> T.Text -> Either a ()
+  say _anyContext _anyMessage = return ()
+
 instance Logging Identity where
   say :: Context -> T.Text -> Identity ()
-  say _ _ = return ()
+  say _anyContext _anyMessage = return ()
 
 instance Logging (Writer [T.Text]) where
   say :: Context -> T.Text -> Writer [T.Text] ()

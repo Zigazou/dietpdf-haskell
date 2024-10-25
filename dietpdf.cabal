@@ -101,6 +101,7 @@ library
       PDF.Document.Encode
       PDF.Document.MergeVectorStream
       PDF.Document.ObjectStream
+      PDF.Document.OptimizeOptionalDictionaryEntries
       PDF.Document.Parser
       PDF.Document.PDFObjects
       PDF.Document.PDFPartition
@@ -223,6 +224,7 @@ library
       NumericUnderscores
       BinaryLiterals
       ViewPatterns
+      PatternSynonyms
   ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded
   build-depends:
       async

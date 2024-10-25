@@ -7,28 +7,29 @@ module Util.String
   , startsWith
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Word (Word8)
 
 import Util.Ascii
-    ( asciiCR
-    , asciiDIGITNINE
+    ( asciiDIGITNINE
     , asciiDIGITZERO
-    , asciiLEFTPARENTHESIS
     , asciiLOWERA
     , asciiLOWERF
-    , asciiREVERSESOLIDUS
-    , asciiRIGHTPARENTHESIS
     , asciiUPPERA
     , asciiUPPERF
+    , pattern AsciiCR
+    , pattern AsciiLEFTPARENTHESIS
+    , pattern AsciiREVERSESOLIDUS
+    , pattern AsciiRIGHTPARENTHESIS
     )
 
-escapeChar :: Word8 -> BS.ByteString
-escapeChar byte | byte == asciiCR               = "\\r"
-                | byte == asciiLEFTPARENTHESIS  = "\\("
-                | byte == asciiRIGHTPARENTHESIS = "\\)"
-                | byte == asciiREVERSESOLIDUS   = "\\\\"
-                | otherwise                     = BS.singleton byte
+escapeChar :: Word8 -> ByteString
+escapeChar AsciiCR               = "\\r"
+escapeChar AsciiLEFTPARENTHESIS  = "\\("
+escapeChar AsciiRIGHTPARENTHESIS = "\\)"
+escapeChar AsciiREVERSESOLIDUS   = "\\\\"
+escapeChar byte                  = BS.singleton byte
 
 {-|
 Encode a PDF string.
@@ -38,10 +39,10 @@ It escapes `asciiCR` and parenthesis characters.
 It does not try optimize the string by avoiding unneeded escaping of
 well-balanced parenthesis.
 -}
-fromString :: BS.ByteString -> BS.ByteString
+fromString :: ByteString -> ByteString
 fromString string = BS.concat ["(", BS.concatMap escapeChar string, ")"]
 
-onlyHexChar :: Word8 -> BS.ByteString
+onlyHexChar :: Word8 -> ByteString
 onlyHexChar byte
   | byte >= asciiDIGITZERO && byte <= asciiDIGITNINE = BS.singleton byte
   | byte >= asciiLOWERA && byte <= asciiLOWERF = BS.singleton byte
@@ -58,7 +59,7 @@ It:
 - handles zero at the end of the hexadecimal string
 - converts every character to lowercase
 -}
-normalizeHexString :: BS.ByteString -> BS.ByteString
+normalizeHexString :: ByteString -> ByteString
 normalizeHexString ""        = ""
 normalizeHexString hexString = if stringLengthIsEven && lastDigitIsZero
   then normalizedWithoutLastDigit
@@ -78,7 +79,7 @@ Non hexadecimal digits are completely discarded.
 
 A trailing zero is removed if the number of hexadecimal digit is even.
 -}
-fromHexString :: BS.ByteString -> BS.ByteString
+fromHexString :: ByteString -> ByteString
 fromHexString hexString = BS.concat ["<", normalizeHexString hexString, ">"]
 
 digitToNumber :: Word8 -> Word8
@@ -95,7 +96,7 @@ Non hexadecimal digits are completely discarded.
 
 If the number of hexadecimal digit is odd, a trailing zero is appended.
 -}
-hexStringToString :: BS.ByteString -> BS.ByteString
+hexStringToString :: ByteString -> ByteString
 hexStringToString hexString = BS.concat
   [convert . normalizeHexString $ hexString]
  where
@@ -109,5 +110,5 @@ hexStringToString hexString = BS.concat
 {- |
 Tells if a `ByteString` starts with another `ByteString`.
 -}
-startsWith :: BS.ByteString -> BS.ByteString -> Bool
+startsWith :: ByteString -> ByteString -> Bool
 startsWith start str = BS.take (BS.length start) str == start

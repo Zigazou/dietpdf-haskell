@@ -8,44 +8,45 @@ import Data.ByteString qualified as BS
 import Data.Word (Word8)
 
 import Util.Ascii
-    ( asciiCR
-    , asciiFF
-    , asciiGREATERTHANSIGN
-    , asciiHT
-    , asciiLEFTCURLYBRACKET
-    , asciiLEFTPARENTHESIS
-    , asciiLEFTSQUAREBRACKET
-    , asciiLESSTHANSIGN
-    , asciiLF
-    , asciiNUL
-    , asciiNUMBERSIGN
-    , asciiPERCENTSIGN
-    , asciiRIGHTCURLYBRACKET
-    , asciiRIGHTPARENTHESIS
-    , asciiRIGHTSQUAREBRACKET
-    , asciiSOLIDUS
-    , asciiSPACE
+    ( asciiSOLIDUS
+    , pattern AsciiCR
+    , pattern AsciiFF
+    , pattern AsciiGREATERTHANSIGN
+    , pattern AsciiHT
+    , pattern AsciiLEFTCURLYBRACKET
+    , pattern AsciiLEFTPARENTHESIS
+    , pattern AsciiLEFTSQUAREBRACKET
+    , pattern AsciiLESSTHANSIGN
+    , pattern AsciiLF
+    , pattern AsciiNUL
+    , pattern AsciiNUMBERSIGN
+    , pattern AsciiPERCENTSIGN
+    , pattern AsciiRIGHTCURLYBRACKET
+    , pattern AsciiRIGHTPARENTHESIS
+    , pattern AsciiRIGHTSQUAREBRACKET
+    , pattern AsciiSOLIDUS
+    , pattern AsciiSPACE
     )
 
 escapeChar :: Word8 -> BS.ByteString
-escapeChar byte | byte == asciiNUL = error "NUL char not allowed in name"
-                | byte == asciiHT                 = "#09"
-                | byte == asciiCR                 = "#0D"
-                | byte == asciiLF                 = "#0A"
-                | byte == asciiFF                 = "#0C"
-                | byte == asciiSPACE              = "#20"
-                | byte == asciiNUMBERSIGN         = "#23"
-                | byte == asciiLEFTPARENTHESIS    = "#28"
-                | byte == asciiRIGHTPARENTHESIS   = "#29"
-                | byte == asciiLESSTHANSIGN       = "#3C"
-                | byte == asciiGREATERTHANSIGN    = "#3E"
-                | byte == asciiLEFTSQUAREBRACKET  = "#5B"
-                | byte == asciiRIGHTSQUAREBRACKET = "#5D"
-                | byte == asciiLEFTCURLYBRACKET   = "#7B"
-                | byte == asciiRIGHTCURLYBRACKET  = "#7D"
-                | byte == asciiSOLIDUS            = "#2F"
-                | byte == asciiPERCENTSIGN        = "#25"
-                | otherwise                       = BS.singleton byte
+escapeChar AsciiNUL                = error "NUL char not allowed in name"
+escapeChar AsciiHT                 = "#09"
+escapeChar AsciiCR                 = "#0D"
+escapeChar AsciiLF                 = "#0A"
+escapeChar AsciiFF                 = "#0C"
+escapeChar AsciiSPACE              = "#20"
+escapeChar AsciiNUMBERSIGN         = "#23"
+escapeChar AsciiLEFTPARENTHESIS    = "#28"
+escapeChar AsciiRIGHTPARENTHESIS   = "#29"
+escapeChar AsciiLESSTHANSIGN       = "#3C"
+escapeChar AsciiGREATERTHANSIGN    = "#3E"
+escapeChar AsciiLEFTSQUAREBRACKET  = "#5B"
+escapeChar AsciiRIGHTSQUAREBRACKET = "#5D"
+escapeChar AsciiLEFTCURLYBRACKET   = "#7B"
+escapeChar AsciiRIGHTCURLYBRACKET  = "#7D"
+escapeChar AsciiSOLIDUS            = "#2F"
+escapeChar AsciiPERCENTSIGN        = "#25"
+escapeChar byte                    = BS.singleton byte
 
 {-|
 Escape all special characters from a PDF Name and insert a solidus at the

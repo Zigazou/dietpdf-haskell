@@ -11,13 +11,13 @@ import Control.Applicative ((<|>))
 import Data.Binary.Parser (Get, word8)
 import Data.Word (Word8)
 
-import Util.Ascii (asciiCR, asciiLF)
+import Util.Ascii (asciiCR, asciiLF, pattern AsciiCR, pattern AsciiLF)
 
 -- | Returns True if a loose end of line is found, False otherwise
 isLooseEndOfLine :: Word8 -> Bool
-isLooseEndOfLine value | value == asciiCR = True
-                       | value == asciiLF = True
-                       | otherwise        = False
+isLooseEndOfLine AsciiCR            = True
+isLooseEndOfLine AsciiLF            = True
+isLooseEndOfLine _anyOtherCharacter = False
 
 -- | Parser for a loose end of line (CR, CR+LF or LF)
 looseEndOfLineP :: Get ()

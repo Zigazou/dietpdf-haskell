@@ -56,6 +56,7 @@ library:
   - NumericUnderscores
   - BinaryLiterals
   - ViewPatterns
+  - PatternSynonyms
   ghc-options:
   - -O2
   - -funfolding-use-threshold=16

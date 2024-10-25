@@ -6,6 +6,7 @@ module Util.Dictionary
   , mkDictionary
   , mkEmptyDictionary
   , dictHasKey
+  , dictAlter
   ) where
 
 import Data.ByteString qualified as BS
@@ -39,3 +40,11 @@ dictHasKey
   -> Dictionary a -- ^ The `Dictionary` to search in
   -> Bool
 dictHasKey = (isJust .) . Map.lookup
+
+dictAlter
+  :: BS.ByteString
+  -> Maybe a
+  -> Dictionary a
+  -> Dictionary a
+dictAlter key value dict = let replaceValue _anyValue = value
+                           in Map.alter replaceValue key dict

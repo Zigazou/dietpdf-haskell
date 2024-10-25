@@ -1,6 +1,7 @@
 module PDF.Object.Object.Properties
   ( hasKey
   , getValueForKey
+  , setValueForKey
   , updateStream
   , xrefCount
   , objectType
@@ -18,7 +19,7 @@ import Data.PDF.XRefSubsection (xrssCount)
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
-import Util.Dictionary (Dictionary, dictHasKey)
+import Util.Dictionary (Dictionary, dictHasKey, dictAlter)
 
 {- |
 Update the stream embedded in a `PDFObject`.
@@ -91,6 +92,23 @@ getValueForKey key (PDFObjectStream _ _ dict _) = Map.lookup key dict
 getValueForKey key (PDFXRefStream _ _ dict _) = Map.lookup key dict
 getValueForKey key (PDFTrailer (PDFDictionary dict)) = Map.lookup key dict
 getValueForKey _ _ = Nothing
+
+setValueForKey :: BS.ByteString -> Maybe PDFObject -> PDFObject -> PDFObject
+setValueForKey key (Just value) (PDFDictionary dict) =
+  PDFDictionary (Map.insert key value dict)
+setValueForKey key Nothing (PDFDictionary dict) =
+  PDFDictionary (Map.delete key dict)
+setValueForKey key value (PDFIndirectObject major minor dict) =
+  PDFIndirectObject major minor (setValueForKey key value dict)
+setValueForKey key value (PDFIndirectObjectWithStream major minor dict stream) =
+  PDFIndirectObjectWithStream major minor (dictAlter key value dict) stream
+setValueForKey key value (PDFObjectStream major minor dict stream) =
+  PDFObjectStream major minor (dictAlter key value dict) stream
+setValueForKey key value (PDFXRefStream major minor dict stream) =
+  PDFXRefStream major minor (dictAlter key value dict) stream
+setValueForKey key value (PDFTrailer dict) =
+  PDFTrailer (setValueForKey key value dict)
+setValueForKey _anyKey _anyValue object = object
 
 {- |
 Checks if the given PDF object contains document information (e.g., has an

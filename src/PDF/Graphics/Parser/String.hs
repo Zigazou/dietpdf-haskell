@@ -41,13 +41,16 @@ import Util.Ascii
     , asciiHT
     , asciiLEFTPARENTHESIS
     , asciiLF
-    , asciiLOWERB
-    , asciiLOWERF
-    , asciiLOWERN
-    , asciiLOWERR
-    , asciiLOWERT
     , asciiREVERSESOLIDUS
     , asciiRIGHTPARENTHESIS
+    , pattern AsciiLEFTPARENTHESIS
+    , pattern AsciiLOWERB
+    , pattern AsciiLOWERF
+    , pattern AsciiLOWERN
+    , pattern AsciiLOWERR
+    , pattern AsciiLOWERT
+    , pattern AsciiREVERSESOLIDUS
+    , pattern AsciiRIGHTPARENTHESIS
     )
 
 escapedEndOfLineP :: Get (Maybe Word8)
@@ -60,16 +63,15 @@ escapedCharP = do
   satisfy isStringEscapeSequence >>= convert
  where
   convert :: Word8 -> Get (Maybe Word8)
-  convert byte
-    | byte == asciiLOWERN           = return (Just asciiLF)
-    | byte == asciiLOWERR           = return (Just asciiCR)
-    | byte == asciiLOWERT           = return (Just asciiHT)
-    | byte == asciiLOWERB           = return (Just asciiBS)
-    | byte == asciiLOWERF           = return (Just asciiFF)
-    | byte == asciiLEFTPARENTHESIS  = return (Just asciiLEFTPARENTHESIS)
-    | byte == asciiRIGHTPARENTHESIS = return (Just asciiRIGHTPARENTHESIS)
-    | byte == asciiREVERSESOLIDUS   = return (Just asciiREVERSESOLIDUS)
-    | otherwise                     = fail "escapedCharG"
+  convert AsciiLOWERN           = return (Just asciiLF)
+  convert AsciiLOWERR           = return (Just asciiCR)
+  convert AsciiLOWERT           = return (Just asciiHT)
+  convert AsciiLOWERB           = return (Just asciiBS)
+  convert AsciiLOWERF           = return (Just asciiFF)
+  convert AsciiLEFTPARENTHESIS  = return (Just asciiLEFTPARENTHESIS)
+  convert AsciiRIGHTPARENTHESIS = return (Just asciiRIGHTPARENTHESIS)
+  convert AsciiREVERSESOLIDUS   = return (Just asciiREVERSESOLIDUS)
+  convert _anyOtherCharacter    = fail "escapedCharG"
 
 escapedOctalP :: Get (Maybe Word8)
 escapedOctalP =
