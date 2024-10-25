@@ -75,6 +75,7 @@ import System.IO (hSetBuffering, stderr)
 
 import Util.ByteString (toNameBase)
 import Util.Sequence (mapMaybe)
+import PDF.Document.OptimizeOptionalDictionaryEntries (optimizeOptionalDictionaryEntries)
 
 {- |
 Encodes a PDF object and keeps track of its number and length.
@@ -217,6 +218,7 @@ pdfEncode objects = do
   resourceNames <- getAllResourceNames
 
   -- Do not create a translation table if GFX won't be optimized.
+  sayP "Optimizing resource names"
   optGFX <- gets (sOptimizeGFX . wSettings)
   let nameTranslations = case optGFX of
         OptimizeGFX      -> getTranslationTable toNameBase resourceNames
@@ -225,6 +227,9 @@ pdfEncode objects = do
   setTranslationTable nameTranslations
 
   modifyIndirectObjects (renameResources nameTranslations)
+
+  sayP "Optimizing optional dictionary entries"
+  modifyIndirectObjects optimizeOptionalDictionaryEntries
 
   sayP $ T.concat [ "Found "
                   , T.pack . show $ Map.size nameTranslations
