@@ -6,6 +6,7 @@ module Util.Hex
   , toHexDigits
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.List.Split (chunksOf)
 import Data.Word (Word8)
@@ -42,7 +43,7 @@ Convert an hexadecimal string to a string of bytes.
 >>> fromHexDigits "abcdefgh12"
 "\xAB\xCD\xEF\x12"
 -}
-fromHexDigits :: BS.ByteString -> BS.ByteString
+fromHexDigits :: ByteString -> ByteString
 fromHexDigits = BS.pack . fmap toHexByte . chunksOf 2 . BS.foldr toHexBytes []
  where
   toHexBytes :: Word8 -> [Word8] -> [Word8]
@@ -60,7 +61,7 @@ toHexDigit byte | byte < 10 = byte + asciiDIGITZERO
                 | byte < 16 = byte + asciiLOWERA - 10
                 | otherwise = asciiSPACE
 
-toHex :: Word8 -> BS.ByteString
+toHex :: Word8 -> ByteString
 toHex byte = BS.cons (toHexDigit upper) (BS.singleton . toHexDigit $ lower)
   where (upper, lower) = divMod byte 16
 
@@ -70,5 +71,5 @@ Convert a string of bytes to an hexadecimal string.
 >>> toHexDigits "\x12\x34\x56\x78\x9a\xbc\xde\xf0"
 "123456789abcdef0"
 -}
-toHexDigits :: BS.ByteString -> BS.ByteString
+toHexDigits :: ByteString -> ByteString
 toHexDigits = BS.concat . BS.foldr ((:) . toHex) []

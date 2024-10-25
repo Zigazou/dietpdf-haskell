@@ -5,13 +5,13 @@ where
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object (PDFObject (PDFHexString), fromPDFObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-hexStringExamples :: [(PDFObject, BS.ByteString)]
+hexStringExamples :: [(PDFObject, ByteString)]
 hexStringExamples =
   [ (PDFHexString "123456"     , "<123456>")
   , (PDFHexString ""           , "<>")

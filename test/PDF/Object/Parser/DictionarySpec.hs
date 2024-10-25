@@ -2,7 +2,7 @@ module PDF.Object.Parser.DictionarySpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object
     ( PDFObject (PDFHexString, PDFName, PDFNumber, PDFReference, PDFString)
@@ -16,7 +16,7 @@ import Test.Hspec (Spec, describe)
 
 import Util.ParserHelper (itWith)
 
-dictionaryExamples :: [(BS.ByteString, PDFObject)]
+dictionaryExamples :: [(ByteString, PDFObject)]
 dictionaryExamples =
   [ ("<</a 1>>"  , mkPDFDictionary [("a", PDFNumber 1.0)])
   , ("<< /a 1 >>", mkPDFDictionary [("a", PDFNumber 1.0)])

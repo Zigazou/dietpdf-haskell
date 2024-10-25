@@ -21,6 +21,7 @@ module PDF.Graphics.Parser.String
 import Control.Applicative ((<|>))
 
 import Data.Binary.Parser (Get, label, many', satisfy, some', word8)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Maybe (catMaybes)
 import Data.PDF.GFXObject
@@ -91,7 +92,7 @@ escapedOctalP =
 
   oneOctal = Just . digitToNumber <$> satisfy isOctal
 
-dropEnd :: Int -> BS.ByteString -> BS.ByteString
+dropEnd :: Int -> ByteString -> ByteString
 dropEnd n ps | n <= 0            = ps
              | n >= BS.length ps = ""
              | otherwise         = BS.take (BS.length ps - n) ps
@@ -103,10 +104,10 @@ charP =
     <|> escapedOctalP
     <|> (Just <$> satisfy isStringRegularChar)
 
-charsP :: Get BS.ByteString
+charsP :: Get ByteString
 charsP = BS.pack . catMaybes <$> some' charP
 
-rawStringP :: Get BS.ByteString
+rawStringP :: Get ByteString
 rawStringP = label "rawStringG" $ do
   word8 asciiLEFTPARENTHESIS
   content <- many' (rawStringP <|> charsP)

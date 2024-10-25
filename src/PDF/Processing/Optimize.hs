@@ -9,6 +9,7 @@ import Codec.Compression.XML (optimizeXML)
 
 import Control.Monad.State (lift)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.Logging (Logging)
@@ -48,8 +49,8 @@ optimizeStreamOrIgnore
   :: Logging m
   => T.Text
   -> PDFObject
-  -> (BS.ByteString -> PDFWork m BS.ByteString)
-  -> PDFWork m BS.ByteString
+  -> (ByteString -> PDFWork m ByteString)
+  -> PDFWork m ByteString
 optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
   stream <- getStream object
   tryP (optimizationProcess stream) >>= \case

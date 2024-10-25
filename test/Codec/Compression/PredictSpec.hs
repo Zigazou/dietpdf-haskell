@@ -12,11 +12,11 @@ import Codec.Compression.Predict.Entropy (entropyShannon)
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-predictorExamples :: [((Predictor, Int, Int), (BS.ByteString, BS.ByteString))]
+predictorExamples :: [((Predictor, Int, Int), (ByteString, ByteString))]
 predictorExamples =
   [ ((PNGNone, 1, 1), ("\xAA", "\x00\xAA"))
   , ((PNGNone, 1, 1), ("\xAA\xAA\xAA", "\x00\xAA\x00\xAA\x00\xAA"))

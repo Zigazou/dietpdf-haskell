@@ -3,6 +3,7 @@ module PDF.Object.Object.FromPDFObject
   ) where
 
 import Data.Array (Array)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.UTF8 qualified as BSU
 import Data.Foldable (toList)
@@ -26,7 +27,7 @@ import Util.String (fromHexString, fromString)
 Takes a `List` of `PDFObject`, converts them to the `ByteString` representation
 and inserts spaces between them if necessary.
 -}
-separateObjects :: [PDFObject] -> BS.ByteString
+separateObjects :: [PDFObject] -> ByteString
 separateObjects []                           = ""
 separateObjects [object1                   ] = fromPDFObject object1
 separateObjects (object1 : object2 : others) = BS.concat
@@ -39,7 +40,7 @@ separateObjects (object1 : object2 : others) = BS.concat
 Converts a `PDFObject` to a `ByteString` ready to be inserted in an output
 PDF file.
 -}
-fromPDFObject :: PDFObject -> BS.ByteString
+fromPDFObject :: PDFObject -> ByteString
 fromPDFObject (PDFComment comment)     = BS.concat ["%", comment, "\n"]
 fromPDFObject (PDFVersion version)     =
   BS.concat ["%PDF-", version, "\n%\xc0\xca\xc0\xda\n"]
@@ -73,10 +74,10 @@ fromPDFObject (PDFTrailer _) = error "a trailer can only contain a dictionary"
 fromPDFObject (PDFStartXRef offset) =
   BS.concat ["startxref\n", fromInt offset, "\n"]
 
-fromArray :: Array PDFObject -> BS.ByteString
+fromArray :: Array PDFObject -> ByteString
 fromArray items = BS.concat ["[", separateObjects (toList items), "]"]
 
-fromDictionary :: Dictionary PDFObject -> BS.ByteString
+fromDictionary :: Dictionary PDFObject -> ByteString
 fromDictionary keyValues = BS.concat
   ["<<", separateObjects (splitCouple (Map.toList keyValues)), ">>"]
  where
@@ -84,7 +85,7 @@ fromDictionary keyValues = BS.concat
   splitCouple ((key, value) : remains) =
     PDFName key : value : splitCouple remains
 
-fromIndirectObject :: Int -> Int -> PDFObject -> BS.ByteString
+fromIndirectObject :: Int -> Int -> PDFObject -> ByteString
 fromIndirectObject number revision object = BS.concat
   [ BSU.fromString (show number)
   , " "
@@ -95,7 +96,7 @@ fromIndirectObject number revision object = BS.concat
   ]
 
 fromIndirectObjectWithStream
-  :: Int -> Int -> Dictionary PDFObject -> BS.ByteString -> BS.ByteString
+  :: Int -> Int -> Dictionary PDFObject -> ByteString -> ByteString
 fromIndirectObjectWithStream number revision dict stream = BS.concat
   [ BSU.fromString (show number)
   , " "
@@ -110,7 +111,7 @@ fromIndirectObjectWithStream number revision dict stream = BS.concat
   ]
 
 fromIndirectObjectWithGraphics
-  :: Int -> Int -> Dictionary PDFObject -> GFXObjects -> BS.ByteString
+  :: Int -> Int -> Dictionary PDFObject -> GFXObjects -> ByteString
 fromIndirectObjectWithGraphics number revision dict gfx = BS.concat
   [ BSU.fromString (show number)
   , " "

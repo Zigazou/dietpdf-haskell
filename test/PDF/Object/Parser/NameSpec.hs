@@ -3,7 +3,7 @@ module PDF.Object.Parser.NameSpec
   ) where
 
 import Data.Binary.Parser (parseDetail)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object (PDFObject (PDFName))
 import PDF.Object.Parser.Name (nameP)
@@ -12,7 +12,7 @@ import Test.Hspec (Spec, describe, it)
 
 import Util.ParserHelper (itWith, shouldBeFullyParsed, shouldBeParsedAs)
 
-nameExamples :: [(BS.ByteString, PDFObject)]
+nameExamples :: [(ByteString, PDFObject)]
 nameExamples =
   [ ("/Name1"              , PDFName "Name1")
   , ("/ASomewhatLongerName", PDFName "ASomewhatLongerName")

@@ -5,7 +5,7 @@ module PDF.Processing.FilterCombine.Jpeg2k
 import Control.Monad.Except (throwError)
 import Control.Monad.State (lift)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.ColorSpace (ColorSpace)
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
@@ -20,7 +20,7 @@ import External.TiffToJpeg2k (tiffToJpeg2k)
 jpeg2k
   :: Logging IO
   => Maybe (Int, Int, ColorSpace)
-  -> BS.ByteString
+  -> ByteString
   -> PDFWork IO FilterCombination
 jpeg2k (Just (width, height, colorSpace)) stream =
   lift (tiffToJpeg2k width height colorSpace stream)

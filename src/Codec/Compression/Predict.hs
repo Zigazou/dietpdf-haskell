@@ -20,7 +20,7 @@ import Codec.Compression.Predict.Predictor
     ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
     )
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidNumberOfBytes))
 
@@ -32,8 +32,8 @@ predict
   -> Predictor -- ^ Predictor to be used to encode
   -> Int -- ^ Width of the stream
   -> Int -- ^ Number of color components
-  -> BS.ByteString -- ^ Stream to encode
-  -> Fallible BS.ByteString -- ^ Encoded stream or an error
+  -> ByteString -- ^ Stream to encode
+  -> Fallible ByteString -- ^ Encoded stream or an error
 predict entropy predictor width components stream
   | width < 1 = Left $ InvalidNumberOfBytes 0 0
   | otherwise = do
@@ -48,8 +48,8 @@ unpredict
   :: Predictor -- ^ Predictor (hint in case of a PNG predictor)
   -> Int -- ^ Width of the image
   -> Int -- ^ Number of color components
-  -> BS.ByteString -- ^ Stream to decode
-  -> Fallible BS.ByteString -- ^ Decoded stream or an error
+  -> ByteString -- ^ Stream to decode
+  -> Fallible ByteString -- ^ Decoded stream or an error
 unpredict predictor width components stream
   | width < 1 = Left $ InvalidNumberOfBytes 0 0
   | otherwise = do

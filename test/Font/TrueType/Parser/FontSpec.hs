@@ -5,6 +5,7 @@ module Font.TrueType.Parser.FontSpec
 import Control.Monad (forM_)
 
 import Data.Array (mkArray)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Word (Word32)
 
@@ -147,7 +148,7 @@ fontExamples =
     )
   ]
 
-calcChecksumExamples :: [(BS.ByteString, Word32)]
+calcChecksumExamples :: [(ByteString, Word32)]
 calcChecksumExamples =
   [ (""        , 0)
   , ("a"       , 0x61000000)

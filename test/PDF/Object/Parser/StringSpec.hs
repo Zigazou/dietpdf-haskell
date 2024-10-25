@@ -3,7 +3,7 @@ module PDF.Object.Parser.StringSpec
   ) where
 
 import Data.Binary.Parser (parseDetail)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object (PDFObject (PDFString))
 import PDF.Object.Parser.String (stringP)
@@ -13,7 +13,7 @@ import Test.Hspec (Spec, describe, it)
 import Util.ParserHelper (itWith, shouldFail)
 
 
-stringExamples :: [(BS.ByteString, PDFObject)]
+stringExamples :: [(ByteString, PDFObject)]
 stringExamples =
   [ ("()"                , PDFString "")
   , ("(abc)"             , PDFString "abc")

@@ -4,6 +4,7 @@ module Command.GetObjectByNumber
 
 import Control.Monad.Trans.Class (MonadTrans (lift))
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
 import Data.Foldable (toList)
@@ -39,7 +40,7 @@ disp :: Level -> Level
 disp (Level level _display) = Level level True
 
 infixl 9 %>
-(%>) :: Level -> BS.ByteString -> BS.ByteString
+(%>) :: Level -> ByteString -> ByteString
 (%>) (Level _level False) bytestring = bytestring
 (%>) (Level level True) bytestring = BS.replicate level 32
                                   <> BS.replicate level 32
@@ -48,7 +49,7 @@ infixl 9 %>
 type Processed :: Type
 type Processed = Set Int
 
-pretty :: Monad m => Processed -> Level -> PDFObject -> PDFWork m BS.ByteString
+pretty :: Monad m => Processed -> Level -> PDFObject -> PDFWork m ByteString
 pretty _processed level (PDFComment comment) =
   return $ level %> "%" <> comment <> "\n"
 
@@ -169,7 +170,7 @@ pretty processed level (PDFTrailer trailer) = do
 pretty _processed level (PDFStartXRef start) =
   return $ level %> "startxref\n" <> fromInt start <> "\n"
 
-printObject :: Logging m => Int -> PDFDocument -> PDFWork m BS.ByteString
+printObject :: Logging m => Int -> PDFDocument -> PDFWork m ByteString
 printObject objectNumber objects = do
   importObjects objects
   getObject objectNumber >>= \case

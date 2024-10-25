@@ -6,7 +6,7 @@ import Control.Applicative ((<|>))
 
 import Data.Array (mkArray)
 import Data.Binary.Parser (Get, label, many', parseDetail, peek, satisfy, sepBy)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.PDF.GFXObject (GFXObject, isWhiteSpace)
 import Data.PDF.GFXObjects (GFXObjects)
@@ -59,7 +59,7 @@ It encapsulates `parseDetail` in order to use the `UnifiedError` type when
 returning errors.
 -}
 gfxParse
-  :: BS.ByteString -- ^ The bytestring to parse coming from a file.
+  :: ByteString -- ^ The bytestring to parse coming from a file.
   -> Fallible GFXObjects -- ^ Error or a `List of `GFXObject`.
 gfxParse source = case parseDetail gfxRawP source of
   Left  err                      -> Left (ParseError err)

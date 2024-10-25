@@ -2,6 +2,7 @@ module PDF.Object.String
   ( optimizeString
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.Logging (Logging)
@@ -14,17 +15,17 @@ import Util.Ascii (asciiDELETE)
 import Util.PdfDocEncoding (unicodeToPdfDocEncoding)
 import Util.String (hexStringToString)
 
-utf16beBOM :: BS.ByteString
+utf16beBOM :: ByteString
 utf16beBOM = "\xfe\xff"
 
-utf16beToPdfDocEncoding :: BS.ByteString -> Maybe BS.ByteString
+utf16beToPdfDocEncoding :: ByteString -> Maybe ByteString
 utf16beToPdfDocEncoding utf16beString
   | BS.length utf16beString < 2           = Nothing
   | odd (BS.length utf16beString)         = Nothing
   | BS.take 2 utf16beString /= utf16beBOM = Nothing
   | otherwise                             = convert (BS.drop 2 utf16beString)
  where
-  convert :: BS.ByteString -> Maybe BS.ByteString
+  convert :: ByteString -> Maybe ByteString
   convert bytes =
     case BS.length bytes of
       0               -> Just ""
@@ -34,17 +35,17 @@ utf16beToPdfDocEncoding utf16beString
         remains <- convert (BS.drop 2 bytes)
         return $ BS.cons byte remains
 
-  codepoint :: BS.ByteString -> Int
+  codepoint :: ByteString -> Int
   codepoint twoBytes = case BS.unpack (BS.take 2 twoBytes) of
     [first, second] -> fromIntegral first * 256 + fromIntegral second
     _anythingElse   -> 0
 
-isUTF16Encoded :: BS.ByteString -> Bool
+isUTF16Encoded :: ByteString -> Bool
 isUTF16Encoded string | BS.length string < 2           = False
                       | BS.take 2 string /= utf16beBOM = False
                       | otherwise                      = True
 
-isASCIIEncoded :: BS.ByteString -> Bool
+isASCIIEncoded :: ByteString -> Bool
 isASCIIEncoded = BS.all (<= asciiDELETE)
 
 {- |

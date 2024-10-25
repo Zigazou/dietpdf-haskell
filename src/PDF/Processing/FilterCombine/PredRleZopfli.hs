@@ -10,7 +10,7 @@ import Codec.Compression.Predict
     )
 import Codec.Compression.RunLength qualified as RL
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
 import Data.PDF.Filter (Filter (Filter))
@@ -21,13 +21,13 @@ import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
-getCompressor :: UseZopfli -> (BS.ByteString -> Fallible BS.ByteString)
+getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
 getCompressor UseZopfli  = FL.compress
 getCompressor UseDeflate = FL.fastCompress
 
 predRleZopfli
   :: Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> UseZopfli
   -> Fallible FilterCombination
 predRleZopfli (Just (width, components)) stream useZopfli = do

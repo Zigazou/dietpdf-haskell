@@ -5,13 +5,13 @@ where
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object (PDFObject (PDFName), fromPDFObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-nameExamples :: [(PDFObject, BS.ByteString)]
+nameExamples :: [(PDFObject, ByteString)]
 nameExamples =
   [ (PDFName "A#B"  , "/A#23B")
   , (PDFName "A B C", "/A#20B#20C")

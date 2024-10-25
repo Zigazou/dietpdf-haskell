@@ -4,7 +4,7 @@ module Data.PDF.TextState
   )
 where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.PDF.TransformationMatrix (TransformationMatrix)
 
@@ -27,7 +27,7 @@ data TextState = TextState
   , tsWordSpacing       :: !Double
   , tsHorizontalScaling :: !Double
   , tsLeading           :: !Double
-  , tsFont              :: !BS.ByteString
+  , tsFont              :: !ByteString
   , tsFontSize          :: !Double
   , tsRenderingMode     :: !Int
   , tsRise              :: !Double

@@ -6,6 +6,7 @@ import Codec.Compression.Flate (compress, decompress)
 
 import Control.Monad (forM, forM_)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (FlateDecodeError))
@@ -14,7 +15,7 @@ import Data.Word (Word8)
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Gen, arbitrary, forAll)
 
-errorExamples :: [(BS.ByteString, Fallible BS.ByteString)]
+errorExamples :: [(ByteString, Fallible ByteString)]
 errorExamples =
   [ ( "a"
     , Left $ FlateDecodeError
@@ -27,7 +28,7 @@ errorExamples =
     )
   ]
 
-randomString :: Gen BS.ByteString
+randomString :: Gen ByteString
 randomString = do
   items         <- arbitrary :: Gen [Word8]
   expandedItems <- forM items $ \item -> do

@@ -26,7 +26,6 @@ module Data.PDF.GraphicsState
   ) where
 
 import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.PDF.Color (Color (ColorGray))
 import Data.PDF.TextState
@@ -192,7 +191,7 @@ Set the font and font size of the current text state.
 The font name is a byte string that represents the font name. The font size is
 a double that represents the font size in points.
 -}
-setFont :: BS.ByteString -> Double -> GraphicsState -> GraphicsState
+setFont :: ByteString -> Double -> GraphicsState -> GraphicsState
 setFont fontName fontSize state = state
   { gsTextState = (gsTextState state)
       { tsFont = fontName

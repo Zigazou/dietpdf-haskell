@@ -11,6 +11,7 @@ import Control.Monad.Extra (whenM)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.State (gets)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.IntMap qualified as IM
@@ -35,12 +36,13 @@ import Data.PDF.PDFWork
     , modifyIndirectObjects
     , pushContext
     , putNewObject
+    , putObject
     , sayP
     , setTrailer
     , setTranslationTable
     , throwError
     , withStreamCount
-    , withoutStreamCount, putObject
+    , withoutStreamCount
     )
 import Data.PDF.Settings
     ( OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX)
@@ -58,6 +60,9 @@ import GHC.IO.Handle (BufferMode (LineBuffering))
 
 import PDF.Document.MergeVectorStream (mergeVectorStream)
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
+import PDF.Document.OptimizeOptionalDictionaryEntries
+    ( optimizeOptionalDictionaryEntries
+    )
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
@@ -75,7 +80,6 @@ import System.IO (hSetBuffering, stderr)
 
 import Util.ByteString (toNameBase)
 import Util.Sequence (mapMaybe)
-import PDF.Document.OptimizeOptionalDictionaryEntries (optimizeOptionalDictionaryEntries)
 
 {- |
 Encodes a PDF object and keeps track of its number and length.
@@ -123,11 +127,11 @@ Finds all resource names in a collection of PDF objects.
 
 Resources are typically stored in a dictionary object with a "Resources" key.
 -}
-getAllResourceNames :: Monad m => PDFWork m [BS.ByteString]
+getAllResourceNames :: Monad m => PDFWork m [ByteString]
 getAllResourceNames =
   gets (concat . getAllResourceNames' . ppObjectsWithoutStream . wPDF)
  where
-  getAllResourceNames' :: IM.IntMap PDFObject -> [[BS.ByteString]]
+  getAllResourceNames' :: IM.IntMap PDFObject -> [[ByteString]]
   getAllResourceNames' objects = do
     (_, object) <- IM.toList objects
     (return . concat . catMaybes)
@@ -145,13 +149,13 @@ getAllResourceNames =
       , getKeys         "Pattern"    object
       ]
 
-  getKeys :: BS.ByteString -> PDFObject -> Maybe [BS.ByteString]
+  getKeys :: ByteString -> PDFObject -> Maybe [ByteString]
   getKeys key object = do
     getValueForKey key object >>= \case
       PDFDictionary dict -> Just $ Map.keys dict
       _notADictionary    -> Nothing
 
-  getResourceKeys :: BS.ByteString -> PDFObject -> Maybe [BS.ByteString]
+  getResourceKeys :: ByteString -> PDFObject -> Maybe [ByteString]
   getResourceKeys key object = do
     resources <- getValueForKey "Resources" object
     getValueForKey key resources >>= \case
@@ -186,7 +190,7 @@ An error is signaled in the following cases:
 -}
 pdfEncode
   :: PDFDocument -- ^ A collection of PDF objects (order matters)
-  -> PDFWork IO BS.ByteString -- ^ A unified error or a bytestring
+  -> PDFWork IO ByteString -- ^ A unified error or a bytestring
 pdfEncode objects = do
   _ <- liftIO $ hSetBuffering stderr LineBuffering
 

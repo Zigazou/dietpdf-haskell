@@ -7,18 +7,19 @@ import Codec.Compression.LZW (compress, decompress)
 
 import Control.Monad (forM_)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 
 import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)
 
-errorExamples :: [BS.ByteString]
+errorExamples :: [ByteString]
 errorExamples =
   [ "a"
   , "aa"
   ,  "\x78\x5e\xf3\x48\xcd\xc9\xc9\x57\x28\xcf\x2f\xca\x49\x51\xe4\x02\x00\x21\x71\x04\x69"
   ]
 
-examples :: [(BS.ByteString, BS.ByteString)]
+examples :: [(ByteString, ByteString)]
 examples =
   [ ( "\x80\x0B\x60\x50\x22\x0C\x0C\x85\x01"
     , "\x2D\x2D\x2D\x2D\x2D\x41\x2D\x2D\x2D\x42"

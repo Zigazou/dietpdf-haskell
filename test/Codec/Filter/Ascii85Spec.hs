@@ -6,6 +6,7 @@ import Codec.Filter.Ascii85 (decode, encode)
 
 import Control.Monad (forM, forM_)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Word (Word8)
@@ -13,7 +14,7 @@ import Data.Word (Word8)
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Gen, arbitrary, forAll)
 
-decodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
+decodeExamples :: [(ByteString, Fallible ByteString)]
 decodeExamples =
   [ ("87cURD_*#4DfTZ)+T~>"    , Right "Hello, World!")
   , ("87cUR D_*#4 DfTZ) +T ~>", Right "Hello, World!")
@@ -27,7 +28,7 @@ decodeExamples =
   , ("5sdq,\r77Kd<\n8P2V~>"   , Right "ABCDEFGHIJK")
   ]
 
-encodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
+encodeExamples :: [(ByteString, Fallible ByteString)]
 encodeExamples =
   [ (""                , Right "~>")
   , ("\x00\x00\x00\x00", Right "z~>")
@@ -38,7 +39,7 @@ encodeExamples =
   , ("ABCDEFGHIJK"     , Right "5sdq,77Kd<8P2V~>")
   ]
 
-randomString :: Gen BS.ByteString
+randomString :: Gen ByteString
 randomString = do
   items         <- arbitrary :: Gen [Word8]
   expandedItems <- forM items $ \item -> do

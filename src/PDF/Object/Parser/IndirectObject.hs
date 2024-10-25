@@ -43,6 +43,7 @@ import Data.Binary.Parser
     , string
     , word8
     )
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Word (Word8)
 
@@ -107,7 +108,7 @@ specifies the exact number of bytes. There should be an end-of-line marker
 after the data and before endstream; this marker shall not be included in the
 stream length."
 -}
-streamP :: Maybe Int -> Get BS.ByteString
+streamP :: Maybe Int -> Get ByteString
 streamP mCount = do
   string "stream"
   streamEndOfLineP

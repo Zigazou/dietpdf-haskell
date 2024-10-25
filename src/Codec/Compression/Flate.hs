@@ -19,6 +19,7 @@ import Codec.Compression.Hopfli qualified as HL
 import Codec.Compression.Zlib qualified as ZL
 import Codec.Compression.Zlib.Internal qualified as ZLI
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BL
 import Data.Fallible (Fallible)
@@ -53,8 +54,8 @@ deflate algorithm.
 The output is standardized but will always return a Right value.
 -}
 compress
-  :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Fallible BS.ByteString -- ^ Either an error or the compressed bytestring
+  :: ByteString -- ^ A strict bytestring to encode
+  -> Fallible ByteString -- ^ Either an error or the compressed bytestring
 compress content = Right . HL.compressWith adaptiveOptions HL.ZLIB $ content
   where
     adaptiveOptions = zopfliCompressOptions
@@ -83,8 +84,8 @@ fast.
 The output is standardized but will always return a Right value.
 -}
 fastCompress
-  :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Fallible BS.ByteString -- ^ Either an error or the compressed bytestring
+  :: ByteString -- ^ A strict bytestring to encode
+  -> Fallible ByteString -- ^ Either an error or the compressed bytestring
 fastCompress =
   Right . BL.toStrict . ZL.compressWith zlibCompressParams . BL.fromStrict
 {-|
@@ -93,7 +94,7 @@ Gives a number showing the "entropy" of a `ByteString`.
 The lower the number, the more compressible the `ByteString`.
 -}
 entropyCompress
-  :: BS.ByteString -- ^ A strict bytestring to encode
+  :: ByteString -- ^ A strict bytestring to encode
   -> Double
 entropyCompress =
   fromIntegral
@@ -107,8 +108,8 @@ Stores a `ByteString` as a Zlib compressed string but with no compression
 The output is standardized but will always return a Right value.
 -}
 noCompress
-  :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Fallible BS.ByteString -- ^ Either an error or the compressed bytestring
+  :: ByteString -- ^ A strict bytestring to encode
+  -> Fallible ByteString -- ^ Either an error or the compressed bytestring
 noCompress =
   Right . BL.toStrict . ZL.compressWith zlibNoCompressParams . BL.fromStrict
 
@@ -119,8 +120,8 @@ algorithm.
 It may return errors on unexpected end of string or incorrect value.
 -}
 decompress
-  :: BS.ByteString -- ^ A strict bytestring to encode
-  -> Fallible BS.ByteString
+  :: ByteString -- ^ A strict bytestring to encode
+  -> Fallible ByteString
   -- ^ Either an error or the compressed bytestring
 decompress = fmap BL.toStrict . decompressLazy . BL.fromStrict
  where

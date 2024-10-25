@@ -46,6 +46,7 @@ module Data.PDF.GFXObject
   ) where
 
 import Data.Array (Array, mkArray, mkEmptyArray)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.Ix (inRange)
@@ -384,7 +385,7 @@ data GSOperator
   | -- | End Inline image (EI)
     GSEndInlineImage
   | -- | Unknown operator
-    GSUnknown !BS.ByteString
+    GSUnknown !ByteString
   | -- | No-op operator
     GSNone
   deriving stock (Eq, Show)
@@ -394,7 +395,7 @@ Converts a `ByteString` to a `GSOperator`.
 
 If the operator is unknown it is copied as is in a `GSUnknown`.
 -}
-toGSOperator :: BS.ByteString -> GSOperator
+toGSOperator :: ByteString -> GSOperator
 toGSOperator "q"     = GSSaveGS
 toGSOperator "Q"     = GSRestoreGS
 toGSOperator "cm"    = GSSetCTM
@@ -472,7 +473,7 @@ toGSOperator unknown = GSUnknown unknown
 {- |
 Converts a `GSOperator` to a `ByteString`.
 -}
-fromGSOperator :: GSOperator -> BS.ByteString
+fromGSOperator :: GSOperator -> ByteString
 fromGSOperator GSSaveGS                       = "q"
 fromGSOperator GSRestoreGS                    = "Q"
 fromGSOperator GSSetCTM                       = "cm"
@@ -556,15 +557,15 @@ Values contained are decoded, meaning they no longer contain escape sequences.
 type GFXObject :: Type
 data GFXObject
   = -- | A comment (without the starting %)
-    GFXComment BS.ByteString
+    GFXComment ByteString
   | -- | A number (always stored as a double)
     GFXNumber Double
   | -- | A name (starting with /)
-    GFXName BS.ByteString
+    GFXName ByteString
   | -- | A string (unescaped and without parenthesis)
-    GFXString BS.ByteString
+    GFXString ByteString
   | -- | An hexadeicmal string (without less-than/greater-than signs)
-    GFXHexString BS.ByteString
+    GFXHexString ByteString
   | -- | A reference, number and generation (two integers followed by an `R`)
     GFXReference Int Int
   | -- | An array containing a list of objects
@@ -576,7 +577,7 @@ data GFXObject
   | -- | A null value
     GFXNull
   | -- | An inline image
-    GFXInlineImage (Dictionary GFXObject) BS.ByteString
+    GFXInlineImage (Dictionary GFXObject) ByteString
   | -- | An operator
     GFXOperator GSOperator
   deriving stock Show
@@ -596,7 +597,7 @@ mkEmptyGFXArray = GFXArray mkEmptyArray
 {- |
 Create a `GFXDictionary` from a list of couples (key, value).
 -}
-mkGFXDictionary :: [(BS.ByteString, GFXObject)] -> GFXObject
+mkGFXDictionary :: [(ByteString, GFXObject)] -> GFXObject
 mkGFXDictionary = GFXDictionary . mkDictionary
 
 {- |
@@ -663,7 +664,7 @@ startsWithDelimiter GFXOperator{}        = False
 Tells if a space must be inserted between 2 `GFXObject` when converted to
 `ByteString`.
 -}
-spaceIfNeeded :: GFXObject -> GFXObject -> BS.ByteString
+spaceIfNeeded :: GFXObject -> GFXObject -> ByteString
 spaceIfNeeded object1 object2 | endsWithDelimiter object1   = ""
                               | startsWithDelimiter object2 = ""
                               | otherwise                   = " "
@@ -672,7 +673,7 @@ spaceIfNeeded object1 object2 | endsWithDelimiter object1   = ""
 Converts a `GFXObject` to a `ByteString` ready to be inserted in a graphics
 object in a stream.
 -}
-fromGFXObject :: GFXObject -> BS.ByteString
+fromGFXObject :: GFXObject -> ByteString
 fromGFXObject (GFXComment   comment  ) = BS.concat ["%", comment, "\n"]
 fromGFXObject (GFXNumber    number   ) = fromNumber number
 fromGFXObject (GFXName      name     ) = fromName name
@@ -718,24 +719,24 @@ objectInfo GFXOperator{} = "operator"
 Takes an `Array` of `GFXObject`, converts them to the `ByteString`
 representation and inserts spaces between them if necessary.
 -}
-separateGfx :: Array GFXObject -> BS.ByteString
+separateGfx :: Array GFXObject -> ByteString
 separateGfx objects = BS.concat $ buildBS (filter notNull $ toList objects)
   where
     notNull :: GFXObject -> Bool
     notNull (GFXOperator GSNone) = False
     notNull _otherObject         = True
 
-    buildBS :: [GFXObject] -> [BS.ByteString]
+    buildBS :: [GFXObject] -> [ByteString]
     buildBS [] = []
     buildBS [object1] = [fromGFXObject object1]
     buildBS (object1:object2:others) = fromGFXObject object1
                                      : spaceIfNeeded object1 object2
                                      : buildBS (object2:others)
 
-fromArray :: Array GFXObject -> BS.ByteString
+fromArray :: Array GFXObject -> ByteString
 fromArray items = BS.concat ["[", separateGfx items, "]"]
 
-fromDictionary :: Dictionary GFXObject -> BS.ByteString
+fromDictionary :: Dictionary GFXObject -> ByteString
 fromDictionary keyValues = BS.concat
   ["<<", separateGfx (splitCouple (mkArray (Map.toList keyValues))), ">>"]
  where
@@ -743,7 +744,7 @@ fromDictionary keyValues = BS.concat
   splitCouple ((key, value) SQ.:<| remains) =
     GFXName key SQ.:<| value SQ.:<| splitCouple remains
 
-fromInlineImage :: Dictionary GFXObject -> BS.ByteString -> BS.ByteString
+fromInlineImage :: Dictionary GFXObject -> ByteString -> ByteString
 fromInlineImage keyValues image = BS.concat
   [ "BI "
   , separateGfx (splitCouple (mkArray (Map.toList keyValues)))
@@ -772,7 +773,7 @@ fromInlineImage keyValues image = BS.concat
   abbreviateValue (GFXName "DCTDecode"      ) = GFXName "DCT"
   abbreviateValue value                       = value
 
-  abbreviateKey :: BS.ByteString -> BS.ByteString
+  abbreviateKey :: ByteString -> ByteString
   abbreviateKey "BitsPerComponent" = "BPC"
   abbreviateKey "ColorSpace"       = "CS"
   abbreviateKey "Decode"           = "D"

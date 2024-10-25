@@ -60,6 +60,7 @@ import Data.Binary.Parser
     , skipMany
     , word8
     )
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidAscii85Stream))
@@ -75,7 +76,7 @@ import Util.Ascii
     , asciiTILDE
     )
 
-specialZeroP :: Get BS.ByteString
+specialZeroP :: Get ByteString
 specialZeroP = label "specialzero" $ do
   skipMany (satisfy isWhiteSpace)
   word8 asciiLOWERZ
@@ -94,7 +95,7 @@ baseN 0 _ _ = []
 baseN width base value =
   let (q, r) = divMod value base in baseN (width - 1) base q ++ [r]
 
-base256ToBase85 :: Word8 -> Word8 -> Word8 -> Word8 -> Get BS.ByteString
+base256ToBase85 :: Word8 -> Word8 -> Word8 -> Word8 -> Get ByteString
 base256ToBase85 b1 b2 b3 b4 =
   label "base256tobase85"
     $ let b1' = fromIntegral b1 :: Int
@@ -108,7 +109,7 @@ base256ToBase85 b1 b2 b3 b4 =
           $ baseN 5 85 c
 
 base85ToBase256
-  :: Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Get BS.ByteString
+  :: Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Get ByteString
 base85ToBase256 c1 c2 c3 c4 c5 =
   label "base85tobase256"
     $ let c1' = fromIntegral (c1 - asciiEXCLAMATIONMARK) :: Int
@@ -121,7 +122,7 @@ base85ToBase256 c1 c2 c3 c4 c5 =
             then fail "Value too big for ASCII85"
             else return . BS.pack . fmap fromIntegral $ baseN 4 256 b
 
-fiveAscii85DigitsP :: Get BS.ByteString
+fiveAscii85DigitsP :: Get ByteString
 fiveAscii85DigitsP = label "fiveascii85digits" $ do
   c1 <- a85digitP
   c2 <- a85digitP
@@ -130,7 +131,7 @@ fiveAscii85DigitsP = label "fiveascii85digits" $ do
   c5 <- a85digitP
   base85ToBase256 c1 c2 c3 c4 c5
 
-fourAscii85DigitsP :: Get BS.ByteString
+fourAscii85DigitsP :: Get ByteString
 fourAscii85DigitsP = label "fourascii85digits" $ do
   c1 <- a85digitP
   c2 <- a85digitP
@@ -138,20 +139,20 @@ fourAscii85DigitsP = label "fourascii85digits" $ do
   c4 <- a85digitP
   BS.take 3 <$> base85ToBase256 c1 c2 c3 c4 0
 
-threeAscii85DigitsP :: Get BS.ByteString
+threeAscii85DigitsP :: Get ByteString
 threeAscii85DigitsP = label "threeascii85digits" $ do
   c1 <- a85digitP
   c2 <- a85digitP
   c3 <- a85digitP
   BS.take 2 <$> base85ToBase256 c1 c2 c3 0 0
 
-twoAscii85DigitsP :: Get BS.ByteString
+twoAscii85DigitsP :: Get ByteString
 twoAscii85DigitsP = label "twoascii85digits" $ do
   c1 <- a85digitP
   c2 <- a85digitP
   BS.take 1 <$> base85ToBase256 c1 c2 0 0 0
 
-ascii85GroupP :: Get BS.ByteString
+ascii85GroupP :: Get ByteString
 ascii85GroupP =
   label "ascii85group"
     $   fiveAscii85DigitsP
@@ -165,7 +166,7 @@ endOfDataMarkerP = label "endofdatamarker" $ do
   word8 asciiTILDE
   word8 asciiGREATERTHANSIGN
 
-decodeAscii85P :: Get BS.ByteString
+decodeAscii85P :: Get ByteString
 decodeAscii85P = label "ascii85" $ do
   values <- many' (specialZeroP <|> ascii85GroupP)
   endOfDataMarkerP
@@ -182,8 +183,8 @@ Right "Hello, World!"
 Right "\x00\x00\x00\x00"
 -}
 decode
-  :: BS.ByteString -- ^ Data to encode
-  -> Fallible BS.ByteString
+  :: ByteString -- ^ Data to encode
+  -> Fallible ByteString
   -- ^ An `InvalidAscii85Stream` is returned if the stream is not valid
 decode stream =
   let stream' = BS.filter (> 32) stream
@@ -191,7 +192,7 @@ decode stream =
       Left  msg     -> Left (InvalidAscii85Stream msg)
       Right decoded -> Right decoded
 
-fourBytesP :: Get BS.ByteString
+fourBytesP :: Get ByteString
 fourBytesP = do
   b1      <- anyWord8
   b2      <- anyWord8
@@ -200,25 +201,25 @@ fourBytesP = do
   encoded <- base256ToBase85 b1 b2 b3 b4
   if encoded == "!!!!!" then return "z" else return encoded
 
-threeBytesP :: Get BS.ByteString
+threeBytesP :: Get ByteString
 threeBytesP = do
   b1 <- anyWord8
   b2 <- anyWord8
   b3 <- anyWord8
   BS.take 4 <$> base256ToBase85 b1 b2 b3 0
 
-twoBytesP :: Get BS.ByteString
+twoBytesP :: Get ByteString
 twoBytesP = do
   b1 <- anyWord8
   b2 <- anyWord8
   BS.take 3 <$> base256ToBase85 b1 b2 0 0
 
-oneBytesP :: Get BS.ByteString
+oneBytesP :: Get ByteString
 oneBytesP = do
   b1 <- anyWord8
   BS.take 2 <$> base256ToBase85 b1 0 0 0
 
-encodeAscii85P :: Get BS.ByteString
+encodeAscii85P :: Get ByteString
 encodeAscii85P = label "ascii85" $ do
   values <- many' (fourBytesP <|> threeBytesP <|> twoBytesP <|> oneBytesP)
   return (BS.concat values)
@@ -236,8 +237,8 @@ Right "5sdq,77Kd<8P/~>"
 Right "5sdq,77Kd<8P2V~z"
 -}
 encode
-  :: BS.ByteString -- ^ Data to encode
-  -> Fallible BS.ByteString
+  :: ByteString -- ^ Data to encode
+  -> Fallible ByteString
 encode stream = case parseOnly (encodeAscii85P <* endOfInput) stream of
   Left  msg     -> Left (InvalidAscii85Stream msg)
   Right encoded -> Right (BS.concat [encoded, "~>"])

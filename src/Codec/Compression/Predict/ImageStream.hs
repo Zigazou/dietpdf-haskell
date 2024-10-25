@@ -38,6 +38,7 @@ import Codec.Compression.Predict.Scanline
     , fromPredictedLine
     )
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Kind (Type)
@@ -93,7 +94,7 @@ Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
 line width.
 -}
 fromPredictedStream
-  :: Predictor -> Int -> Int -> BS.ByteString -> Fallible ImageStream
+  :: Predictor -> Int -> Int -> ByteString -> Fallible ImageStream
 fromPredictedStream predictor width components raw = do
   let rawWidth = components * width + if isPNGGroup predictor then 1 else 0
   scanlines <- mapM (fromPredictedLine predictor components) (splitRaw rawWidth raw)
@@ -107,10 +108,10 @@ fromPredictedStream predictor width components raw = do
 {- |
 Convert an `ImageStream` to a `ByteString`.
 -}
-packStream :: ImageStream -> BS.ByteString
+packStream :: ImageStream -> ByteString
 packStream = BS.concat . fmap packScanline . iLines
  where
-  packScanline :: Scanline -> BS.ByteString
+  packScanline :: Scanline -> ByteString
   packScanline (Scanline Nothing stream) = groupComponents stream
   packScanline (Scanline (Just predictor) stream)
     | isPNGGroup predictor = BS.cons (encodeRowPredictor predictor)
@@ -121,7 +122,7 @@ packStream = BS.concat . fmap packScanline . iLines
 Convert an unpredicted `Bytestring` to an `ImageStream` given its line width.
 -}
 fromUnpredictedStream
-  :: Int -> Int -> BS.ByteString -> Fallible ImageStream
+  :: Int -> Int -> ByteString -> Fallible ImageStream
 fromUnpredictedStream width components raw = return ImageStream
   { iWidth            = width
   , iComponents       = components

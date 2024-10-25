@@ -4,7 +4,7 @@ module PDF.Graphics.Interpreter.OptimizeProgramSpec
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
     ( GFXObject (GFXName, GFXNumber, GFXString)
@@ -19,7 +19,7 @@ import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-optimizeProgramExamples :: [(BS.ByteString, Program)]
+optimizeProgramExamples :: [(ByteString, Program)]
 optimizeProgramExamples =
   [ ( "", mkProgram [] )
   , ( "1.000042 2.421 m"

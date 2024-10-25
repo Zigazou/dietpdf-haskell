@@ -35,6 +35,7 @@ import Data.Binary.Parser
     , skipWhile
     , takeWhile1
     )
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
 import Data.Foldable (foldl')
@@ -74,8 +75,8 @@ type ObjectStream :: Type
 data ObjectStream = ObjectStream
   { osCount   :: !Int
   , osOffset  :: !Int
-  , osIndices :: !BS.ByteString
-  , osObjects :: !BS.ByteString
+  , osIndices :: !ByteString
+  , osObjects :: !ByteString
   }
 
 type NumberOffset :: Type
@@ -106,7 +107,7 @@ oneObjectP = do
 integerP :: Get Int
 integerP = takeWhile1 isDigit <&> toInt
  where
-  toInt :: BS.ByteString -> Int
+  toInt :: ByteString -> Int
   toInt = BS.foldl'
     (\num digit -> num * 10 + fromIntegral (digit - asciiDIGITZERO))
     0
@@ -121,7 +122,7 @@ objectNumberOffsetP = do
   return $! NumberOffset objectNumber offset
 
 parseObjectNumberOffsets
-  :: Logging m => BS.ByteString -> FallibleT m [NumberOffset]
+  :: Logging m => ByteString -> FallibleT m [NumberOffset]
 parseObjectNumberOffsets indices =
   case parseOnly (many' objectNumberOffsetP) indices of
     Left  err    -> throwE (ParseError ("", 0, err))
@@ -227,7 +228,7 @@ appendObject objStm _ = objStm
 insertObjects :: PDFDocument -> ObjectStream
 insertObjects = foldl' appendObject emptyObjectStream
 
-dropLastByte :: BS.ByteString -> BS.ByteString
+dropLastByte :: ByteString -> ByteString
 dropLastByte str = BS.take (BS.length str - 1) str
 
 {- |

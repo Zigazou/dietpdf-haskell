@@ -4,7 +4,7 @@ module PDF.Processing.FilterCombine.RleLzw
 
 import Codec.Compression.LZW qualified as LZW
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
 import Data.PDF.Filter (Filter (Filter))
@@ -15,7 +15,7 @@ import PDF.Processing.FilterCombine.Rle (rle)
 
 rleLzw
   :: Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> Fallible FilterCombination
 rleLzw _ stream = do
   rle Nothing stream

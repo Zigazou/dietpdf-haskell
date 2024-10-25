@@ -24,6 +24,7 @@ import Control.Monad (guard)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (runExceptT, throwE)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.Fallible (FallibleT, tryF)
@@ -64,7 +65,7 @@ readPDF filename = do
     Right bytes -> pdfParse bytes
     Left  _     -> throwE UnableToOpenFile
 
-readByteString :: Maybe FilePath -> FallibleT IO BS.ByteString
+readByteString :: Maybe FilePath -> FallibleT IO ByteString
 readByteString (Just filename) = do
   lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
     Right bytes -> return bytes
@@ -82,7 +83,7 @@ getFileSize path = do
 hexCfg :: Int -> Cfg
 hexCfg offset = defaultCfg { startByte = offset }
 
-hexDump :: Int -> BS.ByteString -> IO ()
+hexDump :: Int -> ByteString -> IO ()
 hexDump offset bytes = do
   let bytes' = BS.take 256 (BS.drop offset bytes)
 

@@ -4,7 +4,7 @@ module PDF.Processing.FilterCombine.Lzw
 
 import Codec.Compression.LZW qualified as LZW
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
 import Data.PDF.Filter (Filter (Filter))
@@ -13,7 +13,7 @@ import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 
 lzw
   :: Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> Fallible FilterCombination
 lzw _ stream =
   LZW.compress stream <&> mkFCAppend [Filter (PDFName "LZWDecode") PDFNull]

@@ -19,6 +19,7 @@ import Data.Array (Array)
 import Data.Binary (Word16, Word32)
 import Data.Binary.Parser (getWord32be, many', parseOnly)
 import Data.Bits (shiftL)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Either (fromRight)
 import Data.Kind (Type)
@@ -32,7 +33,7 @@ import Font.TrueType.Parser.Head (headP)
 import Font.TrueType.ScalerType (ScalerType)
 import Font.TrueType.TableIdentifier (TableIdentifier (RTTFontHeader))
 
-calcChecksum :: BS.ByteString -> Word32
+calcChecksum :: ByteString -> Word32
 calcChecksum raw =
   foldr (+) lastValue . fromRight [] . parseOnly (many' getWord32be) $ raw
  where
@@ -68,12 +69,12 @@ data TableEntry = TableEntry
   }
   deriving stock (Eq, Show)
 
-getBytes :: BS.ByteString -> TableEntry -> BS.ByteString
+getBytes :: ByteString -> TableEntry -> ByteString
 getBytes bytes entry = BS.take
   (fromIntegral $ teLength entry)
   (BS.drop (fromIntegral $ teOffset entry) bytes)
 
-loadContent :: BS.ByteString -> TableEntry -> TableEntry
+loadContent :: ByteString -> TableEntry -> TableEntry
 loadContent bytes entry@TableEntry { teTag = RTTFontHeader } =
   let raw = getBytes bytes entry
   in  case parseOnly headP raw of

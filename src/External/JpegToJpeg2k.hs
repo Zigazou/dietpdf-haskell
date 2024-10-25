@@ -1,12 +1,13 @@
 module External.JpegToJpeg2k (jpegToJpeg2k) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
 import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf'')
 
-getJpegComponents :: BS.ByteString -> Int
+getJpegComponents :: ByteString -> Int
 getJpegComponents jpegImage =
   let ffc0 = indices "\xff\xc0" jpegImage
       ffc2 = indices "\xff\xc2" jpegImage
@@ -30,7 +31,7 @@ to convert the JPEG image to a TIFF image because it can keep CMYK colorspace
 in the process. It is also necessary to negate the image. Then, it uses Grok to
 convert the TIFF image to a JPEG 2000 image.
 -}
-jpegToJpeg2k :: Int -> BS.ByteString -> FallibleT IO BS.ByteString
+jpegToJpeg2k :: Int -> ByteString -> FallibleT IO ByteString
 jpegToJpeg2k quality jpegImage =
   case getJpegComponents jpegImage of
     4 -> do

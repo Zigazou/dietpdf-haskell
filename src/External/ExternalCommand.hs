@@ -9,6 +9,7 @@ where
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible, FallibleT)
 import Data.UnifiedError (UnifiedError (ExternalCommandError))
@@ -58,7 +59,11 @@ returned.
 For unknown reason, this function may fail with some commands. If you encounter
 such a problem, try using `externalCommandBuf' or externalCommandBuf'' instead.
 -}
-externalCommandBuf :: FilePath -> [String] -> BS.ByteString -> FallibleT IO BS.ByteString
+externalCommandBuf
+  :: FilePath
+  -> [String]
+  -> ByteString
+  -> FallibleT IO ByteString
 externalCommandBuf command args input = do
   let process = (proc command args) { std_in  = CreatePipe
                                     , std_out = CreatePipe
@@ -71,12 +76,12 @@ externalCommandBuf command args input = do
     Left err     -> throwE err
  where
   injectInput
-    :: BS.ByteString
+    :: ByteString
     -> Maybe Handle
     -> Maybe Handle
     -> Maybe Handle
     -> ProcessHandle
-    -> IO (Fallible BS.ByteString)
+    -> IO (Fallible ByteString)
   injectInput input' (Just stdin) (Just stdout) _stderr ph = do
     -- Configure stdin
     hSetBinaryMode stdin True
@@ -111,8 +116,8 @@ The output is captured and returned.
 externalCommandBuf'
   :: FilePath
   -> [String]
-  -> BS.ByteString
-  -> FallibleT IO BS.ByteString
+  -> ByteString
+  -> FallibleT IO ByteString
 externalCommandBuf' command args input = do
   withSystemTempFile "dietpdf.temporary" $ \temp tempHandle -> do
     lift $ hClose tempHandle
@@ -130,7 +135,7 @@ externalCommandBuf' command args input = do
     -> Maybe Handle
     -> Maybe Handle
     -> ProcessHandle
-    -> IO (Fallible BS.ByteString)
+    -> IO (Fallible ByteString)
   injectInput _stdin (Just stdout) _stderr ph = do
     -- Configure stdout
     hSetBinaryMode stdout True
@@ -166,8 +171,8 @@ externalCommandBuf''
   -> [String]
   -> String
   -> String
-  -> BS.ByteString
-  -> FallibleT IO BS.ByteString
+  -> ByteString
+  -> FallibleT IO ByteString
 externalCommandBuf'' command args inputExt outputExt input = do
   let inputTemplate  = "dietpdf." ++ inputExt
       outputTemplate = "dietpdf." ++ outputExt

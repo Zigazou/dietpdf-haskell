@@ -5,7 +5,7 @@ module Formatting.ByteStringFormatter
   ( utf8
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.ByteString.UTF8 qualified as BSU
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as TL
@@ -19,5 +19,5 @@ Formats a bytestring as an UTF8 string.
 "UTF8 string: Frédéric"
 
 -}
-utf8 :: Format r (BS.ByteString -> r)
+utf8 :: Format r (ByteString -> r)
 utf8 = Format (. (TL.fromLazyText . TL.pack . BSU.toString))

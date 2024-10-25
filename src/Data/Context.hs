@@ -8,7 +8,7 @@ module Data.Context
 )
 where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Kind (Constraint, Type)
 import Data.Text qualified as T
 
@@ -68,8 +68,8 @@ instance Contextual (Int, Int) where
   ctx :: (Int, Int) -> Context
   ctx (a, b) = Context $ T.pack (show a) <> "." <> T.pack (show b)
 
-instance Contextual BS.ByteString where
-  ctx :: BS.ByteString -> Context
+instance Contextual ByteString where
+  ctx :: ByteString -> Context
   ctx = Context . removeFirstAndLast . T.pack . show
 
 instance Contextual Char where

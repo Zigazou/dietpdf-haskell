@@ -3,7 +3,7 @@ module PDF.Graphics.Parser.LooseEndOfLineSpec
   ) where
 
 import Data.Binary.Parser (sepBy, some', takeTill)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Graphics.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
 
@@ -11,7 +11,7 @@ import Test.Hspec (Spec, describe)
 
 import Util.ParserHelper (itWith)
 
-leolExamples :: [(BS.ByteString, [BS.ByteString])]
+leolExamples :: [(ByteString, [ByteString])]
 leolExamples =
   [ ("a\nb"    , ["a", "b"])
   , ("a\rb"    , ["a", "b"])

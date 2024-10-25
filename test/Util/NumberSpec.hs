@@ -4,6 +4,7 @@ module Util.NumberSpec
 
 import Control.Monad (forM_)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -17,7 +18,7 @@ import Util.Number
     , toNumber
     )
 
-toNumberExamples :: [(BS.ByteString, Int)]
+toNumberExamples :: [(ByteString, Int)]
 toNumberExamples =
   [ (""          , 0)
   , ("0"         , 0)
@@ -29,7 +30,7 @@ toNumberExamples =
   , ("4873987128", 4873987128)
   ]
 
-fromNumberExamples :: [(Double, BS.ByteString)]
+fromNumberExamples :: [(Double, ByteString)]
 fromNumberExamples =
   [ (1.0    , "1")
   , (0.0    , "0")
@@ -58,7 +59,7 @@ bytesNeededToEncodeExamples =
   , (4294967296, 5)
   ]
 
-encodeIntToBytesExamples :: [(Int, Int, BS.ByteString)]
+encodeIntToBytesExamples :: [(Int, Int, ByteString)]
 encodeIntToBytesExamples =
   [ (0         , 1, "\x00")
   , (1         , 1, "\x01")

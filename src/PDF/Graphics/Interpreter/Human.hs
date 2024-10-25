@@ -2,7 +2,7 @@ module PDF.Graphics.Interpreter.Human
 ( human )
 where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Double.Conversion.Text (toShortest)
 import Data.Foldable (foldl', toList)
 import Data.Kind (Constraint, Type)
@@ -14,11 +14,11 @@ import Data.PDF.GFXObject
     )
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.Program (Program)
+import Data.Sequence (Seq)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 
 import Util.Dictionary (Dictionary)
-import Data.Sequence (Seq)
 
 indentSpaces :: T.Text
 indentSpaces = "  "
@@ -48,8 +48,8 @@ instance Human GFXObjects where
     , "]"
     ]
 
-instance Human (BS.ByteString, GFXObject) where
-  human :: Int -> (BS.ByteString, GFXObject) -> T.Text
+instance Human (ByteString, GFXObject) where
+  human :: Int -> (ByteString, GFXObject) -> T.Text
   human level (name, value) = indent level $ T.concat
     [ "/"
     , T.pack (show name)

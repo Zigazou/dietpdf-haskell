@@ -2,6 +2,7 @@ module PDF.Processing.ObjectInfo
   ( objectInfo
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.IntMap qualified as IM
 import Data.Logging (Logging)
@@ -17,6 +18,7 @@ import Data.PDF.PDFObject
     )
 import Data.PDF.PDFWork (PDFWork)
 import Data.Text (Text)
+import Data.Text qualified as T
 import Data.Text.Encoding (decodeUtf8Lenient)
 import Data.Text.Lazy (toStrict)
 
@@ -29,12 +31,11 @@ import PDF.Processing.ObjectCategory (objectCategory)
 import PDF.Processing.Unfilter (unfilter)
 
 import Util.Number (fromNumber)
-import Data.Text qualified as T
 
 getTypeSubType :: PDFObject -> Maybe Text
 getTypeSubType object = getTypeSubType' object >>= Just . decodeUtf8Lenient
 
-getTypeSubType' :: PDFObject -> Maybe BS.ByteString
+getTypeSubType' :: PDFObject -> Maybe ByteString
 getTypeSubType' (PDFDictionary dict) =
   case (Map.lookup "Type" dict, Map.lookup "Subtype" dict) of
   (Just (PDFName objectType), Just (PDFName objectSubType)) ->

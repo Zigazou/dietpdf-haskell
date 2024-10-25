@@ -1,5 +1,6 @@
 module Util.SimplePam (simplePam) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ColorSpace (ColorSpace, csComponents, csTupleType)
 
@@ -9,8 +10,8 @@ simplePam
   :: Int
   -> Int
   -> ColorSpace
-  -> BS.ByteString
-  -> BS.ByteString
+  -> ByteString
+  -> ByteString
 simplePam width height colorSpace input =
   BS.concat
     [ "P7\n"

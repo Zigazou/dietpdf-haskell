@@ -2,7 +2,7 @@ module PDF.Object.Parser.XRefSpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object
     ( PDFObject (PDFXRef)
@@ -17,7 +17,7 @@ import Test.Hspec (Spec, describe)
 import Util.ParserHelper (itWith)
 
 
-xrefExamples :: [(BS.ByteString, PDFObject)]
+xrefExamples :: [(ByteString, PDFObject)]
 xrefExamples =
   [ ( "xref\n\
       \0 1\n\

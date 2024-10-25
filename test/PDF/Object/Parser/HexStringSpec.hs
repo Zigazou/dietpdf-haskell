@@ -2,7 +2,7 @@ module PDF.Object.Parser.HexStringSpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object (PDFObject (PDFHexString))
 import PDF.Object.Parser.HexString (hexStringP)
@@ -12,7 +12,7 @@ import Test.Hspec (Spec, describe)
 import Util.ParserHelper (itWith)
 
 
-hexStringExamples :: [(BS.ByteString, PDFObject)]
+hexStringExamples :: [(ByteString, PDFObject)]
 hexStringExamples =
   [ ("<>"                , PDFHexString "")
   , ("<   >"             , PDFHexString "")

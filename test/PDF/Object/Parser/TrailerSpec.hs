@@ -2,7 +2,7 @@ module PDF.Object.Parser.TrailerSpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Map.Strict (empty, fromList)
 
 import PDF.Object.Object (PDFObject (PDFDictionary, PDFReference, PDFTrailer))
@@ -12,7 +12,7 @@ import Test.Hspec (Spec, describe)
 
 import Util.ParserHelper (itWith)
 
-trailerExamples :: [(BS.ByteString, PDFObject)]
+trailerExamples :: [(ByteString, PDFObject)]
 trailerExamples =
   [ ("trailer\n\
       \<<>>", PDFTrailer (PDFDictionary empty))

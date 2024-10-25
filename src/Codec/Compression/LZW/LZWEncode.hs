@@ -20,6 +20,7 @@ import Codec.Compression.LZW.LZWDictionary
 import Control.Monad.State.Lazy (State, get, put, runState)
 
 import Data.BitsArray (BitsArray, appendBits, newBitsArray, toByteString)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
@@ -27,7 +28,7 @@ import Data.Kind (Type)
 
 type EncodeStep :: Type
 data EncodeStep = EncodeStep
-  { esCurrentWord  :: !BS.ByteString
+  { esCurrentWord  :: !ByteString
   , esCurrentIndex :: !Int
   , esBitsPerCode  :: !Int
   , esDictionary   :: !Dictionary
@@ -51,7 +52,7 @@ initialEncodeStep maxBytes = EncodeStep
   , esOutput       = appendBits 9 clearTableMarker (newBitsArray maxBytes)
   }
 
-setCurrentWord :: BS.ByteString -> State EncodeStep ()
+setCurrentWord :: ByteString -> State EncodeStep ()
 setCurrentWord value = get >>= \step -> put $ step { esCurrentWord = value }
 
 setCurrentIndex :: Int -> State EncodeStep ()
@@ -66,7 +67,7 @@ outputCode value = do
   let output = appendBits (esBitsPerCode step) value (esOutput step)
   put $ step { esOutput = output }
 
-processEncode :: BS.ByteString -> State EncodeStep BitsArray
+processEncode :: ByteString -> State EncodeStep BitsArray
 processEncode "" = do
   -- No more data to process, return the current index and the end of data
   -- marker.
@@ -122,8 +123,8 @@ in the PDF specifications.
 It may return errors on invalid codes.
 -}
 compress
-  :: BS.ByteString -- ^ A strict bytestring
-  -> Fallible BS.ByteString -- ^ The compressed bytestring or an error
+  :: ByteString -- ^ A strict bytestring
+  -> Fallible ByteString -- ^ The compressed bytestring or an error
 compress stream = do
   let (output, _anyError) = runState (processEncode stream)
                                      (initialEncodeStep (BS.length stream * 2 + 16))

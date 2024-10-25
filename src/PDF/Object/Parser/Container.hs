@@ -7,7 +7,7 @@ module PDF.Object.Parser.Container
 import Control.Applicative ((<|>))
 
 import Data.Binary.Parser (Get, label, sepBy, word8)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Map.Strict (fromList)
 
 import PDF.Object.Object (PDFObject (PDFDictionary, PDFName), mkPDFArray)
@@ -64,7 +64,7 @@ arrayP = label "array" $ do
   word8 asciiRIGHTSQUAREBRACKET
   return $ mkPDFArray items
 
-dictionaryKeyValueP :: Get (BS.ByteString, PDFObject)
+dictionaryKeyValueP :: Get (ByteString, PDFObject)
 dictionaryKeyValueP = do
   PDFName key <- nameP
   emptyContentP

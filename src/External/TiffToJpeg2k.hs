@@ -1,6 +1,6 @@
 module External.TiffToJpeg2k (tiffToJpeg2k) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.ColorSpace (ColorSpace)
 import Data.Fallible (FallibleT)
 
@@ -18,8 +18,8 @@ tiffToJpeg2k
   :: Int
   -> Int
   -> ColorSpace
-  -> BS.ByteString
-  -> FallibleT IO BS.ByteString
+  -> ByteString
+  -> FallibleT IO ByteString
 tiffToJpeg2k width height colorSpace input =
   externalCommandBuf'' "grk_compress"
                        [ "--in-file", "-"

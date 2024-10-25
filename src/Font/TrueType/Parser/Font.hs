@@ -8,7 +8,7 @@ import Control.Monad (when)
 import Data.Array (Array)
 import Data.Binary (get)
 import Data.Binary.Parser (Get, label, parseOnly)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Sequence qualified as SQ
 import Data.UnifiedError (UnifiedError (UnknownScalerType))
@@ -53,7 +53,7 @@ fontDirectoryP = label "fontDirectory" $ do
 Parses a True Type font file from a bytestring.
 -}
 ttfParse
-  :: BS.ByteString -- ^ The bytestring to parse coming from a file.
+  :: ByteString -- ^ The bytestring to parse coming from a file.
   -> Fallible FontDirectory -- ^ Error or a `FontDirectory`.
 ttfParse fontfile = case parseOnly fontDirectoryP fontfile of
   Left _anyError -> Left (UnknownScalerType "")

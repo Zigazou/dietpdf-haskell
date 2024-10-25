@@ -25,6 +25,7 @@ import Control.Monad.Loops (whileM)
 import Control.Monad.State.Lazy (State, get, put, runState)
 
 import Data.Bits (shiftL, shiftR, (.&.))
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Kind (Type)
@@ -74,7 +75,7 @@ failWith errorValue action = do
     Just value -> return value
     Nothing    -> setError errorValue >> return mempty
 
-lzwNextCode :: BS.ByteString -> State DecodeStep (Fallible Int)
+lzwNextCode :: ByteString -> State DecodeStep (Fallible Int)
 lzwNextCode stream = do
   step <- get
   let bitPosition = psBitPosition step
@@ -153,7 +154,7 @@ moreToDecode totalBits = do
       notTheEnd     = psPreviousWordIndex step /= endOfDataMarker
   return (notTheEnd && noError && bitsRemaining)
 
-processDecode :: BS.ByteString -> State DecodeStep BS.ByteString
+processDecode :: ByteString -> State DecodeStep ByteString
 processDecode stream = updateBitsPerCode >> lzwNextCode stream >>= \case
   Left  anError          -> setError anError >> return ""
   Right currentWordIndex -> do
@@ -215,8 +216,8 @@ in the PDF specifications.
 It may return errors on invalid codes.
 -}
 decompress
-  :: BS.ByteString -- ^ A strict bytestring of at least 2 bytes
-  -> Fallible BS.ByteString
+  :: ByteString -- ^ A strict bytestring of at least 2 bytes
+  -> Fallible ByteString
      -- ^ The uncompressed bytestring or an error
 decompress stream = do
   let (output, state) = runState

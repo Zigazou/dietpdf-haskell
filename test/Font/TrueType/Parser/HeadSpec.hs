@@ -5,7 +5,7 @@ module Font.TrueType.Parser.HeadSpec
 import Control.Monad (forM_)
 
 import Data.Binary.Parser (parseOnly)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import Font.TrueType.FontTable
     ( Fixed (Fixed)
@@ -15,7 +15,7 @@ import Font.TrueType.Parser.Head (headP)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-headPExamples :: [(BS.ByteString, Head)]
+headPExamples :: [(ByteString, Head)]
 headPExamples =
   [ ( "\x00\x01\x00\x00\x00\x02\x23\x12\xA9\xDE\xA8\x42\x5F\x0F\x3C\xF5\x00\
       \\x19\x08\x00\x00\x00\x00\x00\xC4\xF0\x11\x2E\x00\x00\x00\x00\xD5\x01\

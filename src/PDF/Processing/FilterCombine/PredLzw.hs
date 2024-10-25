@@ -8,6 +8,7 @@ import Codec.Compression.Predict
     , predict
     )
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.PDF.Filter (Filter (Filter))
@@ -19,7 +20,7 @@ import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
 predLzw
   :: Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> Fallible FilterCombination
 predLzw (Just (width, components)) stream = do
   -- Try finding optimal predictors with Shannon entropy function

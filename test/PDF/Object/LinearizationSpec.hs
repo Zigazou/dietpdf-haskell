@@ -8,7 +8,7 @@ module PDF.Object.LinearizationSpec
 import Control.Monad (forM_)
 import Control.Monad.Trans.Except (runExceptT)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Logging (Logging)
 import Data.PDF.PDFDocument (PDFDocument)
 
@@ -20,7 +20,7 @@ import PDF.Object.Linearization
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-linearizationExamples :: [(BS.ByteString, Maybe Linearization)]
+linearizationExamples :: [(ByteString, Maybe Linearization)]
 linearizationExamples =
   [ ( "43 0 obj\n\
       \<< /Linearized 1.0\n\
@@ -71,7 +71,7 @@ linearizationExamples =
     )
   ]
 
-linearizationBadExamples :: [(BS.ByteString, Maybe Linearization)]
+linearizationBadExamples :: [(ByteString, Maybe Linearization)]
 linearizationBadExamples =
   [ ( "43 0 obj\n\
       \<< /Linearized 1.0\n\
@@ -98,7 +98,7 @@ linearizationBadExamples =
     )
   ]
 
-toObjects :: Logging m => BS.ByteString -> m PDFDocument
+toObjects :: Logging m => ByteString -> m PDFDocument
 toObjects stream = runExceptT (pdfParse stream) >>= \case
   Left  _       -> return mempty
   Right objects -> return objects

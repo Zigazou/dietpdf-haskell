@@ -25,6 +25,7 @@ module Codec.Filter.AsciiHex
   , decode
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 
@@ -51,7 +52,7 @@ Right "\xAB\xCD\xEF\x12"
 >>> decode "abcdefgh1yz"
 Right "\xAB\xCD\xEF\x10"
 -}
-decode :: BS.ByteString -> Fallible BS.ByteString
+decode :: ByteString -> Fallible ByteString
 decode = return . fromHexDigits
 
 {- |
@@ -62,5 +63,5 @@ A `>` is appended to the output string to comply with the PDF specification.
 >>> encode "\x12\x34\x56\x78\x9a\xbc\xde\xf0"
 Right "123456789abcdef0"
 -}
-encode :: BS.ByteString -> Fallible BS.ByteString
+encode :: ByteString -> Fallible ByteString
 encode = return . flip BS.snoc asciiGREATERTHANSIGN . toHexDigits

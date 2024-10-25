@@ -9,6 +9,7 @@ import Control.Monad.State (gets, lift)
 import Control.Monad.Trans.Except (except)
 
 import Data.Array (mkArray)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ColorSpace (fromComponents)
 import Data.Context (Contextual (ctx))
@@ -54,8 +55,8 @@ import PDF.Processing.FilterCombine.Zopfli (zopfli)
 filterInfo
   :: Logging m
   => T.Text
-  -> BS.ByteString
-  -> BS.ByteString
+  -> ByteString
+  -> ByteString
   -> PDFWork m ()
 filterInfo filterName streamBefore streamAfter =
   sayComparisonP ("filter " <> filterName)
@@ -65,7 +66,7 @@ filterInfo filterName streamBefore streamAfter =
 applyEveryFilterGeneric
   :: Logging IO
   => Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> PDFWork IO [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
@@ -142,7 +143,7 @@ applyEveryFilterGeneric Nothing stream = do
 applyEveryFilterJPG
   :: Logging IO
   => Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> PDFWork IO [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterJPG (Just _imageProperty) stream = do
@@ -177,7 +178,7 @@ applyEveryFilterJPG Nothing stream = do
 applyEveryFilterXRef
   :: Logging m
   => Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> PDFWork m [FilterCombination]
 -- The stream has width and components information.
 applyEveryFilterXRef widthComponents@(Just (_width, _components)) stream = do

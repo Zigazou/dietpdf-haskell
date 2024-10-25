@@ -2,7 +2,7 @@ module PDF.Document.OptimizeOptionalDictionaryEntries
   ( optimizeOptionalDictionaryEntries
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.PDF.PDFObject (PDFObject (PDFBool, PDFName, PDFNumber), mkPDFArray)
 import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
 
@@ -75,7 +75,7 @@ isOptionalType (PDFName "OutputIntent")       = True
 isOptionalType (PDFName "OPI")                = True
 isOptionalType _anyOtherType                  = False
 
-defaultValues :: [(BS.ByteString, PDFObject)]
+defaultValues :: [(ByteString, PDFObject)]
 defaultValues =
   [ ("AccurateScreens", PDFBool False)
   , ("AddRevInfo", PDFBool False)
@@ -212,7 +212,7 @@ defaultValues =
 
 removeEntryIfDefaultP
   :: Monad m
-  => (BS.ByteString, PDFObject)
+  => (ByteString, PDFObject)
   -> PDFObject
   -> PDFWork m PDFObject
 removeEntryIfDefaultP (key, defaultValue) object =
@@ -220,10 +220,10 @@ removeEntryIfDefaultP (key, defaultValue) object =
     Just value | value == defaultValue -> setValueForKey key Nothing object
     _anyOtherValue                     -> object
 
-removeEntryIfDefaults :: [(BS.ByteString, PDFObject)] -> PDFObject -> PDFObject
+removeEntryIfDefaults :: [(ByteString, PDFObject)] -> PDFObject -> PDFObject
 removeEntryIfDefaults defaults object = foldl deepGo object defaults
  where
-  deepGo :: PDFObject -> (BS.ByteString, PDFObject) -> PDFObject
+  deepGo :: PDFObject -> (ByteString, PDFObject) -> PDFObject
   deepGo object' keyValue =
     case evalPDFWorkT (deepMapP (removeEntryIfDefaultP keyValue) object') of
       Right (Right object'') -> object''

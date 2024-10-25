@@ -5,7 +5,7 @@ module Command.Human
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (FallibleT)
 import Data.PDF.Program (parseProgram)
 import Data.Text.IO qualified as TIO
@@ -13,7 +13,7 @@ import Data.Text.IO qualified as TIO
 import PDF.Graphics.Interpreter.Human (human)
 import PDF.Graphics.Parser.Stream (gfxParse)
 
-humanByteString :: BS.ByteString -> FallibleT IO ()
+humanByteString :: ByteString -> FallibleT IO ()
 humanByteString code = case gfxParse code of
   (Left  err       ) -> throwE err
   (Right gfxObjects) -> do

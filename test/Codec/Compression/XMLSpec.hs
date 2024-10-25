@@ -6,13 +6,13 @@ import Codec.Compression.XML (optimizeXML)
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.PDF.PDFWork (evalPDFWorkT)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 
-xmlExamples :: [(BS.ByteString, BS.ByteString)]
+xmlExamples :: [(ByteString, ByteString)]
 xmlExamples =
   [ ( "<?xml version=\"1.0\" ?>\n\
       \<a>aa</a>\n"

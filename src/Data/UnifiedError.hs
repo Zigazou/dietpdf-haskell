@@ -10,7 +10,7 @@ module Data.UnifiedError
 where
 
 import Data.Binary.Get (ByteOffset)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.ErrorType
     ( ErrorType (EncodingError, ParsingError, ReadingError, StructureError, UnsupportedError)
     )
@@ -20,7 +20,7 @@ import Data.Word (Word8)
 type UnifiedError :: Type
 data UnifiedError
   -- | Parsing error (Remaining bytes, offset of the error and error message)
-  = ParseError !(BS.ByteString, ByteOffset, String)
+  = ParseError !(ByteString, ByteOffset, String)
   -- | The PDF file cannot be opened
   | UnableToOpenFile
   -- | The PDF file contains no indirect object

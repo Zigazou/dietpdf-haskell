@@ -22,6 +22,7 @@ module Codec.Compression.Predict.Entropy
   ) where
 
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 
@@ -35,7 +36,7 @@ data Entropy = EntropyShannon
 Calculate the Shannon entropy of a `ByteString`.
 Adapted from https://rosettacode.org/wiki/Entropy
 -}
-entropyShannon :: BS.ByteString -> Double
+entropyShannon :: ByteString -> Double
 entropyShannon =
   sum'
     . map ponderate

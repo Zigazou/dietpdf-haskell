@@ -4,7 +4,7 @@ module PDF.Object.ArraySpec
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object
     ( PDFObject (PDFBool, PDFName, PDFNumber)
@@ -15,7 +15,7 @@ import PDF.Object.Object
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-arrayExamples :: [(PDFObject, BS.ByteString)]
+arrayExamples :: [(PDFObject, ByteString)]
 arrayExamples =
   [ (mkEmptyPDFArray, "[]")
   , (mkPDFArray [PDFNumber 1.0, PDFName "AB", PDFBool True], "[1/AB true]")

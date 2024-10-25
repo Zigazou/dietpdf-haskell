@@ -5,7 +5,7 @@ module Data.ColorSpace
   , csTupleType
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Kind (Type)
 
 type ColorSpace :: Type
@@ -27,7 +27,7 @@ fromComponents 3          = ColorSpaceRGB
 fromComponents 4          = ColorSpaceCMYK
 fromComponents components = ColorSpaceUnknown components
 
-csTupleType :: ColorSpace -> BS.ByteString
+csTupleType :: ColorSpace -> ByteString
 csTupleType ColorSpaceGray = "GRAY"
 csTupleType ColorSpaceRGB  = "RGB"
 csTupleType ColorSpaceCMYK = "CMYK"

@@ -4,7 +4,7 @@ module Util.ByteStringSpec
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Map (Map, fromList)
 import Data.TranslationTable (getTranslationTable)
 
@@ -17,7 +17,7 @@ import Util.ByteString
     , toNameBase
     )
 
-splitRawExamples :: [(BS.ByteString, Int, [BS.ByteString])]
+splitRawExamples :: [(ByteString, Int, [ByteString])]
 splitRawExamples =
   [ ("ABCD", 2, ["AB", "CD"])
   , ("ABCD", 1, ["A", "B", "C", "D"])
@@ -25,7 +25,7 @@ splitRawExamples =
   , (""    , 3, [])
   ]
 
-separateComponentsExamples :: [(BS.ByteString, Int, [BS.ByteString])]
+separateComponentsExamples :: [(ByteString, Int, [ByteString])]
 separateComponentsExamples =
   [ ("ABCD", 2, ["AC", "BD"])
   , ("ABCD", 1, ["ABCD"])
@@ -33,7 +33,7 @@ separateComponentsExamples =
   , (""    , 1, [""])
   ]
 
-groupComponentsExamples :: [([BS.ByteString], BS.ByteString)]
+groupComponentsExamples :: [([ByteString], ByteString)]
 groupComponentsExamples =
   [ (["AC", "BD"]    , "ABCD")
   , (["ABCD"]        , "ABCD")
@@ -41,7 +41,7 @@ groupComponentsExamples =
   , ([""]            , "")
   ]
 
-toNameBaseExamples :: [(Int, BS.ByteString)]
+toNameBaseExamples :: [(Int, ByteString)]
 toNameBaseExamples =
   [ (0, "0")
   , (1, "1")
@@ -58,7 +58,7 @@ toNameBaseExamples =
   , (3844, "100")
   ]
 
-renameStringsExamples :: [([BS.ByteString], Map BS.ByteString BS.ByteString)]
+renameStringsExamples :: [([ByteString], Map ByteString ByteString)]
 renameStringsExamples =
   [ ([], mempty)
   , (["A", "B", "C"], fromList [("A", "0"), ("B", "1"), ("C", "2")])

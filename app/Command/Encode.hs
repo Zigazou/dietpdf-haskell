@@ -13,14 +13,15 @@ import Codec.Filter.AsciiHex qualified as AH
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible, FallibleT)
 
-manage :: Fallible BS.ByteString -> FallibleT IO ()
+manage :: Fallible ByteString -> FallibleT IO ()
 manage (Right compressed) = lift $ BS.putStr compressed
 manage (Left  err       ) = throwE err
 
-encodeByteString :: Codec -> BS.ByteString -> FallibleT IO ()
+encodeByteString :: Codec -> ByteString -> FallibleT IO ()
 encodeByteString RLE        binData = manage $ RL.compress binData
 encodeByteString Deflate    binData = manage $ FL.fastCompress binData
 encodeByteString LZW        binData = manage $ LZW.compress binData

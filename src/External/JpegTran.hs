@@ -3,6 +3,7 @@ module External.JpegTran (jpegtranOptimize) where
 
 import Codec.Compression.Flate (fastCompress)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
 
@@ -19,7 +20,7 @@ To find the better optimization, this function runs `jpegtran` twice: once
 with the `-progressive` flag and once without it. It then compares the
 compressed sizes of the two outputs and returns the smaller one.
 -}
-jpegtranOptimize :: BS.ByteString -> FallibleT IO BS.ByteString
+jpegtranOptimize :: ByteString -> FallibleT IO ByteString
 jpegtranOptimize input = do
   progressive <- externalCommandBuf
                   "jpegtran"

@@ -38,6 +38,7 @@ import Data.UnifiedError
 import PDF.Object.Object.ToPDFNumber (ToPDFNumber (mkPDFNumber))
 
 import Util.Dictionary (Dictionary)
+import Data.ByteString (ByteString)
 
 {- |
 Returns the stream embedded in a `PDFObject`.
@@ -47,7 +48,7 @@ of the monad.
 
 Only `PDFIndirectObjectWithStream` and `PDFObjectStream` have stream embedded.
 -}
-getStream :: Logging m => PDFObject -> PDFWork m BS.ByteString
+getStream :: Logging m => PDFObject -> PDFWork m ByteString
 getStream object = case object of
   (PDFIndirectObjectWithStream _ _ _ stream) -> return stream
   (PDFObjectStream             _ _ _ stream) -> return stream
@@ -78,7 +79,7 @@ It works transparently for any `PDFObject` containing a dictionary:
 -}
 getValue
   :: Logging m
-  => BS.ByteString -- ^ Key of the value to retrieve
+  => ByteString -- ^ Key of the value to retrieve
   -> PDFObject
   -> PDFWork m (Maybe PDFObject)
 getValue name object = case object of
@@ -99,7 +100,7 @@ It works transparently for any `PDFObject` containing a dictionary:
 -}
 getValueDefault
   :: Logging m
-  => BS.ByteString -- ^ Key of the value to retrieve
+  => ByteString -- ^ Key of the value to retrieve
   -> PDFObject
   -> PDFObject
   -> PDFWork m (Maybe PDFObject)
@@ -114,7 +115,7 @@ If the object has no dictionary, it is ignored.
 -}
 setValue
   :: Logging m
-  => BS.ByteString -- ^ The key in a dictionary
+  => ByteString -- ^ The key in a dictionary
   -> PDFObject -- ^ The value
   -> PDFObject -- ^ The PDFObject to modify
   -> PDFWork m PDFObject
@@ -141,7 +142,7 @@ Remove a value in a dictionary contained in a `PDFObject`.
 -}
 removeValue
   :: Logging m
-  => BS.ByteString -- ^ The key in a dictionary to remove
+  => ByteString -- ^ The key in a dictionary to remove
   -> PDFObject -- ^ The PDFObject to modify
   -> PDFWork m PDFObject
 removeValue name object = case object of
@@ -167,7 +168,7 @@ the `setValue` functin.
 -}
 setMaybe
   :: Logging m
-  => BS.ByteString -- ^ The key in a dictionary
+  => ByteString -- ^ The key in a dictionary
   -> Maybe PDFObject -- ^ The `Maybe` value
   -> PDFObject
   -> PDFWork m PDFObject
@@ -183,7 +184,7 @@ the `setValue` functin.
 -}
 updateValue
   :: Logging m
-  => BS.ByteString -- ^ The key in a dictionary
+  => ByteString -- ^ The key in a dictionary
   -> Maybe PDFObject -- ^ The `Maybe` value
   -> PDFObject
   -> PDFWork m PDFObject
@@ -199,7 +200,7 @@ This function works only on `PDFIndirectObjectStream` and `PDFObjectStream`.
 
 It has no effect on any other `PDFObject`.
 -}
-setStream :: Logging m => BS.ByteString -> PDFObject -> PDFWork m PDFObject
+setStream :: Logging m => ByteString -> PDFObject -> PDFWork m PDFObject
 setStream newStream object = case object of
   (PDFIndirectObjectWithStream number revision dict _) ->
     setValue "Length" newLength
@@ -225,7 +226,7 @@ It has no effect on any other `PDFObject`.
 setStream1
   :: Logging m
   => Int
-  -> BS.ByteString
+  -> ByteString
   -> PDFObject
   -> PDFWork m PDFObject
 setStream1 uncompressedLength newStream object =

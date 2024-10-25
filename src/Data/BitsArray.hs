@@ -10,6 +10,7 @@ module Data.BitsArray
 import Control.Monad (forM_)
 
 import Data.Bits (shiftL, shiftR, (.&.), (.|.))
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 import Data.Vector.Storable qualified as VS
@@ -105,11 +106,11 @@ appendBits bitsWidth bits bitsArray =
     forM_ (zip [start..] bytes) $ \(offset, byte) ->
       MVS.read array offset >>= MVS.write array offset . (byte .|.)
 
-toByteString :: BitsArray -> BS.ByteString
+toByteString :: BitsArray -> ByteString
 toByteString bitsArray = BS.take (bitsSpan $ baLength bitsArray)
                                  (vectorToByteString (baBytes bitsArray))
 
-fromByteString :: BS.ByteString -> BitsArray
+fromByteString :: ByteString -> BitsArray
 fromByteString bytes = BitsArray
   { baCursorOffset = 0
   , baCursorWidth  = 1

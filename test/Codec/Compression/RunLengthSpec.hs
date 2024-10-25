@@ -6,6 +6,7 @@ import Codec.Compression.RunLength (compress, decompress)
 
 import Control.Monad (forM, forM_)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Word (Word8)
@@ -13,7 +14,7 @@ import Data.Word (Word8)
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Gen, arbitrary, forAll)
 
-decodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
+decodeExamples :: [(ByteString, Fallible ByteString)]
 decodeExamples =
   [ (""                        , Right "")
   , ("\o365a"                  , Right "aaaaaaaaaaaa")
@@ -21,7 +22,7 @@ decodeExamples =
   , ("\o365a\o365b\o000c\o000d", Right "aaaaaaaaaaaabbbbbbbbbbbbcd")
   ]
 
-encodeExamples :: [(BS.ByteString, Fallible BS.ByteString)]
+encodeExamples :: [(ByteString, Fallible ByteString)]
 encodeExamples =
   [ (""                          , Right "")
   , ("a"                         , Right "\o000a")
@@ -30,7 +31,7 @@ encodeExamples =
   , ("aaaaaaaaaaaabbbbbbbbbbbbcd", Right "\o365a\o365b\o001cd")
   ]
 
-randomString :: Gen BS.ByteString
+randomString :: Gen ByteString
 randomString = do
   items         <- arbitrary :: Gen [Word8]
   expandedItems <- forM items $ \item -> do

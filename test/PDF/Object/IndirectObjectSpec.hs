@@ -4,7 +4,7 @@ module PDF.Object.IndirectObjectSpec
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object
     ( PDFObject (PDFIndirectObject, PDFNumber)
@@ -13,7 +13,7 @@ import PDF.Object.Object
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-indirectObjectExamples :: [(PDFObject, BS.ByteString)]
+indirectObjectExamples :: [(PDFObject, ByteString)]
 indirectObjectExamples =
   [(PDFIndirectObject 1 0 (PDFNumber 1.0), "1 0 obj\n1\nendobj\n")]
 

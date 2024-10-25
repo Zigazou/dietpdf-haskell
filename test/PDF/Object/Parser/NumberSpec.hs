@@ -2,7 +2,7 @@ module PDF.Object.Parser.NumberSpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object (PDFObject (PDFNumber))
 import PDF.Object.Parser.Number (numberP)
@@ -11,7 +11,7 @@ import Test.Hspec (Spec, describe)
 
 import Util.ParserHelper (itWith)
 
-numberExamples :: [(BS.ByteString, PDFObject)]
+numberExamples :: [(ByteString, PDFObject)]
 numberExamples =
   [ ("123"   , PDFNumber 123.0)
   , ("43445" , PDFNumber 43445.0)

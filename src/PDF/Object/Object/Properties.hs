@@ -9,6 +9,7 @@ module PDF.Object.Object.Properties
   , isCatalog
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.List (foldl')
 import Data.Map.Strict qualified as Map
@@ -19,7 +20,7 @@ import Data.PDF.XRefSubsection (xrssCount)
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
-import Util.Dictionary (Dictionary, dictHasKey, dictAlter)
+import Util.Dictionary (Dictionary, dictAlter, dictHasKey)
 
 {- |
 Update the stream embedded in a `PDFObject`.
@@ -27,7 +28,7 @@ Update the stream embedded in a `PDFObject`.
 It also updates the Length entry in the associated dictionary to reflect the
 change.
 -}
-updateStream :: PDFObject -> BS.ByteString -> PDFObject
+updateStream :: PDFObject -> ByteString -> PDFObject
 updateStream object newStream = case object of
   (PDFIndirectObjectWithStream number revision dict _) ->
     PDFIndirectObjectWithStream number revision (newDict dict) newStream
@@ -59,7 +60,7 @@ on the Type and Subtype keys.
 
 If the dictionary contains does not contain a Type key, it returns `Nothing`.
 -}
-objectType :: Dictionary PDFObject -> Maybe BS.ByteString
+objectType :: Dictionary PDFObject -> Maybe ByteString
 objectType dictionary =
   case (Map.lookup "Type" dictionary, Map.lookup "SubType" dictionary) of
     (Just (PDFName typeValue), Just (PDFName subtypeValue)) ->
@@ -73,7 +74,7 @@ Determine if a key is in a dictionary from a `PDFObject`.
 If the `PDFObject` has no dictionary, it returns `False`.
 -}
 hasKey
-  :: BS.ByteString -- ^ The key to search for
+  :: ByteString -- ^ The key to search for
   -> PDFObject -- ^ The `PDFObject` to search in
   -> Bool
 hasKey key (PDFDictionary dict                        ) = dictHasKey key dict
@@ -84,7 +85,7 @@ hasKey key (PDFIndirectObject _ _ (PDFDictionary dict)) = dictHasKey key dict
 hasKey key (PDFTrailer (PDFDictionary dict)           ) = dictHasKey key dict
 hasKey _   _anyOtherObject                              = False
 
-getValueForKey :: BS.ByteString -> PDFObject -> Maybe PDFObject
+getValueForKey :: ByteString -> PDFObject -> Maybe PDFObject
 getValueForKey key (PDFDictionary dict) = Map.lookup key dict
 getValueForKey key (PDFIndirectObject _ _ (PDFDictionary dict)) = Map.lookup key dict
 getValueForKey key (PDFIndirectObjectWithStream _ _ dict _) = Map.lookup key dict
@@ -93,7 +94,7 @@ getValueForKey key (PDFXRefStream _ _ dict _) = Map.lookup key dict
 getValueForKey key (PDFTrailer (PDFDictionary dict)) = Map.lookup key dict
 getValueForKey _ _ = Nothing
 
-setValueForKey :: BS.ByteString -> Maybe PDFObject -> PDFObject -> PDFObject
+setValueForKey :: ByteString -> Maybe PDFObject -> PDFObject -> PDFObject
 setValueForKey key (Just value) (PDFDictionary dict) =
   PDFDictionary (Map.insert key value dict)
 setValueForKey key Nothing (PDFDictionary dict) =

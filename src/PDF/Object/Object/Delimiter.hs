@@ -2,7 +2,7 @@ module PDF.Object.Object.Delimiter
   ( spaceIfNeeded
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.PDF.PDFObject
     ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
     )
@@ -66,7 +66,7 @@ startsWithDelimiter PDFStartXRef{}                  = False
 Tells if a space must be inserted between 2 `PDFObject` when converted to
 `ByteString`.
 -}
-spaceIfNeeded :: PDFObject -> PDFObject -> BS.ByteString
+spaceIfNeeded :: PDFObject -> PDFObject -> ByteString
 spaceIfNeeded object1 object2 | endsWithDelimiter object1   = ""
                               | startsWithDelimiter object2 = ""
                               | otherwise                   = " "

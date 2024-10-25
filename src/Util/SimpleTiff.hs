@@ -1,6 +1,6 @@
 module Util.SimpleTiff (simpleTiff) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.ByteString.Builder
     ( Builder
     , byteString
@@ -16,10 +16,10 @@ import Data.ColorSpace
 import Data.Kind (Type)
 import Data.Word (Word16, Word32)
 
-build :: Builder -> BS.ByteString
+build :: Builder -> ByteString
 build = BL.toStrict . toLazyByteString
 
-simpleTiff :: Int -> Int -> ColorSpace -> BS.ByteString -> BS.ByteString
+simpleTiff :: Int -> Int -> ColorSpace -> ByteString -> ByteString
 simpleTiff width height ColorSpaceGray imageData = build $
      tiffMagicLE
   <> word32LE 0x00000008 -- Offset of the first IFD

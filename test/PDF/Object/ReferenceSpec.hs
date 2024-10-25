@@ -5,13 +5,13 @@ where
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object (PDFObject (PDFReference), fromPDFObject)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-referenceExamples :: [(PDFObject, BS.ByteString)]
+referenceExamples :: [(PDFObject, ByteString)]
 referenceExamples =
   [(PDFReference 1 0, "1 0 R"), (PDFReference 20 20, "20 20 R")]
 

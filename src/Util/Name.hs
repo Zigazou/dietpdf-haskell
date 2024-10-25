@@ -4,6 +4,7 @@ module Util.Name
   ( fromName
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Word (Word8)
 
@@ -28,7 +29,7 @@ import Util.Ascii
     , pattern AsciiSPACE
     )
 
-escapeChar :: Word8 -> BS.ByteString
+escapeChar :: Word8 -> ByteString
 escapeChar AsciiNUL                = error "NUL char not allowed in name"
 escapeChar AsciiHT                 = "#09"
 escapeChar AsciiCR                 = "#0D"
@@ -73,5 +74,5 @@ The following characters are escaped:
 
 If the PDF Name contains an `asciiNUL` character, it generates an error.
 -}
-fromName :: BS.ByteString -> BS.ByteString
+fromName :: ByteString -> ByteString
 fromName = BS.cons asciiSOLIDUS . BS.concatMap escapeChar

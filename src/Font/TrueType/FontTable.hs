@@ -32,7 +32,7 @@ import Data.Binary.Put
     , putWord32be
     , runPut
     )
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Int (Int16, Int64)
 import Data.Kind (Type)
@@ -87,7 +87,7 @@ data Head = Head
 putFixed :: Fixed -> PutM ()
 putFixed (Fixed ah al) = putWord16be ah >> putWord16be al
 
-fromHead :: Head -> BS.ByteString
+fromHead :: Head -> ByteString
 fromHead fontHead = BSL.toStrict $ runPut $ do
   putFixed (hVersion fontHead)
   putFixed (hFontRevision fontHead)
@@ -109,6 +109,6 @@ fromHead fontHead = BSL.toStrict $ runPut $ do
 
 type FontTable :: Type
 data FontTable
-  = FTRaw BS.ByteString
+  = FTRaw ByteString
   | FTHead Head
   deriving stock (Eq, Show)

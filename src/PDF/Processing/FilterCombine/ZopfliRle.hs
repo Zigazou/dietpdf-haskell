@@ -4,7 +4,7 @@ module PDF.Processing.FilterCombine.ZopfliRle
 
 import Codec.Compression.Flate qualified as FL
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
 import Data.PDF.Filter (Filter (Filter))
@@ -14,13 +14,13 @@ import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli))
 
 import PDF.Processing.FilterCombine.Rle (rle)
 
-getCompressor :: UseZopfli -> (BS.ByteString -> Fallible BS.ByteString)
+getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
 getCompressor UseZopfli  = FL.compress
 getCompressor UseDeflate = FL.fastCompress
 
 zopfliRle
   :: Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> UseZopfli
   -> Fallible FilterCombination
 zopfliRle _ stream useZopfli = do

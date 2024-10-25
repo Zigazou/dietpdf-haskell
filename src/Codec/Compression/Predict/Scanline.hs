@@ -41,6 +41,7 @@ import Codec.Compression.Predict.Predictor
     )
 import Codec.Compression.RunLength qualified as RLE
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Kind (Type)
@@ -59,7 +60,7 @@ the pixels are stored.
 type Scanline :: Type
 data Scanline = Scanline
   { slPredictor :: !(Maybe Predictor)
-  , slStream    :: ![BS.ByteString]
+  , slStream    :: ![ByteString]
   }
 
 {- |
@@ -133,7 +134,7 @@ applyUnpredictorToScanline predictor (Scanline _ prior, Scanline linePredictor c
 Convert a `ByteString` to a `Scanline` according to a `Predictor`.
 -}
 fromPredictedLine
-  :: Predictor -> Int -> BS.ByteString -> Fallible Scanline
+  :: Predictor -> Int -> ByteString -> Fallible Scanline
 fromPredictedLine predictor components raw
   | isPNGGroup predictor = do
     let (predictCode, bytes) = BS.splitAt 1 raw

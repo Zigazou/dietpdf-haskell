@@ -4,6 +4,7 @@ module Util.XMLSpec
 
 import Control.Monad (forM_)
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.UTF8 qualified as BSU
 import Data.List (sort)
@@ -16,7 +17,7 @@ import Text.XML.Light (parseXML, showContent)
 
 import Util.XML (getAllPrefixes, renamePrefixes, toNameBase)
 
-getAllPrefixesExamples :: [(BS.ByteString, [String])]
+getAllPrefixesExamples :: [(ByteString, [String])]
 getAllPrefixesExamples =
   [ ( ""
     , []
@@ -30,7 +31,7 @@ getAllPrefixesExamples =
     )
   ]
 
-renamePrefixesExamples :: [(BS.ByteString, BS.ByteString)]
+renamePrefixesExamples :: [(ByteString, ByteString)]
 renamePrefixesExamples =
   [ ( ""
     , ""

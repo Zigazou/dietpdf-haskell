@@ -2,7 +2,7 @@ module PDF.Object.Parser.IndirectObjectSpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Map.Strict (fromList)
 
 import PDF.Object.Object
@@ -14,7 +14,7 @@ import Test.Hspec (Spec, describe)
 
 import Util.ParserHelper (itWith)
 
-indirectObjectExamples :: [(BS.ByteString, PDFObject)]
+indirectObjectExamples :: [(ByteString, PDFObject)]
 indirectObjectExamples =
   [ ( "1 0 obj<</a 1>>endobj"
     , PDFIndirectObject 1 0 (PDFDictionary (fromList [("a", PDFNumber 1.0)]))

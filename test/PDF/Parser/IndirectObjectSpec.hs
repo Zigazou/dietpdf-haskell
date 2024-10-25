@@ -3,7 +3,7 @@ module PDF.Parser.IndirectObjectSpec
   ) where
 
 import Data.Array (mkArray)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object
     ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFReference, PDFString, PDFXRefStream)
@@ -15,7 +15,7 @@ import Test.Hspec (Spec, describe)
 import Util.Dictionary (mkDictionary)
 import Util.ParserHelper (itWith)
 
-indirectObjectExamples :: [(BS.ByteString, PDFObject)]
+indirectObjectExamples :: [(ByteString, PDFObject)]
 indirectObjectExamples =
   [ ( "1 0 obj<</a 1>>endobj"
     , PDFIndirectObject 1

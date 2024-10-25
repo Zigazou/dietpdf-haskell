@@ -8,7 +8,7 @@ module PDF.Graphics.Parser.Container
 import Control.Applicative ((<|>))
 
 import Data.Binary.Parser (Get, label, sepBy, word8)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Map.Strict (fromList)
 import Data.PDF.GFXObject (GFXObject (GFXDictionary, GFXName), mkGFXArray)
 
@@ -70,7 +70,7 @@ A binary parser for a key (`GFXName`) value (`GFXObject`) pair.
 
 A `List` of these key-value pairs makes a `GFXDictionary`.
 -}
-dictionaryKeyValueP :: Get (BS.ByteString, GFXObject)
+dictionaryKeyValueP :: Get (ByteString, GFXObject)
 dictionaryKeyValueP = label "keyvalueG" $ do
   GFXName key <- nameP
   emptyContentP

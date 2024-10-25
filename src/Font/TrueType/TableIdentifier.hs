@@ -12,6 +12,7 @@ module Font.TrueType.TableIdentifier
   , toTableIdentifier
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 
@@ -88,10 +89,10 @@ data TableIdentifier
   | OOTVerticalMetricsVariations      -- ^ 'VVAR' (optional)
   | OTTCrossReference                 -- ^ 'xref' (optional)
   | OTTGlyphsInformation              -- ^ 'Zapf' (optional)
-  | OUnknownIdentifier BS.ByteString
+  | OUnknownIdentifier ByteString
   deriving stock (Eq, Show)
 
-fromTableIdentifier :: TableIdentifier -> BS.ByteString
+fromTableIdentifier :: TableIdentifier -> ByteString
 fromTableIdentifier OTTAccentAttachment             = "acnt"
 fromTableIdentifier OTTAnchorPointTable             = "ankr"
 fromTableIdentifier OTTAxisVariation                = "avar"
@@ -165,7 +166,7 @@ fromTableIdentifier OTTCrossReference               = "xref"
 fromTableIdentifier OTTGlyphsInformation            = "Zapf"
 fromTableIdentifier (OUnknownIdentifier identifier) = BS.take 4 identifier
 
-toTableIdentifier :: BS.ByteString -> TableIdentifier
+toTableIdentifier :: ByteString -> TableIdentifier
 toTableIdentifier "acnt"     = OTTAccentAttachment
 toTableIdentifier "ankr"     = OTTAnchorPointTable
 toTableIdentifier "avar"     = OTTAxisVariation

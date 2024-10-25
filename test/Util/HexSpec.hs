@@ -4,13 +4,13 @@ module Util.HexSpec
 
 import Control.Monad (forM_)
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.Hex (fromHexDigits, toHexDigits)
 
-fromHexDigitsExamples :: [(BS.ByteString, BS.ByteString)]
+fromHexDigitsExamples :: [(ByteString, ByteString)]
 fromHexDigitsExamples =
   [ (""           , "")
   , ("     "      , "")
@@ -30,7 +30,7 @@ fromHexDigitsExamples =
   , ("abcdefgh1yz", "\xAB\xCD\xEF\x10")
   ]
 
-toHexDigitsExamples :: [(BS.ByteString, BS.ByteString)]
+toHexDigitsExamples :: [(ByteString, ByteString)]
 toHexDigitsExamples =
   [("\x12\x34\x56\x78\x9a\xbc\xde\xf0", "123456789abcdef0")]
 

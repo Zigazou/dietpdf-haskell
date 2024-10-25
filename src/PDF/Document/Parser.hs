@@ -6,7 +6,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Trans.Except (throwE)
 
 import Data.Binary.Parser (Get, label, many', parseDetail, satisfy)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Context (Context (NoContext))
 import Data.Fallible (FallibleT)
 import Data.Logging (Logging, sayF)
@@ -15,7 +15,7 @@ import Data.PDF.PDFObject (PDFObject)
 import Data.UnifiedError (UnifiedError (ParseError))
 import Data.Word (Word8)
 
-import PDF.Object.Object.PDFCharacter ( isWhiteSpace )
+import PDF.Object.Object.PDFCharacter (isWhiteSpace)
 import PDF.Object.Parser.Comment (commentP)
 import PDF.Object.Parser.IndirectObject (indirectObjectP)
 import PDF.Object.Parser.StartXRef (startXRefP)
@@ -39,7 +39,7 @@ returning errors.
 -}
 pdfParse
   :: Logging m
-  => BS.ByteString -- ^ The bytestring to parse coming from a file.
+  => ByteString -- ^ The bytestring to parse coming from a file.
   -> FallibleT m PDFDocument -- ^ Error or a `PDFDocument`.
 pdfParse source = do
   sayF NoContext "Parsing PDF file"

@@ -41,7 +41,7 @@ module Data.PDF.PDFObject
   ) where
 
 import Data.Array (Array, mkArray, mkEmptyArray)
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Context (Context (Context), Contextual (ctx), ctx2)
 import Data.Kind (Type)
 import Data.PDF.GFXObjects (GFXObjects)
@@ -57,21 +57,21 @@ Values contained are decoded, meaning they no longer contain escape sequences.
 type PDFObject :: Type
 data PDFObject
   = -- | A comment (without the starting %)
-    PDFComment !BS.ByteString
+    PDFComment !ByteString
   | -- | Version of the PDF (a special comment)
-    PDFVersion !BS.ByteString
+    PDFVersion !ByteString
   | -- | End of file (a special comment)
     PDFEndOfFile
   | -- | A number (always stored as a double)
     PDFNumber !Double
   | -- | A keyword
-    PDFKeyword !BS.ByteString
+    PDFKeyword !ByteString
   | -- | A name (starting with /)
-    PDFName !BS.ByteString
+    PDFName !ByteString
   | -- | A string (unescaped and without parenthesis)
-    PDFString !BS.ByteString
+    PDFString !ByteString
   | -- | An hexadeicmal string (without less-than/greater-than signs)
-    PDFHexString !BS.ByteString
+    PDFHexString !ByteString
   | -- | A reference, number and generation (two integers followed by an `R`)
     PDFReference !Int !Int
   | -- | An array containing a list of objects
@@ -81,13 +81,13 @@ data PDFObject
   | -- | An indirect object, object number, generation, object itself
     PDFIndirectObject !Int !Int !PDFObject
   | -- | An indirect object with a `ByteString` stream
-    PDFIndirectObjectWithStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
+    PDFIndirectObjectWithStream !Int !Int !(Dictionary PDFObject) !ByteString
   | -- | An indirect object with an `Array` of `GFXObject`
     PDFIndirectObjectWithGraphics !Int !Int !(Dictionary PDFObject) !GFXObjects
   | -- | An object stream, object number, generation, dictionary and stream
-    PDFObjectStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
+    PDFObjectStream !Int !Int !(Dictionary PDFObject) !ByteString
   | -- | An XRef stream, object number, generation, dictionary and stream
-    PDFXRefStream !Int !Int !(Dictionary PDFObject) !BS.ByteString
+    PDFXRefStream !Int !Int !(Dictionary PDFObject) !ByteString
   | -- | A boolean (true or false)
     PDFBool !Bool
   | -- | A null value
@@ -115,7 +115,7 @@ mkEmptyPDFArray = PDFArray mkEmptyArray
 {- |
 Create a `PDFDictionary` from a list of couples (key, value).
 -}
-mkPDFDictionary :: [(BS.ByteString, PDFObject)] -> PDFObject
+mkPDFDictionary :: [(ByteString, PDFObject)] -> PDFObject
 mkPDFDictionary = PDFDictionary . mkDictionary
 
 {- |

@@ -2,7 +2,7 @@ module PDF.Object.Parser.ArraySpec
   ( spec
   ) where
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 
 import PDF.Object.Object
     ( PDFObject (PDFName, PDFNumber, PDFReference, PDFString)
@@ -14,7 +14,7 @@ import Test.Hspec (Spec, describe)
 
 import Util.ParserHelper (itWith)
 
-arrayExamples :: [(BS.ByteString, PDFObject)]
+arrayExamples :: [(ByteString, PDFObject)]
 arrayExamples =
   [ ("[1   2   3]", mkPDFArray [PDFNumber 1.0, PDFNumber 2.0, PDFNumber 3.0])
   , ("[ 1 2 3 ]"  , mkPDFArray [PDFNumber 1.0, PDFNumber 2.0, PDFNumber 3.0])

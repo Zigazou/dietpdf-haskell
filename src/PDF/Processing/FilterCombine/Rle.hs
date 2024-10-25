@@ -4,7 +4,7 @@ module PDF.Processing.FilterCombine.Rle
 
 import Codec.Compression.RunLength qualified as RL
 
-import Data.ByteString qualified as BS
+import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
 import Data.PDF.Filter (Filter (Filter))
@@ -13,7 +13,7 @@ import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 
 rle
   :: Maybe (Int, Int)
-  -> BS.ByteString
+  -> ByteString
   -> Fallible FilterCombination
 rle _ stream =
   RL.compress stream <&> mkFCAppend [Filter (PDFName "RunLengthDecode") PDFNull]

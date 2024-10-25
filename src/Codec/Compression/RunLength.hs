@@ -39,6 +39,7 @@ import Data.Binary.Parser
     , peekMaybe
     , scan
     )
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Kind (Type)
@@ -50,18 +51,18 @@ import GHC.Base (maxInt)
 type RLEAction :: Type
 data RLEAction
   = RLERepeat !Int !Word8
-  | RLECopy !BS.ByteString
+  | RLECopy !ByteString
   | RLEEndOfData
 
 rleEndOfData :: Word8
 rleEndOfData = 128
 
-decode :: RLEAction -> BS.ByteString
+decode :: RLEAction -> ByteString
 decode RLEEndOfData            = ""
 decode (RLECopy bytestring   ) = bytestring
 decode (RLERepeat count value) = BS.replicate count value
 
-encode :: RLEAction -> BS.ByteString
+encode :: RLEAction -> ByteString
 encode RLEEndOfData = BS.singleton rleEndOfData
 encode (RLECopy bytestring) =
   BS.concat [BS.singleton (fromIntegral (BS.length bytestring - 1)), bytestring]
@@ -79,7 +80,7 @@ rleDecodeP = anyWord8 >>= toRLEAction
 {-|
 Decode a RLE bytestring.
 -}
-decompress :: BS.ByteString -> Fallible BS.ByteString
+decompress :: ByteString -> Fallible ByteString
 decompress stream =
   case
       BS.concat
@@ -89,7 +90,7 @@ decompress stream =
       Left  msg     -> Left (RLEDecodeError msg)
       Right decoded -> Right decoded
 
-upToNEqual :: (Int, Word8) -> Get BS.ByteString
+upToNEqual :: (Int, Word8) -> Get ByteString
 upToNEqual state = scan state updateState
  where
   updateState :: (Int, Word8) -> Word8 -> Maybe (Int, Word8)
@@ -97,7 +98,7 @@ upToNEqual state = scan state updateState
   updateState (count, previous) byte =
     if previous == byte then Just (count - 1, byte) else Nothing
 
-upToNNotEqual :: (Int, Word8) -> Get BS.ByteString
+upToNNotEqual :: (Int, Word8) -> Get ByteString
 upToNNotEqual state = scan state updateState
  where
   updateState :: (Int, Word8) -> Word8 -> Maybe (Int, Word8)
@@ -123,7 +124,7 @@ rleEncodeP = do
 {-|
 Encode a bytestring into an RLE bytestring.
 -}
-compress :: BS.ByteString -> Fallible BS.ByteString
+compress :: ByteString -> Fallible ByteString
 compress stream =
   case
       BS.concat
@@ -139,7 +140,7 @@ Gives a number showing the "entropy" of a `ByteString`.
 The lower the number, the more compressible the `ByteString`.
 -}
 entropyCompress
-  :: BS.ByteString -- ^ A strict bytestring
+  :: ByteString -- ^ A strict bytestring
   -> Double
 entropyCompress = fromIntegral
                 . either (const maxInt) BS.length

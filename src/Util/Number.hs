@@ -12,6 +12,7 @@ module Util.Number
   ) where
 
 import Data.Bits (shiftR)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.UTF8 (fromString)
 import Data.Double.Conversion.ByteString (toShortest)
@@ -68,7 +69,7 @@ For example:
 - 0.3 → ".3"
 - 3.0 → "3"
 -}
-fromNumber :: Double -> BS.ByteString
+fromNumber :: Double -> ByteString
 fromNumber number
   | startsWith "0." str  = BS.drop 1 str
   | startsWith "-0." str = BS.cons asciiHYPHENMINUS (BS.drop 2 str)
@@ -86,7 +87,7 @@ For example:
 - 0.3 → ".3"
 - 3.0 → "3"
 -}
-fromNumberRounded :: Int -> Double -> BS.ByteString
+fromNumberRounded :: Int -> Double -> ByteString
 fromNumberRounded limit number
   | startsWith "0." str  = BS.drop 1 str
   | startsWith "-0." str = BS.cons asciiHYPHENMINUS (BS.drop 2 str)
@@ -94,7 +95,7 @@ fromNumberRounded limit number
   where str = toShortest (round' limit number)
 
 -- | Output an int
-fromInt :: Int -> BS.ByteString
+fromInt :: Int -> ByteString
 fromInt = fromString . show
 
 {- |
@@ -110,7 +111,7 @@ bytesNeededToEncode number =
 {- |
 Encodes a number in the minimum bytes required.
 -}
-encodeIntToBytes :: Int -> Int -> BS.ByteString
+encodeIntToBytes :: Int -> Int -> ByteString
 encodeIntToBytes count number
   | count == 0 = ""
   | otherwise = BS.snoc (encodeIntToBytes (count - 1) leftPart) rightPart
