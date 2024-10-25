@@ -94,7 +94,7 @@ pretty processed level (PDFDictionary dict) = do
                     else pretty processed (hide (inc level)) value
         return $ BS.dropEnd 1 pKey <> " " <> pValue
     )
-    (Map.toList dict)
+    (Map.toAscList dict)
   return $ level %> "<<\n" <> BS.concat children <> disp level %> ">>\n"
 
 pretty processed level (PDFIndirectObject major minor object)

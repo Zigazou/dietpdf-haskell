@@ -738,7 +738,7 @@ fromArray items = BS.concat ["[", separateGfx items, "]"]
 
 fromDictionary :: Dictionary GFXObject -> ByteString
 fromDictionary keyValues = BS.concat
-  ["<<", separateGfx (splitCouple (mkArray (Map.toList keyValues))), ">>"]
+  ["<<", separateGfx (splitCouple (mkArray (Map.toAscList keyValues))), ">>"]
  where
   splitCouple SQ.Empty = SQ.empty
   splitCouple ((key, value) SQ.:<| remains) =
@@ -747,7 +747,7 @@ fromDictionary keyValues = BS.concat
 fromInlineImage :: Dictionary GFXObject -> ByteString -> ByteString
 fromInlineImage keyValues image = BS.concat
   [ "BI "
-  , separateGfx (splitCouple (mkArray (Map.toList keyValues)))
+  , separateGfx (splitCouple (mkArray (Map.toAscList keyValues)))
   , " ID\n"
   , image
   , "\nEI"

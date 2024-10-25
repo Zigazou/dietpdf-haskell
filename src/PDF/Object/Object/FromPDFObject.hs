@@ -79,7 +79,7 @@ fromArray items = BS.concat ["[", separateObjects (toList items), "]"]
 
 fromDictionary :: Dictionary PDFObject -> ByteString
 fromDictionary keyValues = BS.concat
-  ["<<", separateObjects (splitCouple (Map.toList keyValues)), ">>"]
+  ["<<", separateObjects (splitCouple (Map.toAscList keyValues)), ">>"]
  where
   splitCouple [] = []
   splitCouple ((key, value) : remains) =
