@@ -73,6 +73,7 @@ library
       Data.PDF.PDFPartition
       Data.PDF.PDFWork
       Data.PDF.Program
+      Data.PDF.Resource
       Data.PDF.Settings
       Data.PDF.Statistics
       Data.PDF.TextState
@@ -101,10 +102,12 @@ library
       PDF.Document.Encode
       PDF.Document.MergeVectorStream
       PDF.Document.ObjectStream
+      PDF.Document.OptimizeNumbers
       PDF.Document.OptimizeOptionalDictionaryEntries
       PDF.Document.Parser
       PDF.Document.PDFObjects
       PDF.Document.PDFPartition
+      PDF.Document.Resources
       PDF.Document.Stat
       PDF.Document.Uncompress
       PDF.Document.XRef
@@ -124,6 +127,8 @@ library
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
+      PDF.Graphics.Interpreter.RenameResources
+      PDF.Graphics.Interpreter.ResourcesUsed
       PDF.Graphics.Optimize
       PDF.Graphics.Parser.Comment
       PDF.Graphics.Parser.Container
@@ -137,7 +142,6 @@ library
       PDF.Graphics.Parser.Reference
       PDF.Graphics.Parser.Stream
       PDF.Graphics.Parser.String
-      PDF.Graphics.RenameResources
       PDF.Object.Container
       PDF.Object.Format
       PDF.Object.Linearization
@@ -327,10 +331,12 @@ test-suite dietpdf-test
       PDF.Document.DocumentSpec
       PDF.Document.EncodeSpec
       PDF.Document.ObjectStreamSpec
+      PDF.Document.ResourcesSpec
       PDF.Document.XRefSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffectiveSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestoreSpec
       PDF.Graphics.Interpreter.OptimizeProgramSpec
+      PDF.Graphics.Interpreter.ResourcesUsedSpec
       PDF.Graphics.Parser.ArraySpec
       PDF.Graphics.Parser.CommentSpec
       PDF.Graphics.Parser.DictionarySpec
@@ -347,6 +353,7 @@ test-suite dietpdf-test
       PDF.Object.LinearizationSpec
       PDF.Object.NameSpec
       PDF.Object.NumberSpec
+      PDF.Object.Object.RenameResourcesSpec
       PDF.Object.OptimizeSpec
       PDF.Object.Parser.ArraySpec
       PDF.Object.Parser.CommentSpec

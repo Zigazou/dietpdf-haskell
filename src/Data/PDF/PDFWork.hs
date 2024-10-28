@@ -33,7 +33,6 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except (runExceptT, throwE)
 import Control.Monad.Trans.State (evalStateT)
 
-import Data.ByteString (ByteString)
 import Data.Context (Context (NoContext))
 import Data.Fallible (Fallible, FallibleT)
 import Data.IntMap qualified as IM
@@ -42,17 +41,16 @@ import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Map qualified as Map
 import Data.PDF.PDFDocument (singleton)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFNull, PDFNumber, PDFReference, PDFTrailer, PDFXRefStream)
-    )
+  ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFNull, PDFNumber, PDFReference, PDFTrailer, PDFXRefStream)
+  )
 import Data.PDF.PDFObjects (findLast)
 import Data.PDF.PDFPartition
-    ( PDFPartition (ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
-    , lastTrailer
-    )
+  ( PDFPartition (ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
+  , lastTrailer
+  )
+import Data.PDF.Resource (Resource)
 import Data.PDF.WorkData
-    ( WorkData (wContexts, wNameTranslations, wPDF)
-    , emptyWorkData
-    )
+  (WorkData (wContexts, wNameTranslations, wPDF), emptyWorkData)
 import Data.Text (Text)
 import Data.TranslationTable (TranslationTable)
 import Data.UnifiedError (UnifiedError)
@@ -190,11 +188,11 @@ putNewObject object = do
 
     _anythingElse -> return 0
 
-setTranslationTable :: Monad m => TranslationTable ByteString -> PDFWork m ()
+setTranslationTable :: Monad m => TranslationTable Resource -> PDFWork m ()
 setTranslationTable translationTable = modifyWorkData $
   \workData -> workData { wNameTranslations = translationTable }
 
-getTranslationTable :: Monad m => PDFWork m (TranslationTable ByteString)
+getTranslationTable :: Monad m => PDFWork m (TranslationTable Resource)
 getTranslationTable = gets wNameTranslations
 
 isEmptyPDF :: Monad m => PDFWork m Bool

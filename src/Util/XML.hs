@@ -71,8 +71,8 @@ getAllPrefixes contents = concatMap (filter (/= "xmlns")) $ do
 baseDigits :: ByteString
 baseDigits = "abcdefghijklmnopqrstuvwxyz"
 
-toNameBase :: Int -> String
-toNameBase value = toNameBase' value ""
+toNameBase :: String -> Int -> String
+toNameBase _orig value = toNameBase' value ""
   where
     toNameBase' :: Int -> String -> String
     toNameBase' 0 ""  = "a"

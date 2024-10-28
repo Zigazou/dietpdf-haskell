@@ -4,18 +4,18 @@ module Data.PDF.WorkData
   , setSettings
   ) where
 
-import Data.ByteString (ByteString)
 import Data.Context (Context)
 import Data.Kind (Type)
 import Data.PDF.PDFPartition (PDFPartition)
-import Data.TranslationTable (TranslationTable)
+import Data.PDF.Resource (Resource)
 import Data.PDF.Settings (Settings, defaultSettings)
+import Data.TranslationTable (TranslationTable)
 
 type WorkData :: Type
 data WorkData = WorkData
   { wPDF              :: !PDFPartition
   , wContexts         :: ![Context]
-  , wNameTranslations :: !(TranslationTable ByteString)
+  , wNameTranslations :: !(TranslationTable Resource)
   , wSettings         :: !Settings
   }
 

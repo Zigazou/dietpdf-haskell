@@ -17,68 +17,62 @@ import Data.Context (Contextual (ctx))
 import Data.IntMap qualified as IM
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (catMaybes)
 import Data.PDF.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Data.PDF.PDFDocument (PDFDocument, fromList)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion)
-    , getObjectNumber
-    )
+  ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion)
+  , getObjectNumber
+  )
+import Data.PDF.PDFObjects (toPDFDocument)
 import Data.PDF.PDFPartition
-    ( PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream)
-    )
+  (PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream))
 import Data.PDF.PDFWork
-    ( PDFWork
-    , getTrailer
-    , hasNoVersion
-    , isEmptyPDF
-    , lastObjectNumber
-    , modifyIndirectObjects
-    , pushContext
-    , putNewObject
-    , putObject
-    , sayP
-    , setTrailer
-    , setTranslationTable
-    , throwError
-    , withStreamCount
-    , withoutStreamCount
-    )
+  ( PDFWork
+  , getTrailer
+  , hasNoVersion
+  , isEmptyPDF
+  , lastObjectNumber
+  , modifyIndirectObjects
+  , pushContext
+  , putNewObject
+  , putObject
+  , sayP
+  , setTrailer
+  , setTranslationTable
+  , throwError
+  , withStreamCount
+  , withoutStreamCount
+  )
+import Data.PDF.Resource (toNameBase)
 import Data.PDF.Settings
-    ( OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX)
-    , Settings (sOptimizeGFX)
-    )
+  (OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX), Settings (sOptimizeGFX))
 import Data.PDF.WorkData (WorkData (wPDF, wSettings))
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 import Data.TranslationTable (getTranslationTable)
 import Data.UnifiedError
-    ( UnifiedError (EncodeEncrypted, EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
-    )
+  ( UnifiedError (EncodeEncrypted, EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
+  )
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
 import PDF.Document.MergeVectorStream (mergeVectorStream)
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
+import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
-    ( optimizeOptionalDictionaryEntries
-    )
+  (optimizeOptionalDictionaryEntries)
+import PDF.Document.Resources (getAllResourceNames)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
-import PDF.Object.Object.RenameResources (renameResources)
+import PDF.Object.Object.RenameResources (containsResources, renameResources)
 import PDF.Object.State (getValue, setMaybe)
 import PDF.Processing.Optimize (optimize)
 import PDF.Processing.PDFWork
-    ( clean
-    , importObjects
-    , pMapP
-    , pModifyIndirectObjects
-    )
+  (clean, importObjects, pMapP, pModifyIndirectObjects)
 
 import System.IO (hSetBuffering, stderr)
 
-import Util.ByteString (toNameBase)
 import Util.Sequence (mapMaybe)
 
 {- |
@@ -121,46 +115,6 @@ updateXRefStm trailer xRefStm = do
   setMaybe "Root" mRoot xRefStm
     >>= setMaybe "Info" mInfo
     >>= setMaybe "ID" mID
-
-{- |
-Finds all resource names in a collection of PDF objects.
-
-Resources are typically stored in a dictionary object with a "Resources" key.
--}
-getAllResourceNames :: Monad m => PDFWork m [ByteString]
-getAllResourceNames =
-  gets (concat . getAllResourceNames' . ppObjectsWithoutStream . wPDF)
- where
-  getAllResourceNames' :: IM.IntMap PDFObject -> [[ByteString]]
-  getAllResourceNames' objects = do
-    (_, object) <- IM.toList objects
-    (return . concat . catMaybes)
-      [ getResourceKeys "ColorSpace" object
-      , getResourceKeys "Font"       object
-      , getResourceKeys "XObject"    object
-      , getResourceKeys "ExtGState"  object
-      , getResourceKeys "Properties" object
-      , getResourceKeys "Pattern"    object
-      , getKeys         "ColorSpace" object
-      , getKeys         "Font"       object
-      , getKeys         "XObject"    object
-      , getKeys         "ExtGState"  object
-      , getKeys         "Properties" object
-      , getKeys         "Pattern"    object
-      ]
-
-  getKeys :: ByteString -> PDFObject -> Maybe [ByteString]
-  getKeys key object = do
-    getValueForKey key object >>= \case
-      PDFDictionary dict -> Just $ Map.keys dict
-      _notADictionary    -> Nothing
-
-  getResourceKeys :: ByteString -> PDFObject -> Maybe [ByteString]
-  getResourceKeys key object = do
-    resources <- getValueForKey "Resources" object
-    getValueForKey key resources >>= \case
-      PDFDictionary dict -> Just $ Map.keys dict
-      _notADictionary    -> Nothing
 
 mergePagesContents :: Logging m => PDFObject -> PDFWork m PDFObject
 mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) = do
@@ -221,6 +175,9 @@ pdfEncode objects = do
 
   resourceNames <- getAllResourceNames
 
+  -- Optimize Numbers
+  optimizeNumbers
+
   -- Do not create a translation table if GFX won't be optimized.
   sayP "Optimizing resource names"
   optGFX <- gets (sOptimizeGFX . wSettings)
@@ -230,7 +187,13 @@ pdfEncode objects = do
 
   setTranslationTable nameTranslations
 
-  modifyIndirectObjects (renameResources nameTranslations)
+  containingResources <- gets ( containsResources
+                              . toPDFDocument
+                              . ppObjectsWithoutStream
+                              . wPDF
+                              )
+
+  modifyIndirectObjects (renameResources nameTranslations containingResources)
 
   sayP "Optimizing optional dictionary entries"
   modifyIndirectObjects optimizeOptionalDictionaryEntries

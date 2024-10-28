@@ -4,8 +4,8 @@ module PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
 
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
-    ( GSOperator (GSBeginCompatibilitySection, GSBeginInlineImage, GSBeginMarkedContentSequence, GSBeginMarkedContentSequencePL, GSBeginText, GSCloseFillStrokeEOR, GSCloseFillStrokeNZWR, GSCloseStrokePath, GSCloseSubpath, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSEndCompatibilitySection, GSEndInlineImage, GSEndMarkedContentSequence, GSEndPath, GSEndText, GSFillPathEOR, GSFillPathNZWR, GSFillStrokePathEOR, GSFillStrokePathNZWR, GSInlineImageData, GSIntersectClippingPathEOR, GSIntersectClippingPathNZWR, GSLineTo, GSMarkedContentPoint, GSMarkedContentPointPL, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSNLShowText, GSNLShowTextWithSpacing, GSNextLine, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetBoundingBoxGlyph, GSSetCTM, GSSetCharacterSpacing, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetGlyphWidth, GSSetHorizontalScaling, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetParameters, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetTextRenderingMode, GSSetTextRise, GSSetWordSpacing, GSShowManyText, GSShowText, GSStrokePath)
-    )
+  ( GSOperator (GSBeginCompatibilitySection, GSBeginInlineImage, GSBeginMarkedContentSequence, GSBeginMarkedContentSequencePL, GSBeginText, GSCloseFillStrokeEOR, GSCloseFillStrokeNZWR, GSCloseStrokePath, GSEndCompatibilitySection, GSEndInlineImage, GSEndMarkedContentSequence, GSEndPath, GSEndText, GSFillPathEOR, GSFillPathNZWR, GSFillStrokePathEOR, GSFillStrokePathNZWR, GSNLShowText, GSNLShowTextWithSpacing, GSPaintShapeColourShading, GSPaintXObject, GSRestoreGS, GSSaveGS, GSShowManyText, GSShowText, GSStrokePath)
+  )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|)), (<|))
 
@@ -14,81 +14,32 @@ isRestore :: Command -> Bool
 isRestore (Command GSRestoreGS _params) = True
 isRestore _anyOtherCommand              = False
 
-isDrawingCommand :: Command -> Bool
-isDrawingCommand (Command command _params) = case command of
-  GSSaveGS                       -> True
-  GSRestoreGS                    -> True
-  GSSetCTM                       -> False
-  GSSetLineWidth                 -> False
-  GSSetLineCap                   -> False
-  GSSetLineJoin                  -> False
-  GSSetMiterLimit                -> False
-  GSSetLineDashPattern           -> False
-  GSSetColourRenderingIntent     -> False
-  GSSetFlatnessTolerance         -> False
-  GSSetParameters                -> False
-  GSMoveTo                       -> False
-  GSLineTo                       -> True
-  GSCubicBezierCurve             -> True
-  GSCubicBezierCurve1To          -> True
-  GSCubicBezierCurve2To          -> True
-  GSCloseSubpath                 -> False
-  GSRectangle                    -> True
-  GSStrokePath                   -> True
-  GSCloseStrokePath              -> True
-  GSFillPathNZWR                 -> True
-  GSFillPathEOR                  -> True
-  GSFillStrokePathNZWR           -> True
-  GSFillStrokePathEOR            -> True
-  GSCloseFillStrokeNZWR          -> True
-  GSCloseFillStrokeEOR           -> True
-  GSEndPath                      -> True
-  GSBeginText                    -> True
-  GSEndText                      -> True
-  GSMoveToNextLine               -> False
-  GSMoveToNextLineLP             -> False
-  GSSetTextMatrix                -> False
-  GSNextLine                     -> False
-  GSShowText                     -> True
-  GSNLShowText                   -> True
-  GSNLShowTextWithSpacing        -> True
-  GSShowManyText                 -> True
-  GSSetCharacterSpacing          -> False
-  GSSetWordSpacing               -> False
-  GSSetHorizontalScaling         -> False
-  GSSetTextLeading               -> False
-  GSSetTextFont                  -> False
-  GSSetTextRenderingMode         -> False
-  GSSetTextRise                  -> False
-  GSSetGlyphWidth                -> False
-  GSSetBoundingBoxGlyph          -> False
-  GSSetStrokeColorspace          -> False
-  GSSetNonStrokeColorspace       -> False
-  GSSetStrokeColor               -> False
-  GSSetStrokeColorN              -> False
-  GSSetNonStrokeColor            -> False
-  GSSetNonStrokeColorN           -> False
-  GSSetStrokeGrayColorspace      -> False
-  GSSetNonStrokeGrayColorspace   -> False
-  GSSetStrokeRGBColorspace       -> False
-  GSSetNonStrokeRGBColorspace    -> False
-  GSSetStrokeCMYKColorspace      -> False
-  GSSetNonStrokeCMYKColorspace   -> False
-  GSPaintShapeColourShading      -> True
-  GSPaintXObject                 -> True
-  GSMarkedContentPoint           -> False
-  GSMarkedContentPointPL         -> False
-  GSBeginMarkedContentSequence   -> False
-  GSBeginMarkedContentSequencePL -> False
-  GSEndMarkedContentSequence     -> False
-  GSBeginCompatibilitySection    -> False
-  GSEndCompatibilitySection      -> False
-  GSIntersectClippingPathNZWR    -> True
-  GSIntersectClippingPathEOR     -> True
-  GSBeginInlineImage             -> True
-  GSInlineImageData              -> True
-  GSEndInlineImage               -> True
-  _anyOtherCommand               -> True
+isSave :: Command -> Bool
+isSave (Command GSSaveGS _params) = True
+isSave _anyOtherCommand           = False
+
+isPathPaintingCommand :: Command -> Bool
+isPathPaintingCommand (Command command _params) = case command of
+  GSStrokePath              -> True
+  GSCloseStrokePath         -> True
+  GSFillPathNZWR            -> True
+  GSFillPathEOR             -> True
+  GSFillStrokePathNZWR      -> True
+  GSFillStrokePathEOR       -> True
+  GSCloseFillStrokeNZWR     -> True
+  GSCloseFillStrokeEOR      -> True
+  GSEndPath                 -> True
+  GSPaintShapeColourShading -> True
+  GSPaintXObject            -> True
+  _anyOtherCommand          -> False
+
+isTextPaintingCommand :: Command -> Bool
+isTextPaintingCommand (Command command _params) = case command of
+  GSShowText              -> True
+  GSNLShowText            -> True
+  GSNLShowTextWithSpacing -> True
+  GSShowManyText          -> True
+  _anyOtherCommand        -> False
 
 protectedCommand :: Command -> Bool
 protectedCommand (Command command _params) = case command of
@@ -101,15 +52,19 @@ protectedCommand (Command command _params) = case command of
   GSEndMarkedContentSequence     -> True
   GSBeginText                    -> True
   GSEndText                      -> True
+  GSSaveGS                       -> True
   _anyOtherCommand               -> False
 
-anyDrawingCommandBeforeRestore :: Program -> Bool
-anyDrawingCommandBeforeRestore Empty = True
-anyDrawingCommandBeforeRestore (_command :<| Empty) = True
-anyDrawingCommandBeforeRestore (command :<| rest)
-  | isRestore command        = False
-  | isDrawingCommand command = True
-  | otherwise                = anyDrawingCommandBeforeRestore rest
+anyPaintingCommandBeforeRestore :: Int -> Program -> Bool
+anyPaintingCommandBeforeRestore _level Empty = True
+anyPaintingCommandBeforeRestore _level (_command :<| Empty) = True
+anyPaintingCommandBeforeRestore level (command :<| rest)
+  | isSave command                  = anyPaintingCommandBeforeRestore (level + 1) rest
+  | level > 0 && isRestore command  = anyPaintingCommandBeforeRestore (level - 1) rest
+  | level == 0 && isRestore command = False
+  | isPathPaintingCommand command   = True
+  | isTextPaintingCommand command   = True
+  | otherwise                       = anyPaintingCommandBeforeRestore level rest
 
 {- |
 Remove useless save/restore commands.
@@ -117,8 +72,9 @@ Remove useless save/restore commands.
 optimizeIneffective :: Program -> Program
 optimizeIneffective Empty = mempty
 optimizeIneffective (command :<| rest)
-  | isDrawingCommand command = command <| optimizeIneffective rest
+  | isPathPaintingCommand command = command <| optimizeIneffective rest
+  | isTextPaintingCommand command = command <| optimizeIneffective rest
   | otherwise =
-      if anyDrawingCommandBeforeRestore rest || protectedCommand command
+      if anyPaintingCommandBeforeRestore 0 rest || protectedCommand command
         then command <| optimizeIneffective rest
         else optimizeIneffective rest

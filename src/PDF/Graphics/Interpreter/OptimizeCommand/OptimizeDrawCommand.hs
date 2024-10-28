@@ -58,15 +58,40 @@ optimizeDrawCommand command rest = case (operator, parameters) of
         y2' = round' precision y2
         x3' = round' precision x3
         y3' = round' precision y3
-    setCurrentPointS x3' y3'
-    return
-      (ReplaceCommand
-        (Command GSCubicBezierCurve (GFXNumber x1' :<| GFXNumber y1'
-                                 :<| GFXNumber x2' :<| GFXNumber y2'
-                                 :<| GFXNumber x3' :<| GFXNumber y3'
-                                 :<| Empty)
-        )
-      )
+
+    currentX <- gets (gsCurrentPointX . iGraphicsState)
+    currentY <- gets (gsCurrentPointY . iGraphicsState)
+    if | (x1', y1') == (currentX, currentY) -> do
+          setCurrentPointS x3' y3'
+          return
+            (ReplaceCommand
+              (Command GSCubicBezierCurve1To (   GFXNumber x2' :<| GFXNumber y2'
+                                             :<| GFXNumber x3' :<| GFXNumber y3'
+                                             :<| Empty
+                                             )
+              )
+            )
+       | (x2', y2') == (currentX, currentY) -> do
+          setCurrentPointS x3' y3'
+          return
+            (ReplaceCommand
+              (Command GSCubicBezierCurve2To (   GFXNumber x1' :<| GFXNumber y1'
+                                             :<| GFXNumber x3' :<| GFXNumber y3'
+                                             :<| Empty
+                                             )
+              )
+            )
+       | otherwise -> do
+          setCurrentPointS x3' y3'
+          return
+            (ReplaceCommand
+              (Command GSCubicBezierCurve (   GFXNumber x1' :<| GFXNumber y1'
+                                          :<| GFXNumber x2' :<| GFXNumber y2'
+                                          :<| GFXNumber x3' :<| GFXNumber y3'
+                                          :<| Empty
+                                          )
+              )
+            )
 
   (GSCubicBezierCurve1To, GFXNumber x1 :<| GFXNumber y1
                       :<| GFXNumber x3 :<| GFXNumber y3

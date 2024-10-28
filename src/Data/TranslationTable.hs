@@ -7,8 +7,12 @@ module Data.TranslationTable
   , getTranslationTableFrom
   , mergeTranslationTables
   , nextFreeIndex
+  , hasTerm
   ) where
 
+import Control.Monad (liftM2)
+
+import Data.Foldable (toList)
 import Data.HasLength (HasLength (objectLength))
 import Data.Kind (Type)
 import Data.List (sortBy)
@@ -51,9 +55,9 @@ The corresponding `Map` is returned.
 Shortest strings are renamed first, giving them the shortest name.
 -}
 getTranslationTable
-  :: (Ord a, HasLength a)
-  => (Int -> a)
-  -> [a]
+  :: (Ord a, HasLength a, Foldable t)
+  => (a -> Int -> a)
+  -> t a
   -> TranslationTable a
 getTranslationTable = getTranslationTableFrom 0
 
@@ -64,14 +68,17 @@ The corresponding `Map` is returned.
 Shortest strings are renamed first, giving them the shortest name.
 -}
 getTranslationTableFrom
-  :: (Ord a, HasLength a)
+  :: (Ord a, HasLength a, Foldable t)
   => Int
-  -> (Int -> a)
-  -> [a]
+  -> (a -> Int -> a)
+  -> t a
   -> TranslationTable a
-getTranslationTableFrom from toNameBase names =
-  mkTranslationTable $ zip ((sortBy shortFirst . nubOrd) names)
-                           (fmap toNameBase [from..])
+getTranslationTableFrom from generator names =
+  let terms = (sortBy shortFirst . nubOrd . toList) names
+  in mkTranslationTable $ zipWith (liftM2 (.) (,) generator) terms [from..]
+
+hasTerm :: Ord a => TranslationTable a -> a -> Bool
+hasTerm = flip Map.member
 
 {- |
 Merge two translation tables.

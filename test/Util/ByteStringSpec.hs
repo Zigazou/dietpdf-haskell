@@ -117,5 +117,5 @@ spec = do
     $ forM_ renameStringsExamples
     $ \(example, expected) ->
         it ("should rename strings " ++ show example)
-          $          getTranslationTable toNameBase example
+          $          getTranslationTable (\_ a -> toNameBase a) example
           `shouldBe` expected

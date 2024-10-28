@@ -48,8 +48,9 @@ optimizeCommands program (command :<| rest) =
 
 optimizeProgramOnePass :: WorkData -> Program -> Program
 optimizeProgramOnePass workData
-  = (flip evalState defaultInterpreterState { iWorkData = workData }
-  . optimizeCommands mempty)
+  = ( flip evalState defaultInterpreterState { iWorkData = workData }
+    . optimizeCommands mempty
+    )
   . optimizeDuplicates
   . optimizeIneffective
   . optimizeRectangle

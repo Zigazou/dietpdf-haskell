@@ -25,7 +25,7 @@ import Data.Sequence qualified as SQ
 
 import PDF.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
 import PDF.Graphics.Parser.Stream (gfxParse)
-import PDF.Graphics.RenameResources (renameResourcesInObject)
+import PDF.Graphics.Interpreter.RenameResources (renameResources)
 
 optimizeGFX :: Logging m => ByteString -> PDFWork m ByteString
 optimizeGFX stream = do
@@ -41,9 +41,9 @@ optimizeGFX stream = do
             nameTranslations <- getTranslationTable
             workData <- get
             let optimizedStream = separateGfx
-                                . fmap (renameResourcesInObject nameTranslations)
                                 . extractObjects
                                 . optimizeProgram workData
+                                . renameResources nameTranslations
                                 . parseProgram
                                 $ objects
 
