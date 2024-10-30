@@ -1,5 +1,6 @@
 module PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
   ( optimizeIneffective
+  , anyPaintingCommandBeforeRestore
   ) where
 
 import Data.PDF.Command (Command (Command))
@@ -53,11 +54,11 @@ protectedCommand (Command command _params) = case command of
   GSBeginText                    -> True
   GSEndText                      -> True
   GSSaveGS                       -> True
+  GSRestoreGS                    -> True
   _anyOtherCommand               -> False
 
 anyPaintingCommandBeforeRestore :: Int -> Program -> Bool
-anyPaintingCommandBeforeRestore _level Empty = True
-anyPaintingCommandBeforeRestore _level (_command :<| Empty) = True
+anyPaintingCommandBeforeRestore _anyLevel Empty = False
 anyPaintingCommandBeforeRestore level (command :<| rest)
   | isSave command                  = anyPaintingCommandBeforeRestore (level + 1) rest
   | level > 0 && isRestore command  = anyPaintingCommandBeforeRestore (level - 1) rest
@@ -72,9 +73,8 @@ Remove useless save/restore commands.
 optimizeIneffective :: Program -> Program
 optimizeIneffective Empty = mempty
 optimizeIneffective (command :<| rest)
-  | isPathPaintingCommand command = command <| optimizeIneffective rest
-  | isTextPaintingCommand command = command <| optimizeIneffective rest
-  | otherwise =
-      if anyPaintingCommandBeforeRestore 0 rest || protectedCommand command
-        then command <| optimizeIneffective rest
-        else optimizeIneffective rest
+  | isPathPaintingCommand command          = command <| optimizeIneffective rest
+  | isTextPaintingCommand command          = command <| optimizeIneffective rest
+  | protectedCommand command               = command <| optimizeIneffective rest
+  | anyPaintingCommandBeforeRestore 0 rest = command <| optimizeIneffective rest
+  | otherwise                              = optimizeIneffective rest

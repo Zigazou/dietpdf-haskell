@@ -19,11 +19,12 @@ import External.TiffToJpeg2k (tiffToJpeg2k)
 
 jpeg2k
   :: Logging IO
-  => Maybe (Int, Int, ColorSpace)
+  => Maybe Int
+  -> Maybe (Int, Int, ColorSpace)
   -> ByteString
   -> PDFWork IO FilterCombination
-jpeg2k (Just (width, height, colorSpace)) stream =
-  lift (tiffToJpeg2k width height colorSpace stream)
+jpeg2k quality (Just (width, height, colorSpace)) stream =
+  lift (tiffToJpeg2k quality width height colorSpace stream)
     <&> mkFCAppend [Filter (PDFName "JPXDecode") PDFNull]
-jpeg2k Nothing _ =
+jpeg2k _quality Nothing _stream =
   throwError (UnsupportedFeature "No width and height information for JPEG2000")

@@ -100,6 +100,7 @@ library
       Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
       PDF.Document.Encode
+      PDF.Document.GetAllMasks
       PDF.Document.MergeVectorStream
       PDF.Document.ObjectStream
       PDF.Document.OptimizeNumbers
@@ -330,9 +331,13 @@ test-suite dietpdf-test
       Font.TrueType.Parser.HeadSpec
       PDF.Document.DocumentSpec
       PDF.Document.EncodeSpec
+      PDF.Document.GetAllMasksSpec
       PDF.Document.ObjectStreamSpec
       PDF.Document.ResourcesSpec
       PDF.Document.XRefSpec
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorSpec
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGenericSpec
+      PDF.Graphics.Interpreter.OptimizeCommandSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffectiveSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestoreSpec
       PDF.Graphics.Interpreter.OptimizeProgramSpec

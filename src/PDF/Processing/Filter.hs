@@ -18,25 +18,26 @@ import Data.Functor ((<&>))
 import Data.Logging (Logging)
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination
-    ( FilterCombination (FilterCombination)
-    , fcBytes
-    , fcLength
-    , fcList
-    , fcReplace
-    , mkFCAppend
-    , mkFCReplace
-    )
+  ( FilterCombination (FilterCombination)
+  , fcBytes
+  , fcLength
+  , fcList
+  , fcReplace
+  , mkFCAppend
+  , mkFCReplace
+  )
 import Data.PDF.OptimizationType
-    ( OptimizationType (JPGOptimization, XRefStreamOptimization)
-    )
+  (OptimizationType (JPGOptimization, XRefStreamOptimization))
 import Data.PDF.PDFObject
-    ( PDFObject (PDFName, PDFNull, PDFNumber, PDFNumber, PDFXRefStream)
-    , hasStream
-    )
-import Data.PDF.PDFWork (PDFWork, sayComparisonP, withContext)
+  ( PDFObject (PDFName, PDFNull, PDFNumber, PDFNumber, PDFXRefStream)
+  , getObjectNumber
+  , hasStream
+  )
+import Data.PDF.PDFWork (PDFWork, getMasks, sayComparisonP, withContext)
 import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli), sZopfli)
 import Data.PDF.WorkData (wSettings)
 import Data.Sequence ((><))
+import Data.Set qualified as Set
 import Data.Text qualified as T
 
 import External.JpegToJpeg2k (jpegToJpeg2k)
@@ -65,21 +66,22 @@ filterInfo filterName streamBefore streamAfter =
 
 applyEveryFilterGeneric
   :: Logging IO
-  => Maybe (Int, Int)
+  => Bool
+  -> Maybe (Int, Int)
   -> ByteString
   -> PDFWork IO [FilterCombination]
 -- The stream has width and components information.
-applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
+applyEveryFilterGeneric objectIsAMask widthComponents@(Just (width, components)) stream = do
   useZopfli <- gets (sZopfli . wSettings)
 
   let rNothing = mkFCAppend [] stream
-      jpeg2kParameters =
-        Just ( width
-             , BS.length stream `div` (width * components)
-             , fromComponents components
-             )
+      jpeg2kParameters = Just ( width
+                              , BS.length stream `div` (width * components)
+                              , fromComponents components
+                              )
+      quality = if objectIsAMask then Just 50 else Nothing
 
-  rJpeg2k <- jpeg2k jpeg2kParameters stream
+  rJpeg2k <- jpeg2k quality jpeg2kParameters stream
   filterInfo "JPEG2000" stream (fcBytes rJpeg2k)
 
   rRle <- lift (except $ rle widthComponents stream)
@@ -116,7 +118,7 @@ applyEveryFilterGeneric widthComponents@(Just (width, components)) stream = do
         ++ rleCombine
 
 -- The stream has no width nor components information.
-applyEveryFilterGeneric Nothing stream = do
+applyEveryFilterGeneric _objectIsAMask Nothing stream = do
   useZopfli <- gets (sZopfli . wSettings)
 
   let rNothing = mkFCAppend [] stream
@@ -142,11 +144,12 @@ applyEveryFilterGeneric Nothing stream = do
 
 applyEveryFilterJPG
   :: Logging IO
-  => Maybe (Int, Int)
+  => Bool
+  -> Maybe (Int, Int)
   -> ByteString
   -> PDFWork IO [FilterCombination]
 -- The stream has width and components information.
-applyEveryFilterJPG (Just _imageProperty) stream = do
+applyEveryFilterJPG _objectIsAMask (Just _imageProperty) stream = do
   useZopfli <- gets (sZopfli . wSettings)
   let rNothing = mkFCAppend [] stream
 
@@ -156,7 +159,8 @@ applyEveryFilterJPG (Just _imageProperty) stream = do
     UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
 
   -- Try Jpeg2000 for images with less than 4 components.
-  let jpeg2kQuality = 40 :: Int
+  let jpeg2kQuality :: Int
+      jpeg2kQuality = 60
 
   rJpeg2k <- lift (jpegToJpeg2k jpeg2kQuality stream)
          <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
@@ -164,7 +168,7 @@ applyEveryFilterJPG (Just _imageProperty) stream = do
 
   return [rNothing, rZopfli, rJpeg2k]
 
-applyEveryFilterJPG Nothing stream = do
+applyEveryFilterJPG _objectIsAMask Nothing stream = do
   useZopfli <- gets (sZopfli . wSettings)
   let rNothing = mkFCAppend [] stream
 
@@ -228,12 +232,19 @@ filterOptimize optimization object =
       stream          <- getStream object
       filters         <- getFilters object
       widthComponents <- getWidthComponents object
+      masks           <- getMasks
+
+      let objectIsAMask :: Bool
+          objectIsAMask = case getObjectNumber object of
+                            Just major    -> Set.member major masks
+                            _anyOtherCase -> False
 
       -- Find appropriate filters for the stream.
-      let applyEveryFilter = case optimization of
-                              JPGOptimization        -> applyEveryFilterJPG
-                              XRefStreamOptimization -> applyEveryFilterXRef
-                              _anyOtherOptimization  -> applyEveryFilterGeneric
+      let applyEveryFilter =
+            case optimization of
+              JPGOptimization        -> applyEveryFilterJPG objectIsAMask
+              XRefStreamOptimization -> applyEveryFilterXRef
+              _anyOtherOptimization  -> applyEveryFilterGeneric objectIsAMask
 
       -- Apply every filter to the stream and return the best result.
       candidates <- applyEveryFilter widthComponents stream <&> mkArray

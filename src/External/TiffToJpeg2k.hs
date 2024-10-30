@@ -15,14 +15,24 @@ supports CMYK JPEG 2000.
 This function is a wrapper around the `grk_compress` command-line tool.
 -}
 tiffToJpeg2k
-  :: Int
+  :: Maybe Int
+  -> Int
   -> Int
   -> ColorSpace
   -> ByteString
   -> FallibleT IO ByteString
-tiffToJpeg2k width height colorSpace input =
+tiffToJpeg2k Nothing width height colorSpace input =
   externalCommandBuf'' "grk_compress"
                        [ "--in-file", "-"
+                       , "--out-file", "-"
+                       ]
+                       "tiff"
+                       "jp2"
+                       (simpleTiff width height colorSpace input)
+tiffToJpeg2k (Just quality) width height colorSpace input =
+  externalCommandBuf'' "grk_compress"
+                       [ "--in-file", "-"
+                       , "--quality", show quality
                        , "--out-file", "-"
                        ]
                        "tiff"

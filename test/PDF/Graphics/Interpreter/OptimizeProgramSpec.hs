@@ -7,10 +7,10 @@ import Control.Monad (forM_)
 import Data.ByteString (ByteString)
 import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
-    ( GFXObject (GFXName, GFXNumber, GFXString)
-    , GSOperator (GSBeginText, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText)
-    , mkGFXArray
-    )
+  ( GFXObject (GFXName, GFXNumber, GFXString)
+  , GSOperator (GSBeginText, GSEndPath, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText)
+  , mkGFXArray
+  )
 import Data.PDF.Program (Program, mkProgram, parseProgram)
 import Data.PDF.WorkData (emptyWorkData)
 
@@ -22,13 +22,17 @@ import Test.Hspec (Spec, describe, it, shouldBe)
 optimizeProgramExamples :: [(ByteString, Program)]
 optimizeProgramExamples =
   [ ( "", mkProgram [] )
-  , ( "1.000042 2.421 m"
-    ,  mkProgram [ mkCommand GSMoveTo [GFXNumber 1.0, GFXNumber 2.42]]
+  , ( "1.000042 2.421 m n"
+    ,  mkProgram
+        [ mkCommand GSMoveTo [GFXNumber 1.000042, GFXNumber 2.421]
+        , mkCommand GSEndPath []
+        ]
     )
-  , ( "q cm Q"
+  , ( "q cm n Q"
     , mkProgram
         [ mkCommand GSSaveGS []
         , mkCommand GSSetCTM []
+        , mkCommand GSEndPath []
         , mkCommand GSRestoreGS []
         ]
     )

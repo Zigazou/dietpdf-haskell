@@ -4,22 +4,22 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommand
 
 import Control.Monad.State (State)
 
+import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNumber, GFXString)
-    , GSOperator (GSSetHorizontalScaling, GSSetTextFont, GSSetTextRise, GSShowManyText, GSShowText)
-    )
+  ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNumber, GFXString)
+  , GSOperator (GSSetHorizontalScaling, GSSetTextFont, GSSetTextRise, GSShowManyText, GSShowText)
+  )
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (KeepCommand, ReplaceCommand)
-    )
+  (InterpreterAction (KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
-    ( InterpreterState
-    , setFontS
-    , setHorizontalScalingS
-    , setTextRiseS
-    , usefulGraphicsPrecisionS
-    , usefulTextPrecisionS
-    )
+  ( InterpreterState
+  , setFontS
+  , setHorizontalScalingS
+  , setTextRiseS
+  , usefulGraphicsPrecisionS
+  , usefulTextPrecisionS
+  )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|)))
 
@@ -39,17 +39,22 @@ optimizeTextCommand command _rest = case (operator, parameters) of
   (GSSetTextFont, GFXName fontName :<| GFXNumber fontSize :<| Empty) -> do
     setFontS fontName fontSize
     precision <- usefulTextPrecisionS
-    return (ReplaceCommand (optimizeParameters command (precision + 1)))
+    return $ replaceCommandWith command
+                                (optimizeParameters command (precision + 1))
 
   -- Set text horizontal scaling
   (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) -> do
     setHorizontalScalingS scaling
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    optimizeParameters command
+      <$> usefulGraphicsPrecisionS
+      <&> replaceCommandWith command
 
   -- Set text rise
   (GSSetTextRise, GFXNumber rise :<| Empty) -> do
     setTextRiseS rise
-    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    optimizeParameters command
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
 
   -- Replace ShowManyText by ShowText when there is only one text
   (GSShowManyText, GFXArray items :<| Empty) -> do
@@ -58,10 +63,14 @@ optimizeTextCommand command _rest = case (operator, parameters) of
           str@(GFXHexString _string :<| Empty) -> Command GSShowText str
           _otherContent                        -> command
 
-    ReplaceCommand . optimizeParameters newCommand <$> usefulTextPrecisionS
+    optimizeParameters newCommand
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
 
   (GSShowText, _parameters) ->
-    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    optimizeParameters command
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
 
   _anyOtherCommand -> return KeepCommand
  where

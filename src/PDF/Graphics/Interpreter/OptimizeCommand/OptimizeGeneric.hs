@@ -4,26 +4,24 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGeneric
 
 import Control.Monad.State (State)
 
+import Data.Functor ((<&>))
 import Data.PDF.Command (Command (cOperator))
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (KeepCommand, ReplaceCommand)
-    )
+  (InterpreterAction (KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
-    ( InterpreterState
-    , usefulColorPrecisionS
-    , usefulGraphicsPrecisionS
-    , usefulTextPrecisionS
-    )
+  ( InterpreterState
+  , usefulColorPrecisionS
+  , usefulGraphicsPrecisionS
+  , usefulTextPrecisionS
+  )
 import Data.PDF.OperatorCategory
-    ( OperatorCategory (ClippingPathOperator, ColorOperator, PathConstructionOperator, PathPaintingOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
-    , category
-    )
+  ( OperatorCategory (ClippingPathOperator, ColorOperator, PathConstructionOperator, PathPaintingOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
+  , category
+  )
 import Data.PDF.Program (Program)
 
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor (optimizeColor)
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
-
-
 
 {- |
 The 'optimizeGeneric' function takes a 'GraphicsState' and a 'Command' and
@@ -35,20 +33,34 @@ optimizeGeneric
   -> State InterpreterState InterpreterAction
 optimizeGeneric command _rest = case category (cOperator command) of
   PathConstructionOperator ->
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    optimizeParameters command
+      <$> usefulGraphicsPrecisionS
+      <&> replaceCommandWith command
   PathPaintingOperator ->
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    optimizeParameters command
+      <$> usefulGraphicsPrecisionS
+      <&> replaceCommandWith command
   ClippingPathOperator ->
-    ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+    optimizeParameters command
+      <$> usefulGraphicsPrecisionS
+      <&> replaceCommandWith command
   TextStateOperator ->
-    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    optimizeParameters command
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
   Type3FontOperator ->
-    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    optimizeParameters command
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
   TextPositioningOperator ->
-    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    optimizeParameters command
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
   TextShowingOperator ->
-    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
-  ColorOperator -> ReplaceCommand
+    optimizeParameters command
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
+  ColorOperator -> replaceCommandWith command
                  . optimizeColor
                  . optimizeParameters command
                <$> usefulColorPrecisionS

@@ -1,5 +1,6 @@
 module Data.PDF.InterpreterAction
   ( InterpreterAction (ReplaceCommand, ReplaceAndDeleteNextCommand, DeleteCommand, KeepCommand)
+  , replaceCommandWith
   )
 where
 
@@ -13,3 +14,8 @@ data InterpreterAction
   | DeleteCommand
   | KeepCommand
   deriving stock (Eq, Show)
+
+replaceCommandWith :: Command -> Command -> InterpreterAction
+replaceCommandWith command newCommand
+  | command == newCommand = KeepCommand
+  | otherwise             = ReplaceCommand newCommand

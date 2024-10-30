@@ -6,30 +6,24 @@ import Control.Monad.State (State, gets)
 
 import Data.PDF.Command (Command (cOperator, cParameters))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXName)
-    , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
-    )
+  ( GFXObject (GFXName)
+  , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
+  )
 import Data.PDF.GraphicsState
-    ( GraphicsState (gsIntent, gsStrokeColor)
-    , gsNonStrokeColor
-    )
+  (GraphicsState (gsIntent, gsStrokeColor), gsNonStrokeColor)
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
-    )
+  (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
-    ( InterpreterState (iGraphicsState)
-    , setNonStrokeColorS
-    , setRenderingIntentS
-    , setStrokeColorS
-    )
+  ( InterpreterState (iGraphicsState)
+  , setNonStrokeColorS
+  , setRenderingIntentS
+  , setStrokeColorS
+  )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
-    ( mkColor
-    , mkNonStrokeCommand
-    , mkStrokeCommand
-    )
+  (mkColor, mkNonStrokeCommand, mkStrokeCommand, optimizeColor)
 
 strokeDeleteIfNoChange
   :: Command
@@ -40,7 +34,9 @@ strokeDeleteIfNoChange command = do
     setStrokeColorS newColor
     return $ if currentColor == newColor
               then DeleteCommand
-              else ReplaceCommand (mkStrokeCommand newColor)
+              else replaceCommandWith
+                      command
+                      (optimizeColor $ mkStrokeCommand newColor)
 
 nonStrokeDeleteIfNoChange
   :: Command
@@ -51,7 +47,9 @@ nonStrokeDeleteIfNoChange command = do
     setNonStrokeColorS newColor
     return $ if currentColor == newColor
               then DeleteCommand
-              else ReplaceCommand (mkNonStrokeCommand newColor)
+              else replaceCommandWith
+                      command
+                      (optimizeColor $ mkNonStrokeCommand newColor)
 
 {- |
 The 'optimizeColorCommand' function takes a 'GraphicsState' and a 'Command' and

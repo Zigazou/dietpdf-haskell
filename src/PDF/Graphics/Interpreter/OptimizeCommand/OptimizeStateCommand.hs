@@ -7,26 +7,24 @@ import Control.Monad.State (State, gets)
 import Data.Functor ((<&>))
 import Data.PDF.Command (Command (cOperator, cParameters))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXNumber)
-    , GSOperator (GSRestoreGS, GSSaveGS, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit)
-    )
+  ( GFXObject (GFXNumber)
+  , GSOperator (GSRestoreGS, GSSaveGS, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit)
+  )
 import Data.PDF.GraphicsState
-    ( GraphicsState (gsFlatness, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit)
-    )
+  (GraphicsState (gsFlatness, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit))
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
-    )
+  (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
-    ( InterpreterState (iGraphicsState)
-    , restoreStateS
-    , saveStateS
-    , setFlatnessS
-    , setLineCapS
-    , setLineJoinS
-    , setLineWidthS
-    , setMiterLimitS
-    , usefulGraphicsPrecisionS
-    )
+  ( InterpreterState (iGraphicsState)
+  , restoreStateS
+  , saveStateS
+  , setFlatnessS
+  , setLineCapS
+  , setLineJoinS
+  , setLineWidthS
+  , setMiterLimitS
+  , usefulGraphicsPrecisionS
+  )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|)))
 
@@ -47,7 +45,9 @@ deleteIfNoChange command newValue getter setter = do
       then return DeleteCommand
       else do
         setter newValue'
-        ReplaceCommand . optimizeParameters command <$> usefulGraphicsPrecisionS
+        optimizeParameters command
+          <$> usefulGraphicsPrecisionS
+          <&> replaceCommandWith command
 
 {- |
 The 'optimizeStateCommand' function takes a 'GraphicsState' and a 'Command' and

@@ -37,6 +37,7 @@ import Data.PDF.PDFWork
   , putNewObject
   , putObject
   , sayP
+  , setMasks
   , setTrailer
   , setTranslationTable
   , throwError
@@ -56,6 +57,7 @@ import Data.UnifiedError
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
+import PDF.Document.GetAllMasks (getAllMasks)
 import PDF.Document.MergeVectorStream (mergeVectorStream)
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import PDF.Document.OptimizeNumbers (optimizeNumbers)
@@ -177,6 +179,12 @@ pdfEncode objects = do
 
   -- Optimize Numbers
   optimizeNumbers
+
+  -- Find all masks
+  sayP "Finding all masks"
+  wosMasks <- gets (getAllMasks . toPDFDocument . ppObjectsWithoutStream . wPDF)
+  wsMasks <- gets (getAllMasks . toPDFDocument . ppObjectsWithStream . wPDF)
+  setMasks (wosMasks <> wsMasks)
 
   -- Do not create a translation table if GFX won't be optimized.
   sayP "Optimizing resource names"

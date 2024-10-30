@@ -24,6 +24,8 @@ module Data.PDF.PDFWork
   , fallibleP
   , setTranslationTable
   , getTranslationTable
+  , setMasks
+  , getMasks
   , putNewObject
   )
 where
@@ -50,7 +52,8 @@ import Data.PDF.PDFPartition
   )
 import Data.PDF.Resource (Resource)
 import Data.PDF.WorkData
-  (WorkData (wContexts, wNameTranslations, wPDF), emptyWorkData)
+  (WorkData (wContexts, wMasks, wNameTranslations, wPDF), emptyWorkData)
+import Data.Set (Set)
 import Data.Text (Text)
 import Data.TranslationTable (TranslationTable)
 import Data.UnifiedError (UnifiedError)
@@ -194,6 +197,12 @@ setTranslationTable translationTable = modifyWorkData $
 
 getTranslationTable :: Monad m => PDFWork m (TranslationTable Resource)
 getTranslationTable = gets wNameTranslations
+
+setMasks :: Monad m => Set Int -> PDFWork m ()
+setMasks masks = modifyWorkData $ \workData -> workData { wMasks = masks }
+
+getMasks :: Monad m => PDFWork m (Set Int)
+getMasks = gets wMasks
 
 isEmptyPDF :: Monad m => PDFWork m Bool
 isEmptyPDF = do

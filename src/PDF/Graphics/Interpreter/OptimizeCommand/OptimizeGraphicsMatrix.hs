@@ -7,17 +7,14 @@ import Control.Monad.State (State)
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject (GFXObject (GFXNumber), GSOperator (GSSetCTM))
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand)
-    )
+  ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand)
+  , replaceCommandWith
+  )
 import Data.PDF.InterpreterState
-    ( InterpreterState
-    , applyGraphicsMatrixS
-    , usefulGraphicsPrecisionS
-    )
+  (InterpreterState, applyGraphicsMatrixS, usefulGraphicsPrecisionS)
 import Data.PDF.Program (Program)
 import Data.PDF.TransformationMatrix
-    ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
-    )
+  (TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF))
 import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
@@ -76,7 +73,8 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
         return $ ReplaceAndDeleteNextCommand (optimizeParameters command' precision)
       _anythingElse -> do
         applyGraphicsMatrixS (TransformationMatrix a b c d e f)
-        return $ ReplaceCommand (optimizeParameters command precision)
+        return $ replaceCommandWith command
+                                    (optimizeParameters command precision)
 
   _anyOtherCommand -> return KeepCommand
  where

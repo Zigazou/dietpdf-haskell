@@ -4,26 +4,25 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
 
 import Control.Monad.State (State, gets)
 
+import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXNumber)
-    , GSOperator (GSBeginText, GSCloseSubpath, GSEndPath, GSEndText, GSMoveToNextLine, GSMoveToNextLineLP, GSSetTextMatrix)
-    )
+  ( GFXObject (GFXNumber)
+  , GSOperator (GSBeginText, GSCloseSubpath, GSEndPath, GSEndText, GSMoveToNextLine, GSMoveToNextLineLP, GSSetTextMatrix)
+  )
 import Data.PDF.GraphicsState (GraphicsState (gsTextState))
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
-    )
+  (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
-    ( InterpreterState (iGraphicsState)
-    , applyTextMatrixS
-    , resetTextStateS
-    , usefulTextPrecisionS
-    )
+  ( InterpreterState (iGraphicsState)
+  , applyTextMatrixS
+  , resetTextStateS
+  , usefulTextPrecisionS
+  )
 import Data.PDF.Program (Program)
 import Data.PDF.TextState (TextState (tsMatrix))
 import Data.PDF.TransformationMatrix
-    ( TransformationMatrix (TransformationMatrix)
-    )
+  (TransformationMatrix (TransformationMatrix))
 import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
@@ -79,9 +78,11 @@ optimizeTextMatrix command rest = case (operator, parameters) of
     if hasTextmoveBeforeEndText rest || currentTextMatrix /= mempty
       then do
         applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
-        return $ ReplaceCommand (optimizeParameters command precision)
+        return $ replaceCommandWith command
+                                    (optimizeParameters command precision)
       else
-        return $ ReplaceCommand
+        return $ replaceCommandWith
+                  command
                   ( optimizeParameters
                     (Command GSMoveToNextLine ( GFXNumber tx
                                             :<| GFXNumber ty
@@ -98,7 +99,9 @@ optimizeTextMatrix command rest = case (operator, parameters) of
                 :<| GFXNumber f
                 :<| Empty) -> do
     applyTextMatrixS (TransformationMatrix a b c d e f)
-    ReplaceCommand . optimizeParameters command <$> usefulTextPrecisionS
+    optimizeParameters command
+      <$> usefulTextPrecisionS
+      <&> replaceCommandWith command
 
   _anyOtherCommand -> return KeepCommand
  where
