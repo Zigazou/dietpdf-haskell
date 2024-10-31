@@ -4,7 +4,7 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand
 
 import Control.Monad.State (State, gets)
 
-import Data.PDF.Command (Command (cOperator, cParameters))
+import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
   ( GFXObject (GFXName)
   , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
@@ -28,6 +28,8 @@ import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
 strokeDeleteIfNoChange
   :: Command
   -> State InterpreterState InterpreterAction
+strokeDeleteIfNoChange (Command GSSetStrokeCMYKColorspace _params) =
+  return KeepCommand
 strokeDeleteIfNoChange command = do
     currentColor <- gets (gsStrokeColor . iGraphicsState)
     newColor <- mkColor command
@@ -41,6 +43,8 @@ strokeDeleteIfNoChange command = do
 nonStrokeDeleteIfNoChange
   :: Command
   -> State InterpreterState InterpreterAction
+nonStrokeDeleteIfNoChange (Command GSSetNonStrokeCMYKColorspace _params) =
+  return KeepCommand
 nonStrokeDeleteIfNoChange command = do
     currentColor <- gets (gsNonStrokeColor . iGraphicsState)
     newColor <- mkColor command

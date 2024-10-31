@@ -173,9 +173,9 @@ applyTextMatrix matrix state = state
       }
   }
  where
-  tsState          = gsTextState state
-  textMatrix = gsCTM state <> matrix
-  renderingMatrix  = textMatrix <> (TransformationMatrix
+  tsState = gsTextState state
+  textMatrix = matrix
+  renderingMatrix = textMatrix <> (TransformationMatrix
     { tmA = tsFontSize tsState * tsHorizontalScaling tsState
     , tmB = 0.0
     , tmC = 0.0
@@ -289,7 +289,7 @@ setCurrentPoint :: Double -> Double -> GraphicsState -> GraphicsState
 setCurrentPoint x y state = state { gsCurrentPointX = x, gsCurrentPointY = y }
 
 resetTextState :: GraphicsState -> GraphicsState
-resetTextState state = state { gsTextState = defaultTextState }
+resetTextState = applyTextMatrix mempty
 
 setStrokeColor :: Color -> GraphicsState -> GraphicsState
 setStrokeColor color state = state { gsStrokeColor = color }

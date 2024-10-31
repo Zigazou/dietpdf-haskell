@@ -18,7 +18,7 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.TranslationTable (TranslationTable, convert)
 
-import PDF.Object.Object.Properties (getValueForKey, hasKey, setValueForKey)
+import PDF.Object.Object.Properties (getValueForKey, setValueForKey)
 
 import Util.Dictionary (Dictionary)
 
@@ -70,8 +70,18 @@ renameResourcesInDictionary
   :: TranslationTable Resource
   -> Dictionary PDFObject
   -> Dictionary PDFObject
-renameResourcesInDictionary table =
-  Map.fromList . fmap (renameByResourceType table) . Map.toList
+renameResourcesInDictionary table object =
+  case Map.lookup "Resources" object of
+    Just (PDFDictionary resources) ->
+      Map.insert
+        "Resources"
+        (PDFDictionary $ renameResourcesInDictionary table resources)
+        object
+    _anyOtherCase ->
+        Map.fromList
+      . fmap (renameByResourceType table)
+      . Map.toList
+      $ object
 
 renameResources
   :: TranslationTable Resource
@@ -91,20 +101,9 @@ renameResources table containingResources object@(PDFIndirectObject number revis
         number
         revision
         (PDFDictionary (renameResourcesInDictionary table dict))
-  | hasKey "Resources" object =
-      PDFIndirectObject
-        number
-        revision
-        (renameResources table containingResources (PDFDictionary dict))
   | otherwise = object
 renameResources table containingResources object@(PDFIndirectObjectWithStream number revision dict stream)
   | Set.member number containingResources =
-      PDFIndirectObjectWithStream
-        number
-        revision
-        (renameResourcesInDictionary table dict)
-        stream
-  | hasKey "Resources" object =
       PDFIndirectObjectWithStream
         number
         revision
@@ -114,20 +113,28 @@ renameResources table containingResources object@(PDFIndirectObjectWithStream nu
 renameResources _table _containingResources object = object
 
 containsResources :: PDFDocument -> Set Int
-containsResources = foldMap getResourceReferences . deepFind resourceEntry
+containsResources = foldMap getResourceReferences . deepFind hasResourceEntry
   where
-    resourceEntry :: PDFObject -> Bool
-    resourceEntry object = case getValueForKey "Resources" object of
+    hasResourceEntry :: PDFObject -> Bool
+    hasResourceEntry object = case getValueForKey "Resources" object of
       Just _  -> True
       Nothing -> False
 
     getResourceReferences :: PDFObject -> Set Int
     getResourceReferences object = case getValueForKey "Resources" object of
       Just (PDFDictionary dict) ->
-        (Set.fromList . fmap getMajor . Map.elems . Map.filter isReference) dict
+        Set.singleton (getMajor object)
+          <> ( Set.fromList
+             . fmap getMajor
+             . Map.elems
+             . Map.filter isReference
+             ) dict
+
       Just reference@PDFReference{} -> Set.singleton (getMajor reference)
-      _ -> mempty
+      _anyOtherObject               -> mempty
 
     getMajor :: PDFObject -> Int
-    getMajor (PDFReference major _) = major
-    getMajor _                      = 0
+    getMajor (PDFReference major _)                                   = major
+    getMajor (PDFIndirectObject major _minor _object)                 = major
+    getMajor (PDFIndirectObjectWithStream major _minor _dict _stream) = major
+    getMajor _                                                        = 0

@@ -24,7 +24,7 @@ optimizeProgramExamples =
   [ ( "", mkProgram [] )
   , ( "1.000042 2.421 m n"
     ,  mkProgram
-        [ mkCommand GSMoveTo [GFXNumber 1.000042, GFXNumber 2.421]
+        [ mkCommand GSMoveTo [GFXNumber 1.0, GFXNumber 2.42]
         , mkCommand GSEndPath []
         ]
     )
@@ -54,17 +54,17 @@ optimizeProgramExamples =
             ]
         , mkCommand GSSaveGS []
         , mkCommand GSSetCTM
-            [ GFXNumber 8.33333
+            [ GFXNumber 8.33
             , GFXNumber 0.0
             , GFXNumber 0.0
-            , GFXNumber 8.33333
+            , GFXNumber 8.33
             , GFXNumber 0.0
             , GFXNumber 0.0
             ]
         , mkCommand GSBeginText []
         , mkCommand GSSetTextFont [GFXName "R7", GFXNumber 11.04]
         , mkCommand GSSetTextMatrix
-            [ GFXNumber 0.999402
+            [ GFXNumber 0.9994
             , GFXNumber 0.0
             , GFXNumber 0.0
             , GFXNumber 1.0
@@ -73,8 +73,8 @@ optimizeProgramExamples =
             ]
         , mkCommand GSShowManyText
             [ mkGFXArray
-                [ GFXString "A", GFXNumber (-4.33874)
-                , GFXString "B", GFXNumber 6.53732
+                [ GFXString "A", GFXNumber (-4.3387)
+                , GFXString "B", GFXNumber 6.5373
                 ]
             ]
         ]

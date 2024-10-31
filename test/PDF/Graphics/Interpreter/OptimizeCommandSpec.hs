@@ -31,7 +31,7 @@ optimizeCommandExamples =
     )
   , ( mkCommand GSSetNonStrokeRGBColorspace [GFXNumber 1, GFXNumber 2, GFXNumber 3]
     , mempty
-    , ReplaceCommand $ mkCommand GSSetNonStrokeRGBColorspace [GFXNumber 1, GFXNumber 2, GFXNumber 3]
+    , KeepCommand
     )
   , ( mkCommand GSRestoreGS mempty
     , mempty

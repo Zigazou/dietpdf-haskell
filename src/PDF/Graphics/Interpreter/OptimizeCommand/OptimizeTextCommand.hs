@@ -3,6 +3,7 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommand
   ) where
 
 import Control.Monad.State (State)
+import Control.Monad.Trans.State (gets)
 
 import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
@@ -10,10 +11,11 @@ import Data.PDF.GFXObject
   ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNumber, GFXString)
   , GSOperator (GSSetHorizontalScaling, GSSetTextFont, GSSetTextRise, GSShowManyText, GSShowText)
   )
+import Data.PDF.GraphicsState (gsTextState)
 import Data.PDF.InterpreterAction
-  (InterpreterAction (KeepCommand), replaceCommandWith)
+  (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
-  ( InterpreterState
+  ( InterpreterState (iGraphicsState)
   , setFontS
   , setHorizontalScalingS
   , setTextRiseS
@@ -21,10 +23,10 @@ import Data.PDF.InterpreterState
   , usefulTextPrecisionS
   )
 import Data.PDF.Program (Program)
+import Data.PDF.TextState (TextState (tsFont, tsFontSize, tsHorizontalScaling, tsRise))
 import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
-
 
 {- |
 The 'optimizeTextCommand' function takes a 'GraphicsState' and a 'Command' and
@@ -37,24 +39,40 @@ optimizeTextCommand
 optimizeTextCommand command _rest = case (operator, parameters) of
   -- Set text font and size
   (GSSetTextFont, GFXName fontName :<| GFXNumber fontSize :<| Empty) -> do
-    setFontS fontName fontSize
-    precision <- usefulTextPrecisionS
-    return $ replaceCommandWith command
-                                (optimizeParameters command (precision + 1))
+    currentFontName <- gets (tsFont . gsTextState . iGraphicsState)
+    currentFontSize <- gets (tsFontSize . gsTextState . iGraphicsState)
+    if currentFontName == fontName && currentFontSize == fontSize
+      then
+        return DeleteCommand
+      else do
+        setFontS fontName fontSize
+        precision <- usefulTextPrecisionS
+        return $ replaceCommandWith command
+                                    (optimizeParameters command (precision + 1))
 
   -- Set text horizontal scaling
   (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) -> do
-    setHorizontalScalingS scaling
-    optimizeParameters command
-      <$> usefulGraphicsPrecisionS
-      <&> replaceCommandWith command
+    currentScaling <- gets (tsHorizontalScaling . gsTextState . iGraphicsState)
+    if currentScaling == scaling
+      then
+        return DeleteCommand
+      else do
+        setHorizontalScalingS scaling
+        optimizeParameters command
+          <$> usefulGraphicsPrecisionS
+          <&> replaceCommandWith command
 
   -- Set text rise
   (GSSetTextRise, GFXNumber rise :<| Empty) -> do
-    setTextRiseS rise
-    optimizeParameters command
-      <$> usefulTextPrecisionS
-      <&> replaceCommandWith command
+    currentRise <- gets (tsRise . gsTextState . iGraphicsState)
+    if currentRise == rise
+      then
+        return DeleteCommand
+      else do
+        setTextRiseS rise
+        optimizeParameters command
+          <$> usefulTextPrecisionS
+          <&> replaceCommandWith command
 
   -- Replace ShowManyText by ShowText when there is only one text
   (GSShowManyText, GFXArray items :<| Empty) -> do

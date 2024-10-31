@@ -7,7 +7,9 @@ import Control.Monad (forM_)
 
 import Data.Map qualified as Map
 import Data.PDF.PDFObject
-  (PDFObject (PDFIndirectObject, PDFNull), mkPDFDictionary)
+  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFNull, PDFReference)
+  , mkPDFDictionary
+  )
 import Data.PDF.Resource
   (Resource (ResExtGState, ResFont, ResPattern, ResXObject))
 import Data.Set (Set)
@@ -17,6 +19,8 @@ import Data.TranslationTable (TranslationTable)
 import PDF.Object.Object.RenameResources (renameResources)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
+
+import Util.Dictionary (mkDictionary)
 
 objectExamples :: [(Set Int, PDFObject, PDFObject)]
 objectExamples =
@@ -63,6 +67,68 @@ objectExamples =
             ]
           )
         ]
+    )
+  , ( mempty
+    , PDFIndirectObject 1 0
+        ( mkPDFDictionary
+          [ ( "Resources"
+            , mkPDFDictionary
+              [ ( "Font"
+                , mkPDFDictionary [("a", PDFNull)]
+                )
+              ]
+            )
+          ]
+        )
+    , PDFIndirectObject 1 0
+        ( mkPDFDictionary
+          [ ( "Resources"
+            , mkPDFDictionary
+              [ ( "Font"
+                , mkPDFDictionary [("a", PDFNull)]
+                )
+              ]
+            )
+          ]
+        )
+    )
+  , ( mempty
+    , PDFIndirectObjectWithStream 1 0
+        ( mkDictionary
+          [ ( "Resources"
+            , mkPDFDictionary
+              [ ( "Font"
+                , mkPDFDictionary [("a", PDFNull)]
+                )
+              ]
+            )
+          ]
+        )
+        "dummy"
+    , PDFIndirectObjectWithStream 1 0
+        ( mkDictionary
+          [ ( "Resources"
+            , mkPDFDictionary
+              [ ( "Font"
+                , mkPDFDictionary [("0", PDFNull)]
+                )
+              ]
+            )
+          ]
+        )
+        "dummy"
+    )
+  , ( Set.fromList [1]
+    , PDFIndirectObject 1 0 (mkPDFDictionary
+        [ ( "Font"
+          , mkPDFDictionary [("a", PDFReference 10 0)]
+          )
+        ])
+    , PDFIndirectObject 1 0 (mkPDFDictionary
+        [ ( "Font"
+          , mkPDFDictionary [("0", PDFReference 10 0)]
+          )
+        ])
     )
   ]
 

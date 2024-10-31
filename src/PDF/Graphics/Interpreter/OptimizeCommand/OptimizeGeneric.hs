@@ -6,8 +6,7 @@ import Control.Monad.State (State)
 
 import Data.Functor ((<&>))
 import Data.PDF.Command (Command (cOperator))
-import Data.PDF.InterpreterAction
-  (InterpreterAction (KeepCommand), replaceCommandWith)
+import Data.PDF.InterpreterAction (InterpreterAction, replaceCommandWith)
 import Data.PDF.InterpreterState
   ( InterpreterState
   , usefulColorPrecisionS
@@ -65,4 +64,7 @@ optimizeGeneric command _rest = case category (cOperator command) of
                  . optimizeParameters command
                <$> usefulColorPrecisionS
 
-  _anyOtherCategory -> return KeepCommand
+  _anyOtherCategory -> replaceCommandWith command
+                     . optimizeColor
+                     . optimizeParameters command
+                   <$> usefulGraphicsPrecisionS

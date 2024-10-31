@@ -105,6 +105,7 @@ library
       PDF.Document.ObjectStream
       PDF.Document.OptimizeNumbers
       PDF.Document.OptimizeOptionalDictionaryEntries
+      PDF.Document.OptimizeResources
       PDF.Document.Parser
       PDF.Document.PDFObjects
       PDF.Document.PDFPartition
@@ -152,6 +153,7 @@ library
       PDF.Object.Object.FromXRef
       PDF.Object.Object.PDFCharacter
       PDF.Object.Object.Properties
+      PDF.Object.Object.RemoveResources
       PDF.Object.Object.RenameResources
       PDF.Object.Object.ToPDFNumber
       PDF.Object.Parser.Comment
@@ -338,6 +340,7 @@ test-suite dietpdf-test
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGenericSpec
       PDF.Graphics.Interpreter.OptimizeCommandSpec
+      PDF.Graphics.Interpreter.OptimizeParametersSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffectiveSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestoreSpec
       PDF.Graphics.Interpreter.OptimizeProgramSpec

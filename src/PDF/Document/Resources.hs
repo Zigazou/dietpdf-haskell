@@ -12,7 +12,7 @@ import Data.PDF.PDFObject
   ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFReference)
   )
 import Data.PDF.PDFObjects (toPDFDocument)
-import Data.PDF.PDFPartition (PDFPartition (ppObjectsWithoutStream))
+import Data.PDF.PDFPartition (PDFPartition (ppObjectsWithoutStream, ppObjectsWithStream))
 import Data.PDF.PDFWork (PDFWork, getReference)
 import Data.PDF.Resource (Resource, createSet, toResource)
 import Data.PDF.WorkData (WorkData (wPDF))
@@ -95,8 +95,15 @@ Resources are typically stored in a dictionary object with a "Resources" key.
 -}
 getAllResourceNames :: Monad m => PDFWork m (Set Resource)
 getAllResourceNames = do
-  gets ( deepFind (hasKey "Resources")
-       . toPDFDocument
-       . ppObjectsWithoutStream
-       . wPDF
-       ) >>= foldM getResourceNames mempty
+  wosObjects <- gets (toPDFDocument . ppObjectsWithoutStream . wPDF)
+  wsObjects <- gets (toPDFDocument . ppObjectsWithStream . wPDF)
+
+  wosResources <- foldM getResourceNames
+                        mempty
+                        (deepFind (hasKey "Resources") wosObjects)
+
+  wsResources <-  foldM getResourceNames
+                        mempty
+                        (deepFind (hasKey "Resources") wsObjects)
+
+  return (wosResources <> wsResources)

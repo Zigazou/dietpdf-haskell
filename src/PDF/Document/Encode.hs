@@ -29,6 +29,7 @@ import Data.PDF.PDFPartition
 import Data.PDF.PDFWork
   ( PDFWork
   , getTrailer
+  , getTranslationTable
   , hasNoVersion
   , isEmptyPDF
   , lastObjectNumber
@@ -39,18 +40,13 @@ import Data.PDF.PDFWork
   , sayP
   , setMasks
   , setTrailer
-  , setTranslationTable
   , throwError
   , withStreamCount
   , withoutStreamCount
   )
-import Data.PDF.Resource (toNameBase)
-import Data.PDF.Settings
-  (OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX), Settings (sOptimizeGFX))
-import Data.PDF.WorkData (WorkData (wPDF, wSettings))
+import Data.PDF.WorkData (WorkData (wPDF))
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
-import Data.TranslationTable (getTranslationTable)
 import Data.UnifiedError
   ( UnifiedError (EncodeEncrypted, EncodeNoIndirectObject, EncodeNoTrailer, EncodeNoVersion)
   )
@@ -63,11 +59,10 @@ import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
   (optimizeOptionalDictionaryEntries)
-import PDF.Document.Resources (getAllResourceNames)
+import PDF.Document.OptimizeResources (optimizeResources)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
-import PDF.Object.Object.RenameResources (containsResources, renameResources)
 import PDF.Object.State (getValue, setMaybe)
 import PDF.Processing.Optimize (optimize)
 import PDF.Processing.PDFWork
@@ -175,10 +170,9 @@ pdfEncode objects = do
 
   clean
 
-  resourceNames <- getAllResourceNames
-
-  -- Optimize Numbers
+  -- Optimize Numbers and resources
   optimizeNumbers
+  optimizeResources
 
   -- Find all masks
   sayP "Finding all masks"
@@ -186,26 +180,10 @@ pdfEncode objects = do
   wsMasks <- gets (getAllMasks . toPDFDocument . ppObjectsWithStream . wPDF)
   setMasks (wosMasks <> wsMasks)
 
-  -- Do not create a translation table if GFX won't be optimized.
-  sayP "Optimizing resource names"
-  optGFX <- gets (sOptimizeGFX . wSettings)
-  let nameTranslations = case optGFX of
-        OptimizeGFX      -> getTranslationTable toNameBase resourceNames
-        DoNotOptimizeGFX -> Map.empty
-
-  setTranslationTable nameTranslations
-
-  containingResources <- gets ( containsResources
-                              . toPDFDocument
-                              . ppObjectsWithoutStream
-                              . wPDF
-                              )
-
-  modifyIndirectObjects (renameResources nameTranslations containingResources)
-
   sayP "Optimizing optional dictionary entries"
   modifyIndirectObjects optimizeOptionalDictionaryEntries
 
+  nameTranslations <- getTranslationTable
   sayP $ T.concat [ "Found "
                   , T.pack . show $ Map.size nameTranslations
                   , " resource names"
