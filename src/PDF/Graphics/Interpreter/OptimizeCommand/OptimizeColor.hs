@@ -9,15 +9,17 @@ import Control.Monad.State (State)
 
 import Data.Foldable (toList)
 import Data.Functor ((<&>))
-import Data.PDF.Color (Color (ColorCMYK, ColorGeneric, ColorGray, ColorRGB))
+import Data.PDF.Color
+  (Color (ColorCMYK, ColorGeneric, ColorGray, ColorNotSet, ColorRGB))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXName, GFXNull, GFXNumber)
-    , GSOperator (GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
-    )
+  ( GFXObject (GFXName, GFXNull, GFXNumber)
+  , GSOperator (GSNone, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
+  )
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.InterpreterState (InterpreterState, usefulColorPrecisionS)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), fromList)
+
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 
@@ -160,6 +162,8 @@ mkStrokeCommand (ColorGeneric parameters (Just name)) =
 mkStrokeCommand (ColorGeneric parameters Nothing) =
   Command GSSetStrokeColor (fromList (GFXNumber <$> parameters))
 
+mkStrokeCommand ColorNotSet = Command GSNone mempty
+
 mkNonStrokeCommand :: Color -> Command
 mkNonStrokeCommand (ColorRGB red green blue) =
   Command GSSetNonStrokeRGBColorspace
@@ -185,3 +189,5 @@ mkNonStrokeCommand (ColorGeneric parameters (Just name)) =
 
 mkNonStrokeCommand (ColorGeneric parameters Nothing) =
   Command GSSetNonStrokeColor (fromList (GFXNumber <$> parameters))
+
+mkNonStrokeCommand ColorNotSet = Command GSNone mempty

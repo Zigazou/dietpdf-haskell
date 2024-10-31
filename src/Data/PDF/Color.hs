@@ -1,5 +1,5 @@
 module Data.PDF.Color
-  ( Color(ColorGray, ColorRGB, ColorCMYK, ColorGeneric)
+  ( Color(ColorGray, ColorRGB, ColorCMYK, ColorGeneric, ColorNotSet)
   ) where
 
 import Data.ByteString (ByteString)
@@ -11,4 +11,5 @@ data Color
   | ColorRGB !Double !Double !Double
   | ColorCMYK !Double !Double !Double !Double
   | ColorGeneric ![Double] !(Maybe ByteString)
+  | ColorNotSet
   deriving stock (Show, Eq)

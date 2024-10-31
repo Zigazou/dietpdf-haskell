@@ -27,7 +27,7 @@ module Data.PDF.GraphicsState
 
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
-import Data.PDF.Color (Color (ColorGray))
+import Data.PDF.Color (Color (ColorNotSet))
 import Data.PDF.TextState
     ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsMatrix, tsRise)
     , defaultTextState
@@ -97,8 +97,8 @@ defaultGraphicsState = GraphicsState
   , gsFlatness       = 1.0
   , gsStrokeAlpha    = 1.0
   , gsNonStrokeAlpha = 1.0
-  , gsStrokeColor    = ColorGray 0
-  , gsNonStrokeColor = ColorGray 0
+  , gsStrokeColor    = ColorNotSet
+  , gsNonStrokeColor = ColorNotSet
   , gsPathStartX     = 0.0
   , gsPathStartY     = 0.0
   , gsCurrentPointX  = 0.0
