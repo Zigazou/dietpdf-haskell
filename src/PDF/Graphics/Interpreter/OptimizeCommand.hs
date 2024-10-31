@@ -11,30 +11,25 @@ import Data.PDF.InterpreterState (InterpreterState)
 import Data.PDF.Program (Program)
 
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand
-    ( optimizeColorCommand
-    )
+  (optimizeColorCommand)
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeDrawCommand
-    ( optimizeDrawCommand
-    )
+  (optimizeDrawCommand)
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGeneric
-    ( optimizeGeneric
-    )
+  (optimizeGeneric)
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGraphicsMatrix
-    ( optimizeGraphicsMatrix
-    )
+  (optimizeGraphicsMatrix)
+import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeOrder (optimizeOrder)
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeStateCommand
-    ( optimizeStateCommand
-    )
+  (optimizeStateCommand)
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommand
-    ( optimizeTextCommand
-    )
+  (optimizeTextCommand)
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
-    ( optimizeTextMatrix
-    )
+  (optimizeTextMatrix)
 
 optimizations :: [Command -> Program -> State InterpreterState InterpreterAction]
 optimizations =
-  [ optimizeStateCommand
+  [ optimizeOrder
+  , optimizeStateCommand
   , optimizeGraphicsMatrix
   , optimizeTextMatrix
   , optimizeDrawCommand

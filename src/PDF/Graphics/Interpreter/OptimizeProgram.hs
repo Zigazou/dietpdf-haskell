@@ -4,29 +4,23 @@ where
 import Control.Monad.State (State, evalState)
 
 import Data.PDF.InterpreterAction
-    ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand)
-    )
+  ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand, SwitchCommand)
+  )
 import Data.PDF.InterpreterState
-    ( InterpreterState (iWorkData)
-    , defaultInterpreterState
-    )
+  (InterpreterState (iWorkData), defaultInterpreterState)
 import Data.PDF.Program (Program)
 import Data.PDF.WorkData (WorkData)
-import Data.Sequence (Seq (Empty, (:<|)), (|>))
+import Data.Sequence (Seq (Empty, (:<|)), (|>), (<|))
 
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
-    ( optimizeDuplicates
-    )
+  (optimizeDuplicates)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
-    ( optimizeIneffective
-    )
+  (optimizeIneffective)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
-    ( optimizeRectangle
-    )
+  (optimizeRectangle)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
-    ( optimizeSaveRestore
-    )
+  (optimizeSaveRestore)
 
 import Util.Transform (untilNoChange)
 
@@ -45,6 +39,10 @@ optimizeCommands program (command :<| rest) =
       Empty -> return program
       (_commandToDelete :<| rest') ->
         optimizeCommands (program |> optimizedCommand') rest'
+    SwitchCommand -> case rest of
+      Empty -> return program
+      (nextCommand :<| rest') ->
+        optimizeCommands program (nextCommand <| command <| rest')
 
 optimizeProgramOnePass :: WorkData -> Program -> Program
 optimizeProgramOnePass workData
@@ -61,4 +59,6 @@ The 'optimizeProgram' function takes a 'Program' and returns an optimized
 'Program'.
 -}
 optimizeProgram :: WorkData -> Program -> Program
-optimizeProgram workData = untilNoChange (optimizeProgramOnePass workData)
+optimizeProgram workData program =
+  let optimized = untilNoChange (optimizeProgramOnePass workData) program
+  in if optimized == mempty then program else optimized

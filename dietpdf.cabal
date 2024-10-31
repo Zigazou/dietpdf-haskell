@@ -120,6 +120,7 @@ library
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeDrawCommand
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGeneric
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGraphicsMatrix
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeOrder
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeStateCommand
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommand
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
