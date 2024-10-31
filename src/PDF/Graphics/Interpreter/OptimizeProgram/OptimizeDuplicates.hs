@@ -41,6 +41,6 @@ optimizeDuplicates (command1@(Command operator1 _anyParameters1)
                 :<| command2@(Command operator2 _anyParameters2)
                 :<| rest)
   | operator1 /= operator2 = command1 <| optimizeDuplicates (command2 <| rest)
-  | uselessWhenDuplicated operator1 = optimizeDuplicates rest
+  | uselessWhenDuplicated operator1 = optimizeDuplicates (command2 <| rest)
   | otherwise = command1 <| optimizeDuplicates (command2 <| rest)
 optimizeDuplicates (command :<| rest) = command <| optimizeDuplicates rest
