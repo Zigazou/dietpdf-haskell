@@ -7,17 +7,22 @@ where
 
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
-    ( GSOperator (GSBeginMarkedContentSequence, GSBeginMarkedContentSequencePL, GSEndMarkedContentSequence, GSRestoreGS, GSSaveGS)
-    )
+  ( GSOperator (GSBeginMarkedContentSequence, GSBeginMarkedContentSequencePL, GSEndMarkedContentSequence, GSRestoreGS, GSSaveGS)
+  )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), breakl, singleton, (<|))
 
 import Util.Transform (untilNoChange)
 
-
 onRestore :: Command -> Bool
 onRestore (Command GSRestoreGS _params) = True
 onRestore _anyOtherCommand              = False
+
+pattern Restore :: Command
+pattern Restore = Command GSRestoreGS Empty
+
+pattern Save :: Command
+pattern Save = Command GSSaveGS Empty
 
 {- |
 Find the save command associated with a restore command.
@@ -27,69 +32,75 @@ associated with the restore command. The restore command must not be included in
 the program given in input.
 -}
 findRelatedSave :: Program -> Maybe (Program, Program)
-findRelatedSave program = findRelatedSave' 1 (Just (program, mempty))
+findRelatedSave program = go 1 (Just (program, mempty))
  where
-  findRelatedSave' :: Int -> Maybe (Program, Program) -> Maybe (Program, Program)
-  findRelatedSave' 0 result = result
-  findRelatedSave' level (Just (before :|> restore@(Command GSRestoreGS _params), after)) =
-    findRelatedSave' (level + 1) (Just (before, restore <| after))
-  findRelatedSave' level (Just (before :|> save@(Command GSSaveGS _params), after)) =
-    findRelatedSave' (level - 1) (Just (before, save <| after))
-  findRelatedSave' level (Just (before :|> command, after)) =
-    findRelatedSave' level (Just (before, command <| after))
-  findRelatedSave' level (Just (command :<| Empty, after)) =
-    findRelatedSave' level (Just (mempty, command <| after))
-  findRelatedSave' _level _ = Nothing
+  go :: Int -> Maybe (Program, Program) -> Maybe (Program, Program)
+  go 0 result = result
+
+  go level (Just (before :|> Restore, after)) =
+    go (level + 1) (Just (before, Restore <| after))
+
+  go level (Just (before :|> Save, after)) =
+    go (level - 1) (Just (before, Save <| after))
+
+  go level (Just (before :|> command, after)) =
+      go level (Just (before, command <| after))
+
+  go level (Just (command :<| Empty, after)) =
+      go level (Just (mempty, command <| after))
+
+  go _anyOtherLevel _anyOtherValue = Nothing
+
+findDoubleRestore :: Program -> Maybe (Program, Program)
+findDoubleRestore program = case breakl onRestore program of
+  (beforeRestore, Restore :<| Restore :<| afterRestore) ->
+    Just (beforeRestore, afterRestore)
+  (beforeRestore, Restore :<| afterRestore) -> do
+    (beforeRestore', afterRestore') <- findDoubleRestore afterRestore
+    Just (beforeRestore <> singleton Restore <> beforeRestore', afterRestore')
+  _anyOtherCase -> Nothing
+
+{- |
+Save one save/restore pair just before a restore operator in one pass.
+-}
+reduceSaveRestoreOnePass :: Program -> Program
+reduceSaveRestoreOnePass program = case findDoubleRestore program of
+  -- Two consecutive restore commands means a save/restore pair is useless.
+  Just (beforeDoubleRestore, afterDoubleRestore) ->
+    -- Look for the save command associated with the restore command.
+    case findRelatedSave beforeDoubleRestore of
+      Just (beforeSave, Save :<| afterSave) ->
+        beforeSave <> afterSave <> singleton Restore <> afterDoubleRestore
+      _anythingElse -> error "unbalanced save/restore"
+  _anyOtherCase -> program
 
 {- |
 Remove useless save/restore commands.
 -}
 optimizeSaveRestoreOnePass :: Program -> Program
 optimizeSaveRestoreOnePass program = case breakl onRestore program of
-  -- Two consecutive restore commands means a save/restore pair is useless.
-  (beforeRestore, Command GSRestoreGS _params1
-              :<| Command GSRestoreGS _params2
-              :<| afterRestore) ->
-    -- Look for the save command associated with the restore command.
-    case findRelatedSave beforeRestore of
-      Just (beforeSave, Command GSSaveGS _params :<| afterSave) ->
-           beforeSave
-        <> afterSave
-        <> singleton (Command GSRestoreGS mempty)
-        <> optimizeSaveRestoreOnePass afterRestore
-      _anythingElse ->
-           beforeRestore
-        <> singleton (Command GSRestoreGS mempty)
-        <> singleton (Command GSRestoreGS mempty)
-        <> optimizeSaveRestoreOnePass afterRestore
-
-  -- Found a restore command not followed by another restore command.
-  (beforeRestore, Command GSRestoreGS _params
-              :<| afterRestore) ->
+  -- Found a restore command.
+  (beforeRestore, Restore :<| afterRestore) ->
+    -- If the next commands do not change state, remove save/restore.
     if nextRestoreWithoutNewState afterRestore
     then
       case findRelatedSave beforeRestore of
-        Just (beforeSave, Command GSSaveGS _params :<| afterSave) ->
-            beforeSave
+        Just (beforeSave, Save :<| afterSave) ->
+             beforeSave
           <> afterSave
           <> optimizeSaveRestoreOnePass afterRestore
         _anythingElse ->
-            beforeRestore
-          <> singleton (Command GSRestoreGS mempty)
-          <> singleton (Command GSRestoreGS mempty)
+             beforeRestore
+          <> singleton Restore
           <> optimizeSaveRestoreOnePass afterRestore
     else
       -- Look for the save command associated with the restore command.
       case findRelatedSave beforeRestore of
         -- If there is no command between save and restore, remove both.
-        Just (beforeSave, Command GSSaveGS _params :<| Empty) ->
-            beforeSave
-          <> optimizeSaveRestoreOnePass afterRestore
+        Just (beforeSave, Save :<| Empty) ->
+          beforeSave <> afterRestore
         _anythingElse ->
-            beforeRestore
-          <> (  Command GSRestoreGS mempty
-             <| optimizeSaveRestoreOnePass afterRestore
-             )
+          beforeRestore <> (Restore <| optimizeSaveRestoreOnePass afterRestore)
 
   -- For any other case, just keep the program as is.
   _anyOtherCase -> program
@@ -107,4 +118,6 @@ optimizeSaveRestoreOnePass program = case breakl onRestore program of
     _anyOtherCommand -> False
 
 optimizeSaveRestore :: Program -> Program
-optimizeSaveRestore = untilNoChange optimizeSaveRestoreOnePass
+optimizeSaveRestore program =
+  let reduced = untilNoChange reduceSaveRestoreOnePass program
+  in untilNoChange optimizeSaveRestoreOnePass reduced
