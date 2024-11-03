@@ -8,18 +8,13 @@ import Data.Functor ((<&>))
 import Data.PDF.Command (Command (cOperator))
 import Data.PDF.InterpreterAction (InterpreterAction, replaceCommandWith)
 import Data.PDF.InterpreterState
-  ( InterpreterState
-  , usefulColorPrecisionS
-  , usefulGraphicsPrecisionS
-  , usefulTextPrecisionS
-  )
+  (InterpreterState, usefulGraphicsPrecisionS, usefulTextPrecisionS)
 import Data.PDF.OperatorCategory
-  ( OperatorCategory (ClippingPathOperator, ColorOperator, PathConstructionOperator, PathPaintingOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
+  ( OperatorCategory (ClippingPathOperator, PathConstructionOperator, PathPaintingOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
   , category
   )
 import Data.PDF.Program (Program)
 
-import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor (optimizeColor)
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 {- |
@@ -59,12 +54,7 @@ optimizeGeneric command _rest = case category (cOperator command) of
     optimizeParameters command
       <$> usefulTextPrecisionS
       <&> replaceCommandWith command
-  ColorOperator -> replaceCommandWith command
-                 . optimizeColor
-                 . optimizeParameters command
-               <$> usefulColorPrecisionS
 
   _anyOtherCategory -> replaceCommandWith command
-                     . optimizeColor
                      . optimizeParameters command
                    <$> usefulGraphicsPrecisionS

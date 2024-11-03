@@ -43,8 +43,8 @@ findAction
   => InterpreterAction
   -> m InterpreterAction
   -> m InterpreterAction
-findAction KeepCommand action        = action
-findAction action      _anythingElse = return action
+findAction KeepCommand     nextActionM   = nextActionM
+findAction effectiveAction _anythingElse = return effectiveAction
 
 {- |
 The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and

@@ -10,13 +10,15 @@ import Data.PDF.InterpreterState
   (InterpreterState (iWorkData), defaultInterpreterState)
 import Data.PDF.Program (Program)
 import Data.PDF.WorkData (WorkData)
-import Data.Sequence (Seq (Empty, (:<|)), (|>), (<|))
+import Data.Sequence (Seq (Empty, (:<|)), (<|), (|>))
 
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
   (optimizeDuplicates)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
   (optimizeIneffective)
+import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContent
+  (optimizeMarkedContent)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
   (optimizeRectangle)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
@@ -32,13 +34,17 @@ optimizeCommands program Empty = return program
 optimizeCommands program (command :<| rest) =
   optimizeCommand command rest >>= \case
     KeepCommand -> optimizeCommands (program |> command) rest
+
     DeleteCommand -> optimizeCommands program rest
+
     ReplaceCommand optimizedCommand' ->
       optimizeCommands (program |> optimizedCommand') rest
+
     ReplaceAndDeleteNextCommand optimizedCommand' -> case rest of
       Empty -> return program
       (_commandToDelete :<| rest') ->
         optimizeCommands (program |> optimizedCommand') rest'
+
     SwitchCommand -> case rest of
       Empty -> return program
       (nextCommand :<| rest') ->
@@ -49,6 +55,7 @@ optimizeProgramOnePass workData
   = ( flip evalState defaultInterpreterState { iWorkData = workData }
     . optimizeCommands mempty
     )
+  . optimizeMarkedContent
   . optimizeDuplicates
   . optimizeIneffective
   . optimizeRectangle

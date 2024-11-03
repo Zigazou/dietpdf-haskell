@@ -580,7 +580,7 @@ data GFXObject
     GFXInlineImage (Dictionary GFXObject) ByteString
   | -- | An operator
     GFXOperator GSOperator
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 {- |
 Create an empty `GFXDictionary`.
@@ -605,22 +605,6 @@ Create a `GFXArray` from a list of `GFXObject`.
 -}
 mkGFXArray :: [GFXObject] -> GFXObject
 mkGFXArray = GFXArray . mkArray
-
-instance Eq GFXObject where
-  (==) :: GFXObject -> GFXObject -> Bool
-  GFXComment   x       == GFXComment   y       = x == y
-  GFXNumber    x       == GFXNumber    y       = x == y
-  GFXName      x       == GFXName      y       = x == y
-  GFXString    x       == GFXString    y       = x == y
-  GFXHexString x       == GFXHexString y       = x == y
-  GFXReference xn xr   == GFXReference yn yr   = xn == yn && xr == yr
-  GFXArray      x      == GFXArray      y      = x == y
-  GFXDictionary x      == GFXDictionary y      = x == y
-  GFXBool       x      == GFXBool       y      = x == y
-  GFXNull              == GFXNull              = True
-  GFXOperator x        == GFXOperator y        = x == y
-  GFXInlineImage dx ix == GFXInlineImage dy iy = dx == dy && ix == iy
-  _anyObjectA          == _anyObjectB          = False
 
 {- |
 Indicates whether the `GFXObject` ends with a delimiter when converted to a

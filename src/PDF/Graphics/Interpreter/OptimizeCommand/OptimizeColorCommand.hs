@@ -7,7 +7,7 @@ import Control.Monad.State (State, gets)
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
   ( GFXObject (GFXName)
-  , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
+  , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
   )
 import Data.PDF.GraphicsState
   (GraphicsState (gsIntent, gsStrokeColor), gsNonStrokeColor)
@@ -28,8 +28,6 @@ import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
 strokeDeleteIfNoChange
   :: Command
   -> State InterpreterState InterpreterAction
-strokeDeleteIfNoChange (Command GSSetStrokeCMYKColorspace _params) =
-  return KeepCommand
 strokeDeleteIfNoChange command = do
     currentColor <- gets (gsStrokeColor . iGraphicsState)
     newColor <- mkColor command
@@ -43,8 +41,6 @@ strokeDeleteIfNoChange command = do
 nonStrokeDeleteIfNoChange
   :: Command
   -> State InterpreterState InterpreterAction
-nonStrokeDeleteIfNoChange (Command GSSetNonStrokeCMYKColorspace _params) =
-  return KeepCommand
 nonStrokeDeleteIfNoChange command = do
     currentColor <- gets (gsNonStrokeColor . iGraphicsState)
     newColor <- mkColor command
@@ -72,17 +68,16 @@ optimizeColorCommand command _rest = case (operator, parameters) of
         setRenderingIntentS intent
         return KeepCommand
 
-  (GSSetStrokeColorspace, _params)        -> return KeepCommand
-  (GSSetNonStrokeColorspace, _params)     -> return KeepCommand
-  (GSSetStrokeColor, _params)             -> strokeDeleteIfNoChange command
+  (GSSetStrokeColor, _params)          -> strokeDeleteIfNoChange command
+  (GSSetStrokeColorN, _params)         -> strokeDeleteIfNoChange command
+  (GSSetStrokeGrayColorspace, _params) -> strokeDeleteIfNoChange command
+  (GSSetStrokeRGBColorspace, _params)  -> strokeDeleteIfNoChange command
+  (GSSetStrokeCMYKColorspace, _params) -> strokeDeleteIfNoChange command
+
   (GSSetNonStrokeColor, _params)          -> nonStrokeDeleteIfNoChange command
-  (GSSetStrokeColorN, _params)            -> strokeDeleteIfNoChange command
   (GSSetNonStrokeColorN, _params)         -> nonStrokeDeleteIfNoChange command
-  (GSSetStrokeGrayColorspace, _params)    -> strokeDeleteIfNoChange command
   (GSSetNonStrokeGrayColorspace, _params) -> nonStrokeDeleteIfNoChange command
-  (GSSetStrokeRGBColorspace, _params)     -> strokeDeleteIfNoChange command
   (GSSetNonStrokeRGBColorspace, _params)  -> nonStrokeDeleteIfNoChange command
-  (GSSetStrokeCMYKColorspace, _params)    -> strokeDeleteIfNoChange command
   (GSSetNonStrokeCMYKColorspace, _params) -> nonStrokeDeleteIfNoChange command
 
   _anyOtherCommand -> return KeepCommand

@@ -62,7 +62,6 @@ optimizeProgramExamples =
             , GFXNumber 0.0
             ]
         , mkCommand GSBeginText []
-        , mkCommand GSSetTextFont [GFXName "R7", GFXNumber 11.04]
         , mkCommand GSSetTextMatrix
             [ GFXNumber 0.9994
             , GFXNumber 0.0
@@ -71,6 +70,7 @@ optimizeProgramExamples =
             , GFXNumber 471.24
             , GFXNumber 38.6002
             ]
+        , mkCommand GSSetTextFont [GFXName "R7", GFXNumber 11.04]
         , mkCommand GSShowManyText
             [ mkGFXArray
                 [ GFXString "A", GFXNumber (-4.3387)

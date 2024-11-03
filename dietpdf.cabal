@@ -128,6 +128,7 @@ library
       PDF.Graphics.Interpreter.OptimizeProgram
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
+      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContent
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
       PDF.Graphics.Interpreter.RenameResources
@@ -338,11 +339,14 @@ test-suite dietpdf-test
       PDF.Document.ObjectStreamSpec
       PDF.Document.ResourcesSpec
       PDF.Document.XRefSpec
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommandSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGenericSpec
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeOrderSpec
       PDF.Graphics.Interpreter.OptimizeCommandSpec
       PDF.Graphics.Interpreter.OptimizeParametersSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffectiveSpec
+      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContentSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestoreSpec
       PDF.Graphics.Interpreter.OptimizeProgramSpec
       PDF.Graphics.Interpreter.ResourcesUsedSpec
