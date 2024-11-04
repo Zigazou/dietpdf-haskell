@@ -24,6 +24,8 @@ ghc-options:
 - -funbox-strict-fields
 - -fspecialise-aggressively
 - -fexpose-all-unfoldings
+- -fllvm
+- -fforce-recomp
 - -hiedir=.hie
 - -Weverything
 - -Wno-missing-safe-haskell-mode

@@ -234,7 +234,7 @@ library
       BinaryLiterals
       ViewPatterns
       PatternSynonyms
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -fforce-recomp -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded
   build-depends:
       async
     , base >=4.7 && <5
@@ -297,7 +297,7 @@ executable dietpdf
       TupleSections
       StandaloneKindSignatures
       ImportQualifiedPost
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -fforce-recomp -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -413,7 +413,7 @@ test-suite dietpdf-test
       ImportQualifiedPost
       NumericUnderscores
       BinaryLiterals
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -fforce-recomp -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
     , base >=4.7 && <5

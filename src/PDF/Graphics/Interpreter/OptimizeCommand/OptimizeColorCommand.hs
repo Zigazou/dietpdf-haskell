@@ -4,7 +4,7 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand
 
 import Control.Monad.State (State, gets)
 
-import Data.PDF.Command (Command (Command, cOperator, cParameters))
+import Data.PDF.Command (Command (cOperator, cParameters))
 import Data.PDF.GFXObject
   ( GFXObject (GFXName)
   , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
