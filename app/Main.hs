@@ -3,9 +3,9 @@ module Main
   ) where
 
 import AppOptions
-    ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, GetOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions)
-    , appOptions
-    )
+  ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, GetOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions)
+  , appOptions
+  )
 
 import Command.Decode (decodeByteString)
 import Command.Encode (encodeByteString)
@@ -31,25 +31,19 @@ import Data.Fallible (FallibleT, tryF)
 import Data.Logging (sayComparisonF)
 import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.Settings
-    ( Settings (Settings, sOptimizeGFX, sUseGhostScript, sZopfli)
-    , UseGhostScript (DoNotUseGhostScript, UseGhostScript)
-    )
+  ( Settings (Settings, sOptimizeGFX, sUseGhostScript, sUsePDFToCairo, sZopfli)
+  , UseGhostScript (DoNotUseGhostScript, UseGhostScript)
+  , UsePDFToCairo (DoNotUsePDFToCairo, UsePDFToCairo)
+  )
 import Data.UnifiedError (UnifiedError (ParseError, UnableToOpenFile))
 
 import External.GhostScriptOptimize (ghostScriptOptimize)
+import External.PDFToCairoOptimize (pdfToCairoOptimize)
 
 import Hexdump (Cfg, defaultCfg, prettyHexCfg, startByte)
 
 import Options.Applicative
-    ( ParserInfo
-    , execParser
-    , fullDesc
-    , header
-    , helper
-    , info
-    , progDesc
-    , (<**>)
-    )
+  (ParserInfo, execParser, fullDesc, header, helper, info, progDesc, (<**>))
 
 import PDF.Document.Parser (pdfParse)
 
@@ -95,29 +89,68 @@ runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 
-runApp (OptimizeOptions inputPDF outputPDF useGS useZopfli optimizeGFX) = do
+runApp (OptimizeOptions inputPDF outputPDF useGS usePTC useZopfli optimizeGFX) = do
   let settings = Settings { sOptimizeGFX    = optimizeGFX
                           , sZopfli         = useZopfli
                           , sUseGhostScript = useGS
+                          , sUsePDFToCairo  = usePTC
                           }
-  case useGS of
-    UseGhostScript -> withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
-      -- Close the handles so external programs can use the files.
-      lift $ hClose ghostscriptHandle
+  case (useGS, usePTC) of
+    (UseGhostScript, DoNotUsePDFToCairo) ->
+      withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
+        -- Close the handles so external programs can use the files.
+        lift $ hClose ghostscriptHandle
 
-      -- Optimize PDF with GhostScript.
-      ghostScriptOptimize inputPDF ghostscriptPDF
+        -- Optimize PDF with GhostScript.
+        ghostScriptOptimize inputPDF ghostscriptPDF
 
-      -- Compare the sizes of the original and GhostScript PDFs.
-      originalSize    <- lift $ getFileSize inputPDF
-      ghostScriptSize <- lift $ getFileSize ghostscriptPDF
+        -- Compare the sizes of the original and GhostScript PDFs.
+        originalSize    <- lift $ getFileSize inputPDF
+        ghostScriptSize <- lift $ getFileSize ghostscriptPDF
 
-      sayComparisonF (ctx ("ghostscript" :: String))
-                     "GhostScripted PDF" originalSize ghostScriptSize
+        sayComparisonF (ctx ("ghostscript" :: String))
+                      "GhostScripted PDF" originalSize ghostScriptSize
 
-      go ghostscriptPDF settings
+        go ghostscriptPDF settings
 
-    DoNotUseGhostScript -> go inputPDF settings
+    (DoNotUseGhostScript, UsePDFToCairo) ->
+      withSystemTempFile (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
+        -- Close the handles so external programs can use the files.
+        lift $ hClose pdfToCairoHandle
+
+        -- Optimize PDF with PDFToCairo.
+        pdfToCairoOptimize inputPDF pdfToCairoPDF
+
+        -- Compare the sizes of the original and PDFToCairo PDFs.
+        originalSize   <- lift $ getFileSize inputPDF
+        pdfToCairoSize <- lift $ getFileSize pdfToCairoPDF
+
+        sayComparisonF (ctx ("pdftocairo" :: String))
+                      "PDFToCairo'd PDF" originalSize pdfToCairoSize
+
+        go pdfToCairoPDF settings
+
+    (UseGhostScript, UsePDFToCairo) ->
+      withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
+        withSystemTempFile (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
+          -- Close the handles so external programs can use the files.
+          lift $ hClose ghostscriptHandle
+          lift $ hClose pdfToCairoHandle
+
+          -- Optimize PDF with GhostScript and PDFToCairo.
+          ghostScriptOptimize inputPDF ghostscriptPDF
+          pdfToCairoOptimize ghostscriptPDF pdfToCairoPDF
+
+          -- Compare the sizes of the original and PDFToCairo PDFs.
+          originalSize   <- lift $ getFileSize inputPDF
+          pdfToCairoSize <- lift $ getFileSize pdfToCairoPDF
+
+          sayComparisonF (ctx ("ghostscript+pdftocairo" :: String))
+                        "optimized PDF" originalSize pdfToCairoSize
+
+          go pdfToCairoPDF settings
+
+    (DoNotUseGhostScript, DoNotUsePDFToCairo) -> go inputPDF settings
  where
   go :: FilePath -> Settings -> FallibleT IO ()
   go pdfToOptimize settings = do

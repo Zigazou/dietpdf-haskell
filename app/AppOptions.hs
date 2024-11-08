@@ -20,33 +20,35 @@ import Codec.Compression.Predict (Predictor)
 
 import Data.Kind (Type)
 import Data.PDF.Settings
-    ( OptimizeGFX
-    , UseGhostScript
-    , UseZopfli
-    , toOptimizeGFX
-    , toUseGhostScript
-    , toUseZopfli
-    )
+  ( OptimizeGFX
+  , UseGhostScript
+  , UsePDFToCairo
+  , UseZopfli
+  , toOptimizeGFX
+  , toUseGhostScript
+  , toUsePDFToCairo
+  , toUseZopfli
+  )
 
 import Options.Applicative
-    ( Alternative (some)
-    , CommandFields
-    , Mod
-    , Parser
-    , argument
-    , auto
-    , command
-    , help
-    , info
-    , long
-    , metavar
-    , optional
-    , progDesc
-    , short
-    , str
-    , subparser
-    , switch
-    )
+  ( Alternative (some)
+  , CommandFields
+  , Mod
+  , Parser
+  , argument
+  , auto
+  , command
+  , help
+  , info
+  , long
+  , metavar
+  , optional
+  , progDesc
+  , short
+  , str
+  , subparser
+  , switch
+  )
 type Codec :: Type
 data Codec = LZW
            | Deflate
@@ -68,7 +70,7 @@ predictorsHelp =
 
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !FilePath !UseGhostScript !UseZopfli !OptimizeGFX
+  = OptimizeOptions !FilePath !FilePath !UseGhostScript !UsePDFToCairo !UseZopfli !OptimizeGFX
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -110,6 +112,7 @@ commandOptimize = command
     <$> argument str (metavar "<input_pdf_file>" <> help "PDF file to process")
     <*> argument str (metavar "<output_pdf_file>" <> help "PDF file to create")
     <*> (toUseGhostScript <$> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing"))
+    <*> (toUsePDFToCairo <$> switch (long "p2c-optimize" <> short 'p' <> help "Use PDFToCairo before optimizing"))
     <*> (toUseZopfli . not <$> switch (long "no-zopfli" <> short 'z' <> help "Do not use Zopfli"))
     <*> (toOptimizeGFX . not <$> switch (long "no-gfx-optimize" <> short 'x' <> help "Do not optimize graphics stream"))
     )

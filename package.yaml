@@ -25,7 +25,6 @@ ghc-options:
 - -fspecialise-aggressively
 - -fexpose-all-unfoldings
 - -fllvm
-- -fforce-recomp
 - -hiedir=.hie
 - -Weverything
 - -Wno-missing-safe-haskell-mode

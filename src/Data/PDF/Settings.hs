@@ -1,12 +1,14 @@
 module Data.PDF.Settings
-  ( Settings(Settings, sOptimizeGFX, sZopfli, sUseGhostScript)
+  ( Settings(Settings, sOptimizeGFX, sZopfli, sUseGhostScript, sUsePDFToCairo)
   , OptimizeGFX(OptimizeGFX, DoNotOptimizeGFX)
   , UseZopfli(UseZopfli, UseDeflate)
   , UseGhostScript(UseGhostScript, DoNotUseGhostScript)
+  , UsePDFToCairo(UsePDFToCairo, DoNotUsePDFToCairo)
   , defaultSettings
   , toUseZopfli
   , toOptimizeGFX
   , toUseGhostScript
+  , toUsePDFToCairo
   ) where
 
 import Data.Kind (Type)
@@ -32,12 +34,23 @@ toUseGhostScript :: Bool -> UseGhostScript
 toUseGhostScript True  = UseGhostScript
 toUseGhostScript False = DoNotUseGhostScript
 
+type UsePDFToCairo :: Type
+data UsePDFToCairo = UsePDFToCairo | DoNotUsePDFToCairo deriving stock Eq
+
+toUsePDFToCairo :: Bool -> UsePDFToCairo
+toUsePDFToCairo True  = UsePDFToCairo
+toUsePDFToCairo False = DoNotUsePDFToCairo
+
 type Settings :: Type
 data Settings = Settings
   { sOptimizeGFX    :: !OptimizeGFX
   , sZopfli         :: !UseZopfli
   , sUseGhostScript :: !UseGhostScript
+  , sUsePDFToCairo  :: !UsePDFToCairo
   }
 
 defaultSettings :: Settings
-defaultSettings = Settings OptimizeGFX UseZopfli DoNotUseGhostScript
+defaultSettings = Settings OptimizeGFX
+                           UseZopfli
+                           DoNotUseGhostScript
+                           DoNotUsePDFToCairo

@@ -52,6 +52,7 @@ library
       Data.PDF.Command
       Data.PDF.EncodedObject
       Data.PDF.EncodedObjects
+      Data.PDF.ExtGState
       Data.PDF.Filter
       Data.PDF.FilterCombination
       Data.PDF.FilterList
@@ -74,6 +75,7 @@ library
       Data.PDF.PDFWork
       Data.PDF.Program
       Data.PDF.Resource
+      Data.PDF.ResourceDictionary
       Data.PDF.Settings
       Data.PDF.Statistics
       Data.PDF.TextState
@@ -88,6 +90,7 @@ library
       External.GhostScriptOptimize
       External.JpegToJpeg2k
       External.JpegTran
+      External.PDFToCairoOptimize
       External.TiffToJpeg2k
       External.TtfAutoHint
       Font.TrueType.FontDirectory
@@ -124,6 +127,7 @@ library
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeStateCommand
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommand
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
+      PDF.Graphics.Interpreter.OptimizeGState
       PDF.Graphics.Interpreter.OptimizeParameters
       PDF.Graphics.Interpreter.OptimizeProgram
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
@@ -234,7 +238,7 @@ library
       BinaryLiterals
       ViewPatterns
       PatternSynonyms
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -fforce-recomp -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded
   build-depends:
       async
     , base >=4.7 && <5
@@ -297,7 +301,7 @@ executable dietpdf
       TupleSections
       StandaloneKindSignatures
       ImportQualifiedPost
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -fforce-recomp -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , bytestring
@@ -344,6 +348,7 @@ test-suite dietpdf-test
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGenericSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeOrderSpec
       PDF.Graphics.Interpreter.OptimizeCommandSpec
+      PDF.Graphics.Interpreter.OptimizeGStateSpec
       PDF.Graphics.Interpreter.OptimizeParametersSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffectiveSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContentSpec
@@ -413,7 +418,7 @@ test-suite dietpdf-test
       ImportQualifiedPost
       NumericUnderscores
       BinaryLiterals
-  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -fforce-recomp -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -funbox-strict-fields -fspecialise-aggressively -fexpose-all-unfoldings -fllvm -hiedir=.hie -Weverything -Wno-missing-safe-haskell-mode -Wno-implicit-prelude -Wno-missed-specialisations -Wno-all-missed-specialisations -Wno-unsafe -Wno-safe -Wno-redundant-bang-patterns -j -threaded -O2 -funfolding-use-threshold=16 -optc-O3 -optc-ffast-math -flate-dmd-anal -fmax-simplifier-iterations=6 -flate-specialise -fstatic-argument-transformation -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
     , base >=4.7 && <5
