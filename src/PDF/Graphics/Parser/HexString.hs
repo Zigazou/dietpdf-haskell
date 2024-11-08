@@ -24,7 +24,8 @@ module PDF.Graphics.Parser.HexString
   ( hexStringP
   ) where
 
-import Data.Binary.Parser (Get, isHexDigit, label, takeWhile1, word8)
+import Data.Binary.Parser (Get, isHexDigit, label, word8)
+import Data.Binary.Parser qualified as BP
 import Data.PDF.GFXObject (GFXObject (GFXHexString), isWhiteSpace)
 
 import Util.Ascii (asciiGREATERTHANSIGN, asciiLESSTHANSIGN)
@@ -40,6 +41,6 @@ It returns a `GFXHexString`.
 hexStringP :: Get GFXObject
 hexStringP = label "hexstringG" $ do
   word8 asciiLESSTHANSIGN
-  content <- takeWhile1 (\byte -> isHexDigit byte || isWhiteSpace byte)
+  content <- BP.takeWhile (\byte -> isHexDigit byte || isWhiteSpace byte)
   word8 asciiGREATERTHANSIGN
   return $ GFXHexString (normalizeHexString content)
