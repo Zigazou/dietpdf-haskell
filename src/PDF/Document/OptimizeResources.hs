@@ -20,7 +20,6 @@ import Data.TranslationTable (getTranslationTable)
 import PDF.Document.Resources (getAllResourceNames)
 import PDF.Object.Object.RenameResources (containsResources, renameResources)
 
-
 optimizeResources :: Logging m => PDFWork m ()
 optimizeResources = do
   sayP "Optimizing resource names"
@@ -38,17 +37,15 @@ optimizeResources = do
   sayP "Renaming resources"
 
   -- Get all objects containing resources.
-  wosContainingResources <- gets ( containsResources
-                                 . toPDFDocument
+  wosContainingResources <- gets ( toPDFDocument
                                  . ppObjectsWithoutStream
                                  . wPDF
-                                 )
+                                 ) >>= containsResources
 
-  wsContainingResources <- gets ( containsResources
-                                . toPDFDocument
+  wsContainingResources <- gets ( toPDFDocument
                                 . ppObjectsWithStream
                                 . wPDF
-                                )
+                                ) >>= containsResources
 
   let containingResources = wosContainingResources <> wsContainingResources
 

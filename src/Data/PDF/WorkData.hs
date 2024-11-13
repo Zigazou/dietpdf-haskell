@@ -1,5 +1,5 @@
 module Data.PDF.WorkData
-  ( WorkData(WorkData, wPDF, wContexts, wNameTranslations, wSettings, wMasks)
+  ( WorkData(WorkData, wPDF, wContexts, wNameTranslations, wSettings, wMasks, wAdditionalGStates)
   , emptyWorkData
   , setSettings
   ) where
@@ -8,21 +8,23 @@ import Data.Context (Context)
 import Data.Kind (Type)
 import Data.PDF.PDFPartition (PDFPartition)
 import Data.PDF.Resource (Resource)
+import Data.PDF.ResourceDictionary (ResourceDictionary)
 import Data.PDF.Settings (Settings, defaultSettings)
 import Data.Set (Set)
 import Data.TranslationTable (TranslationTable)
 
 type WorkData :: Type
 data WorkData = WorkData
-  { wPDF              :: !PDFPartition
-  , wContexts         :: ![Context]
-  , wNameTranslations :: !(TranslationTable Resource)
-  , wMasks            :: !(Set Int)
-  , wSettings         :: !Settings
+  { wPDF               :: !PDFPartition
+  , wContexts          :: ![Context]
+  , wNameTranslations  :: !(TranslationTable Resource)
+  , wAdditionalGStates :: !ResourceDictionary
+  , wMasks             :: !(Set Int)
+  , wSettings          :: !Settings
   }
 
 emptyWorkData :: WorkData
-emptyWorkData = WorkData mempty [] mempty mempty defaultSettings
+emptyWorkData = WorkData mempty [] mempty mempty mempty defaultSettings
 
 setSettings :: WorkData -> Settings -> WorkData
 setSettings workData settings = workData { wSettings = settings }

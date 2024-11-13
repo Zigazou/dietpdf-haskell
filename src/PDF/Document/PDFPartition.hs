@@ -10,22 +10,25 @@ module PDF.Document.PDFPartition
   ) where
 
 import Data.Context (Contextual (ctx))
+import Data.Foldable (toList)
 import Data.IntMap qualified as IM
 import Data.Logging (Logging)
-import Data.PDF.PDFDocument (PDFDocument, cFilter, deepFind, member)
+import Data.PDF.PDFDocument (PDFDocument, cFilter, deepFind)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFReference)
-    , hasStream
-    , isHeader
-    , isIndirect
-    , isReference
-    , isTrailer
-    )
+  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFReference)
+  , hasStream
+  , isHeader
+  , isIndirect
+  , isReference
+  , isTrailer
+  )
 import Data.PDF.PDFObjects (fromPDFDocument, toPDFDocument)
 import Data.PDF.PDFPartition
-    ( PDFPartition (PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
-    )
+  ( PDFPartition (PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
+  )
 import Data.PDF.PDFWork (PDFWork, sayP, withContext)
+import Data.Set (Set)
+import Data.Set qualified as Set
 
 import PDF.Document.Uncompress (uncompressDocument, uncompressObjects)
 import PDF.Object.Object.Properties (hasKey)
@@ -43,11 +46,21 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
     uTrailers <- uncompressDocument trailers
 
     sayP "Locating all references"
-    let references =
-          deepFind isReference uHeads
-            <> deepFind isReference uTrailers
-            <> deepFind isReference (toPDFDocument uObjectsWithStream)
-            <> deepFind isReference (toPDFDocument uObjectsWithoutStream)
+    let
+      startReferences :: Set PDFObject
+      startReferences =
+        (Set.fromList . toList) (  deepFind isReference uHeads
+                                <> deepFind isReference uTrailers
+                                )
+
+      otherReferences :: Set PDFObject
+      otherReferences =
+        (Set.fromList . toList)
+          (  deepFind isReference (toPDFDocument uObjectsWithStream)
+          <> deepFind isReference (toPDFDocument uObjectsWithoutStream)
+          )
+
+      references = findUsedReferences startReferences otherReferences
 
     sayP "Removing unused objects"
 
@@ -58,19 +71,27 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
       , ppTrailers             = trailers
       }
  where
+  findUsedReferences :: Set PDFObject -> Set PDFObject -> Set PDFObject
+  findUsedReferences startRefs refs =
+    let usedRefs = Set.filter (isReferenced startRefs) refs
+    in if usedRefs /= mempty
+        then findUsedReferences (Set.union startRefs usedRefs)
+                                (Set.difference refs usedRefs)
+        else startRefs
+
   isNotLinearized :: PDFObject -> Bool
   isNotLinearized = not . hasKey "Linearized"
 
-  isReferenced :: PDFDocument -> PDFObject -> Bool
+  isReferenced :: Set PDFObject -> PDFObject -> Bool
   isReferenced refs (PDFIndirectObject num gen _) =
-    PDFReference num gen `member` refs
+    PDFReference num gen `Set.member` refs
   isReferenced refs (PDFIndirectObjectWithStream num gen _ _) =
-    PDFReference num gen `member` refs
+    PDFReference num gen `Set.member` refs
   isReferenced refs (PDFObjectStream num gen _ _) =
-    PDFReference num gen `member` refs
+    PDFReference num gen `Set.member` refs
   isReferenced _anyRefs _anyOtherObject = True
 
-  used :: PDFDocument -> PDFObject -> Bool
+  used :: Set PDFObject -> PDFObject -> Bool
   used refs object = isNotLinearized object && isReferenced refs object
 
 {- |

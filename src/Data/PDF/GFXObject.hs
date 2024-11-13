@@ -43,6 +43,7 @@ module Data.PDF.GFXObject
   , isStringRegularChar
   , isNameRegularChar
   , spaceIfNeeded
+  , isKeywordFirstCharacter
   ) where
 
 import Data.Array (Array, mkArray, mkEmptyArray)
@@ -61,23 +62,24 @@ import Formatting (format, int, (%))
 import Formatting.ByteStringFormatter (utf8)
 
 import Util.Ascii
-    ( asciiDIGITSEVEN
-    , asciiDIGITZERO
-    , asciiLOWERA
-    , asciiLOWERZ
-    , asciiUPPERA
-    , asciiUPPERZ
-    , pattern AsciiAPOSTROPHE
-    , pattern AsciiASTERISK
-    , pattern AsciiCR
-    , pattern AsciiFF
-    , pattern AsciiHT
-    , pattern AsciiLF
-    , pattern AsciiNUL
-    , pattern AsciiNUMBERSIGN
-    , pattern AsciiQUOTATIONMARK
-    , pattern AsciiSPACE
-    )
+  ( asciiDIGITNINE
+  , asciiDIGITSEVEN
+  , asciiDIGITZERO
+  , asciiLOWERA
+  , asciiLOWERZ
+  , asciiUPPERA
+  , asciiUPPERZ
+  , pattern AsciiAPOSTROPHE
+  , pattern AsciiASTERISK
+  , pattern AsciiCR
+  , pattern AsciiFF
+  , pattern AsciiHT
+  , pattern AsciiLF
+  , pattern AsciiNUL
+  , pattern AsciiNUMBERSIGN
+  , pattern AsciiQUOTATIONMARK
+  , pattern AsciiSPACE
+  )
 import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
 import Util.Name (fromName)
 import Util.Number (fromInt, fromNumber, round')
@@ -121,13 +123,22 @@ Test if a byte is a keyword character.
 
 Keyword characters are either lowercase or uppercase alphabetical characters.
 -}
+isKeywordFirstCharacter :: Word8 -> Bool
+isKeywordFirstCharacter AsciiASTERISK                                  = True
+isKeywordFirstCharacter AsciiAPOSTROPHE                                = True
+isKeywordFirstCharacter AsciiQUOTATIONMARK                             = True
+isKeywordFirstCharacter byte | inRange (asciiLOWERA, asciiLOWERZ) byte = True
+                             | inRange (asciiUPPERA, asciiUPPERZ) byte = True
+                             | otherwise                               = False
+
 isKeywordCharacter :: Word8 -> Bool
-isKeywordCharacter AsciiASTERISK                                  = True
-isKeywordCharacter AsciiAPOSTROPHE                                = True
-isKeywordCharacter AsciiQUOTATIONMARK                             = True
-isKeywordCharacter byte | inRange (asciiLOWERA, asciiLOWERZ) byte = True
-                        | inRange (asciiUPPERA, asciiUPPERZ) byte = True
-                        | otherwise                               = False
+isKeywordCharacter AsciiASTERISK                                        = True
+isKeywordCharacter AsciiAPOSTROPHE                                      = True
+isKeywordCharacter AsciiQUOTATIONMARK                                   = True
+isKeywordCharacter byte | inRange (asciiLOWERA, asciiLOWERZ) byte       = True
+                        | inRange (asciiUPPERA, asciiUPPERZ) byte       = True
+                        | inRange (asciiDIGITZERO, asciiDIGITNINE) byte = True
+                        | otherwise                                     = False
 
 {-|
 Test if a byte a an octal digit.

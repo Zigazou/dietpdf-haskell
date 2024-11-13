@@ -6,11 +6,12 @@ import Control.Monad.State (State)
 
 import Data.Functor ((<&>))
 import Data.PDF.Command (Command (cOperator))
-import Data.PDF.InterpreterAction (InterpreterAction, replaceCommandWith)
+import Data.PDF.InterpreterAction
+  (InterpreterAction (KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
   (InterpreterState, usefulGraphicsPrecisionS, usefulTextPrecisionS)
 import Data.PDF.OperatorCategory
-  ( OperatorCategory (ClippingPathOperator, PathConstructionOperator, PathPaintingOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
+  ( OperatorCategory (ClippingPathOperator, ColorOperator, PathConstructionOperator, PathPaintingOperator, SpecialGraphicsStateOperator, TextPositioningOperator, TextShowingOperator, TextStateOperator, Type3FontOperator)
   , category
   )
 import Data.PDF.Program (Program)
@@ -26,34 +27,44 @@ optimizeGeneric
   -> Program
   -> State InterpreterState InterpreterAction
 optimizeGeneric command _rest = case category (cOperator command) of
+  SpecialGraphicsStateOperator -> return KeepCommand
+
   PathConstructionOperator ->
     optimizeParameters command
       <$> usefulGraphicsPrecisionS
       <&> replaceCommandWith command
+
   PathPaintingOperator ->
     optimizeParameters command
       <$> usefulGraphicsPrecisionS
       <&> replaceCommandWith command
+
   ClippingPathOperator ->
     optimizeParameters command
       <$> usefulGraphicsPrecisionS
       <&> replaceCommandWith command
+
   TextStateOperator ->
     optimizeParameters command
       <$> usefulTextPrecisionS
       <&> replaceCommandWith command
+
   Type3FontOperator ->
     optimizeParameters command
       <$> usefulTextPrecisionS
       <&> replaceCommandWith command
+
   TextPositioningOperator ->
     optimizeParameters command
       <$> usefulTextPrecisionS
       <&> replaceCommandWith command
+
   TextShowingOperator ->
     optimizeParameters command
       <$> usefulTextPrecisionS
       <&> replaceCommandWith command
+
+  ColorOperator -> return KeepCommand
 
   _anyOtherCategory -> replaceCommandWith command
                      . optimizeParameters command

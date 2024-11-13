@@ -27,6 +27,7 @@ data OperatorWeight = Weight Int
 operatorWeight :: GSOperator -> OperatorWeight
 operatorWeight GSSetCTM                     = Weight 0
 operatorWeight GSSetTextMatrix              = Weight 1
+
 operatorWeight GSSetStrokeColorspace        = Weight 3
 operatorWeight GSSetStrokeColor             = Weight 3
 operatorWeight GSSetStrokeColorN            = Weight 3
@@ -39,6 +40,7 @@ operatorWeight GSSetNonStrokeColor          = Weight 6
 operatorWeight GSSetNonStrokeColorN         = Weight 6
 operatorWeight GSSetNonStrokeGrayColorspace = Weight 6
 operatorWeight GSSetNonStrokeRGBColorspace  = Weight 6
+
 operatorWeight GSSetLineWidth               = Weight 10
 operatorWeight GSSetLineCap                 = Weight 11
 operatorWeight GSSetLineJoin                = Weight 12
@@ -46,11 +48,11 @@ operatorWeight GSSetMiterLimit              = Weight 13
 operatorWeight GSSetLineDashPattern         = Weight 14
 operatorWeight GSSetColourRenderingIntent   = Weight 15
 operatorWeight GSSetFlatnessTolerance       = Weight 16
+operatorWeight GSSetTextFont                = Weight 17
 operatorWeight GSSetCharacterSpacing        = Weight 18
 operatorWeight GSSetWordSpacing             = Weight 19
 operatorWeight GSSetHorizontalScaling       = Weight 20
 operatorWeight GSSetTextLeading             = Weight 21
-operatorWeight GSSetTextFont                = Weight 22
 operatorWeight GSSetTextRenderingMode       = Weight 23
 operatorWeight GSSetTextRise                = Weight 24
 operatorWeight GSSetGlyphWidth              = Weight 25

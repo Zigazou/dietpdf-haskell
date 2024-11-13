@@ -23,21 +23,22 @@ module Data.PDF.GraphicsState
   , resetTextState
   , setStrokeColor
   , setNonStrokeColor
+  , usefulMatrixPrecisionFor
   ) where
 
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.PDF.Color (Color (ColorNotSet))
 import Data.PDF.TextState
-    ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsMatrix, tsRise)
-    , defaultTextState
-    , tsScaleX
-    , tsScaleY
-    )
+  ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsMatrix, tsRise)
+  , defaultTextState
+  , tsScaleX
+  , tsScaleY
+  )
 import Data.PDF.TransformationMatrix
-    ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
-    , matrixScale
-    )
+  ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
+  , matrixScale
+  )
 
 {- |
 The graphics state is a collection of parameters that define the current page's
@@ -105,13 +106,16 @@ defaultGraphicsState = GraphicsState
   , gsCurrentPointY  = 0.0
   }
 
+usefulMatrixPrecisionFor :: Double -> Int
+usefulMatrixPrecisionFor scale = max 0 (6 - floor (logBase 10 (abs scale)))
+
 {- |
 Calculates the useful precision of the current graphics state. The useful
 precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulGraphicsPrecision :: GraphicsState -> Int
-usefulGraphicsPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
+usefulGraphicsPrecision state = max 0 (ceiling (logBase 10 scale) + 2)
  where
   userUnit = gsUserUnit state
   scaleX   = userUnit * abs (gsScaleX state)
@@ -124,7 +128,7 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulTextPrecision :: GraphicsState -> Int
-usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
+usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 2)
  where
   userUnit = gsUserUnit state
   scaleTX  = abs ((tsScaleX . gsTextState) state)

@@ -27,6 +27,13 @@ module Data.PDF.PDFWork
   , setMasks
   , getMasks
   , putNewObject
+  , createNewName
+  , getAdditionalGStates
+  , addAdditionalGState
+  , setAdditionalGStates
+  , modifyIndirectObjectsP
+  , loadFullObject
+  , flattenObject
   )
 where
 
@@ -35,32 +42,38 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except (runExceptT, throwE)
 import Control.Monad.Trans.State (evalStateT)
 
+import Data.ByteString (ByteString)
 import Data.Context (Context (NoContext))
 import Data.Fallible (Fallible, FallibleT)
+import Data.Functor ((<&>))
 import Data.IntMap qualified as IM
 import Data.Kind (Type)
 import Data.Logging (Logging, sayComparisonF, sayErrorF, sayF)
 import Data.Map qualified as Map
 import Data.PDF.PDFDocument (singleton)
 import Data.PDF.PDFObject
-  ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFNull, PDFNumber, PDFReference, PDFTrailer, PDFXRefStream)
+  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFNull, PDFNumber, PDFReference, PDFTrailer, PDFXRefStream)
   )
 import Data.PDF.PDFObjects (findLast)
 import Data.PDF.PDFPartition
   ( PDFPartition (ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
   , lastTrailer
   )
-import Data.PDF.Resource (Resource)
+import Data.PDF.Resource (Resource (ResExtGState), resName, toNameBase)
+import Data.PDF.ResourceDictionary (ResourceDictionary)
 import Data.PDF.WorkData
-  (WorkData (wContexts, wMasks, wNameTranslations, wPDF), emptyWorkData)
+  ( WorkData (wAdditionalGStates, wContexts, wMasks, wNameTranslations, wPDF)
+  , emptyWorkData
+  )
 import Data.Set (Set)
+import Data.Set qualified as Set
 import Data.Text (Text)
 import Data.TranslationTable (TranslationTable)
 import Data.UnifiedError (UnifiedError)
 
 import PDF.Object.Object.Properties (isCatalog, isInfo)
 
-import Util.Dictionary (mkDictionary)
+import Util.Dictionary (Dictionary, findFirst, mkDictionary)
 
 type PDFWork :: (Type -> Type) -> Type -> Type
 type PDFWork m a = StateT WorkData (FallibleT m) a
@@ -152,6 +165,62 @@ getReference (PDFNumber objectNumber) =
     Nothing     -> return PDFNull
 getReference _anythingElse = return PDFNull
 
+loadDictionary
+  :: Monad m
+  => Set Int
+  -> Dictionary PDFObject
+  -> PDFWork m (Dictionary PDFObject)
+loadDictionary alreadySeen dictionary =
+  mapM go (Map.toList dictionary) <&> Map.fromList
+ where
+  go :: Monad m => (ByteString, PDFObject) -> PDFWork m (ByteString, PDFObject)
+  go (key, value) = do
+    newValue <- loadFullObject' alreadySeen value
+    return (key, newValue)
+
+loadFullObject' :: Monad m => Set Int -> PDFObject -> PDFWork m PDFObject
+loadFullObject' alreadySeen reference@(PDFReference major _minor) =
+  if Set.member major alreadySeen
+    then return reference
+    else
+      getReference reference >>= loadFullObject' alreadySeen
+
+loadFullObject' alreadySeen (PDFArray items) =
+  mapM (loadFullObject' alreadySeen) items <&> PDFArray
+
+loadFullObject' alreadySeen (PDFDictionary dictionary) =
+  loadDictionary alreadySeen dictionary <&> PDFDictionary
+
+loadFullObject' alreadySeen object@(PDFIndirectObjectWithStream major minor dict stream) =
+  if Set.member major alreadySeen
+    then return object
+    else do
+      let alreadySeen' = Set.insert major alreadySeen
+      loadedDictionary <- loadDictionary alreadySeen' dict
+      return (PDFIndirectObjectWithStream major minor loadedDictionary stream)
+
+loadFullObject' alreadySeen object@(PDFIndirectObject major minor value) =
+  if Set.member major alreadySeen
+    then return object
+    else
+      let alreadySeen' = Set.insert major alreadySeen
+      in loadFullObject' alreadySeen' value <&> PDFIndirectObject major minor
+
+loadFullObject' _alreadySeen object = return object
+
+loadFullObject :: Monad m => PDFObject -> PDFWork m PDFObject
+loadFullObject = loadFullObject' mempty
+
+flattenObject :: PDFObject -> PDFObject
+flattenObject (PDFIndirectObject _major _minor value) = flattenObject value
+flattenObject (PDFIndirectObjectWithStream major minor _dict _stream) =
+  PDFReference major minor
+flattenObject (PDFIndirectObjectWithGraphics major minor _dict _gfxObjects) =
+  PDFReference major minor
+flattenObject (PDFArray items)     = PDFArray (flattenObject <$> items)
+flattenObject (PDFDictionary dict) = PDFDictionary (flattenObject <$> dict)
+flattenObject object               = object
+
 putObject :: Monad m => PDFObject -> PDFWork m ()
 putObject object = modifyPDF $ \pdf ->
   case object of
@@ -197,6 +266,34 @@ setTranslationTable translationTable = modifyWorkData $
 
 getTranslationTable :: Monad m => PDFWork m (TranslationTable Resource)
 getTranslationTable = gets wNameTranslations
+
+createNewName :: (Monad m) => Resource -> PDFWork m Resource
+createNewName resourceType = do
+  translationTable <- getTranslationTable
+  let newName = toNameBase resourceType (Map.size translationTable)
+  setTranslationTable (Map.insert newName newName translationTable)
+  return newName
+
+setAdditionalGStates :: Monad m => ResourceDictionary -> PDFWork m ()
+setAdditionalGStates additionalGStates =
+  modifyWorkData $ \workData ->
+    workData { wAdditionalGStates = additionalGStates }
+
+getAdditionalGStates :: Monad m => PDFWork m ResourceDictionary
+getAdditionalGStates = gets wAdditionalGStates
+
+addAdditionalGState :: Monad m => PDFObject -> PDFWork m Resource
+addAdditionalGState additionalGState = do
+  currentGStates <- getAdditionalGStates
+
+  key <- case findFirst (== additionalGState) currentGStates of
+          Just key -> return (ResExtGState key)
+          Nothing  -> createNewName (ResExtGState "")
+
+  let newGStates = Map.insert (resName key) additionalGState currentGStates
+  setAdditionalGStates newGStates
+
+  return key
 
 setMasks :: Monad m => Set Int -> PDFWork m ()
 setMasks masks = modifyWorkData $ \workData -> workData { wMasks = masks }
@@ -268,6 +365,18 @@ modifyIndirectObjects func = modifyPDF $ \pdf ->
   pdf { ppObjectsWithStream    = IM.map func (ppObjectsWithStream pdf)
       , ppObjectsWithoutStream = IM.map func (ppObjectsWithoutStream pdf)
       }
+
+modifyIndirectObjectsP
+  :: Monad m
+  => (PDFObject -> PDFWork m PDFObject)
+  -> PDFWork m ()
+modifyIndirectObjectsP func = do
+  origin <- gets wPDF
+  os <- mapM func (ppObjectsWithStream origin)
+  ows <- mapM func (ppObjectsWithoutStream origin)
+  modifyPDF $ \pdf -> pdf { ppObjectsWithStream = os
+                          , ppObjectsWithoutStream = ows
+                          }
 
 lastObjectNumber :: Monad m => PDFWork m Int
 lastObjectNumber = do

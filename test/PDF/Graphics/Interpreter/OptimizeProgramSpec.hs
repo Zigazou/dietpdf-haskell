@@ -54,10 +54,10 @@ optimizeProgramExamples =
             ]
         , mkCommand GSSaveGS []
         , mkCommand GSSetCTM
-            [ GFXNumber 8.33
+            [ GFXNumber 8.33333
             , GFXNumber 0.0
             , GFXNumber 0.0
-            , GFXNumber 8.33
+            , GFXNumber 8.33333
             , GFXNumber 0.0
             , GFXNumber 0.0
             ]

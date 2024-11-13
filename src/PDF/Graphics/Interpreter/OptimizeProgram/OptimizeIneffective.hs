@@ -68,10 +68,14 @@ anyPaintingCommandBeforeRestore level (command :<| rest)
   | otherwise                       = anyPaintingCommandBeforeRestore level rest
 
 {- |
-Remove useless save/restore commands.
+Remove useless save/restore graphics state commands or begin/end text.
 -}
 optimizeIneffective :: Program -> Program
 optimizeIneffective Empty = mempty
+optimizeIneffective (   Command GSBeginText _noParameters1
+                    :<| Command GSEndText _noParameters2
+                    :<| rest
+                    ) = optimizeIneffective rest
 optimizeIneffective (command :<| rest)
   | isPathPaintingCommand command          = command <| optimizeIneffective rest
   | isTextPaintingCommand command          = command <| optimizeIneffective rest

@@ -74,6 +74,9 @@ optimizeTextCommand command _rest = case (operator, parameters) of
           <$> usefulTextPrecisionS
           <&> replaceCommandWith command
 
+  -- Remove ShowManyText when there is no text.
+  (GSShowManyText, GFXArray Empty :<| Empty) -> return DeleteCommand
+
   -- Replace ShowManyText by ShowText when there is only one text
   (GSShowManyText, GFXArray items :<| Empty) -> do
     let newCommand = case items of
@@ -84,6 +87,9 @@ optimizeTextCommand command _rest = case (operator, parameters) of
     optimizeParameters newCommand
       <$> usefulTextPrecisionS
       <&> replaceCommandWith command
+
+  -- Remove ShowText when there is no text.
+  (GSShowText, GFXString "" :<| Empty) -> return DeleteCommand
 
   (GSShowText, _parameters) ->
     optimizeParameters command

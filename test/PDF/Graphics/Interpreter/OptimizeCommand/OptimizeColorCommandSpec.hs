@@ -40,7 +40,7 @@ optimizeColorCommandExamples =
         [ mkCommand GSSetNonStrokeGrayColorspace [GFXNumber 1]
         , mkCommand GSRectangle [ GFXNumber 5, GFXNumber 5, GFXNumber 50, GFXNumber 10]
         , mkCommand GSFillPathNZWR []
-        , mkCommand GSSetNonStrokeCMYKColorspace [GFXNumber 0, GFXNumber 0, GFXNumber 0, GFXNumber 1]
+        , mkCommand GSSetNonStrokeGrayColorspace [GFXNumber 0]
         , mkCommand GSRectangle [ GFXNumber 5, GFXNumber 5, GFXNumber 50, GFXNumber 10]
         , mkCommand GSFillPathNZWR []
         , mkCommand GSSetNonStrokeGrayColorspace [GFXNumber 1]

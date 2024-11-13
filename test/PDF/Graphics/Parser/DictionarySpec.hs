@@ -28,6 +28,9 @@ dictionaryExamples =
   , ( "<</a<</b 2>>>>"
     , mkGFXDictionary [("a", mkGFXDictionary [("b", GFXNumber 2.0)])]
     )
+  , ( "<<\r\n/Page /Catalog\r\n>>"
+    , mkGFXDictionary [("Page", GFXName "Catalog")]
+    )
   , ( "<</Type/FontDescriptor/FontName/BAAAAA+LiberationSerif\
       \/Flags 4\n\
       \/FontBBox[-543 -303 1277 981]/ItalicAngle 0\n\

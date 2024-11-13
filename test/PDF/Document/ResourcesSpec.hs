@@ -6,7 +6,7 @@ import Control.Monad (forM_)
 
 import Data.PDF.PDFDocument (PDFDocument, fromList)
 import Data.PDF.PDFObject
-  ( PDFObject (PDFEndOfFile, PDFIndirectObject, PDFNumber, PDFVersion, PDFReference)
+  ( PDFObject (PDFEndOfFile, PDFIndirectObject, PDFNumber, PDFReference, PDFVersion)
   , mkPDFDictionary
   )
 import Data.PDF.PDFWork (evalPDFWorkT)
@@ -19,9 +19,11 @@ import PDF.Processing.PDFWork (importObjects)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-getAllResourceNamesExamples :: [(PDFDocument, Set Resource)]
+
+getAllResourceNamesExamples :: [(Int, PDFDocument, Set Resource)]
 getAllResourceNamesExamples =
-  [ ( fromList
+  [ ( 0
+    , fromList
         [ PDFVersion "1.4"
         , PDFIndirectObject 1 0 (mkPDFDictionary [("ID", PDFNumber 3)])
         , PDFEndOfFile
@@ -29,7 +31,8 @@ getAllResourceNamesExamples =
         ]
     , mempty
     )
-  , ( fromList
+  , ( 1
+    , fromList
         [ PDFVersion "1.4"
         , PDFIndirectObject 1 0
             ( mkPDFDictionary
@@ -45,7 +48,8 @@ getAllResourceNamesExamples =
         ]
     , Set.fromList [ ResFont "a" ]
     )
-  , ( fromList
+  , ( 2
+    , fromList
         [ PDFVersion "1.4"
         , PDFIndirectObject 1 0
             ( mkPDFDictionary [( "Resources", PDFReference 2 0 )] )
@@ -65,7 +69,7 @@ spec :: Spec
 spec = do
   describe "getAllResourceNames"
     $ forM_ getAllResourceNamesExamples
-    $ \(example, expected) ->
-        it ("should find all resource names for " ++ show example) $ do
+    $ \(identifier, example, expected) ->
+        it ("should find all resource names for example " ++ show identifier) $ do
           optimized <- evalPDFWorkT (importObjects example >> getAllResourceNames)
           optimized `shouldBe` Right expected

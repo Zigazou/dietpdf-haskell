@@ -17,11 +17,11 @@ module Data.PDF.Resource (
 ) where
 
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.HasLength (HasLength (objectLength))
 import Data.Kind (Type)
 import Data.Set (Set)
 import Data.Set qualified as Set
-import Data.ByteString qualified as BS
 
 type Resource :: Type
 data Resource
@@ -38,13 +38,13 @@ data Resource
 -- | Get the name of a resource.
 resName :: Resource -> ByteString
 resName (ResColorSpace name) = name
-resName (ResFont name) = name
-resName (ResXObject name) = name
-resName (ResExtGState name) = name
+resName (ResFont name)       = name
+resName (ResXObject name)    = name
+resName (ResExtGState name)  = name
 resName (ResProperties name) = name
-resName (ResPattern name) = name
-resName (ResShading name) = name
-resName (ResProcSet name) = name
+resName (ResPattern name)    = name
+resName (ResShading name)    = name
+resName (ResProcSet name)    = name
 
 instance HasLength Resource where
   objectLength :: Resource -> Int
@@ -53,13 +53,13 @@ instance HasLength Resource where
 -- | Map a function over the name of a resource.
 rmap :: (ByteString -> ByteString) -> Resource -> Resource
 rmap func (ResColorSpace name) = ResColorSpace (func name)
-rmap func (ResFont name) = ResFont (func name)
-rmap func (ResXObject name) = ResXObject (func name)
-rmap func (ResExtGState name) = ResExtGState (func name)
+rmap func (ResFont name)       = ResFont (func name)
+rmap func (ResXObject name)    = ResXObject (func name)
+rmap func (ResExtGState name)  = ResExtGState (func name)
 rmap func (ResProperties name) = ResProperties (func name)
-rmap func (ResPattern name) = ResPattern (func name)
-rmap func (ResShading name) = ResShading (func name)
-rmap func (ResProcSet name) = ResProcSet (func name)
+rmap func (ResPattern name)    = ResPattern (func name)
+rmap func (ResShading name)    = ResShading (func name)
+rmap func (ResProcSet name)    = ResProcSet (func name)
 
 {- | Convert a resource type and name to a 'Resource'.
 
@@ -67,14 +67,14 @@ If the resource type is not `ColorSpace`, `Font`, `XObject`, `ExtGState`,
 `Properties`, or `Pattern`, then `Nothing` is returned.
 -}
 toResource :: ByteString -> ByteString -> Maybe Resource
-toResource "ColorSpace" name = Just $ ResColorSpace name
-toResource "Font" name = Just $ ResFont name
-toResource "XObject" name = Just $ ResXObject name
-toResource "ExtGState" name = Just $ ResExtGState name
-toResource "Properties" name = Just $ ResProperties name
-toResource "Pattern" name = Just $ ResPattern name
-toResource "Shading" name = Just $ ResShading name
-toResource "ProcSet" name = Just $ ResProcSet name
+toResource "ColorSpace" name          = Just $ ResColorSpace name
+toResource "Font" name                = Just $ ResFont name
+toResource "XObject" name             = Just $ ResXObject name
+toResource "ExtGState" name           = Just $ ResExtGState name
+toResource "Properties" name          = Just $ ResProperties name
+toResource "Pattern" name             = Just $ ResPattern name
+toResource "Shading" name             = Just $ ResShading name
+toResource "ProcSet" name             = Just $ ResProcSet name
 toResource _unknownResourceType _name = Nothing
 
 {- | Create a set of resources from a list of `Maybe Resource`s.
@@ -89,7 +89,7 @@ createSet = foldr go mempty
  where
   go :: Maybe Resource -> Set Resource -> Set Resource
   go (Just resource) resources = Set.insert resource resources
-  go Nothing resources = resources
+  go Nothing resources         = resources
 
 baseDigits :: ByteString
 baseDigits = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

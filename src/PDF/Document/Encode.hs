@@ -34,6 +34,7 @@ import Data.PDF.PDFWork
   , isEmptyPDF
   , lastObjectNumber
   , modifyIndirectObjects
+  , modifyIndirectObjectsP
   , pushContext
   , putNewObject
   , putObject
@@ -60,18 +61,17 @@ import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
   (optimizeOptionalDictionaryEntries)
 import PDF.Document.OptimizeResources (optimizeResources)
+-- TODO: import PDF.Document.Resources (updateWithAdditionalResources)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
 import PDF.Object.State (getValue, setMaybe)
 import PDF.Processing.Optimize (optimize)
-import PDF.Processing.PDFWork
-  (clean, importObjects, pMapP, pModifyIndirectObjects)
+import PDF.Processing.PDFWork (clean, importObjects, pMapP)
 
 import System.IO (hSetBuffering, stderr)
 
 import Util.Sequence (mapMaybe)
-
 {- |
 Encodes a PDF object and keeps track of its number and length.
 
@@ -190,7 +190,9 @@ pdfEncode objects = do
                   ]
 
   sayP "Optimizing PDF"
-  pModifyIndirectObjects optimize
+  modifyIndirectObjectsP optimize
+
+  -- TODO: updateWithAdditionalResources
 
   clean
 
@@ -204,6 +206,7 @@ pdfEncode objects = do
                                . wPDF
                                )
 
+  sayP "Making object stream from objects"
   objectStream <- makeObjectStreamFromObjects objectsWithoutStream
                                               nextObjectNumber
 

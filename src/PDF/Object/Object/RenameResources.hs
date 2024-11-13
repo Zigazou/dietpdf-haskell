@@ -4,12 +4,14 @@ module PDF.Object.Object.RenameResources
 
 
 import Data.ByteString (ByteString)
+import Data.Functor ((<&>))
+import Data.Logging (Logging)
 import Data.Map qualified as Map
-import Data.PDF.PDFDocument (PDFDocument, deepFind)
+import Data.PDF.PDFDocument (PDFDocument, deepFind, toList)
 import Data.PDF.PDFObject
   ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFReference)
-  , isReference
   )
+import Data.PDF.PDFWork (PDFWork, getReference)
 import Data.PDF.Resource
   ( Resource (ResColorSpace, ResExtGState, ResFont, ResPattern, ResProcSet, ResProperties, ResShading, ResXObject)
   , resName
@@ -18,9 +20,16 @@ import Data.Set (Set)
 import Data.Set qualified as Set
 import Data.TranslationTable (TranslationTable, convert)
 
-import PDF.Object.Object.Properties (getValueForKey, setValueForKey)
+import PDF.Object.Object.Properties (getValueForKey, hasKey)
 
 import Util.Dictionary (Dictionary)
+
+getMajor :: PDFObject -> Set Int
+getMajor (PDFReference major _) = Set.singleton major
+getMajor (PDFIndirectObject major _minor _object) = Set.singleton major
+getMajor (PDFIndirectObjectWithStream major _minor _dict _stream) =
+  Set.singleton major
+getMajor _anyOtherObject = mempty
 
 convertResource
   :: TranslationTable Resource
@@ -50,21 +59,56 @@ renameResource table "Shading" (name, object) =
   (convertResource table ResShading name, object)
 renameResource table "ProcSet" (name, object) =
   (convertResource table ResProcSet name, object)
-renameResource _table _unknownResource (name, object) = (name, object)
+renameResource _table _unknownResourceType (name, object) = (name, object)
+
+isAResourceType :: ByteString -> Bool
+isAResourceType "ColorSpace"  = True
+isAResourceType "Font"        = True
+isAResourceType "XObject"     = True
+isAResourceType "ExtGState"   = True
+isAResourceType "Properties"  = True
+isAResourceType "Pattern"     = True
+isAResourceType "Shading"     = True
+isAResourceType "ProcSet"     = True
+isAResourceType _anyOtherType = False
 
 renameByResourceType
   :: TranslationTable Resource
   -> (ByteString, PDFObject)
   -> (ByteString, PDFObject)
-renameByResourceType table (resourceType, PDFDictionary dict) =
-  ( resourceType
-  , PDFDictionary ( Map.fromList
-                  . fmap (renameResource table resourceType)
-                  . Map.toList
-                  $ dict
-                  )
+renameByResourceType table (resourceType, PDFDictionary dict)
+  | isAResourceType resourceType =
+      ( resourceType
+      , PDFDictionary ( Map.fromList
+                      . fmap (renameResource table resourceType)
+                      . Map.toList
+                      $ dict
+                      )
+      )
+  | otherwise =
+      ( convertResource table ResColorSpace
+      $ convertResource table ResColorSpace
+      $ convertResource table ResFont
+      $ convertResource table ResXObject
+      $ convertResource table ResExtGState
+      $ convertResource table ResProperties
+      $ convertResource table ResPattern
+      $ convertResource table ResShading
+      $ convertResource table ResProcSet resourceType
+      , PDFDictionary dict
+      )
+renameByResourceType table (resourceType, object) =
+  ( convertResource table ResColorSpace
+  $ convertResource table ResColorSpace
+  $ convertResource table ResFont
+  $ convertResource table ResXObject
+  $ convertResource table ResExtGState
+  $ convertResource table ResProperties
+  $ convertResource table ResPattern
+  $ convertResource table ResShading
+  $ convertResource table ResProcSet resourceType
+  , object
   )
-renameByResourceType _table (resourceType, object) = (resourceType, object)
 
 renameResourcesInDictionary
   :: TranslationTable Resource
@@ -88,53 +132,71 @@ renameResources
   -> Set Int
   -> PDFObject
   -> PDFObject
-renameResources table _containingResources dictionary@PDFDictionary{} =
-  case getValueForKey "Resources" dictionary of
-    Just (PDFDictionary resources) -> setValueForKey
-        "Resources"
-        (Just . PDFDictionary $ renameResourcesInDictionary table resources)
-        dictionary
-    _anyOtherCase -> dictionary
-renameResources table containingResources object@(PDFIndirectObject number revision (PDFDictionary dict))
-  | Set.member number containingResources =
-      PDFIndirectObject
-        number
-        revision
-        (PDFDictionary (renameResourcesInDictionary table dict))
+renameResources table _containingResources object@(PDFDictionary dictionary)
+  | hasKey "Resources" object =
+    PDFDictionary (renameResourcesInDictionary table dictionary)
   | otherwise = object
-renameResources table containingResources object@(PDFIndirectObjectWithStream number revision dict stream)
-  | Set.member number containingResources =
-      PDFIndirectObjectWithStream
-        number
-        revision
-        (renameResourcesInDictionary table dict)
-        stream
+renameResources table containingResources object
+  | Set.intersection (getMajor object) containingResources /= mempty =
+      case object of
+        PDFIndirectObject number revision (PDFDictionary dict) ->
+          PDFIndirectObject
+            number
+            revision
+            (PDFDictionary (renameResourcesInDictionary table dict))
+        PDFIndirectObjectWithStream number revision dict stream ->
+          PDFIndirectObjectWithStream
+            number
+            revision
+            (renameResourcesInDictionary table dict)
+            stream
+        _anyOtherObject -> object
   | otherwise = object
-renameResources _table _containingResources object = object
 
-containsResources :: PDFDocument -> Set Int
-containsResources = foldMap getResourceReferences . deepFind hasResourceEntry
-  where
-    hasResourceEntry :: PDFObject -> Bool
-    hasResourceEntry object = case getValueForKey "Resources" object of
-      Just _  -> True
-      Nothing -> False
+containsResources :: Logging m => PDFDocument -> PDFWork m (Set Int)
+containsResources document = do
+  let resourceEntries = toList (deepFind (hasKey "Resources") document)
+  mapM getResourceReferences resourceEntries <&> Set.unions
+ where
+  getResourceReferences :: Logging m => PDFObject -> PDFWork m (Set Int)
+  getResourceReferences object = case getValueForKey "Resources" object of
+    Just dictionary@PDFDictionary{} -> do
+      subResources <- getSubResourceReferences dictionary
+      return $ getMajor object <> subResources
 
-    getResourceReferences :: PDFObject -> Set Int
-    getResourceReferences object = case getValueForKey "Resources" object of
-      Just (PDFDictionary dict) ->
-        Set.singleton (getMajor object)
-          <> ( Set.fromList
-             . fmap getMajor
-             . Map.elems
-             . Map.filter isReference
-             ) dict
+    Just reference@PDFReference{} -> do
+      referencedObject <- getReference reference
+      subResources <- getSubResourceReferences referencedObject
+      return $ getMajor object <> getMajor reference <> subResources
 
-      Just reference@PDFReference{} -> Set.singleton (getMajor reference)
-      _anyOtherObject               -> mempty
+    Just _anyObject -> return (getMajor object)
 
-    getMajor :: PDFObject -> Int
-    getMajor (PDFReference major _)                                   = major
-    getMajor (PDFIndirectObject major _minor _object)                 = major
-    getMajor (PDFIndirectObjectWithStream major _minor _dict _stream) = major
-    getMajor _                                                        = 0
+    _anyOtherObject -> return mempty
+
+  getCategoryReferences :: ByteString -> PDFObject -> Set Int
+  getCategoryReferences category object =
+    case getValueForKey category object of
+      Just categoryObject -> getMajor categoryObject
+      _anyOtherObject     -> mempty
+
+  getSubResourceReferences :: Logging m => PDFObject -> PDFWork m (Set Int)
+  getSubResourceReferences object = do
+    let colorSpace = getCategoryReferences "ColorSpace" object
+        font       = getCategoryReferences "Font"       object
+        xObject    = getCategoryReferences "XObject"    object
+        extGState  = getCategoryReferences "ExtGState"  object
+        properties = getCategoryReferences "Properties" object
+        pattern_   = getCategoryReferences "Pattern"    object
+        shading    = getCategoryReferences "Shading"    object
+        procSet    = getCategoryReferences "ProcSet"    object
+
+    return ( colorSpace
+          <> font
+          <> xObject
+          <> extGState
+          <> properties
+          <> pattern_
+          <> shading
+          <> procSet
+          <> getMajor object
+          )
