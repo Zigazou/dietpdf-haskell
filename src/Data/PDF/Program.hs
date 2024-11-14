@@ -11,7 +11,7 @@ import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXInlineImage, GFXOperator)
+    ( GFXObject (GFXInlineImage, GFXOperator, GFXComment)
     , GSOperator (GSBeginInlineImage, GSUnknown)
     )
 import Data.PDF.GFXObjects (GFXObjects)
@@ -46,6 +46,8 @@ parseProgram objs =
       (mempty, program |> Command operator objects)
     collectCommands (objects, program) image@(GFXInlineImage _dict _data) =
       (mempty, program |> Command GSBeginInlineImage (objects |> image))
+    collectCommands (objects, program) (GFXComment _comment) =
+      (objects, program)
     collectCommands (objects, program) object =
       (objects |> object, program)
 
