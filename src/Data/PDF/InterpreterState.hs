@@ -9,7 +9,7 @@ module Data.PDF.InterpreterState
   , usefulTextPrecisionS
   , usefulColorPrecisionS
   , applyGraphicsMatrixS
-  , applyTextMatrixS
+  , setTextMatrixS
   , setFontS
   , setHorizontalScalingS
   , setTextRiseS
@@ -29,6 +29,7 @@ module Data.PDF.InterpreterState
   , setNonStrokeColorS
   , setStrokeColorS
   , setWorkData
+  , applyTextMatrixS
   ) where
 
 import Control.Monad.RWS (modify)
@@ -38,33 +39,34 @@ import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.PDF.Color (Color)
 import Data.PDF.GraphicsState
-    ( GraphicsState
-    , applyGraphicsMatrix
-    , applyTextMatrix
-    , defaultGraphicsState
-    , gsPathStartX
-    , gsPathStartY
-    , resetTextState
-    , setCurrentPoint
-    , setDashPattern
-    , setFlatness
-    , setFont
-    , setHorizontalScaling
-    , setLineCap
-    , setLineJoin
-    , setLineWidth
-    , setMiterLimit
-    , setNonStrokeAlpha
-    , setNonStrokeColor
-    , setPathStart
-    , setRenderingIntent
-    , setStrokeAlpha
-    , setStrokeColor
-    , setTextRise
-    , usefulColorPrecision
-    , usefulGraphicsPrecision
-    , usefulTextPrecision
-    )
+  ( GraphicsState
+  , applyGraphicsMatrix
+  , applyTextMatrix
+  , defaultGraphicsState
+  , gsPathStartX
+  , gsPathStartY
+  , resetTextState
+  , setCurrentPoint
+  , setDashPattern
+  , setFlatness
+  , setFont
+  , setHorizontalScaling
+  , setLineCap
+  , setLineJoin
+  , setLineWidth
+  , setMiterLimit
+  , setNonStrokeAlpha
+  , setNonStrokeColor
+  , setPathStart
+  , setRenderingIntent
+  , setStrokeAlpha
+  , setStrokeColor
+  , setTextMatrix
+  , setTextRise
+  , usefulColorPrecision
+  , usefulGraphicsPrecision
+  , usefulTextPrecision
+  )
 import Data.PDF.TransformationMatrix (TransformationMatrix)
 import Data.PDF.WorkData (WorkData, emptyWorkData)
 
@@ -129,6 +131,9 @@ applyGraphicsMatrixS = modifyGraphicsStateS . applyGraphicsMatrix
 
 applyTextMatrixS :: TransformationMatrix -> State InterpreterState ()
 applyTextMatrixS = modifyGraphicsStateS . applyTextMatrix
+
+setTextMatrixS :: TransformationMatrix -> State InterpreterState ()
+setTextMatrixS = modifyGraphicsStateS . setTextMatrix
 
 setFontS :: ByteString -> Double -> State InterpreterState ()
 setFontS fontName fontSize = modifyGraphicsStateS (setFont fontName fontSize)

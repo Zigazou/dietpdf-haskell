@@ -5,7 +5,7 @@ module Data.PDF.GraphicsState
   , usefulTextPrecision
   , usefulColorPrecision
   , applyGraphicsMatrix
-  , applyTextMatrix
+  , setTextMatrix
   , setFont
   , setHorizontalScaling
   , setTextRise
@@ -24,6 +24,7 @@ module Data.PDF.GraphicsState
   , setStrokeColor
   , setNonStrokeColor
   , usefulMatrixPrecisionFor
+  , applyTextMatrix
   ) where
 
 import Data.ByteString (ByteString)
@@ -162,14 +163,29 @@ applyGraphicsMatrix matrix state = state
   (scaleX, scaleY) = matrixScale graphicsMatrix (1.0, 1.0)
 
 {- |
+Apply the text matrix of the current text state.
+-}
+applyTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
+applyTextMatrix matrix state = state
+  { gsTextState = (gsTextState state)
+      { tsMatrix = textMatrix
+      , tsScaleX = scaleX
+      , tsScaleY = scaleY
+      }
+  }
+ where
+  textMatrix = matrix <> tsMatrix (gsTextState state)
+  (scaleX, scaleY) = matrixScale textMatrix (1.0, 1.0)
+
+{- |
 Set the text matrix of the current text state.
 
 Contrary to the 'applyGraphicsMatrix' function, this function replaces the
 current text matrix with the given matrix. Plus, the resulting text matrix is
 the product of the given matrix and the current text matrix.
 -}
-applyTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
-applyTextMatrix matrix state = state
+setTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
+setTextMatrix matrix state = state
   { gsTextState = (gsTextState state)
       { tsMatrix = textMatrix
       , tsScaleX = scaleX
@@ -293,7 +309,7 @@ setCurrentPoint :: Double -> Double -> GraphicsState -> GraphicsState
 setCurrentPoint x y state = state { gsCurrentPointX = x, gsCurrentPointY = y }
 
 resetTextState :: GraphicsState -> GraphicsState
-resetTextState = applyTextMatrix mempty
+resetTextState = setTextMatrix mempty
 
 setStrokeColor :: Color -> GraphicsState -> GraphicsState
 setStrokeColor color state = state { gsStrokeColor = color }
