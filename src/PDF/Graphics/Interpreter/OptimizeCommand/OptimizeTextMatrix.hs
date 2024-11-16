@@ -8,7 +8,7 @@ import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
   ( GFXObject (GFXNumber)
-  , GSOperator (GSBeginText, GSCloseSubpath, GSEndPath, GSEndText, GSMoveToNextLine, GSMoveToNextLineLP, GSSetTextMatrix)
+  , GSOperator (GSBeginText, GSEndText, GSMoveToNextLine, GSSetTextMatrix)
   )
 import Data.PDF.GraphicsState (GraphicsState (gsTextState))
 import Data.PDF.InterpreterAction
@@ -28,16 +28,6 @@ import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
-
-hasTextmoveBeforeEndText :: Program -> Bool
-hasTextmoveBeforeEndText (Command GSEndPath _params :<| _tail)          = False
-hasTextmoveBeforeEndText (Command GSCloseSubpath _params :<| _tail)     = False
-hasTextmoveBeforeEndText (Command GSMoveToNextLine _params :<| _tail)   = True
-hasTextmoveBeforeEndText (Command GSMoveToNextLineLP _params :<| _tail) = True
-hasTextmoveBeforeEndText (Command GSSetTextMatrix _params :<| _tail)    = True
-hasTextmoveBeforeEndText Empty                                          = False
-hasTextmoveBeforeEndText (_command :<| rest) = hasTextmoveBeforeEndText rest
-
 {- |
 The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
@@ -46,7 +36,7 @@ optimizeTextMatrix
   :: Command
   -> Program
   -> State InterpreterState InterpreterAction
-optimizeTextMatrix command rest = case (operator, parameters) of
+optimizeTextMatrix command _rest = case (operator, parameters) of
   -- Begin text object
   (GSBeginText, _params) -> do
     resetTextStateS
@@ -76,24 +66,38 @@ optimizeTextMatrix command rest = case (operator, parameters) of
                                 (optimizeParameters command precision)
 
   -- Set text transformation matrix
-  (GSSetTextMatrix, GFXNumber 1
+  (GSSetTextMatrix, GFXNumber scaleX
                 :<| GFXNumber 0
                 :<| GFXNumber 0
-                :<| GFXNumber 1
-                :<| GFXNumber tx
-                :<| GFXNumber ty
+                :<| GFXNumber scaleY
+                :<| GFXNumber translateX
+                :<| GFXNumber translateY
                 :<| Empty) -> do
     precision <- usefulTextPrecisionS
-    (TransformationMatrix _a _b _c _d currentTx currentTy) <-
+    (TransformationMatrix currentScaleX _b _c currentScaleY currentTranslateX currentTranslateY) <-
       gets (tsMatrix . gsTextState . iGraphicsState)
-    setTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
-    (TransformationMatrix _a _b _c _d newTx newTy) <-
+    setTextMatrixS (TransformationMatrix scaleX 0 0 scaleY translateX translateY)
+    (TransformationMatrix newScaleX _b _c newScaleY newTranslateX newTranslateY) <-
       gets (tsMatrix . gsTextState . iGraphicsState)
-    return $ replaceCommandWith
+    if newScaleX /= currentScaleX || newScaleY /= currentScaleY
+      then return $ replaceCommandWith
               command
               ( optimizeParameters
-                (Command GSMoveToNextLine ( GFXNumber (newTx - currentTx)
-                                        :<| GFXNumber (newTy - currentTy)
+                (Command GSSetTextMatrix ( GFXNumber newScaleX
+                                        :<| GFXNumber 0
+                                        :<| GFXNumber 0
+                                        :<| GFXNumber newScaleY
+                                        :<| GFXNumber newTranslateX
+                                        :<| GFXNumber newTranslateY
+                                        :<| Empty)
+                )
+                precision
+              )
+      else return $ replaceCommandWith
+              command
+              ( optimizeParameters
+                (Command GSMoveToNextLine ( GFXNumber (newTranslateX - currentTranslateX)
+                                        :<| GFXNumber (newTranslateY - currentTranslateY)
                                         :<| Empty)
                 )
                 precision
