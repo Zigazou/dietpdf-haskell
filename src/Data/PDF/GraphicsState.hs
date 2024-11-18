@@ -129,7 +129,7 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulTextPrecision :: GraphicsState -> Int
-usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 2)
+usefulTextPrecision state = max 0 (ceiling (logBase 10 scale) + 3)
  where
   userUnit = gsUserUnit state
   scaleTX  = abs ((tsScaleX . gsTextState) state)
