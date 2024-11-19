@@ -3,17 +3,16 @@ module PDF.Processing.ObjectCategory (objectCategory) where
 import Data.Logging (Logging)
 import Data.Map qualified as Map
 import Data.PDF.ObjectCategory
-    ( ObjectCategory (Bitmap, File, Font, Other, Vector, XML)
-    )
+  (ObjectCategory (Bitmap, File, Font, Other, Vector, XML))
 import Data.PDF.OptimizationType
-    ( OptimizationType (GfxOptimization, JPGOptimization, TTFOptimization, XMLOptimization)
-    )
+  ( OptimizationType (GfxOptimization, JPGOptimization, TTFOptimization, XMLOptimization)
+  )
 import Data.PDF.PDFObject (PDFObject (PDFName))
 import Data.PDF.PDFWork (PDFWork, tryP)
 
 import PDF.Object.State (getDictionary)
-import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 import PDF.Processing.Unfilter (unfilter)
+import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 objectCategory :: Logging IO => PDFObject -> PDFWork IO ObjectCategory
 objectCategory object = tryP (getDictionary object) >>= \case
@@ -37,4 +36,11 @@ objectCategory object = tryP (getDictionary object) >>= \case
             _anyOtherSubType                -> return Other
         (Just (PDFName "Font")) -> return Font
         (Just (PDFName "XML"))  -> return XML
-        _anyOtherType           -> return Other
+        _anyOtherType           -> case Map.lookup "Subtype" dict of
+            (Just (PDFName "Image"))        -> return Bitmap
+            (Just (PDFName "Form"))         -> return Vector
+            (Just (PDFName "Type1"))        -> return Font
+            (Just (PDFName "EmbeddedFile")) -> return File
+            (Just (PDFName "XML"))          -> return XML
+            _anyOtherSubType                -> return Other
+
