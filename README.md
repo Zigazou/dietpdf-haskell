@@ -172,9 +172,12 @@ do the same (like NetPBM tools), few support CMYK Jpeg files.
 
 **required**: `grk_compress`
 
-The Grok image compression tools are not available as packages. You need to
-download them from [Github Grok repository](https://github.com/GrokImageCompression/grok)
-and install them manually.
+If the Grok image compression tools are not available on your distribution as
+packages. You need to download them from [Github Grok
+repository](https://github.com/GrokImageCompression/grok) and install them
+manually. You will also need to modify the `JpegToJpeg2k.hs` and
+`TiffToJpeg2k.hs` because the command line parameters may vary along the version
+used.
 
 Grok is used to handle Jpeg 2000 images. While OpenJPEG also does the same and
 is available as package in most Linux distributions, Grok supports CMYK JPEG
