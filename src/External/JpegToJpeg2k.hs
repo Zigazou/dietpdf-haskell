@@ -45,9 +45,9 @@ jpegToJpeg2k quality jpegImage =
                                         jpegImage
 
       externalCommandBuf'' "grk_compress"
-                          [ "-in_file", "-"
-                          , "-quality", show quality
-                          , "-out_file", "-"
+                          [ "--in-file", "-"
+                          , "--quality", show quality
+                          , "--out-file", "-"
                           ]
                           "tiff"
                           "jp2"
@@ -57,9 +57,9 @@ jpegToJpeg2k quality jpegImage =
       -- It also avoids using ImageMagick which can change the colorspace due
       -- to a bug in color space handling before ImageMagick v6.9.13.
       externalCommandBuf'' "grk_compress"
-                          [ "-in_file", "-"
-                          , "-quality", show quality
-                          , "-out_file", "-"
+                          [ "--in-file", "-"
+                          , "--quality", show quality
+                          , "--out-file", "-"
                           ]
                           "jpg"
                           "jp2"

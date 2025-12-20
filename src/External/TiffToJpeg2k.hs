@@ -23,17 +23,17 @@ tiffToJpeg2k
   -> FallibleT IO ByteString
 tiffToJpeg2k Nothing width height colorSpace input =
   externalCommandBuf'' "grk_compress"
-                       [ "-in_file", "-"
-                       , "-out_file", "-"
+                       [ "--in-file", "-"
+                       , "--out-file", "-"
                        ]
                        "tiff"
                        "jp2"
                        (simpleTiff width height colorSpace input)
 tiffToJpeg2k (Just quality) width height colorSpace input =
   externalCommandBuf'' "grk_compress"
-                       [ "-in_file", "-"
-                       , "-quality", show quality
-                       , "-out_file", "-"
+                       [ "--in-file", "-"
+                       , "--quality", show quality
+                       , "--out-file", "-"
                        ]
                        "tiff"
                        "jp2"

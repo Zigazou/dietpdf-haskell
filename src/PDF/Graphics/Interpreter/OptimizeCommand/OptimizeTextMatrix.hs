@@ -96,8 +96,8 @@ optimizeTextMatrix command _rest = case (operator, parameters) of
       else return $ replaceCommandWith
               command
               ( optimizeParameters
-                (Command GSMoveToNextLine ( GFXNumber (currentScaleX * (newTranslateX - currentTranslateX))
-                                        :<| GFXNumber (currentScaleY * (newTranslateY - currentTranslateY))
+                (Command GSMoveToNextLine ( GFXNumber ((newTranslateX - currentTranslateX) / currentScaleX)
+                                        :<| GFXNumber ((newTranslateY - currentTranslateY) / currentScaleY)
                                         :<| Empty)
                 )
                 precision
