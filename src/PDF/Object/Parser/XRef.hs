@@ -53,40 +53,33 @@ module PDF.Object.Parser.XRef
   ) where
 
 import Data.Binary.Parser
-    ( Get
-    , anyWord8
-    , isDigit
-    , label
-    , satisfy
-    , scan
-    , skipWhile
-    , some'
-    , string
-    , word8
-    )
+  ( Get
+  , anyWord8
+  , isDigit
+  , label
+  , satisfy
+  , scan
+  , skipWhile
+  , some'
+  , string
+  , word8
+  )
 import Data.ByteString qualified as BS
 import Data.Ix (inRange)
 import Data.Word (Word8)
 
 import PDF.Object.Object
-    ( PDFObject (PDFXRef)
-    , XRefEntry (XRefEntry)
-    , XRefState (FreeEntry, InUseEntry)
-    , XRefSubsection (XRefSubsection)
-    , isSpace
-    )
+  ( PDFObject (PDFXRef)
+  , XRefEntry (XRefEntry)
+  , XRefState (FreeEntry, InUseEntry)
+  , XRefSubsection (XRefSubsection)
+  , isWhiteSpace
+  )
 import PDF.Object.Parser.EmptyContent (emptyContentP)
 import PDF.Object.Parser.LooseEndOfLine (looseEndOfLineP)
 
 import Util.Ascii
-    ( asciiCR
-    , asciiDIGITNINE
-    , asciiDIGITZERO
-    , asciiLF
-    , asciiLOWERF
-    , asciiLOWERN
-    , asciiSPACE
-    )
+  (asciiDIGITNINE, asciiDIGITZERO, asciiLOWERF, asciiLOWERN, asciiSPACE)
 import Util.Number (toNumber)
 
 integerP :: Get Int
@@ -120,18 +113,6 @@ xrefStateP = anyWord8 >>= validate
                  | value == asciiLOWERN = return InUseEntry
                  | otherwise            = fail "xrefstate"
 
-xrefEndOfLine :: Get ()
-xrefEndOfLine = do
-  byte1 <- anyWord8
-  byte2 <- anyWord8
-  validate (byte1, byte2)
- where
-  validate :: (Word8, Word8) -> Get ()
-  validate value | value == (asciiSPACE, asciiCR) = return ()
-                 | value == (asciiSPACE, asciiLF) = return ()
-                 | value == (asciiCR, asciiLF)    = return ()
-                 | otherwise                      = fail "xrefendofline"
-
 xrefEntryP :: Get XRefEntry
 xrefEntryP = do
   offset <- fixedSizeInteger 10
@@ -139,12 +120,12 @@ xrefEntryP = do
   generation <- fixedSizeInteger 5
   word8 asciiSPACE
   state <- xrefStateP
-  xrefEndOfLine
+  skipWhile isWhiteSpace
   return $ XRefEntry offset generation state
 
 xrefSubsectionP :: Get XRefSubsection
 xrefSubsectionP = do
-  skipWhile isSpace
+  skipWhile isWhiteSpace
   offset <- integerP
   word8 asciiSPACE
   count <- integerP
