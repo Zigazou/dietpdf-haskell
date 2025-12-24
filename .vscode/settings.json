@@ -7,5 +7,6 @@
                 "/home/fred/Programmation/dietpdf-haskell/stylish-haskell.yaml"
             ]
         }
-    }
+    },
+    "makefile.configureOnOpen": false
 }

@@ -8,7 +8,7 @@ import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
   ( GFXObject (GFXNumber)
-  , GSOperator (GSBeginText, GSEndText, GSMoveToNextLine, GSSetTextMatrix)
+  , GSOperator (GSBeginText, GSEndText, GSMoveToNextLine, GSMoveToNextLineLP, GSNextLine, GSSetTextLeading, GSSetTextMatrix)
   )
 import Data.PDF.GraphicsState (GraphicsState (gsTextState))
 import Data.PDF.InterpreterAction
@@ -17,11 +17,12 @@ import Data.PDF.InterpreterState
   ( InterpreterState (iGraphicsState)
   , applyTextMatrixS
   , resetTextStateS
+  , setTextLeadingS
   , setTextMatrixS
   , usefulTextPrecisionS
   )
 import Data.PDF.Program (Program)
-import Data.PDF.TextState (TextState (tsMatrix))
+import Data.PDF.TextState (TextState (tsLeading, tsMatrix))
 import Data.PDF.TransformationMatrix
   (TransformationMatrix (TransformationMatrix))
 import Data.Sequence (Seq (Empty, (:<|)))
@@ -60,6 +61,26 @@ optimizeTextMatrix command _rest = case (operator, parameters) of
   (GSMoveToNextLine, GFXNumber tx
                  :<| GFXNumber ty
                  :<| Empty) -> do
+    precision <- usefulTextPrecisionS
+    applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
+    return $ replaceCommandWith command
+                                (optimizeParameters command precision)
+
+  (GSNextLine, _noArgument) -> do
+    textLeading <- gets (tsLeading . gsTextState . iGraphicsState)
+    applyTextMatrixS (TransformationMatrix 1 0 0 1 0 textLeading)
+    return KeepCommand
+
+  (GSSetTextLeading, GFXNumber leading
+                  :<| Empty) -> do
+    setTextLeadingS leading
+    replaceCommandWith command . optimizeParameters command <$> usefulTextPrecisionS
+
+  -- Move to next line LP
+  (GSMoveToNextLineLP, GFXNumber tx
+                 :<| GFXNumber ty
+                 :<| Empty) -> do
+    setTextLeadingS ty
     precision <- usefulTextPrecisionS
     applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
     return $ replaceCommandWith command

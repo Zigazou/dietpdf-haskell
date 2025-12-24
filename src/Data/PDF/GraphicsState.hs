@@ -9,6 +9,7 @@ module Data.PDF.GraphicsState
   , setFont
   , setHorizontalScaling
   , setTextRise
+  , setTextLeading
   , setPathStart
   , setNonStrokeAlpha
   , setStrokeAlpha
@@ -31,7 +32,7 @@ import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.PDF.Color (Color (ColorNotSet))
 import Data.PDF.TextState
-  ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsMatrix, tsRise)
+  ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsLeading, tsMatrix, tsRise)
   , defaultTextState
   , tsScaleX
   , tsScaleY
@@ -132,7 +133,7 @@ precision is the number of decimal places that are useful for rendering
 purposes.
 -}
 usefulTextPrecision :: GraphicsState -> Int
-usefulTextPrecision state = 
+usefulTextPrecision state =
   if scale < 1e-6
     then 0
     else max 0 (ceiling (logBase 10 scale) + 3)
@@ -244,6 +245,16 @@ baseline up or down.
 setTextRise :: Double -> GraphicsState -> GraphicsState
 setTextRise rise state = state
   { gsTextState = (gsTextState state) { tsRise = rise } }
+
+{- |
+Set the leading of the current text state.
+
+The leading is a double that represents the distance, in points, between
+baselines.
+-}
+setTextLeading :: Double -> GraphicsState -> GraphicsState
+setTextLeading leading state = state
+  { gsTextState = (gsTextState state) { tsLeading = leading } }
 
 {- |
 Set the line width of the current graphics state.

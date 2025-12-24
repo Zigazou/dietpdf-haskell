@@ -10,10 +10,10 @@ import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.PDF.PDFDocument (PDFDocument, fromList)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFArray, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFNumber, PDFReference, PDFTrailer, PDFVersion, PDFXRef)
-    )
+  ( PDFObject (PDFArray, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFNumber, PDFReference, PDFTrailer, PDFVersion, PDFXRef)
+  )
 import Data.PDF.XRefEntry (XRefEntry (XRefEntry))
-import Data.PDF.XRefState (XRefState (InUseEntry))
+import Data.PDF.XRefState (XRefState (FreeEntry, InUseEntry))
 import Data.PDF.XRefSubsection (XRefSubsection (XRefSubsection))
 
 import PDF.Document.Parser (pdfParse)
@@ -29,7 +29,7 @@ pdfParseExamples =
     , Right $ fromList [PDFVersion "1.4", PDFEndOfFile]
     )
   , ("%%EOF\n", Right $ fromList [PDFEndOfFile])
-  , ( "xref\n1 1\n0000000000 00000 n \ntrailer\n\n<<\n/Info 675 0 R\n\
+  , ( "xref\n1 1\n0000000000 00000 n \r\n\ntrailer\n\n<<\n/Info 675 0 R\n\
      \/ID [<dfeef40d72cc1a237c43702126fcacea><fe2ccdc64c1f9e903d5ef1384c263447>\
      \]\n/Root 674 0 R\n/Size 676\n>>"
     , Right $ fromList
@@ -74,6 +74,26 @@ pdfParseExamples =
       , PDFIndirectObject 2
                           0
                           (PDFDictionary $ mkDictionary [("ID", PDFNumber 4)])
+      ]
+    )
+  , ( "xref\r\n0 2\r\n\
+      \0000000000 65535 f \r\n0000364838 00000 n \r\n"
+    , Right $ fromList
+      [ PDFXRef
+          [ XRefSubsection
+              0
+              2
+              [
+                XRefEntry 0 65535 FreeEntry,
+                XRefEntry 364838 0 InUseEntry
+              ]
+          ]
+      ]
+    )
+  , ( "%%EOF1 0 obj 3 endobj"
+    , Right $ fromList
+      [ PDFEndOfFile
+      , PDFIndirectObject 1 0 (PDFNumber 3)
       ]
     )
   ]

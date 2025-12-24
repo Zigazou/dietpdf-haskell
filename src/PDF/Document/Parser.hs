@@ -16,7 +16,7 @@ import Data.UnifiedError (UnifiedError (ParseError))
 import Data.Word (Word8)
 
 import PDF.Object.Object.PDFCharacter (isWhiteSpace)
-import PDF.Object.Parser.Comment (commentP)
+import PDF.Object.Parser.Comment (commentP, eofP)
 import PDF.Object.Parser.IndirectObject (indirectObjectP)
 import PDF.Object.Parser.StartXRef (startXRefP)
 import PDF.Object.Parser.Trailer (trailerP)
@@ -26,7 +26,7 @@ whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)
 
 topObjectP :: Get PDFObject
-topObjectP = commentP <|> indirectObjectP <|> trailerP <|> xrefP <|> startXRefP
+topObjectP = eofP <|> commentP <|> indirectObjectP <|> trailerP <|> xrefP <|> startXRefP
 
 pdfRawP :: Get PDFDocument
 pdfRawP = label "pdf" $ topObjectP `dSepBy` whiteSpaces
@@ -46,5 +46,5 @@ pdfParse source = do
   case parseDetail pdfRawP source of
     Left  err                      -> throwE (ParseError err)
     Right (""    , _     , result) -> return result
-    Right (remain, offset, _     ) -> throwE
-      (ParseError (remain, offset, "Stopped to read at offset " ++ show offset))
+    Right (remain, offset, result) -> throwE
+      (ParseError (remain, offset, "Stopped to read at offset " ++ show offset ++ show result))

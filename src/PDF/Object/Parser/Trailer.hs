@@ -30,7 +30,7 @@ import PDF.Object.Parser.Container (dictionaryP)
 Parse a `PDFTrailer`.
 -}
 trailerP :: Get PDFObject
-trailerP = label "xref" $ do
+trailerP = label "trailer" $ do
   string "trailer"
   skipWhile isWhiteSpace
   PDFTrailer <$> dictionaryP

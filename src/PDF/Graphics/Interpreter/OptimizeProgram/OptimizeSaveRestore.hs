@@ -117,7 +117,25 @@ optimizeSaveRestoreOnePass program = case breakl onRestore program of
       nextRestoreWithoutNewState rest
     _anyOtherCommand -> False
 
+{- |
+Check if a program has balanced save/restore commands.
+-}
+balancedProgram :: Int -> Program -> Bool
+balancedProgram level Empty = level == 0
+balancedProgram level (Command GSSaveGS _params :<| rest) =
+  balancedProgram (level + 1) rest
+balancedProgram level (Command GSBeginMarkedContentSequence _params :<| rest) =
+  balancedProgram (level + 1) rest
+balancedProgram level (Command GSRestoreGS _params :<| rest) =
+  (level > 0) && balancedProgram (level - 1) rest
+balancedProgram level (Command GSEndMarkedContentSequence _params :<| rest) =
+  (level > 0) && balancedProgram (level - 1) rest
+balancedProgram level (_anyOtherCommand :<| rest) = balancedProgram level rest
+
 optimizeSaveRestore :: Program -> Program
 optimizeSaveRestore program =
-  let reduced = untilNoChange reduceSaveRestoreOnePass program
-  in untilNoChange optimizeSaveRestoreOnePass reduced
+  if balancedProgram 0 program
+  then 
+    let reduced = untilNoChange reduceSaveRestoreOnePass program
+    in untilNoChange optimizeSaveRestoreOnePass reduced
+  else program

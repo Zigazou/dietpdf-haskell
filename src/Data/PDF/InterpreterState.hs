@@ -13,6 +13,7 @@ module Data.PDF.InterpreterState
   , setFontS
   , setHorizontalScalingS
   , setTextRiseS
+  , setTextLeadingS
   , setLineWidthS
   , setLineCapS
   , setLineJoinS
@@ -63,6 +64,7 @@ import Data.PDF.GraphicsState
   , setStrokeColor
   , setTextMatrix
   , setTextRise
+  , setTextLeading
   , usefulColorPrecision
   , usefulGraphicsPrecision
   , usefulTextPrecision
@@ -143,6 +145,9 @@ setHorizontalScalingS = modifyGraphicsStateS . setHorizontalScaling
 
 setTextRiseS :: Double -> State InterpreterState ()
 setTextRiseS = modifyGraphicsStateS . setTextRise
+
+setTextLeadingS :: Double -> State InterpreterState ()
+setTextLeadingS = modifyGraphicsStateS . setTextLeading
 
 setLineWidthS :: Double -> State InterpreterState ()
 setLineWidthS = modifyGraphicsStateS . setLineWidth
