@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.37.0.
+-- This file has been generated from package.yaml by hpack version 0.38.1.
 --
 -- see: https://github.com/sol/hpack
 
@@ -347,6 +347,7 @@ test-suite dietpdf-test
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGenericSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeOrderSpec
+      PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommandSpec
       PDF.Graphics.Interpreter.OptimizeCommandSpec
       PDF.Graphics.Interpreter.OptimizeGStateSpec
       PDF.Graphics.Interpreter.OptimizeParametersSpec

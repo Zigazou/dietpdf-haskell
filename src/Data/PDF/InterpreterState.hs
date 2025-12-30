@@ -31,6 +31,8 @@ module Data.PDF.InterpreterState
   , setStrokeColorS
   , setWorkData
   , applyTextMatrixS
+  , setCharacterSpacingS
+  , setWordSpacingS
   ) where
 
 import Control.Monad.RWS (modify)
@@ -47,6 +49,7 @@ import Data.PDF.GraphicsState
   , gsPathStartX
   , gsPathStartY
   , resetTextState
+  , setCharacterSpacing
   , setCurrentPoint
   , setDashPattern
   , setFlatness
@@ -62,9 +65,10 @@ import Data.PDF.GraphicsState
   , setRenderingIntent
   , setStrokeAlpha
   , setStrokeColor
+  , setTextLeading
   , setTextMatrix
   , setTextRise
-  , setTextLeading
+  , setWordSpacing
   , usefulColorPrecision
   , usefulGraphicsPrecision
   , usefulTextPrecision
@@ -145,6 +149,12 @@ setHorizontalScalingS = modifyGraphicsStateS . setHorizontalScaling
 
 setTextRiseS :: Double -> State InterpreterState ()
 setTextRiseS = modifyGraphicsStateS . setTextRise
+
+setCharacterSpacingS :: Double -> State InterpreterState ()
+setCharacterSpacingS = modifyGraphicsStateS . setCharacterSpacing
+
+setWordSpacingS :: Double -> State InterpreterState ()
+setWordSpacingS = modifyGraphicsStateS . setWordSpacing
 
 setTextLeadingS :: Double -> State InterpreterState ()
 setTextLeadingS = modifyGraphicsStateS . setTextLeading

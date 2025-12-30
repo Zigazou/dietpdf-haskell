@@ -59,10 +59,10 @@ optimizeStateCommand
   -> State InterpreterState InterpreterAction
 optimizeStateCommand command _rest = case (operator, parameters) of
   -- Save graphics state
-  (GSSaveGS, _params) -> saveStateS >> return KeepCommand
+  (GSSaveGS, Empty) -> saveStateS >> return KeepCommand
 
   -- Restore graphics state
-  (GSRestoreGS, _params) -> restoreStateS >> return KeepCommand
+  (GSRestoreGS, Empty) -> restoreStateS >> return KeepCommand
 
   (GSSetLineWidth, GFXNumber width :<| Empty) ->
     deleteIfNoChange command width gsLineWidth setLineWidthS

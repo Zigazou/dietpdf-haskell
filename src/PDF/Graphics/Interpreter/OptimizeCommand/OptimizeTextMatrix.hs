@@ -39,13 +39,12 @@ optimizeTextMatrix
   -> State InterpreterState InterpreterAction
 optimizeTextMatrix command _rest = case (operator, parameters) of
   -- Begin text object
-  (GSBeginText, _params) -> do
+  (GSBeginText, Empty) -> do
     resetTextStateS
-    setTextMatrixS mempty
     return KeepCommand
 
   -- End text object
-  (GSEndText, _params) -> return KeepCommand
+  (GSEndText, Empty) -> return KeepCommand
 
   -- Identity text matrix can be ignored
   (GSSetTextMatrix, GFXNumber 1
@@ -66,7 +65,7 @@ optimizeTextMatrix command _rest = case (operator, parameters) of
     return $ replaceCommandWith command
                                 (optimizeParameters command precision)
 
-  (GSNextLine, _noArgument) -> do
+  (GSNextLine, Empty) -> do
     textLeading <- gets (tsLeading . gsTextState . iGraphicsState)
     applyTextMatrixS (TransformationMatrix 1 0 0 1 0 textLeading)
     return KeepCommand

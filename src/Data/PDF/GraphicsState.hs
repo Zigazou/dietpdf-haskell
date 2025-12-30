@@ -10,6 +10,8 @@ module Data.PDF.GraphicsState
   , setHorizontalScaling
   , setTextRise
   , setTextLeading
+  , setCharacterSpacing
+  , setWordSpacing
   , setPathStart
   , setNonStrokeAlpha
   , setStrokeAlpha
@@ -34,8 +36,10 @@ import Data.PDF.Color (Color (ColorNotSet))
 import Data.PDF.TextState
   ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsLeading, tsMatrix, tsRise)
   , defaultTextState
+  , tsCharacterSpacing
   , tsScaleX
   , tsScaleY
+  , tsWordSpacing
   )
 import Data.PDF.TransformationMatrix
   ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
@@ -108,6 +112,11 @@ defaultGraphicsState = GraphicsState
   , gsCurrentPointY  = 0.0
   }
 
+{- |
+Calculates the useful matrix precision for a given scale factor. The useful
+matrix precision is the number of decimal places that are useful for rendering
+purposes.
+-}
 usefulMatrixPrecisionFor :: Double -> Int
 usefulMatrixPrecisionFor scale = max 0 (6 - floor (logBase 10 (abs scale)))
 
@@ -255,6 +264,20 @@ baselines.
 setTextLeading :: Double -> GraphicsState -> GraphicsState
 setTextLeading leading state = state
   { gsTextState = (gsTextState state) { tsLeading = leading } }
+
+{- |
+Set the word spacing of the current text state.
+-}
+setCharacterSpacing :: Double -> GraphicsState -> GraphicsState
+setCharacterSpacing spacing state = state
+  { gsTextState = (gsTextState state) { tsCharacterSpacing = spacing } }
+
+{- |
+Set the word spacing of the current text state.
+-}
+setWordSpacing :: Double -> GraphicsState -> GraphicsState
+setWordSpacing spacing state = state
+  { gsTextState = (gsTextState state) { tsWordSpacing = spacing } }
 
 {- |
 Set the line width of the current graphics state.

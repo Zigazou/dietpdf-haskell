@@ -36,6 +36,7 @@ A PDF comment is a line starting with `asciiPERCENTSIGN`.
 
 It returns either:
 
+- `PDFEndOfFile` for the special comment `%EOF` (eofP should be used instead)
 - `PDFVersion` for any comment starting with `PDF-`
 - `PDFComment` for any other string
  -}
@@ -45,5 +46,6 @@ commentP = label "comment" $ do
   comment <- takeTill isLooseEndOfLine
   endOfInput <|> looseEndOfLineP
   return $ case BS.splitAt 4 comment of
+    ("%EOF", _      ) -> PDFEndOfFile
     ("PDF-", version) -> PDFVersion version
     (_     , _      ) -> PDFComment comment

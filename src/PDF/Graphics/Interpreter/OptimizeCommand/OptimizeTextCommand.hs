@@ -9,24 +9,52 @@ import Data.Functor ((<&>))
 import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
   ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNumber, GFXString)
-  , GSOperator (GSSetHorizontalScaling, GSSetTextFont, GSSetTextRise, GSShowManyText, GSShowText)
+  , GSOperator (GSBeginText, GSEndText, GSRestoreGS, GSSaveGS, GSSetCharacterSpacing, GSSetHorizontalScaling, GSSetTextFont, GSSetTextRise, GSSetWordSpacing, GSShowManyText, GSShowText)
   )
 import Data.PDF.GraphicsState (gsTextState)
 import Data.PDF.InterpreterAction
   (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
   ( InterpreterState (iGraphicsState)
+  , resetTextStateS
+  , restoreStateS
+  , saveStateS
+  , setCharacterSpacingS
   , setFontS
   , setHorizontalScalingS
   , setTextRiseS
-  , usefulGraphicsPrecisionS
+  , setWordSpacingS
   , usefulTextPrecisionS
   )
 import Data.PDF.Program (Program)
-import Data.PDF.TextState (TextState (tsFont, tsFontSize, tsHorizontalScaling, tsRise))
+import Data.PDF.TextState
+  ( TextState (tsCharacterSpacing, tsFont, tsFontSize, tsHorizontalScaling, tsRise, tsWordSpacing)
+  )
 import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
+
+import Util.Number (round')
+
+{-|
+Delete the command if the new value is the same as the current value.
+-}
+deleteIfNoChange
+  :: Command
+  -> Double
+  -> (TextState -> Double)
+  -> (Double -> State InterpreterState ())
+  -> State InterpreterState InterpreterAction
+deleteIfNoChange command newValue getter setter = do
+    newValue' <- usefulTextPrecisionS <&> flip round' newValue
+    currentValue <- gets (getter . gsTextState . iGraphicsState)
+    if newValue' == currentValue
+      then return DeleteCommand
+      else do
+        setter newValue'
+        optimizeParameters command
+          <$> usefulTextPrecisionS
+          <&> replaceCommandWith command
 
 {- |
 The 'optimizeTextCommand' function takes a 'GraphicsState' and a 'Command' and
@@ -37,6 +65,18 @@ optimizeTextCommand
   -> Program
   -> State InterpreterState InterpreterAction
 optimizeTextCommand command _rest = case (operator, parameters) of
+  -- Save graphics state
+  (GSSaveGS, Empty) -> saveStateS >> return KeepCommand
+
+  -- Restore graphics state
+  (GSRestoreGS, Empty) -> restoreStateS >> return KeepCommand
+
+  -- Begin text object
+  (GSBeginText, Empty) -> resetTextStateS >> return KeepCommand
+
+  -- End text object
+  (GSEndText, Empty) -> return KeepCommand
+
   -- Set text font and size
   (GSSetTextFont, GFXName fontName :<| GFXNumber fontSize :<| Empty) -> do
     currentFontName <- gets (tsFont . gsTextState . iGraphicsState)
@@ -46,33 +86,7 @@ optimizeTextCommand command _rest = case (operator, parameters) of
         return DeleteCommand
       else do
         setFontS fontName fontSize
-        precision <- usefulTextPrecisionS
-        return $ replaceCommandWith command
-                                    (optimizeParameters command (precision + 1))
-
-  -- Set text horizontal scaling
-  (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) -> do
-    currentScaling <- gets (tsHorizontalScaling . gsTextState . iGraphicsState)
-    if currentScaling == scaling
-      then
-        return DeleteCommand
-      else do
-        setHorizontalScalingS scaling
-        optimizeParameters command
-          <$> usefulGraphicsPrecisionS
-          <&> replaceCommandWith command
-
-  -- Set text rise
-  (GSSetTextRise, GFXNumber rise :<| Empty) -> do
-    currentRise <- gets (tsRise . gsTextState . iGraphicsState)
-    if currentRise == rise
-      then
-        return DeleteCommand
-      else do
-        setTextRiseS rise
-        optimizeParameters command
-          <$> usefulTextPrecisionS
-          <&> replaceCommandWith command
+        replaceCommandWith command . optimizeParameters command <$> usefulTextPrecisionS
 
   -- Remove ShowManyText when there is no text.
   (GSShowManyText, GFXArray Empty :<| Empty) -> return DeleteCommand
@@ -95,6 +109,22 @@ optimizeTextCommand command _rest = case (operator, parameters) of
     optimizeParameters command
       <$> usefulTextPrecisionS
       <&> replaceCommandWith command
+
+  -- Set text rise
+  (GSSetTextRise, GFXNumber rise :<| Empty) ->
+    deleteIfNoChange command rise tsRise setTextRiseS
+
+  -- Set character spacing
+  (GSSetCharacterSpacing, GFXNumber newCharacterSpacing :<| Empty) ->
+    deleteIfNoChange command newCharacterSpacing tsCharacterSpacing setCharacterSpacingS
+
+  -- Set word spacing
+  (GSSetWordSpacing, GFXNumber newWordSpacing :<| Empty) ->
+    deleteIfNoChange command newWordSpacing tsWordSpacing setWordSpacingS
+
+  -- Set text horizontal scaling
+  (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) ->
+    deleteIfNoChange command scaling tsHorizontalScaling setHorizontalScalingS
 
   _anyOtherCommand -> return KeepCommand
  where
