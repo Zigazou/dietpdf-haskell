@@ -18,29 +18,32 @@ objectCategory :: Logging IO => PDFObject -> PDFWork IO ObjectCategory
 objectCategory object = tryP (getDictionary object) >>= \case
   Left _noDictionary -> return Other
   Right dict -> do
-    optimization <- unfilter object >>= whatOptimizationFor
-    case optimization of
-      XMLOptimization -> return XML
-      GfxOptimization -> return Vector
-      JPGOptimization -> return Bitmap
-      TTFOptimization -> return Font
-      _noOptimization -> case Map.lookup "Type" dict of
-        (Just (PDFName "EmbeddedFile")) -> return File
-        (Just (PDFName "XObject")) ->
-          case Map.lookup "Subtype" dict of
-            (Just (PDFName "Image"))        -> return Bitmap
-            (Just (PDFName "Form"))         -> return Vector
-            (Just (PDFName "Type1"))        -> return Font
-            (Just (PDFName "EmbeddedFile")) -> return File
-            (Just (PDFName "XML"))          -> return XML
-            _anyOtherSubType                -> return Other
-        (Just (PDFName "Font")) -> return Font
-        (Just (PDFName "XML"))  -> return XML
-        _anyOtherType           -> case Map.lookup "Subtype" dict of
-            (Just (PDFName "Image"))        -> return Bitmap
-            (Just (PDFName "Form"))         -> return Vector
-            (Just (PDFName "Type1"))        -> return Font
-            (Just (PDFName "EmbeddedFile")) -> return File
-            (Just (PDFName "XML"))          -> return XML
-            _anyOtherSubType                -> return Other
-
+    -- Try to unfilter and determine optimization. This is helpful to handle
+    -- errors on malformed FlateDecode streams that would prevent us from
+    -- reading the dictionary properly.
+    tryP (unfilter object >>= whatOptimizationFor) >>= \case
+      Left _unfilterOrOptError -> return Other
+      Right optimization -> case optimization of
+        XMLOptimization -> return XML
+        GfxOptimization -> return Vector
+        JPGOptimization -> return Bitmap
+        TTFOptimization -> return Font
+        _noOptimization -> case Map.lookup "Type" dict of
+          (Just (PDFName "EmbeddedFile")) -> return File
+          (Just (PDFName "XObject")) ->
+            case Map.lookup "Subtype" dict of
+              (Just (PDFName "Image"))        -> return Bitmap
+              (Just (PDFName "Form"))         -> return Vector
+              (Just (PDFName "Type1"))        -> return Font
+              (Just (PDFName "EmbeddedFile")) -> return File
+              (Just (PDFName "XML"))          -> return XML
+              _anyOtherSubType                -> return Other
+          (Just (PDFName "Font")) -> return Font
+          (Just (PDFName "XML"))  -> return XML
+          _anyOtherType           -> case Map.lookup "Subtype" dict of
+              (Just (PDFName "Image"))        -> return Bitmap
+              (Just (PDFName "Form"))         -> return Vector
+              (Just (PDFName "Type1"))        -> return Font
+              (Just (PDFName "EmbeddedFile")) -> return File
+              (Just (PDFName "XML"))          -> return XML
+              _anyOtherSubType                -> return Other
