@@ -1,10 +1,15 @@
+{-|
+Main module of the application.
+
+Provides the 'main' function to run the application.
+-}
 module Main
   ( main
   ) where
 
 import AppOptions
-  ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, GetOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions)
-  , FileOverwrite(DoNotOverwriteFile)
+  ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, GetOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions, VersionOptions)
+  , FileOverwrite (DoNotOverwriteFile)
   , appOptions
   )
 
@@ -22,8 +27,8 @@ import Command.Unpredict (unpredictByteString)
 
 import Control.Exception (tryJust)
 import Control.Monad (guard, when)
-import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString (ByteString)
@@ -50,18 +55,28 @@ import Options.Applicative
 
 import PDF.Document.Parser (pdfParse)
 
+import Data.Version (showVersion)
+
+import Paths_dietpdf qualified
+
 import System.FilePath (takeFileName)
 import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
 import System.IO.Temp (withSystemTempFile)
 import System.Posix (fileSize, getFileStatus)
 
+{-|
+Read a PDF file and parse it.
+-}
 readPDF :: FilePath -> FallibleT IO PDFDocument
 readPDF filename = do
   lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
     Right bytes -> pdfParse bytes
     Left _error -> throwE UnableToOpenFile
 
+{-|
+Read a ByteString from a file or from standard input.
+-}
 readByteString :: Maybe FilePath -> FallibleT IO ByteString
 readByteString (Just filename) = do
   lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
@@ -72,27 +87,45 @@ readByteString Nothing =
     Right bytes -> return bytes
     Left _error -> throwE UnableToOpenFile
 
-getFileSize :: String -> IO Int
+{-|
+Get the size of a file in bytes.
+-}
+getFileSize :: FilePath -> IO Int
 getFileSize path = do
     stat <- getFileStatus path
     return $ fromIntegral (fileSize stat)
 
+{-|
+Check whether a file exists.
+-}
 doesFileExist :: FilePath -> IO Bool
 doesFileExist path = do
   tryJust (guard . isDoesNotExistError) (getFileStatus path) >>= \case
     Right _stat -> return True
     Left  _err  -> return False
 
+{-|
+Configuration for hexdump starting at a given offset.
+-}
 hexCfg :: Int -> Cfg
 hexCfg offset = defaultCfg { startByte = offset }
 
+{-|
+Display a hexdump of a ByteString starting at a given offset.
+-}
 hexDump :: Int -> ByteString -> IO ()
 hexDump offset bytes = do
   let bytes' = BS.take 256 (BS.drop offset bytes)
 
   putStrLn $ prettyHexCfg (hexCfg offset) bytes'
 
+{-|
+Run the application with given options.
+-}
 runApp :: AppOptions -> FallibleT IO ()
+runApp VersionOptions = do
+  liftIO $ putStrLn $ "dietpdf version " <> showVersion Paths_dietpdf.version
+
 runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 
 runApp (ExtractOptions objectNumber inputPDF) =
@@ -211,13 +244,19 @@ runApp (StatOptions inputPDF) = do
 runApp (GetOptions objectNumber inputPDF) =
   readPDF inputPDF >>= getObjectByNumber objectNumber
 
+{-|
+Parser information for application options.
+-}
 options :: ParserInfo AppOptions
 options = info
   (appOptions <**> helper)
-  (fullDesc <> progDesc "Reduce PDF file size or analyze PDF file" <> header
-    "dietpdf - reduce PDF file size"
+  (fullDesc <> progDesc "Reduce PDF file size or analyze PDF file"
+            <> header "dietpdf - reduce PDF file size"
   )
 
+{-|
+Main entry point of the application.
+-}
 main :: IO ()
 main = runExceptT (runApp =<< lift (execParser options)) >>= \case
   Right _anyValue -> return ()

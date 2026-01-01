@@ -23,6 +23,12 @@ The `dietpdf` CLI commands take the following form:
 
     dietpdf <command> <command arguments>
 
+### version
+
+Prints the version of DietPDF.
+
+**Usage:** `dietpdf version`
+
 ### info
 
 Prints a list of objects contained in a PDF file.
@@ -45,11 +51,14 @@ content is sent to the standard output.
 
 Optimizes a PDF file.
 
-**Usage:** `dietpdf optimize <input_pdf_file> <output_pdf_file> [--gs-optimize | -g]`
-
+**Usage:** `dietpdf optimize <input_pdf_file> [<output_pdf_file>] [-g|--gs-optimize] [-p|--p2c-optimize] [-z|--no-zopfli] [-x|--no-gfx-optimize] [-o|--overwrite]`
 * *input_pdf_file*: The path to the PDF file to process.
-* *output_pdf_file*: The path to the optimized PDF file to create.
-* --gs-optimize or -g: (Optional) Use GhostScript before optimizing.
+* *output_pdf_file*: (optional) path to the optimized PDF file to create.
+* --gs-optimize or -g: (optional) Use GhostScript before optimizing.
+* --p2c-optimize or -p: (optional) Use PDF2Cairo before optimizing.
+* --no-zopfli or -z: (optional) Do not use Zopfli, use Zlib instead.
+* --no-gfx-optimize or -x: (optional) Do not try to optimize vector elements.
+* --overwrite or -o: (optional) Overwrite the output file if it exists.
 
 ### hash
 

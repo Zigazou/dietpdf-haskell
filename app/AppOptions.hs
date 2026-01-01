@@ -19,6 +19,7 @@ module AppOptions
     , HumanOptions
     , StatOptions
     , GetOptions
+    , VersionOptions
     )
   , appOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
@@ -118,6 +119,7 @@ data AppOptions
   | HumanOptions !(Maybe FilePath)
   | StatOptions ![FilePath]
   | GetOptions !Int !FilePath
+  | VersionOptions
 
 {-|
 Parser for the info command.
@@ -276,6 +278,17 @@ commandGet = command
   )
 
 {-|
+Parser for the version command.
+-}
+commandVersion :: Mod CommandFields AppOptions
+commandVersion = command
+  "version"
+  (info
+    (pure VersionOptions)
+    (progDesc "Show version information")
+  )
+
+{-|
 Parser for application options.
 -}
 appOptions :: Parser AppOptions
@@ -292,3 +305,4 @@ appOptions =
     <> commandHuman
     <> commandStat
     <> commandGet
+    <> commandVersion

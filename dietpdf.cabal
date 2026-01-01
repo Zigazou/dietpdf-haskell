@@ -5,13 +5,13 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           dietpdf
-version:        1.0.0.0
+version:        1.1.0.0
 description:    Please see the README on GitHub at <https://github.com/zigazou/dietpdf#readme>
 homepage:       https://github.com/zigazou/dietpdf#readme
 bug-reports:    https://github.com/zigazou/dietpdf/issues
 author:         Frédéric BISSON
 maintainer:     zigazou@protonmail.com
-copyright:      2025 Frédéric BISSON
+copyright:      2026 Frédéric BISSON
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple

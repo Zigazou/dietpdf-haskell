@@ -1,10 +1,10 @@
 name:                dietpdf
-version:             1.0.0.0
+version:             1.1.0.0
 github:              "zigazou/dietpdf"
 license:             BSD3
 author:              "Frédéric BISSON"
 maintainer:          "zigazou@protonmail.com"
-copyright:           "2025 Frédéric BISSON"
+copyright:           "2026 Frédéric BISSON"
 
 extra-source-files:
 - README.md
