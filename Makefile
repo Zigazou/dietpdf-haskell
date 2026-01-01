@@ -1,5 +1,5 @@
 # Use the fpm command (from Ruby gem fpm) to create a Debian package
-dist/dietpdf_1.0.0_amd64.deb: .stack-work/dist/x86_64-linux-tinfo6/ghc-9.6.6/build/dietpdf/dietpdf
+dist/dietpdf_1.1.0_amd64.deb: .stack-work/dist/x86_64-linux-tinfo6/ghc-9.8.4/build/dietpdf/dietpdf
 	rm -f $@
 	fpm \
 		-s dir \
