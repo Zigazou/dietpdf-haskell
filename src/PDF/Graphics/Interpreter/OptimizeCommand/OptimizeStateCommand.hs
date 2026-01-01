@@ -49,7 +49,7 @@ deleteIfNoChange command newValue getter setter = do
           <$> usefulGraphicsPrecisionS
           <&> replaceCommandWith command
 
-{- |
+{-|
 The 'optimizeStateCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}

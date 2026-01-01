@@ -24,7 +24,7 @@ import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidNumberOfBytes))
 
-{- |
+{-|
 Apply a `Predictor` to a `ByteString`, considering its line width.
 -}
 predict
@@ -40,7 +40,7 @@ predict entropy predictor width components stream
     imgStm <- fromUnpredictedStream width components stream
     return $ packStream (predictImageStream entropy predictor imgStm)
 
-{- |
+{-|
 Invert the application of a `Predictor` to a `ByteString`, considering its
 line width.
 -}

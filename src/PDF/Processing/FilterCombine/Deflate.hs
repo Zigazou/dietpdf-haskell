@@ -1,3 +1,9 @@
+{-|
+Deflate compression filter combination.
+
+Provides a helper to compress a stream using fast Deflate and return a
+`FilterCombination` that appends a `FlateDecode` filter with no parameters.
+-}
 module PDF.Processing.FilterCombine.Deflate
   ( deflate
   ) where
@@ -11,6 +17,12 @@ import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
 import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 
+{-|
+Compress a stream using fast Deflate, ignoring width/components metadata.
+
+Returns a `FilterCombination` with a `FlateDecode` filter and the compressed
+bytes.
+-}
 deflate
   :: Maybe (Int, Int)
   -> ByteString

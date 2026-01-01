@@ -8,7 +8,7 @@ import Data.PDF.PDFObject
     )
 
 
-{- |
+{-|
 Indicates whether the `PDFObject` ends with a delimiter when converted to a
 `ByteString`.
 -}
@@ -35,7 +35,7 @@ endsWithDelimiter PDFXRef{}                       = False
 endsWithDelimiter PDFTrailer{}                    = True
 endsWithDelimiter PDFStartXRef{}                  = True
 
-{- |
+{-|
 Indicates whether the `PDFObject` starts with a delimiter when converted to a
 `ByteString`.
 -}
@@ -62,7 +62,7 @@ startsWithDelimiter PDFXRef{}                       = False
 startsWithDelimiter PDFTrailer{}                    = False
 startsWithDelimiter PDFStartXRef{}                  = False
 
-{- |
+{-|
 Tells if a space must be inserted between 2 `PDFObject` when converted to
 `ByteString`.
 -}

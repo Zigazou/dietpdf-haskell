@@ -1,4 +1,4 @@
-{- |
+{-|
 This module provides a parser for PDF numbers.
 
 An integer shall be written as one or more decimal digits optionally preceded
@@ -80,7 +80,7 @@ integerDecimalP = do
   rightPart <- (dot >> some' digit) <|> (dot >> return []) <|> return []
   return (leftPart, rightPart)
 
-{- |
+{-|
 Parse a `PDFNumber`.
 
 Internally, all numbers (either integer or real) are stored as `Double`.

@@ -72,7 +72,7 @@ import PDF.Processing.PDFWork (clean, importObjects, pMapP)
 import System.IO (hSetBuffering, stderr)
 
 import Util.Sequence (mapMaybe)
-{- |
+{-|
 Encodes a PDF object and keeps track of its number and length.
 
 Returns an `EncodedObject` which contains the object's number, the length of its
@@ -97,7 +97,7 @@ encodeObject object@(PDFObjectStream number _ _ _) = do
 encodeObject object = return $ EncodedObject 0 (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
 
-{- |
+{-|
 Updates an XRef stream object by copying certain fields ("Root", "Info", "ID")
 from a given trailer object.
 
@@ -128,7 +128,7 @@ mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) =
 
 mergePagesContents object = return object
 
-{- |
+{-|
 Given a list of PDF objects, generate the PDF file content.
 
 This function recreates the XRef table in the old format.

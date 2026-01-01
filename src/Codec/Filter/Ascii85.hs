@@ -1,4 +1,4 @@
-{- |
+{-|
 This module handles Ascii85 streams.
 
 The ASCII base-85 encoding shall use the ASCII characters ! through u

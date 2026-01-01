@@ -9,7 +9,7 @@ import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf)
 
-{- |
+{-|
 Optimize a JPG file using `jpegtran`.
 
 This function is a wrapper around the `jpegtran` command-line tool. It

@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains functions facilitating container manipulation (`PDFArray`,
 `PDFDictionary` and `PDFIndirectObject`).
 -}
@@ -23,7 +23,7 @@ import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import PDF.Object.State (embedObject, getValue, updateValue)
 
-{- |
+{-|
 Apply a function to any object contained by an object at any level.
 -}
 deepMap
@@ -45,7 +45,7 @@ deepMap fn container = case container of
   PDFArray items -> mapM (deepMap fn) items <&> PDFArray
   object         -> fn object
 
-{- |
+{-|
 Return a list of filters contained in a `PDFDictionary`.
 -}
 getFilters :: Logging m => PDFObject -> PDFWork m FilterList
@@ -87,7 +87,7 @@ getFilters container = do
     fs
     (ps SQ.>< SQ.replicate (SQ.length fs - SQ.length ps) PDFNull)
 
-{- |
+{-|
 Update the Filter and DecodeParms dictionary entries according to a
 `FilterList`.
 

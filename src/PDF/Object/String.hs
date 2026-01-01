@@ -48,7 +48,7 @@ isUTF16Encoded string | BS.length string < 2           = False
 isASCIIEncoded :: ByteString -> Bool
 isASCIIEncoded = BS.all (<= asciiDELETE)
 
-{- |
+{-|
 Optimize `PDFHexString` into `PDFString`.
 -}
 optimizeString :: Logging m => PDFObject -> PDFWork m PDFObject

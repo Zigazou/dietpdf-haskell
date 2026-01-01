@@ -1,3 +1,11 @@
+{-|
+Summarize PDF objects into structured `ObjectInfo`.
+
+This module inspects `PDFObject`s and produces human-readable descriptions,
+categories, optional stream size details (filtered vs unfiltered), and embedded
+child information for compound objects like object streams. It is intended for
+diagnostics and reporting.
+-}
 module PDF.Processing.ObjectInfo
   ( objectInfo
   ) where
@@ -81,6 +89,21 @@ getObjectType (PDFTrailer (PDFDictionary _dict)) = "trailer"
 getObjectType (PDFTrailer _) = "invalid trailer"
 getObjectType (PDFStartXRef _startOffset) = "startxref"
 
+{-|
+Build an `ObjectInfo` summary for a `PDFObject`.
+
+Parameters:
+
+* The `PDFObject` to summarize.
+* An optional byte `offset` where the object begins in the source.
+
+Behavior:
+
+* For stream-based objects, computes both filtered and unfiltered sizes by
+  attempting to decode supported filters.
+* For object streams, extracts embedded entries and summarizes each.
+* Otherwise, returns a textual description and category without stream details.
+-}
 objectInfo :: Logging IO => PDFObject -> Maybe Int -> PDFWork IO ObjectInfo
 objectInfo (PDFComment comment) offset = return ObjectInfo
   { oNumber      = Nothing

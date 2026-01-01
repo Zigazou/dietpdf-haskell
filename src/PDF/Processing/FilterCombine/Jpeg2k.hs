@@ -1,3 +1,10 @@
+{-|
+JPEG 2000 re-encoding filter combination.
+
+Wraps `tiffToJpeg2k` to convert raw image-like streams with known width and
+height into `JPXDecode` encoded bytes, returning a `FilterCombination`. Useful
+for reducing size of bitmap images.
+-}
 module PDF.Processing.FilterCombine.Jpeg2k
   ( jpeg2k
   ) where
@@ -17,6 +24,17 @@ import Data.UnifiedError (UnifiedError (UnsupportedFeature))
 
 import External.TiffToJpeg2k (tiffToJpeg2k)
 
+{-|
+Re-encode a stream to JPEG 2000 (`JPXDecode`).
+
+Parameters:
+
+* Optional quality factor.
+* Optional triple of width, height, and `ColorSpace`.
+* Source bytes.
+
+Fails with `UnsupportedFeature` when width/height is missing.
+-}
 jpeg2k
   :: Logging IO
   => Maybe Int

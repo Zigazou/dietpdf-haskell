@@ -1,3 +1,11 @@
+{-|
+Predictor + Zopfli/Deflate filter combination.
+
+Finds an optimal PNG predictor using both Shannon and Deflate-oriented
+heuristics, then compresses with either Zopfli or fast Deflate, returning a
+`FilterCombination` with predictor parameters. When width is unknown, uses
+`TIFFPredictor2` with width set to stream length and components to 1.
+-}
 module PDF.Processing.FilterCombine.PredZopfli
   ( predZopfli
   ) where
@@ -24,6 +32,11 @@ getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
 getCompressor UseZopfli  = FL.compress
 getCompressor UseDeflate = FL.fastCompress
 
+{-|
+Apply PNG predictor, then Zopfli/Deflate, selecting the better result between
+Shannon and Deflate heuristics. If `(width, components)` is missing, falls back
+to `TIFFPredictor2`.
+-}
 predZopfli
   :: Maybe (Int, Int)
   -> ByteString
@@ -32,11 +45,9 @@ predZopfli
 predZopfli (Just (width, components)) stream useZopfli = do
   let compressor = getCompressor useZopfli
 
-  -- Try finding optimal predictors with Shannon entropy function
   compressedS <-
     predict EntropyShannon PNGOptimum width components stream >>= compressor
 
-  -- Try finding optimal predictors with Deflate "entropy" function
   compressedD <-
     predict EntropyDeflate PNGOptimum width components stream >>= compressor
 

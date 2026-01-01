@@ -41,7 +41,7 @@ toText bytes = case decodeUtf8' bytes of
   Right text -> text
   Left  _    -> decodeLatin1 bytes
 
-{- | Parse a number from a string.
+{-| Parse a number from a string.
 
 >>> parseNumber "3.14"
 Just 3.14
@@ -60,7 +60,7 @@ optimizePrefixes contents =
       newPrefixes = getTranslationTable toNameBase prefixes
   in renamePrefixes newPrefixes contents
 
-{- | Optimize XML stream.
+{-| Optimize XML stream.
 
 It:
 

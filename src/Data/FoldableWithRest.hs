@@ -6,13 +6,13 @@ module Data.FoldableWithRest
 import Data.Kind (Constraint, Type)
 import Data.Sequence (Seq (Empty, (:<|)))
 
-{- |
+{-|
 The 'FoldableWithRest' typeclass provides a way to fold over a data structure
 while keeping track of the rest of the data structure.
 -}
 type FoldableWithRest :: (Type -> Type) -> Constraint
 class FoldableWithRest t where
-  {- |
+  {-|
   Fold over a data structure while keeping track of the rest of the data
   structure.
   
@@ -28,7 +28,7 @@ class FoldableWithRest t where
     -> t a
     -> b
 
-  {- |
+  {-|
   Fold over a data structure while keeping track of the rest of the data
   structure in a monadic context.
 

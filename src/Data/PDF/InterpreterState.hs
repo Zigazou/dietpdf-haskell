@@ -90,7 +90,7 @@ defaultInterpreterState = InterpreterState
   , iWorkData = emptyWorkData
   }
 
-{- |
+{-|
 Saves the current graphics state to the graphics state stack.
 -}
 saveState :: InterpreterState -> InterpreterState
@@ -99,7 +99,7 @@ saveState state = state { iStack = iGraphicsState state : iStack state }
 saveStateS :: State InterpreterState ()
 saveStateS = get >>= put . saveState
 
-{- |
+{-|
 Restores the previous graphics state from the graphics state stack.
 -}
 restoreState :: InterpreterState -> InterpreterState

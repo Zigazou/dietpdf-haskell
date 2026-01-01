@@ -10,7 +10,7 @@ module PDF.Object.Object.ToPDFNumber
 import Data.Kind (Constraint, Type)
 import Data.PDF.PDFObject (PDFObject (PDFNumber))
 
-{- |
+{-|
 Allow easy creation of `PDFNumber` objects with auto conversion.
 -}
 type ToPDFNumber :: Type -> Constraint

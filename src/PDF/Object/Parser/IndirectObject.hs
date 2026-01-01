@@ -1,4 +1,4 @@
-{- |
+{-|
 This module provides a parser for PDF indirect objects.
 
 Any object in a PDF file may be labelled as an indirect object. This gives the
@@ -82,7 +82,7 @@ itemP =
 integerP :: Get [Word8]
 integerP = some' digit
 
-{- |
+{-|
 Eats an end of line in the case of stream content.
 
 From PDF specifications:
@@ -97,7 +97,7 @@ streamEndOfLineP = word8 asciiLF <|> (word8 asciiCR >> word8 asciiLF)
 whiteSpaceP :: Get ()
 whiteSpaceP = skipMany $ satisfy isWhiteSpace
 
-{- |
+{-|
 Get the contents of a stream.
 
 From PDF specifications:
@@ -126,7 +126,7 @@ streamP mCount = do
       whiteSpaceP
       return $! stream
 
-{- |
+{-|
 Parse a `PDFXRefStream`, a `PDFObjectStream`, a `PDFIndirectObjectWithStream`
 or a `PDFIndirectObject`.
 

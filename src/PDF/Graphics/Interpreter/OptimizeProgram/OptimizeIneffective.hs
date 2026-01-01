@@ -67,7 +67,7 @@ anyPaintingCommandBeforeRestore level (command :<| rest)
   | isTextPaintingCommand command   = True
   | otherwise                       = anyPaintingCommandBeforeRestore level rest
 
-{- |
+{-|
 Remove useless save/restore graphics state commands or begin/end text.
 -}
 optimizeIneffective :: Program -> Program

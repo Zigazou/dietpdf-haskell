@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains functions facilitating container manipulation (`PDFArray`,
 `PDFDictionary` and `PDFIndirectObject`).
 -}
@@ -11,7 +11,7 @@ import Data.Kind (Type)
 import Data.PDF.PDFObject (PDFObject (PDFNull))
 
 
-{- |
+{-|
 A filter with its parameters.
 -}
 type Filter :: Type

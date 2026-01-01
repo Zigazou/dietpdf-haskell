@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for PDF hexadecimal strings.
 
 Hexadecimal strings are useful for including arbitrary binary data in a PDF
@@ -32,7 +32,7 @@ import PDF.Object.Object (PDFObject (PDFHexString), isWhiteSpace)
 import Util.Ascii (asciiGREATERTHANSIGN, asciiLESSTHANSIGN)
 import Util.String (normalizeHexString)
 
-{- |
+{-|
 A binary parser for a PDF hexstring.
 
 A PDF hexstring is a structure signaled by angle brackets.

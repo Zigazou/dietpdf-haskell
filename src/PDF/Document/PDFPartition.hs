@@ -94,7 +94,7 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
   used :: Set PDFObject -> PDFObject -> Bool
   used refs object = isNotLinearized object && isReferenced refs object
 
-{- |
+{-|
 Determines if a PDF object should be embedded in an object stream (ObjStm).
 
 Returns `True` for indirect objects that do not have a stream.
@@ -102,7 +102,7 @@ Returns `True` for indirect objects that do not have a stream.
 objectToEmbed :: PDFObject -> Bool
 objectToEmbed object = isIndirect object && not (hasStream object)
 
-{- |
+{-|
 Checks if a PDF object contains content (i.e., it has a stream but is not a
 trailer).
 
@@ -111,7 +111,7 @@ Returns `True` if the object has a stream and is not a trailer.
 objectWithContent :: PDFObject -> Bool
 objectWithContent object = hasStream object && not (isTrailer object)
 
-{- |
+{-|
 Partitions a collection of PDF objects (`PDFDocument`) into a `PDFPartition`,
 separating objects with streams, objects without streams, header objects, and
 trailers.

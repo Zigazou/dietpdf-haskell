@@ -46,7 +46,7 @@ findAction
 findAction KeepCommand     nextActionM   = nextActionM
 findAction effectiveAction _anythingElse = return effectiveAction
 
-{- |
+{-|
 The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}

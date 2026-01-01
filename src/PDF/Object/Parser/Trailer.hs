@@ -1,4 +1,4 @@
-{- |
+{-|
 This module provides a parser for PDF trailers.
 
 The trailer of a PDF file enables a conforming reader to quickly find the
@@ -26,7 +26,7 @@ import Data.Binary.Parser (Get, label, skipWhile, string)
 import PDF.Object.Object (PDFObject (PDFTrailer), isWhiteSpace)
 import PDF.Object.Parser.Container (dictionaryP)
 
-{- |
+{-|
 Parse a `PDFTrailer`.
 -}
 trailerP :: Get PDFObject

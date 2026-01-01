@@ -109,7 +109,7 @@ extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
     (Map.!?) dictionary <$> ["Linearized", "L", "H", "O", "E", "N", "T", "P"]
 extractLinearization _ = Nothing
 
-{- |
+{-|
 Given a list of `PDFObject`, extract the linearization information.
 -}
 getLinearization

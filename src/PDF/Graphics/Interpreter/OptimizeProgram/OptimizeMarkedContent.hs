@@ -12,7 +12,7 @@ isEndMarkedContentSequence :: Command -> Bool
 isEndMarkedContentSequence (Command GSEndMarkedContentSequence _) = True
 isEndMarkedContentSequence _anyOtherCommand                       = False
 
-{- |
+{-|
 Remove duplicated consecutive operators.
 -}
 optimizeMarkedContent :: Program -> Program

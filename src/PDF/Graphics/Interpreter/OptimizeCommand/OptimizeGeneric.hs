@@ -18,7 +18,7 @@ import Data.PDF.Program (Program)
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
-{- |
+{-|
 The 'optimizeGeneric' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}

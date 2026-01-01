@@ -1,3 +1,9 @@
+{-|
+Run-length encoding filter combination.
+
+Compresses a stream using RLE and returns a `FilterCombination` that appends a
+`RunLengthDecode` filter with no parameters.
+-}
 module PDF.Processing.FilterCombine.Rle
   ( rle
   ) where
@@ -11,6 +17,10 @@ import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
 import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 
+{-|
+Compress a stream using run-length encoding, ignoring width/components metadata.
+Returns a `FilterCombination` with `RunLengthDecode` and the compressed bytes.
+-}
 rle
   :: Maybe (Int, Int)
   -> ByteString

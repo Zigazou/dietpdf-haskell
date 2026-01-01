@@ -18,7 +18,7 @@ import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence ((|>))
 import Data.Sequence qualified as SQ
 
-{- |
+{-|
 The 'Program' type represents a sequence of 'Command's.
 -}
 type Program :: Type
@@ -27,7 +27,7 @@ type Program = Array Command
 mkProgram :: [Command] -> Program
 mkProgram = SQ.fromList
 
-{- |
+{-|
 The 'parseProgram' function takes an array of 'GFXObject's and returns a
 'Program'.
 -}
@@ -51,7 +51,7 @@ parseProgram objs =
     collectCommands (objects, program) object =
       (objects |> object, program)
 
-{- |
+{-|
 The 'extractObjects' function takes a 'Program' and returns an array of
 'GFXObject's.
 -}

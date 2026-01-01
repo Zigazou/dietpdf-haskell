@@ -48,7 +48,7 @@ isNonStrokeColorOperator GSSetNonStrokeCMYKColorspace = True
 isNonStrokeColorOperator GSSetNonStrokeGrayColorspace = True
 isNonStrokeColorOperator _anyOtherOperator            = False
 
-{- |
+{-|
 Remove duplicated consecutive operators.
 -}
 optimizeDuplicates :: Program -> Program

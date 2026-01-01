@@ -1,5 +1,13 @@
+{-|
+Numeric helpers for PDF formatting and decoding.
 
--- | This modules gives helper functions for working with numbers.
+This module contains small helpers for working with numbers in the context of
+PDF serialization:
+
+- formatting floating point numbers in a compact PDF-friendly form;
+- parsing ASCII digit sequences into integers;
+- encoding positive integers into big-endian byte sequences.
+-}
 module Util.Number
   ( fromNumber
   , fromNumberRounded
@@ -22,7 +30,7 @@ import Data.Word (Word8)
 import Util.Ascii (asciiDIGITZERO, asciiHYPHENMINUS)
 import Util.String (startsWith)
 
-{- |
+{-|
 Rounds a number to a given number of decimal places.
 
 The number of decimal places is given by the first argument.
@@ -32,7 +40,7 @@ round' limit x = fromIntegral (floor (x * t + 0.5) :: Int) / t
  where
   t = 10 ^ limit
 
-{- |
+{-|
 Rounds a number to a given number of decimal places.
 
 The number of decimal places is given by the first argument.
@@ -94,11 +102,15 @@ fromNumberRounded limit number
   | otherwise            = str
   where str = toShortest (round' limit number)
 
--- | Output an int
+{-|
+Convert an 'Int' to its decimal ASCII representation.
+
+This is a small convenience wrapper around 'show'.
+-}
 fromInt :: Int -> ByteString
 fromInt = fromString . show
 
-{- |
+{-|
 Calculates the number of bytes needed to encode a number in binary.
 
 This function only works for positive numbers.
@@ -108,7 +120,7 @@ bytesNeededToEncode 0 = 1
 bytesNeededToEncode number =
   floor (logBase 256 (fromIntegral number :: Double)) + 1
 
-{- |
+{-|
 Encodes a number in the minimum bytes required.
 -}
 encodeIntToBytes :: Int -> Int -> ByteString

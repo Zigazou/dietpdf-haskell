@@ -21,19 +21,19 @@ import Data.Map (Map, fromList)
 import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 
-{- |
+{-|
 A translation table is a map from values to values.
 -}
 type TranslationTable :: Type -> Type
 type TranslationTable a = Map a a
 
-{- |
+{-|
 Create a translation table from a list of pairs.
 -}
 mkTranslationTable :: Ord a => [(a, a)] -> TranslationTable a
 mkTranslationTable = fromList
 
-{- |
+{-|
 Convert a value using a translation table.
 
 If the value is not in the table, it returns the original value.
@@ -48,7 +48,7 @@ shortFirst x y | xLength /= yLength = compare xLength yLength
   xLength = objectLength x
   yLength = objectLength y
 
-{- |
+{-|
 Rename a list of strings.
 The corresponding `Map` is returned.
 
@@ -61,7 +61,7 @@ getTranslationTable
   -> TranslationTable a
 getTranslationTable = getTranslationTableFrom 0
 
-{- |
+{-|
 Rename a list of strings.
 The corresponding `Map` is returned.
 
@@ -80,7 +80,7 @@ getTranslationTableFrom from generator names =
 hasTerm :: Ord a => TranslationTable a -> a -> Bool
 hasTerm = flip Map.member
 
-{- |
+{-|
 Merge two translation tables.
 -}
 mergeTranslationTables
@@ -90,7 +90,7 @@ mergeTranslationTables
   -> TranslationTable a
 mergeTranslationTables = Map.union
 
-{- |
+{-|
 Get the next free index in a translation table.
 -}
 nextFreeIndex :: TranslationTable a -> Int

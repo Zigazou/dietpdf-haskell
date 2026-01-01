@@ -15,7 +15,7 @@ import Data.Sequence (Seq (Empty, (:<|)))
 import Data.Set (Set)
 import Data.Set qualified as Set
 
-{- |
+{-|
 The 'resourcesUsed' function takes a 'Program' and returns a list of
 `PDFName`s giving the resources used in the program.
 

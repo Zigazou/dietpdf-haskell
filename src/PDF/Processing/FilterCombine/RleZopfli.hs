@@ -1,3 +1,10 @@
+{-|
+Run-length followed by Zopfli/Deflate filter combination.
+
+Applies RLE to the stream and then compresses with either Zopfli or fast
+Deflate, returning a `FilterCombination` with `FlateDecode` and
+`RunLengthDecode` filters appended.
+-}
 module PDF.Processing.FilterCombine.RleZopfli
   ( rleZopfli
   ) where
@@ -18,6 +25,10 @@ getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
 getCompressor UseZopfli  = FL.compress
 getCompressor UseDeflate = FL.fastCompress
 
+{-|
+Apply RLE first, then Zopfli/Deflate compression. Returns the combined filters
+and compressed bytes.
+-}
 rleZopfli
   :: Maybe (Int, Int)
   -> ByteString

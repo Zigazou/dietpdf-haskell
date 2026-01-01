@@ -1,3 +1,11 @@
+{-|
+Classify `PDFObject`s into high-level categories for reporting.
+
+This module provides `objectCategory`, which determines whether an object is
+`XML`, `Vector` graphics, `Bitmap` image, `Font`, `File`, or `Other`. It
+consults dictionary keys ("Type", "Subtype") and, when possible, attempts to
+unfilter and analyze streams to improve classification.
+-}
 module PDF.Processing.ObjectCategory (objectCategory) where
 
 import Data.Logging (Logging)
@@ -14,13 +22,21 @@ import PDF.Object.State (getDictionary)
 import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
+{-|
+Determine the `ObjectCategory` for a `PDFObject`.
+
+Behavior:
+
+* Attempts to read the object's dictionary; if unavailable, returns `Other`.
+* Tries to unfilter the object and classify via `whatOptimizationFor` to handle
+  malformed streams that might otherwise prevent dictionary inspection; on
+  failure, falls back to dictionary-based heuristics.
+* Checks `Type`/`Subtype` for embedded files, images, forms, fonts, and XML.
+-}
 objectCategory :: Logging IO => PDFObject -> PDFWork IO ObjectCategory
 objectCategory object = tryP (getDictionary object) >>= \case
   Left _noDictionary -> return Other
   Right dict -> do
-    -- Try to unfilter and determine optimization. This is helpful to handle
-    -- errors on malformed FlateDecode streams that would prevent us from
-    -- reading the dictionary properly.
     tryP (unfilter object >>= whatOptimizationFor) >>= \case
       Left _unfilterOrOptError -> return Other
       Right optimization -> case optimization of

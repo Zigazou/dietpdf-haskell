@@ -1,4 +1,4 @@
-{- |
+{-|
 This module holds function handling hexadecimal strings.
 
 It decodes data that has been encoded in ASCII hexadecimal form.
@@ -32,7 +32,7 @@ import Data.Fallible (Fallible)
 import Util.Ascii (asciiGREATERTHANSIGN)
 import Util.Hex (fromHexDigits, toHexDigits)
 
-{- |
+{-|
 Decodes an hexadecimal bytestring.
 
 Any character not included in `0123456789abcdefABCDEF` is simply ignored.
@@ -55,7 +55,7 @@ Right "\xAB\xCD\xEF\x10"
 decode :: ByteString -> Fallible ByteString
 decode = return . fromHexDigits
 
-{- |
+{-|
 Encodes an hexadecimal bytestring.
 
 A `>` is appended to the output string to comply with the PDF specification.

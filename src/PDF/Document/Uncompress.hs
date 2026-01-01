@@ -13,7 +13,7 @@ import Data.PDF.PDFWork (PDFWork, sayP, withContext)
 import PDF.Document.ObjectStream (explodeDocument, explodeObjects)
 import PDF.Processing.Unfilter (unfilter)
 
-{- |
+{-|
 Uncompress all `PDFObject` contained in a `PDFDObjects`.
 
 Objects embedded in object streams are extracted and the object stream is
@@ -31,7 +31,7 @@ uncompressObjects pdf = withContext (ctx ("uncompressobjects" :: String)) $ do
   sayP "Unfiltering all objects"
   mapM unfilter objects
 
-{- |
+{-|
 Uncompress all `PDFObject` contained in a `PDFDocument`.
 
 Objects embedded in object streams are extracted and the object stream is

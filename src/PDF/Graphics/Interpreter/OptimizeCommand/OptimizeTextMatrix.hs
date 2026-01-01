@@ -29,7 +29,7 @@ import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
-{- |
+{-|
 The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}

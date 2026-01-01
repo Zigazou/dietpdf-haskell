@@ -32,7 +32,7 @@ import Util.Graphics (areAligned)
 import Util.Number (round')
 
 
-{- |
+{-|
 The 'optimizeDrawCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}

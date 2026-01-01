@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for GFX names.
 
 A name object is an atomic symbol uniquely defined by a sequence of any
@@ -62,7 +62,7 @@ hexadecimalCodeP = do
 charP :: Get Word8
 charP = hexadecimalCodeP <|> satisfy isNameRegularChar
 
-{- |
+{-|
 Parse a `GFXName`.
 
 The name resulting from the parsing is decoded (there is no hexadecimal value

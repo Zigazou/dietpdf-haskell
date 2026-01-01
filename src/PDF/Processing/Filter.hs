@@ -1,5 +1,11 @@
 {-|
-This modules implements several optimization techniques targeted at PDF objects.
+Stream filter optimization for PDF objects.
+
+This module evaluates multiple filter combinations (Zopfli/Deflate, RunLength,
+Predictor variants, and JPEG2000) to find the best representation for object
+streams, taking into account object properties like width, components, masks,
+and special cases (JPEG images, XRef streams). It reports size changes via
+logging and updates the object's stream and filter list accordingly.
 -}
 module PDF.Processing.Filter
   ( filterOptimize
@@ -53,6 +59,10 @@ import PDF.Processing.FilterCombine.Rle (rle)
 import PDF.Processing.FilterCombine.RleZopfli (rleZopfli)
 import PDF.Processing.FilterCombine.Zopfli (zopfli)
 
+{-|
+Log a comparison line for a filter application, showing the stream size before
+and after applying a given filter.
+-}
 filterInfo
   :: Logging m
   => T.Text
@@ -64,13 +74,23 @@ filterInfo filterName streamBefore streamAfter =
                  (BS.length streamBefore)
                  (BS.length streamAfter)
 
+{-|
+Evaluate all generic filter candidates for a stream.
+
+Behavior depends on the presence of width/components metadata:
+
+* When available, considers RLE, Zopfli/Deflate, predictor variants, and
+  JPEG2000; optionally combines RLE with Zopfli/Deflate when beneficial.
+* When missing, limits to RLE and Zopfli/Deflate options.
+
+Returns candidate `FilterCombination`s to compare downstream.
+-}
 applyEveryFilterGeneric
   :: Logging IO
   => Bool
   -> Maybe (Int, Int)
   -> ByteString
   -> PDFWork IO [FilterCombination]
--- The stream has width and components information.
 applyEveryFilterGeneric objectIsAMask widthComponents@(Just (width, components)) stream = do
   useZopfli <- gets (sZopfli . wSettings)
 
@@ -117,7 +137,6 @@ applyEveryFilterGeneric objectIsAMask widthComponents@(Just (width, components))
   return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli, rJpeg2k]
         ++ rleCombine
 
--- The stream has no width nor components information.
 applyEveryFilterGeneric _objectIsAMask Nothing stream = do
   useZopfli <- gets (sZopfli . wSettings)
 
@@ -142,13 +161,19 @@ applyEveryFilterGeneric _objectIsAMask Nothing stream = do
     else
       return [rNothing, rZopfli]
 
+{-|
+Evaluate filter candidates specifically for JPEG content streams.
+
+When width/components are available, tries Zopfli/Deflate and a re-encoding to
+JPEG2000 (`JPXDecode`) with moderate quality; otherwise, falls back to
+Zopfli/Deflate.
+-}
 applyEveryFilterJPG
   :: Logging IO
   => Bool
   -> Maybe (Int, Int)
   -> ByteString
   -> PDFWork IO [FilterCombination]
--- The stream has width and components information.
 applyEveryFilterJPG _objectIsAMask (Just _imageProperty) stream = do
   useZopfli <- gets (sZopfli . wSettings)
   let rNothing = mkFCAppend [] stream
@@ -179,12 +204,17 @@ applyEveryFilterJPG _objectIsAMask Nothing stream = do
 
   return [rNothing, rZopfli]
 
+{-|
+Evaluate filter candidates for XRef streams.
+
+Prefers Predictor + Zopfli/Deflate when width/components are known; otherwise
+offers a no-op and Zopfli/Deflate.
+-}
 applyEveryFilterXRef
   :: Logging m
   => Maybe (Int, Int)
   -> ByteString
   -> PDFWork m [FilterCombination]
--- The stream has width and components information.
 applyEveryFilterXRef widthComponents@(Just (_width, _components)) stream = do
   useZopfli <- gets (sZopfli . wSettings)
   rPredZopfli <- lift (except $ predZopfli widthComponents stream useZopfli)
@@ -202,6 +232,11 @@ applyEveryFilterXRef Nothing stream = do
     UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
   return [rNothing, rZopfli]
 
+{-|
+Infer stream width and components from object keys (`Width`, `ColorSpace`). For
+`XRef` streams, width is derived by `xrefStreamWidth` and components default to
+1.
+-}
 getWidthComponents :: Logging m => PDFObject -> PDFWork m (Maybe (Int, Int))
 getWidthComponents object@PDFXRefStream{} =
   xrefStreamWidth object <&> Just . (, 1)
@@ -220,13 +255,26 @@ getWidthComponents object = do
     Just (PDFNumber width') -> return $ Just (round width', components)
     _anyOtherValue          -> return Nothing
 
+{-|
+Optimize a stream for a `PDFObject` based on the selected `OptimizationType` and
+object metadata.
+
+Steps:
+
+1. Determine applicable filter candidate generator (generic/JPG/XRef).
+2. Generate candidates and pick the best by stream length + filter overhead.
+3. If the best candidate improves on the original, update stream bytes and
+   filter list; otherwise leave the object unchanged.
+
+This logs size comparisons and operates within `PDFWork` context.
+-}
 filterOptimize
   :: Logging IO
   => OptimizationType
   -> PDFObject
   -> PDFWork IO PDFObject
 filterOptimize optimization object =
-  withContext (ctx ("filterOptimize" :: String) <> ctx object) $
+  withContext (ctx ("filterOptimize" :: String)) $
     if hasStream object
     then do
       stream          <- getStream object

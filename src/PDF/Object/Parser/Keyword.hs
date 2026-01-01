@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for PDF keywords.
 
 A keyword is a sequence of alphabetical letters only (either lowercase or
@@ -18,7 +18,7 @@ import PDF.Object.Object
     , isKeywordCharacter
     )
 
-{- |
+{-|
 A binary parser for a PDF keyword.
 
 It returns a `PDFBool`, a `PDFNull` or a `PDFKeyword`.

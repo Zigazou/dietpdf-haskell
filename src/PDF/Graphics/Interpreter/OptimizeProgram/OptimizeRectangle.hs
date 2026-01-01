@@ -31,7 +31,7 @@ isRectangle x0 y0 x1 y1 x2 y2 x3 y3 x4 y4
   | x0 == x1 && y1 == y2 && x2 == x3 && y3 == y0 = CounterClockwiseRectangle
   | otherwise                                    = NotARectangle
 
-{- |
+{-|
 Optimize line drawing commands to rectangle drawing commands.
 
 This function replaces a sequence of line drawing commands that form a rectangle

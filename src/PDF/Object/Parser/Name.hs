@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for PDF names.
 
 A name object is an atomic symbol uniquely defined by a sequence of any
@@ -63,7 +63,7 @@ hexadecimalCodeP = do
 charP :: Get Word8
 charP = hexadecimalCodeP <|> satisfy isNameRegularChar
 
-{- |
+{-|
 Parse a `PDFName`.
 
 The name resulting from the parsing is decoded (there is no hexadecimal value

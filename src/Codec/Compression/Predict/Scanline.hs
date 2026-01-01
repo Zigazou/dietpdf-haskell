@@ -51,7 +51,7 @@ import Data.Word (Word8)
 
 import Util.ByteString (groupComponents, separateComponents)
 
-{- |
+{-|
 A `Scanline` is a line of pixels.
 
 Each scanline may have an associated `Predictor` indicating the state in which
@@ -63,7 +63,7 @@ data Scanline = Scanline
   , slStream    :: ![ByteString]
   }
 
-{- |
+{-|
 An empty `Scanline` is used as a default `Scanline` when using PNG predictors
 `PNGUp`, `PNGAverage` and `PNGPaeth`.
 
@@ -81,7 +81,7 @@ scanlineEntropy EntropyDeflate =
   FL.entropyCompress . groupComponents . slStream
 scanlineEntropy EntropyRLE = RLE.entropyCompress . groupComponents . slStream
 
-{- |
+{-|
 Given a `Predictor` and 2 consecutive `Scanline`, encode the last `Scanline`.
 -}
 applyPredictorToScanline :: Entropy -> Predictor -> (Scanline, Scanline) -> Scanline
@@ -108,7 +108,7 @@ applyPredictorToScanline _ predictor (Scanline _ prior, Scanline _ current) = Sc
     fn (Samples upperLeft above left sample)
       : applyPredictorToScanline' fn (above, sample) remain
 
-{- |
+{-|
 Given a `Predictor` and 2 consecutive `Scanline`, uncode the last `Scanline`.
 -}
 applyUnpredictorToScanline :: Predictor -> (Scanline, Scanline) -> Scanline
@@ -130,7 +130,7 @@ applyUnpredictorToScanline predictor (Scanline _ prior, Scanline linePredictor c
     let decodedSample = fn (Samples upperLeft above left sample)
     in  decodedSample : applyUnpredictorToScanline' fn (above, decodedSample) remain
 
-{- |
+{-|
 Convert a `ByteString` to a `Scanline` according to a `Predictor`.
 -}
 fromPredictedLine

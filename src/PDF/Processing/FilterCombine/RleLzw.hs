@@ -1,3 +1,9 @@
+{-|
+Run-length followed by LZW filter combination.
+
+Applies RLE to the stream, then LZW, returning a `FilterCombination` with
+`LZWDecode` and `RunLengthDecode` filters appended.
+-}
 module PDF.Processing.FilterCombine.RleLzw
   ( rleLzw
   ) where
@@ -13,6 +19,10 @@ import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 
 import PDF.Processing.FilterCombine.Rle (rle)
 
+{-|
+Apply RLE first, then LZW compression. Returns the combined filters and
+compressed bytes.
+-}
 rleLzw
   :: Maybe (Int, Int)
   -> ByteString

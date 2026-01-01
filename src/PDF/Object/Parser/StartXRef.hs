@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for PDF start XREF object.
 
 The last line of the file shall contain only the end-of-file marker, %%EOF.
@@ -20,7 +20,7 @@ import PDF.Object.Parser.LooseEndOfLine (looseEndOfLineP)
 
 import Util.Number (toNumber)
 
-{- |
+{-|
 Parse a `PDFXRef` object.
 -}
 startXRefP :: Get PDFObject

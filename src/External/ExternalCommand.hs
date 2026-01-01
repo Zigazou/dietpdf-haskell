@@ -33,7 +33,7 @@ import System.Process
     )
 import System.Process.Internals (CreateProcess (std_in, std_out), ProcessHandle)
 
-{- |
+{-|
 Runs an external command with the given arguments.
 
 If the command fails, this function throws an `ExternalCommandError` error.
@@ -48,7 +48,7 @@ externalCommand command args = do
     ExitSuccess    -> return ()
     ExitFailure rc -> throwE (ExternalCommandError (show args) rc)
 
-{- |
+{-|
 Runs an external command with the given arguments and input.
 
 If the command fails, this function throws an `ExternalCommandError` error.
@@ -105,7 +105,7 @@ externalCommandBuf command args input = do
   injectInput _ _ _ _ _ =
     return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)
 
-{- |
+{-|
 Runs an external command with the given arguments and input.
 
 If the command fails, this function throws an `ExternalCommandError` error.
@@ -158,7 +158,7 @@ insertFileNames ("-":args) (fileName:fileNames) =
   fileName : insertFileNames args fileNames
 insertFileNames (arg:args) fileNames = arg : insertFileNames args fileNames
 
-{- |
+{-|
 Runs an external command with the given arguments and input.
 
 If the command fails, this function throws an `ExternalCommandError` error.

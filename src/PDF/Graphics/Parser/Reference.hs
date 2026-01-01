@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for GFX references.
 
 A GFX reference is an object value used to allow one object to refer to another.
@@ -23,7 +23,7 @@ digit = satisfy isDigit
 integerP :: Get [Word8]
 integerP = some' digit
 
-{- |
+{-|
 Parse a `GFXReference`.
 -}
 referenceP :: Get GFXObject

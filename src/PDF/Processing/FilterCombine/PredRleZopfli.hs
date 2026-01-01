@@ -1,3 +1,11 @@
+{-|
+Predictor + RLE + Zopfli/Deflate filter combination.
+
+Applies PNG predictor tuned for RLE entropy, stores then RLE-compresses, and
+finally compresses with either Zopfli or fast Deflate, producing a
+`FilterCombination` with `FlateDecode`, `RunLengthDecode`, and a second
+`FlateDecode` carrying predictor parameters.
+-}
 module PDF.Processing.FilterCombine.PredRleZopfli
   ( predRleZopfli
   ) where
@@ -25,6 +33,12 @@ getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
 getCompressor UseZopfli  = FL.compress
 getCompressor UseDeflate = FL.fastCompress
 
+{-|
+Apply RLE-tuned predictor pipeline: store → RLE → Zopfli/Deflate.
+
+Requires `(width, components)`; returns `InvalidFilterParm` when width is
+missing.
+-}
 predRleZopfli
   :: Maybe (Int, Int)
   -> ByteString
@@ -33,7 +47,6 @@ predRleZopfli
 predRleZopfli (Just (width, components)) stream useZopfli = do
   let compressor = getCompressor useZopfli
 
-  -- Try finding optimal predictors with Deflate "entropy" function
   predict EntropyRLE PNGOptimum width components stream
     >>= FL.noCompress
     >>= RL.compress

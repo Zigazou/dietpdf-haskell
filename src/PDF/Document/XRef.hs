@@ -46,7 +46,7 @@ import PDF.Object.State (getValue)
 import Util.Dictionary (Dictionary, mkDictionary)
 import Util.Number (bytesNeededToEncode, encodeIntToBytes)
 
-{- |
+{-|
 Given an encoded object, returns a list of tuples where the first element is the
 object number and the second element is the index of the object in the object
 stream.
@@ -59,7 +59,7 @@ indexedObjects (EncodedObject number _len _bin embedded) =
   go index (item :<| remains) = (item, InObjectStream item number index)
                               :<| go (index + 1) remains
 
-{- |
+{-|
 Given an encoded object, calculates the offset of the object and the offsets of
 the embedded objects.
 -}
@@ -141,7 +141,7 @@ xrefStreamWidth _anyOtherCase = throwError (XRefStreamNoW "Not a PDFXRefStream")
 mkBinary :: [(Int, Int)] -> ByteString
 mkBinary = BS.concat . fmap (uncurry encodeIntToBytes)
 
-{- | Create an entry for the cross-reference stream.
+{-| Create an entry for the cross-reference stream.
 
 There are three types of entries in a cross-reference stream:
 
@@ -170,7 +170,7 @@ mkEntry _number offsetWidth numberWidth (DirectOffset _ offset) =
 mkEntry _number offsetWidth numberWidth (InObjectStream _ objStream index) =
   mkBinary [(1, 2), (offsetWidth, objStream), (numberWidth, index)]
 
-{- |
+{-|
 Given a collection of encoded objects, generates a cross-reference stream.
 -}
 xrefStreamTable

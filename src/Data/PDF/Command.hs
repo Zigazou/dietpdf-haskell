@@ -9,7 +9,7 @@ import Data.PDF.GFXObject (GFXObject, GSOperator)
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence (fromList)
 
-{- |
+{-|
 The 'Command' type represents a graphics state operator and its parameters.
 -}
 type Command :: Type

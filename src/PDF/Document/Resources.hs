@@ -92,7 +92,7 @@ getResourceNames resources object = case getValueForKey "Resources" object of
     return (resources <> names)
   _notFound -> return resources
 
-{- |
+{-|
 Finds all resource names in a collection of PDF objects.
 
 Resources are typically stored in a dictionary object with a "Resources" key.

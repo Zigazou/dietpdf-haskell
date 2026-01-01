@@ -29,14 +29,14 @@ instance Ord EncodedObject where
   compare (EncodedObject objNum1 _ _ _) (EncodedObject objNum2 _ _ _) =
     compare objNum1 objNum2
 
-{- |
+{-|
 Count the number of objects in an encoded object. This includes the object
 itself and any embedded objects.
 -}
 objectCount :: EncodedObject -> Int
 objectCount = (+ 1) . length . eoEmbeddedObjects
 
-{- |
+{-|
 Get the object numbers of an encoded object. This includes the object itself
 and any embedded objects.
 

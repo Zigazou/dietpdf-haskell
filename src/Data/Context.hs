@@ -1,4 +1,4 @@
-{- |
+{-|
 Build and combine human-readable processing contexts.
 
 This module defines `Context`, a small utility type used to annotate logs,
@@ -27,7 +27,7 @@ import Data.Kind (Constraint, Type)
 import Data.List (sortBy)
 import Data.Text qualified as T
 
-{- |
+{-|
 A human-readable context value. Constructors:
 
 * `Context` — a textual label segment. When combined, segments are joined with
@@ -59,7 +59,7 @@ instance Ord Context where
   compare (ContextProgress _current1 _total1)
           (ContextProgress _current2 _total2) = EQ
 
-{- |
+{-|
 Fold a list of contexts into a single `Context`.
 
 Progress information (if present) is placed before textual segments so the final
@@ -72,7 +72,7 @@ stable, readable output.
 compileContexts :: [Context] -> Context
 compileContexts = foldr (<>) NoContext . sortBy (flip compare) . reverse
 
-{- |
+{-|
 Remove first and last characters from text (used to trim quotes from shown
 ByteString values).
 -}
@@ -99,7 +99,7 @@ instance Monoid Context where
   mempty :: Context
   mempty = NoContext
 
-{- |
+{-|
 Types that can be converted to a `Context`.
 
 Minimal complete definition: `ctx`.
@@ -143,7 +143,7 @@ instance Contextual (Int, Int) where
   ctx :: (Int, Int) -> Context
   ctx (a, b) = Context $ T.pack (show a) <> "." <> T.pack (show b)
 
-{- |
+{-|
 Convert a `ByteString` to a `Context` segment, trimming quotes from its shown
 form.
 -}
@@ -156,7 +156,7 @@ instance Contextual Char where
   ctx :: Char -> Context
   ctx = Context . T.singleton
 
-{- |
+{-|
 Combine two values into a composite `Context`.
 
 The values are converted via `ctx` and concatenated using the `Semigroup`

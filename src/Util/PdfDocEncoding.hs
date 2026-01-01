@@ -9,7 +9,7 @@ module Util.PdfDocEncoding
 import Data.Map (Map, fromList)
 import Data.Word (Word8)
 
-{- | The `PdfDocEncoding` is a map from Unicode code points to the
+{-| The `PdfDocEncoding` is a map from Unicode code points to the
 corresponding `PdfDocEncoding` code points.
 
 This is from the PDF 2.0 specifications ISO 32000-2:2020, Table D.3 page 859.

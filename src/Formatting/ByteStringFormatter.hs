@@ -12,7 +12,7 @@ import Data.Text.Lazy.Builder qualified as TL
 
 import Formatting.Internal (Format (Format))
 
-{- |
+{-|
 Formats a bytestring as an UTF8 string.
 
 >>> format ("UTF8 string: " % utf8) "Fr\xC3\xA9\&d\xC3\xA9ric"

@@ -1,4 +1,4 @@
-{- |
+{-|
 Optimization passes for PDF objects and their streams.
 
 This module decides which optimization to apply based on object type and
@@ -52,7 +52,7 @@ import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 
-{- |
+{-|
 Run a stream optimization process for a given `PDFObject`.
 
 If the optimization succeeds, logs a size comparison and returns the optimized
@@ -76,7 +76,7 @@ optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
       sayErrorP "cannot optimize" anError
       return stream
 
-{- |
+{-|
 Apply an appropriate stream-level optimization based on the object content (XML,
 graphics, JPEG, TrueType font). Returns the object with its stream updated when
 applicable.
@@ -107,7 +107,7 @@ streamOptimize object = do
 
     _anyOtherOptimization -> return object
 
-{- |
+{-|
 Completely refilter a stream by finding the best filter combination.
 
 It also optimized nested strings and XML streams.
@@ -124,7 +124,7 @@ refilter object = do
         >>= filterOptimize optimization
     else return stringOptimized
 
-{- |
+{-|
 Return whether a filter is known and supported for optimization.
 -}
 isFilterOK :: Filter -> Bool
@@ -138,7 +138,7 @@ isFilterOK f = case fFilter f of
   (PDFName "JPXDecode"     ) -> True
   _anyOtherCase              -> False
 
-{- |
+{-|
 Determine if a `PDFObject` is optimizable, whether because its filters are
 known by DietPDF or because its structure is optimizable.
 -}
@@ -156,7 +156,7 @@ optimizable object@PDFObjectStream{} = do
   return $ SQ.null unsupportedFilters
 optimizable _anyOtherObject = return False
 
-{- |
+{-|
 Optimize a PDF object.
 
 `PDFObject` may be optimized by:

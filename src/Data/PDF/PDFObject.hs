@@ -100,25 +100,25 @@ data PDFObject
     PDFStartXRef !Int
   deriving stock (Show)
 
-{- |
+{-|
 Create an empty `PDFDictionary`.
 -}
 mkEmptyPDFDictionary :: PDFObject
 mkEmptyPDFDictionary = PDFDictionary mkEmptyDictionary
 
-{- |
+{-|
 Create an empty `PDFArray`.
 -}
 mkEmptyPDFArray :: PDFObject
 mkEmptyPDFArray = PDFArray mkEmptyArray
 
-{- |
+{-|
 Create a `PDFDictionary` from a list of couples (key, value).
 -}
 mkPDFDictionary :: [(ByteString, PDFObject)] -> PDFObject
 mkPDFDictionary = PDFDictionary . mkDictionary
 
-{- |
+{-|
 Create a `PDFArray` from a list of `PDFObject`.
 -}
 mkPDFArray :: [PDFObject] -> PDFObject
@@ -228,7 +228,7 @@ instance Contextual PDFObject where
   ctx (PDFStartXRef _)                            = Context "startxref"
   ctx PDFEndOfFile                                = Context "eof"
 
-{- |
+{-|
 Determine if a `PDFObject` has a dictionary.
 -}
 hasDictionary :: PDFObject -> Bool
@@ -240,7 +240,7 @@ hasDictionary PDFDictionary{}                           = True
 hasDictionary (PDFTrailer (PDFDictionary _))            = True
 hasDictionary _anyOtherObject                           = False
 
-{- |
+{-|
 Determine if a `PDFObject` has a stream.
 -}
 hasStream :: PDFObject -> Bool

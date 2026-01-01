@@ -401,7 +401,7 @@ data GSOperator
     GSNone
   deriving stock (Eq, Show)
 
-{- |
+{-|
 Converts a `ByteString` to a `GSOperator`.
 
 If the operator is unknown it is copied as is in a `GSUnknown`.
@@ -481,7 +481,7 @@ toGSOperator "ID"    = GSInlineImageData
 toGSOperator "EI"    = GSEndInlineImage
 toGSOperator unknown = GSUnknown unknown
 
-{- |
+{-|
 Converts a `GSOperator` to a `ByteString`.
 -}
 fromGSOperator :: GSOperator -> ByteString
@@ -593,31 +593,31 @@ data GFXObject
     GFXOperator GSOperator
   deriving stock (Eq, Show)
 
-{- |
+{-|
 Create an empty `GFXDictionary`.
 -}
 mkEmptyGFXDictionary :: GFXObject
 mkEmptyGFXDictionary = GFXDictionary mkEmptyDictionary
 
-{- |
+{-|
 Create an empty `GFXArray`.
 -}
 mkEmptyGFXArray :: GFXObject
 mkEmptyGFXArray = GFXArray mkEmptyArray
 
-{- |
+{-|
 Create a `GFXDictionary` from a list of couples (key, value).
 -}
 mkGFXDictionary :: [(ByteString, GFXObject)] -> GFXObject
 mkGFXDictionary = GFXDictionary . mkDictionary
 
-{- |
+{-|
 Create a `GFXArray` from a list of `GFXObject`.
 -}
 mkGFXArray :: [GFXObject] -> GFXObject
 mkGFXArray = GFXArray . mkArray
 
-{- |
+{-|
 Indicates whether the `GFXObject` ends with a delimiter when converted to a
 `ByteString`.
 -}
@@ -636,7 +636,7 @@ endsWithDelimiter GFXInlineImage{}     = False
 endsWithDelimiter (GFXOperator GSNone) = True
 endsWithDelimiter GFXOperator{}        = False
 
-{- |
+{-|
 Indicates whether the `GFXObject` starts with a delimiter when converted to a
 `ByteString`.
 -}
@@ -655,7 +655,7 @@ startsWithDelimiter GFXInlineImage{}     = False
 startsWithDelimiter (GFXOperator GSNone) = True
 startsWithDelimiter GFXOperator{}        = False
 
-{- |
+{-|
 Tells if a space must be inserted between 2 `GFXObject` when converted to
 `ByteString`.
 -}
@@ -664,7 +664,7 @@ spaceIfNeeded object1 object2 | endsWithDelimiter object1   = ""
                               | startsWithDelimiter object2 = ""
                               | otherwise                   = " "
 
-{- |
+{-|
 Converts a `GFXObject` to a `ByteString` ready to be inserted in a graphics
 object in a stream.
 -}
@@ -684,7 +684,7 @@ fromGFXObject GFXNull                    = "null"
 fromGFXObject (GFXInlineImage dict raw)  = fromInlineImage dict raw
 fromGFXObject (GFXOperator operator   )  = fromGSOperator operator
 
-{- |
+{-|
 Returns a `Text` string describing a GFXObject.
 -}
 objectInfo :: GFXObject -> TL.Text
@@ -710,7 +710,7 @@ objectInfo (GFXInlineImage dict raw) = format
   (BS.length raw)
 objectInfo GFXOperator{} = "operator"
 
-{- |
+{-|
 Takes an `Array` of `GFXObject`, converts them to the `ByteString`
 representation and inserts spaces between them if necessary.
 -}
@@ -780,7 +780,7 @@ fromInlineImage keyValues image = BS.concat
   abbreviateKey "Width"            = "W"
   abbreviateKey key                = key
 
-{- |
+{-|
 Round a GFXNumber or GFXNumbers in GFXArray to a given precision.
 
 Any other GFXObject is returned as is.

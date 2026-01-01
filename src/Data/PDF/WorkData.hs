@@ -1,4 +1,4 @@
-{- |
+{-|
 This module defines `WorkData`, the state container used throughout PDF
 processing. It tracks the current PDF partition, contextual information for
 logging, resource name translations, additional graphics states, masks, global
@@ -24,7 +24,7 @@ import Data.PDF.Settings (Settings, defaultSettings)
 import Data.Set (Set)
 import Data.TranslationTable (TranslationTable)
 
-{- |
+{-|
 WorkData encapsulates the state used during PDF processing, including the
 current PDF partition, context stack, name translations, additional graphics
 states, masks, settings, and the current index for generating new object
@@ -41,7 +41,7 @@ data WorkData = WorkData
   , wCurrentIndex      :: !Int                          -- ^ Progress index for reporting operations.
   }
 
-{- |
+{-|
 Initial empty `WorkData` used to bootstrap PDF processing.
 -}
 emptyWorkData :: WorkData
@@ -55,19 +55,19 @@ emptyWorkData = WorkData
   , wCurrentIndex = 1
   }
 
-{- |
+{-|
 Update the `Settings` contained in `WorkData`.
 -}
 setSettings :: WorkData -> Settings -> WorkData
 setSettings workData settings = workData { wSettings = settings }
 
-{- |
+{-|
 Reset the progress index to 1.
 -}
 resetCurrentIndex :: WorkData -> WorkData
 resetCurrentIndex workData = workData { wCurrentIndex = 1 }
 
-{- |
+{-|
 Increment the progress index by 1.
 -}
 nextIndex :: WorkData -> WorkData

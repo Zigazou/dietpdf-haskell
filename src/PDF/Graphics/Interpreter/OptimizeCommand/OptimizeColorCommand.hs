@@ -51,7 +51,7 @@ nonStrokeDeleteIfNoChange command = do
                       command
                       (optimizeColor $ mkNonStrokeCommand newColor)
 
-{- |
+{-|
 The 'optimizeColorCommand' function takes a 'GraphicsState' and a 'Command' and
 returns an optimized 'Command'.
 -}

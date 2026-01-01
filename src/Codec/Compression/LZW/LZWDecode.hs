@@ -1,6 +1,12 @@
 {-|
-This module implements the LZW uncompress alfgorithm as used in PDF file
-(and also TIFF)
+LZW decompression as used by PDF and TIFF.
+
+This module implements LZW decompression as used in PDF streams (and also in
+TIFF).
+
+The decoder follows the PDF flavor of LZW, including handling the clear-table
+and end-of-data markers. Decoding errors are reported through the project's
+'Data.Fallible.Fallible' error type.
 -}
 module Codec.Compression.LZW.LZWDecode
   ( decompress
@@ -34,6 +40,9 @@ import Data.UnifiedError
     ( UnifiedError (InternalError, NotEnoughBytes, ParseError)
     )
 
+{-|
+A structure representing bit slicing information for LZW decoding.
+-}
 type BitsRange :: Type
 data BitsRange = BitsRange
   { brByteMask0 :: Int
@@ -44,6 +53,9 @@ data BitsRange = BitsRange
   }
   deriving stock (Eq, Show)
 
+{-|
+Compute bit slicing information for LZW decoding.
+-}
 bitsSlices :: Int -> Int -> Maybe BitsRange
 bitsSlices spanLength offset
   | validBitsPerCode spanLength = Just $ BitsRange
@@ -58,6 +70,9 @@ bitsSlices spanLength offset
   mask :: Int
   mask = shiftR (shiftL 0xffffffff (24 - spanLength) .&. 0x00ffffff) offset
 
+{-|
+A structure representing the state of an LZW decoding step.
+-}
 type DecodeStep :: Type
 data DecodeStep = DecodeStep
   { psPreviousWordIndex :: Int
@@ -68,6 +83,9 @@ data DecodeStep = DecodeStep
   }
   deriving stock (Eq, Show)
 
+{-|
+Helper function that fails with a given error if the action returns `Nothing`.
+-}
 failWith :: Monoid a => UnifiedError -> State DecodeStep (Maybe a) -> State DecodeStep a
 failWith errorValue action = do
   result <- action
@@ -75,6 +93,9 @@ failWith errorValue action = do
     Just value -> return value
     Nothing    -> setError errorValue >> return mempty
 
+{-|
+Read the next LZW code from the input stream.
+-}
 lzwNextCode :: ByteString -> State DecodeStep (Fallible Int)
 lzwNextCode stream = do
   step <- get
@@ -105,6 +126,9 @@ lzwNextCode stream = do
       nextBitPosition
       return (flip shiftR shift <$> code)
 
+{-|
+Read the `Predictor` parameter; throws an error if the value is invalid.
+-}
 setPreviousWordIndex :: Int -> State DecodeStep ()
 setPreviousWordIndex value =
   get >>= \step -> put $ step { psPreviousWordIndex = value }
@@ -116,18 +140,33 @@ instance MonadDictionary (State DecodeStep) where
   putDictionary :: Dictionary -> State DecodeStep ()
   putDictionary value = get >>= \step -> put $ step { psDictionary = value }
 
+{-|
+Get the previous word index from the decoding state.
+-}
 getPreviousWordIndex :: State DecodeStep Int
 getPreviousWordIndex = psPreviousWordIndex <$> get
 
+{-|
+Get the current bits-per-code from the decoding state.
+-}
 getBitsPerCode :: State DecodeStep Int
 getBitsPerCode = psBitsPerCode <$> get
 
+{-|
+Set the current bits-per-code in the decoding state.
+-}
 setBitsPerCode :: Int -> State DecodeStep ()
 setBitsPerCode value = get >>= \step -> put $ step { psBitsPerCode = value }
 
+{-|
+Reset the bits-per-code to the minimum value.
+-}
 resetBitsPerCode :: State DecodeStep ()
 resetBitsPerCode = setBitsPerCode minBitsPerCode
 
+{-|
+Update the bits-per-code according to the current dictionary length.
+-}
 updateBitsPerCode :: State DecodeStep ()
 updateBitsPerCode = do
   bitsPerCode <- getBitsPerCode
@@ -138,14 +177,23 @@ updateBitsPerCode = do
     | dictLength == 2047 -> 12
     | otherwise          -> bitsPerCode
 
+{-|
+Advance the bit position by the current bits-per-code.
+-}
 nextBitPosition :: State DecodeStep ()
 nextBitPosition = do
   step <- get
   put $ step { psBitPosition = psBitPosition step + psBitsPerCode step }
 
+{-|
+Set an error in the decoding state.
+-}
 setError :: UnifiedError -> State DecodeStep ()
 setError value = get >>= \step -> put $ step { psError = Just value }
 
+{-|
+Check whether there are more codes to decode.
+-}
 moreToDecode :: Int -> State DecodeStep Bool
 moreToDecode totalBits = do
   step <- get
@@ -154,6 +202,9 @@ moreToDecode totalBits = do
       notTheEnd     = psPreviousWordIndex step /= endOfDataMarker
   return (notTheEnd && noError && bitsRemaining)
 
+{-|
+Process the next LZW code and return the corresponding decoded word.
+-}
 processDecode :: ByteString -> State DecodeStep ByteString
 processDecode stream = updateBitsPerCode >> lzwNextCode stream >>= \case
   Left  anError          -> setError anError >> return ""
@@ -200,6 +251,9 @@ processDecode stream = updateBitsPerCode >> lzwNextCode stream >>= \case
           )
         return ""
 
+{-|
+Create the initial decoding state.
+-}
 initialDecodeStep :: Int -> DecodeStep
 initialDecodeStep first = DecodeStep
   { psPreviousWordIndex = first
@@ -216,9 +270,8 @@ in the PDF specifications.
 It may return errors on invalid codes.
 -}
 decompress
-  :: ByteString -- ^ A strict bytestring of at least 2 bytes
+  :: ByteString
   -> Fallible ByteString
-     -- ^ The uncompressed bytestring or an error
 decompress stream = do
   let (output, state) = runState
         (whileM (moreToDecode $ BS.length stream * 8) (processDecode stream))

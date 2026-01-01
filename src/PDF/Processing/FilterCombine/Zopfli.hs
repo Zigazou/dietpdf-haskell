@@ -1,3 +1,9 @@
+{-|
+Zopfli/Deflate compression filter combination.
+
+Compresses a stream using either Zopfli or fast Deflate and returns a
+`FilterCombination` that appends a `FlateDecode` filter.
+-}
 module PDF.Processing.FilterCombine.Zopfli
   ( zopfli
   ) where
@@ -16,6 +22,11 @@ getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
 getCompressor UseZopfli  = FL.compress
 getCompressor UseDeflate = FL.fastCompress
 
+{-|
+Compress a stream with either Zopfli (slower, smaller) or fast Deflate (faster,
+larger). Returns a `FilterCombination` with `FlateDecode` and the compressed
+bytes.
+-}
 zopfli
   :: Maybe (Int, Int)
   -> ByteString

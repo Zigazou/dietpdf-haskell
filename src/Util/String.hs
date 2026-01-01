@@ -1,4 +1,12 @@
--- | This modules contains functions to help encoding of PDF strings.
+{-|
+PDF string and hex-string helpers.
+
+This module contains helpers to encode PDF /literal strings/ (@(...)@) and PDF
+/hex strings/ (@<...>@), along with a few utilities used by those encoders.
+
+The hex-string utilities are intentionally forgiving: non-hex characters are
+discarded and case is normalized to lowercase.
+-}
 module Util.String
   ( fromString
   , fromHexString
@@ -24,6 +32,12 @@ import Util.Ascii
     , pattern AsciiRIGHTPARENTHESIS
     )
 
+{-|
+Escape a single byte for inclusion in a PDF literal string.
+
+Only the characters that must be escaped by this encoder are handled: carriage
+return, parentheses, and the reverse solidus.
+-}
 escapeChar :: Word8 -> ByteString
 escapeChar AsciiCR               = "\\r"
 escapeChar AsciiLEFTPARENTHESIS  = "\\("
@@ -42,6 +56,11 @@ well-balanced parenthesis.
 fromString :: ByteString -> ByteString
 fromString string = BS.concat ["(", BS.concatMap escapeChar string, ")"]
 
+{-|
+Keep only ASCII hex digits, normalizing uppercase to lowercase.
+
+Non-hex bytes are mapped to the empty string (i.e. discarded).
+-}
 onlyHexChar :: Word8 -> ByteString
 onlyHexChar byte
   | byte >= asciiDIGITZERO && byte <= asciiDIGITNINE = BS.singleton byte
@@ -50,7 +69,7 @@ onlyHexChar byte
   | otherwise = ""
   where lowerDigit d = d - asciiUPPERA + asciiLOWERA
 
-{- |
+{-|
 Normalize an hexadecimal string.
 
 It:
@@ -82,6 +101,11 @@ A trailing zero is removed if the number of hexadecimal digit is even.
 fromHexString :: ByteString -> ByteString
 fromHexString hexString = BS.concat ["<", normalizeHexString hexString, ">"]
 
+{-|
+Decode a single ASCII hex digit into its numeric value (0..15).
+
+Non-hex bytes decode to @0@.
+-}
 digitToNumber :: Word8 -> Word8
 digitToNumber byte
   | byte >= asciiDIGITZERO && byte <= asciiDIGITNINE = byte - asciiDIGITZERO
@@ -107,7 +131,7 @@ hexStringToString hexString = BS.concat
     | otherwise = BS.cons (convertHexByte (BS.index hs 0) (BS.index hs 1))
                           (convert (BS.drop 2 hs))
 
-{- |
+{-|
 Tells if a `ByteString` starts with another `ByteString`.
 -}
 startsWith :: ByteString -> ByteString -> Bool

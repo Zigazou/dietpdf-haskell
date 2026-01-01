@@ -22,7 +22,7 @@ import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
 import Util.Dictionary (Dictionary, dictAlter, dictHasKey)
 
-{- |
+{-|
 Update the stream embedded in a `PDFObject`.
 
 It also updates the Length entry in the associated dictionary to reflect the
@@ -44,7 +44,7 @@ updateStream object newStream = case object of
   newDict :: Dictionary PDFObject -> Dictionary PDFObject
   newDict = Map.adjust (const newLength) "Length"
 
-{- |
+{-|
 Returns the count of cross-references in a `PDFXRef` object.
 
 If the object is not a `PDFXRef`, it returns 0.
@@ -54,7 +54,7 @@ xrefCount (PDFXRef subsections) = foldl' (+) 0 $ xrssCount <$> subsections
 xrefCount (PDFXRefStream _ _ _ stream) = BS.length stream
 xrefCount _ = 0
 
-{- |
+{-|
 Given a `Dictionary`, generate a human `ByteString` describing the object based
 on the Type and Subtype keys.
 
@@ -68,7 +68,7 @@ objectType dictionary =
     (Just (PDFName typeValue), _noSubtype) -> Just typeValue
     _noType -> Nothing
 
-{- |
+{-|
 Determine if a key is in a dictionary from a `PDFObject`.
 
 If the `PDFObject` has no dictionary, it returns `False`.
@@ -111,7 +111,7 @@ setValueForKey key value (PDFTrailer dict) =
   PDFTrailer (setValueForKey key value dict)
 setValueForKey _anyKey _anyValue object = object
 
-{- |
+{-|
 Checks if the given PDF object contains document information (e.g., has an
 "Author" key).
 
@@ -121,7 +121,7 @@ isInfo :: PDFObject -> Bool
 isInfo object@PDFIndirectObject{} = hasKey "Author" object
 isInfo _anyOtherObject            = False
 
-{- |
+{-|
 Checks if the given PDF object is a Catalog object by verifying that its "Type"
 key is set to "Catalog".
 

@@ -1,4 +1,4 @@
-{- |
+{-|
 This module has all the standard table identifier for True Type and Open Type
 file formats.
 

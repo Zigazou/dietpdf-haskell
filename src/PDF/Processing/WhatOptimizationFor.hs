@@ -1,3 +1,20 @@
+{-|
+Determine the appropriate optimization pass for a `PDFObject`.
+
+This module inspects object dictionaries and streams to classify optimizations
+into categories:
+
+* XML streams → `XMLOptimization`
+* JPEG images (magic `\xff\xd8`) → `JPGOptimization`
+* Graphics content streams → `GfxOptimization`
+* TrueType font streams → `TTFOptimization`
+* Object streams → `ObjectStreamOptimization`
+* Cross-reference streams → `XRefStreamOptimization`
+* Otherwise → `NoOptimization`
+
+Detection uses keys like "Subtype" and "Type" and, when needed, parsers for
+graphics (`gfxParse`) and TrueType fonts (`ttfParse`).
+-}
 module PDF.Processing.WhatOptimizationFor
   ( whatOptimizationFor
   )
@@ -17,8 +34,21 @@ import PDF.Graphics.Parser.Stream (gfxParse)
 import PDF.Object.State (getStream, getValue)
 
 
-{- |
-Determine the optimization type that can be applied to a `PDFObject`.
+{-|
+Classify a `PDFObject` into an `OptimizationType`.
+
+Heuristics:
+
+* `Subtype = XML` → XML optimization.
+* `Subtype = Image` and stream begins with JPEG magic → JPG optimization.
+* `Subtype = Form` → analyze stream with `gfxParse`; non-empty graphics →
+  graphics optimization.
+* `Type = ObjStm` → object stream optimization.
+* `Type = XRef` → xref stream optimization.
+* `Type = Pattern` → graphics optimization.
+* If none of the above, attempt `ttfParse` on the stream; success → TTF
+  optimization. Otherwise, analyze with `gfxParse` to decide graphics or no
+  optimization.
 -}
 whatOptimizationFor :: Logging m => PDFObject -> PDFWork m OptimizationType
 whatOptimizationFor object =

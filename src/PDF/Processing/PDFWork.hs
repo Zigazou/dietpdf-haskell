@@ -1,3 +1,16 @@
+{-|
+Helpers for running `PDFWork` transformations over PDF structures.
+
+This module provides utilities to:
+
+* import and partition PDF documents into working state,
+* clean unused objects while reporting progress,
+* apply transformations concurrently over collections,
+* map transformations across nested object structures.
+
+All functions integrate with `PDFWork` and `Logging` to maintain context and
+error reporting.
+-}
 module PDF.Processing.PDFWork
   ( importObjects
   , clean
@@ -37,13 +50,17 @@ import PDF.Object.State (embedObject)
 type PDFWork :: (Type -> Type) -> Type -> Type
 type PDFWork m a = StateT WorkData (FallibleT m) a
 
+{-|
+Import a `PDFDocument` into the current `PDFWork` state by exploding object
+streams and partitioning into a `PDFPartition`.
+-}
 importObjects :: Logging m => PDFDocument -> PDFWork m ()
 importObjects objects = do
   workData <- get
   explodedObjects <- explodeDocument objects
   put $ workData { wPDF = partitionDocument explodedObjects}
 
-{- |
+{-|
 Cleans a `PDFPartition` by removing unused objects and logs the number of
 removed objects.
 -}
@@ -61,7 +78,7 @@ clean = do
     Left theError -> do
       sayErrorP "Unable to remove unused objects" theError
 
-{- |
+{-|
 Parallel map function that applies a given transformation to each element of a
 traversable structure (e.g., list) using concurrency.
 
@@ -82,6 +99,10 @@ pMapP transform items = do
          )
     >>= either throwError return . sequence
 
+{-|
+Apply a transformation to all indirect objects in the partition, processing both
+with-stream and without-stream objects concurrently.
+-}
 pModifyIndirectObjects
   :: Logging IO
   => (PDFObject -> PDFWork IO PDFObject)
@@ -95,7 +116,7 @@ pModifyIndirectObjects func = do
   modifyPDF $ const
     pdf { ppObjectsWithStream = wStream, ppObjectsWithoutStream = woStream }
 
-{- |
+{-|
 Apply a function to any object contained by an object at any level.
 -}
 deepMapP

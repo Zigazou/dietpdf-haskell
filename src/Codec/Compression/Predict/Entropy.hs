@@ -32,7 +32,7 @@ data Entropy = EntropyShannon
              | EntropyRLE
              deriving stock Eq
 
-{- |
+{-|
 Calculate the Shannon entropy of a `ByteString`.
 Adapted from https://rosettacode.org/wiki/Entropy
 -}

@@ -46,7 +46,7 @@ import Data.PDF.TransformationMatrix
   , matrixScale
   )
 
-{- |
+{-|
 The graphics state is a collection of parameters that define the current page's
 graphics context. The graphics state includes the following parameters:
 
@@ -79,7 +79,7 @@ data GraphicsState = GraphicsState
   , gsCurrentPointY  :: !Double
   } deriving stock (Eq, Show)
 
-{- |
+{-|
 The default graphics state is the initial graphics state of a page. It has the
 following parameters:
 
@@ -112,7 +112,7 @@ defaultGraphicsState = GraphicsState
   , gsCurrentPointY  = 0.0
   }
 
-{- |
+{-|
 Calculates the useful matrix precision for a given scale factor. The useful
 matrix precision is the number of decimal places that are useful for rendering
 purposes.
@@ -120,7 +120,7 @@ purposes.
 usefulMatrixPrecisionFor :: Double -> Int
 usefulMatrixPrecisionFor scale = max 0 (6 - floor (logBase 10 (abs scale)))
 
-{- |
+{-|
 Calculates the useful precision of the current graphics state. The useful
 precision is the number of decimal places that are useful for rendering
 purposes.
@@ -136,7 +136,7 @@ usefulGraphicsPrecision state =
   scaleY   = userUnit * abs (gsScaleY state)
   scale    = max scaleX scaleY
 
-{- |
+{-|
 Calculates the useful precision of the current graphics state. The useful
 precision is the number of decimal places that are useful for rendering
 purposes.
@@ -156,7 +156,7 @@ usefulTextPrecision state =
   scaleY   = userUnit * scaleTY * scaleGY
   scale    = max scaleX scaleY
 
-{- |
+{-|
 Calculates the useful precision of the current graphics state. The useful
 precision is the number of decimal places that are useful for rendering
 purposes.
@@ -164,7 +164,7 @@ purposes.
 usefulColorPrecision :: GraphicsState -> Int
 usefulColorPrecision _state = 2
 
-{- |
+{-|
 Applies a transformation matrix to the current transformation matrix (CTM) of
 the graphics state.
 -}
@@ -178,7 +178,7 @@ applyGraphicsMatrix matrix state = state
   graphicsMatrix   = gsCTM state <> matrix
   (scaleX, scaleY) = matrixScale graphicsMatrix (1.0, 1.0)
 
-{- |
+{-|
 Apply the text matrix of the current text state.
 -}
 applyTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
@@ -193,7 +193,7 @@ applyTextMatrix matrix state = state
   textMatrix = tsMatrix (gsTextState state) <> matrix
   (scaleX, scaleY) = matrixScale textMatrix (1.0, 1.0)
 
-{- |
+{-|
 Set the text matrix of the current text state.
 
 Contrary to the 'applyGraphicsMatrix' function, this function replaces the
@@ -221,7 +221,7 @@ setTextMatrix matrix state = state
     })
   (scaleX, scaleY) = matrixScale renderingMatrix (1.0, 1.0)
 
-{- |
+{-|
 Set the font and font size of the current text state.
 
 The font name is a byte string that represents the font name. The font size is
@@ -235,7 +235,7 @@ setFont fontName fontSize state = state
       }
   }
 
-{- |
+{-|
 Set the horizontal scaling of the current text state.
 
 The scaling is a double that represents the horizontal scaling factor in
@@ -245,7 +245,7 @@ setHorizontalScaling :: Double -> GraphicsState -> GraphicsState
 setHorizontalScaling scaling state = state
   { gsTextState = (gsTextState state) { tsHorizontalScaling = scaling / 100 } }
 
-{- |
+{-|
 Set the rise of the current text state.
 
 The rise is a double that represents the distance, in points, to move the
@@ -255,7 +255,7 @@ setTextRise :: Double -> GraphicsState -> GraphicsState
 setTextRise rise state = state
   { gsTextState = (gsTextState state) { tsRise = rise } }
 
-{- |
+{-|
 Set the leading of the current text state.
 
 The leading is a double that represents the distance, in points, between
@@ -265,45 +265,45 @@ setTextLeading :: Double -> GraphicsState -> GraphicsState
 setTextLeading leading state = state
   { gsTextState = (gsTextState state) { tsLeading = leading } }
 
-{- |
+{-|
 Set the word spacing of the current text state.
 -}
 setCharacterSpacing :: Double -> GraphicsState -> GraphicsState
 setCharacterSpacing spacing state = state
   { gsTextState = (gsTextState state) { tsCharacterSpacing = spacing } }
 
-{- |
+{-|
 Set the word spacing of the current text state.
 -}
 setWordSpacing :: Double -> GraphicsState -> GraphicsState
 setWordSpacing spacing state = state
   { gsTextState = (gsTextState state) { tsWordSpacing = spacing } }
 
-{- |
+{-|
 Set the line width of the current graphics state.
 -}
 setLineWidth :: Double -> GraphicsState -> GraphicsState
 setLineWidth lineWidth state = state { gsLineWidth = lineWidth }
 
-{- |
+{-|
 Set the line cap of the current graphics state.
 -}
 setLineCap :: Double -> GraphicsState -> GraphicsState
 setLineCap lineCap state = state { gsLineCap = lineCap }
 
-{- |
+{-|
 Set the line join of the current graphics state.
 -}
 setLineJoin :: Double -> GraphicsState -> GraphicsState
 setLineJoin lineJoin state = state { gsLineJoin = lineJoin }
 
-{- |
+{-|
 Set the miter limit of the current graphics state.
 -}
 setMiterLimit :: Double -> GraphicsState -> GraphicsState
 setMiterLimit miterLimit state = state { gsMiterLimit = miterLimit }
 
-{- |
+{-|
 Set the dash pattern of the current graphics state.
 -}
 setDashPattern :: Double -> [Double] -> GraphicsState -> GraphicsState
@@ -312,37 +312,37 @@ setDashPattern dashPhase dashArray state = state
   , gsDashPhase = dashPhase
   }
 
-{- |
+{-|
 Set the rendering intent of the current graphics state.
 -}
 setRenderingIntent :: ByteString -> GraphicsState -> GraphicsState
 setRenderingIntent intent state = state { gsIntent = intent }
 
-{- |
+{-|
 Set the flatness of the current graphics state.
 -}
 setFlatness :: Double -> GraphicsState -> GraphicsState
 setFlatness flatness state = state { gsFlatness = flatness }
 
-{- |
+{-|
 Set the stroke alpha of the current graphics state.
 -}
 setStrokeAlpha :: Double -> GraphicsState -> GraphicsState
 setStrokeAlpha alpha state = state { gsStrokeAlpha = alpha }
 
-{- |
+{-|
 Set the non-stroke alpha of the current graphics state.
 -}
 setNonStrokeAlpha :: Double -> GraphicsState -> GraphicsState
 setNonStrokeAlpha alpha state = state { gsNonStrokeAlpha = alpha }
 
-{- |
+{-|
 Set the start of the current path.
 -}
 setPathStart :: Double -> Double -> GraphicsState -> GraphicsState
 setPathStart x y state = state { gsPathStartX = x, gsPathStartY = y }
 
-{- |
+{-|
 Set the current point of the current path.
 -}
 setCurrentPoint :: Double -> Double -> GraphicsState -> GraphicsState

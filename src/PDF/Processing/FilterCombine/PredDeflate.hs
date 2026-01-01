@@ -1,3 +1,10 @@
+{-|
+Predictor + Deflate filter combination.
+
+Finds an optimal PNG predictor using both Shannon and Deflate-oriented
+heuristics, compresses with fast Deflate, and returns a `FilterCombination` that
+includes `FlateDecode` with `Predictor`, `Columns`, and `Colors` parameters.
+-}
 module PDF.Processing.FilterCombine.PredDeflate
   ( predDeflate
   ) where
@@ -19,17 +26,22 @@ import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
+{-|
+Apply PNG predictor, then fast Deflate, selecting the better result between
+Shannon and Deflate heuristics.
+
+Requires `(width, components)`; returns `InvalidFilterParm` when width is
+missing.
+-}
 predDeflate
   :: Maybe (Int, Int)
   -> ByteString
   -> Fallible FilterCombination
 predDeflate (Just (width, components)) stream = do
-  -- Try finding optimal predictors with Shannon entropy function
   compressedS <-
     predict EntropyShannon PNGOptimum width components stream
       >>= FL.fastCompress
 
-  -- Try finding optimal predictors with Deflate "entropy" function
   compressedD <-
     predict EntropyDeflate PNGOptimum width components stream
       >>= FL.fastCompress

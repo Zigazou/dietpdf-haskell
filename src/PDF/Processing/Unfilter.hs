@@ -1,5 +1,11 @@
 {-|
-This module facilitates unfiltering of `PDFObject`.
+Unfiltering of PDF object streams.
+
+This module attempts to decode supported filters from object streams
+(`FlateDecode`, `RunLengthDecode`, `LZWDecode`, `ASCII85Decode`,
+`ASCIIHexDecode`) and applies PNG-style predictors when specified. It preserves
+unsupported filters and returns any remaining filter list alongside the
+unfiltered stream.
 -}
 module PDF.Processing.Unfilter
   ( unfilter
@@ -24,12 +30,13 @@ import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import PDF.Object.Container (getFilters, setFilters)
 import PDF.Object.Object
-    ( PDFObject (PDFName, PDFNumber)
-    , ToPDFNumber (mkPDFNumber)
-    , hasKey
-    )
+  (PDFObject (PDFName, PDFNumber), ToPDFNumber (mkPDFNumber), hasKey)
 import PDF.Object.State (getStream, getValue, getValueDefault, setStream)
 
+{-|
+Extract and decode the `Predictor` value from filter parameters. Throws
+`InvalidFilterParm` when the predictor is missing or invalid.
+-}
 getPredictor :: Logging m => PDFObject -> PDFWork m Predictor
 getPredictor params =
   tryP (getValue "Predictor" params) >>= \case
@@ -40,6 +47,10 @@ getPredictor params =
     _anythingElse -> throwError
       $ InvalidFilterParm ("Predictor=" ++ show params)
 
+{-|
+Read the `Columns` parameter; defaults to 1. Throws `InvalidFilterParm` on
+invalid values.
+-}
 getColumns :: Logging m => PDFObject -> PDFWork m Int
 getColumns params =
   tryP (getValueDefault "Columns" (PDFNumber 1) params) >>= \case
@@ -47,6 +58,10 @@ getColumns params =
     _anythingElse -> throwError
       $ InvalidFilterParm ("Columns=" ++ show params)
 
+{-|
+Read `BitsPerComponent`; defaults to 8.
+Throws `InvalidFilterParm` on invalid values.
+-}
 getComponents :: Logging m => PDFObject -> PDFWork m Int
 getComponents params =
   tryP (getValueDefault "BitsPerComponent" (PDFNumber 8) params) >>= \case
@@ -54,6 +69,10 @@ getComponents params =
     _anythingElse -> throwError
       $ InvalidFilterParm ("BitsPerComponent=" ++ show params)
 
+{-|
+Read `Colors` with a provided default; returns the color count.
+Throws `InvalidFilterParm` on invalid values.
+-}
 getColors :: Logging m => Int -> PDFObject -> PDFWork m Int
 getColors defaultColors params =
   tryP (getValueDefault "Colors" (mkPDFNumber defaultColors) params) >>= \case
@@ -61,6 +80,10 @@ getColors defaultColors params =
     _anythingElse                  -> throwError
       $ InvalidFilterParm ("Colors=" ++ show params)
 
+{-|
+Apply PNG predictor decoding when `Predictor` is present in filter parameters;
+otherwise return the stream unchanged.
+-}
 unpredictStream
   :: Logging m
   => Int
@@ -81,6 +104,10 @@ unpredictStream defaultColors pdfFilter stream =
           $ InvalidFilterParm ("Predictor=" ++ show params)
     else return stream
 
+{-|
+Decode supported filters in order, threading remaining filters forward. For
+`FlateDecode` and `LZWDecode`, applies predictor decoding when appropriate.
+-}
 unfilterStream
   :: Logging m
   => Int
@@ -107,6 +134,10 @@ unfilterStream colors (filters@(pdfFilter :<| otherFilters), stream)
   | otherwise = return (filters, stream)
 unfilterStream _colors (filters, stream) = return (filters, stream)
 
+{-|
+Infer a color-space channel count from the `ColorSpace` key.
+Defaults to 1 channel when the value is unrecognized.
+-}
 getColorSpace :: Logging m => PDFObject -> PDFWork m Int
 getColorSpace params =
   tryP (getValueDefault "ColorSpace" (PDFName "DeviceGray") params) >>= \case
@@ -117,6 +148,11 @@ getColorSpace params =
     _anythingElse -> throwError
       $ InvalidFilterParm ("ColorSpace=" ++ show params)
 
+{-|
+Retrieve the stream and filter list from an object, determine the
+color-space, and decode filters, producing the remaining filters and the
+unfiltered stream.
+-}
 unfiltered :: Logging m => PDFObject -> PDFWork m (FilterList, ByteString)
 unfiltered object = do
   stream     <- getStream object
@@ -124,7 +160,7 @@ unfiltered object = do
   colorSpace <- getColorSpace object
   unfilterStream colorSpace (filters, stream)
 
-{- |
+{-|
 Tries to decode every filter of an object with a stream. Some filters will not
 be decoded because (like `DCTDecode`).
 

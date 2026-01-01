@@ -40,7 +40,7 @@ import PDF.Object.Object.ToPDFNumber (ToPDFNumber (mkPDFNumber))
 import Util.Dictionary (Dictionary)
 import Data.ByteString (ByteString)
 
-{- |
+{-|
 Returns the stream embedded in a `PDFObject`.
 
 If the object has no stream, a `UnifiedError` `NoStream` stops the evaluation
@@ -55,7 +55,7 @@ getStream object = case object of
   (PDFXRefStream               _ _ _ stream) -> return stream
   _anyOtherObject                            -> throwError (NoStream "")
 
-{- |
+{-|
 Returns the dictionary embedded in a `PDFObject`.
 
 If the object has no dictionary, a `UnifiedError` `NoDictionary` stops the
@@ -70,7 +70,7 @@ getDictionary object = case object of
   (PDFTrailer (PDFDictionary dict)           ) -> return dict
   _anyOtherObject                              -> throwError (NoDictionary "")
 
-{- |
+{-|
 Get value in a dictionary from a `PDFObject`.
 
 It works transparently for any `PDFObject` containing a dictionary:
@@ -91,7 +91,7 @@ getValue name object = case object of
   (PDFXRefStream _ _ dict _                  ) -> return $ dict Map.!? name
   _anyOtherObject                              -> return Nothing
 
-{- |
+{-|
 Get value in a dictionary from a `PDFObject`.
 
 It works transparently for any `PDFObject` containing a dictionary:
@@ -108,7 +108,7 @@ getValueDefault name defaultValue object = getValue name object >>= \case
   Just value -> return $ Just value
   Nothing    -> return $ Just defaultValue
 
-{- |
+{-|
 Set value in a dictionary contained in a `PDFObject`.
 
 If the object has no dictionary, it is ignored.
@@ -137,7 +137,7 @@ setValue name value object = case object of
     return $ PDFXRefStream num gen (Map.insert name value dict) stream
   _anyOtherObject -> return object
 
-{- |
+{-|
 Remove a value in a dictionary contained in a `PDFObject`.
 -}
 removeValue
@@ -159,7 +159,7 @@ removeValue name object = case object of
     return $ PDFXRefStream num gen (Map.delete name dict) stream
   _anyOtherObject -> return object
 
-{- |
+{-|
 Set value (maybe) in a dictionary contained in a `PDFObject`.
 
 When the value is `Nothing`, this function does nothing.
@@ -175,7 +175,7 @@ setMaybe
 setMaybe _    Nothing      object = return object
 setMaybe name (Just value) object = setValue name value object
 
-{- |
+{-|
 Set value (maybe) in a dictionary contained in a `PDFObject`.
 
 When the value is `Nothing`, this function does nothing.
@@ -191,7 +191,7 @@ updateValue
 updateValue name Nothing      object = removeValue name object
 updateValue name (Just value) object = setValue name value object
 
-{- |
+{-|
 Define the stream part of a `PDFObject` if it has one.
 
 It also updates the Length entry in the associated `Dictionary`.
@@ -214,7 +214,7 @@ setStream newStream object = case object of
   newLength :: PDFObject
   newLength = mkPDFNumber . BS.length $ newStream
 
-{- |
+{-|
 Define the stream part of a `PDFObject` if it has one.
 
 It also updates the Length entry in the associated `Dictionary`.
@@ -233,7 +233,7 @@ setStream1 uncompressedLength newStream object =
   setStream newStream object >>=
     setValue "Length1" (mkPDFNumber uncompressedLength)
 
-{- |
+{-|
 Embed an object into a `PDFObject`.
 
 If the object is a `PDFDictionary`, its will be embedded in:

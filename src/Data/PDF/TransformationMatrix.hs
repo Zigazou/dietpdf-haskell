@@ -7,7 +7,7 @@ module Data.PDF.TransformationMatrix
 
 import Data.Kind (Type)
 
-{- |
+{-|
 A transformation matrix in PDF shall be specified by six numbers, usually in the
 form of an array containing six elements. In its most general form, this array
 is denoted [ a b c d e f ].
@@ -46,21 +46,21 @@ data TransformationMatrix = TransformationMatrix
   , tmF :: !Double
   } deriving stock (Eq, Show)
 
-{- |
+{-|
 Transforms a point by the given transformation matrix.
 -}
 transform :: TransformationMatrix -> (Double, Double) -> (Double, Double)
 transform (TransformationMatrix a b c d e f) (x, y) =
   (a * x + c * y + e, b * x + d * y + f)
 
-{- |
+{-|
 Scales a point by the given transformation matrix.
 -}
 matrixScale :: TransformationMatrix -> (Double, Double) -> (Double, Double)
 matrixScale (TransformationMatrix a b c d _e _f) (x, y) =
   (a * x + c * y, b * x + d * y)
 
-{- |
+{-|
 Multiplies two transformation matrices.
 -}
 prod :: TransformationMatrix -> TransformationMatrix -> TransformationMatrix

@@ -1,4 +1,4 @@
-{- |
+{-|
 Lightweight logging with contextual prefixes and helpers.
 
 This module provides the `Logging` typeclass to abstract logging over various
@@ -33,7 +33,7 @@ import System.IO (hFlush, stderr)
 import Util.Number (round')
 
 type Logging :: (Type -> Type) -> Constraint
-{- |
+{-|
 A minimal logging interface for monads.
 
 Implementations decide how to render and where to send messages. The `Context`
@@ -43,7 +43,7 @@ progress indicators.
 Minimal complete definition: `say`.
 -}
 class Monad m => Logging m where
-  {- |
+  {-|
   Emit a message with a contextual prefix.
   
   Depending on the instance:
@@ -54,7 +54,7 @@ class Monad m => Logging m where
   -}
   say :: Context -> T.Text -> m ()
 
-{- |
+{-|
 Log to `stderr` with immediate flush to reduce interleaving.
 
 This instance does not use the hPutStrLn function to ensure the output is sent
@@ -99,7 +99,7 @@ instance Logging (Writer [T.Text]) where
   say NoContext message       = (void . tell . return)
                                 message
 
-{- |
+{-|
 Lift a `say` call through a monad transformer.
 
 Useful when logging from transformer stacks like `ReaderT` or `StateT`,
@@ -108,7 +108,7 @@ delegating the actual logging to the base monad instance.
 sayF :: (Logging m, MonadTrans t) => Context -> T.Text -> t m ()
 sayF mIntro = lift . say mIntro
 
-{- |
+{-|
 Emit a comparison line with label, sizes, and delta percentage.
 
 Renders: label, size-before, size-after, and signed percentage change rounded to

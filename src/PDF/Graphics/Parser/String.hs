@@ -1,4 +1,4 @@
-{- |
+{-|
 This module provides a parser for GFX strings.
 
 A string consists of a series of bytes (unsigned integer values in the range
@@ -114,7 +114,7 @@ rawStringP = label "rawStringG" $ do
   word8 asciiRIGHTPARENTHESIS
   return $ BS.concat ["(", BS.concat content, ")"]
 
-{- |
+{-|
 Parse a `GFXString`
 -}
 stringP :: Get GFXObject

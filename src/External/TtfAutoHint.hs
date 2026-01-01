@@ -5,7 +5,7 @@ import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf)
 
-{- |
+{-|
 Optimize a TTF font using `ttfautohint`.
 
 This function is a wrapper around the `ttfautohint` command-line tool. It

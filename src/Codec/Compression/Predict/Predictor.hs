@@ -76,7 +76,7 @@ data Predictor
     -- ^ The optimum predictor is determined for each scanline.
   deriving stock (Eq, Read, Show)
 
-{- | Convert a PDF predictor code, returns either a `Predictor` or an
+{-| Convert a PDF predictor code, returns either a `Predictor` or an
 `InvalidPredictor` error.
 -}
 decodePredictor :: Word8 -> Fallible Predictor
@@ -90,7 +90,7 @@ decodePredictor 14    = Right PNGPaeth
 decodePredictor 15    = Right PNGOptimum
 decodePredictor value = Left $ InvalidPredictor value
 
-{- | Convert a PDF predictor code, returns either a `Predictor` or an
+{-| Convert a PDF predictor code, returns either a `Predictor` or an
 `InvalidPredictor` error.
 -}
 decodeRowPredictor :: Word8 -> Fallible Predictor
@@ -102,7 +102,7 @@ decodeRowPredictor 4     = Right PNGPaeth
 decodeRowPredictor 5     = Right PNGOptimum
 decodeRowPredictor value = Left $ InvalidPredictor value
 
-{- | Convert a `Predictor` to a PDF predictor code.
+{-| Convert a `Predictor` to a PDF predictor code.
 -}
 encodePredictor :: Predictor -> Word8
 encodePredictor TIFFNoPrediction = 1
@@ -118,7 +118,7 @@ instance ToPDFNumber Predictor where
   mkPDFNumber :: Predictor -> PDFObject
   mkPDFNumber = PDFNumber . fromIntegral . encodePredictor
 
-{- | Convert a `Predictor` to a PDF row predictor code.
+{-| Convert a `Predictor` to a PDF row predictor code.
 -}
 encodeRowPredictor :: Predictor -> Word8
 encodeRowPredictor PNGNone            = 0
@@ -129,7 +129,7 @@ encodeRowPredictor PNGPaeth           = 4
 encodeRowPredictor PNGOptimum         = 5
 encodeRowPredictor _anyOtherPredictor = 0
 
-{- |
+{-|
 Tell if a `Predictor` is from the PNG group.
 
 Predictors from the PNG group work on a per-line basis. They add one byte to
@@ -145,7 +145,7 @@ isPNGGroup PNGAverage       = True
 isPNGGroup PNGPaeth         = True
 isPNGGroup PNGOptimum       = True
 
-{- |
+{-|
 Tell if a `Predictor` is from the TIFF group.
 
 The TIFF group is applied globally, it adds no data to the stream.
@@ -153,7 +153,7 @@ The TIFF group is applied globally, it adds no data to the stream.
 isTIFFGroup :: Predictor -> Bool
 isTIFFGroup = not . isPNGGroup
 
-{- |
+{-|
 A `Samples` is a utilitary structure used to facilitate computations of
 predictors. It holds a sample and it’s 3 preceding samples.
 -}
@@ -165,14 +165,14 @@ data Samples = Samples
   , sCurrent   :: !Word8
   }
 
-{- |
+{-|
 A predictor function is a function taking samples as input and returning the
 resulting sample.
 -}
 type PredictorFunc :: Type
 type PredictorFunc = Samples -> Word8
 
-{- |
+{-|
 The `PNGAverage` predictor needs to do average on a larger scale than a simple
 byte.
 -}
@@ -182,7 +182,7 @@ average a b =
       (a', b') = (fromIntegral a, fromIntegral b)
   in  (fromIntegral . fst) (divMod (a' + b') 2)
 
-{- |
+{-|
 The Paeth algorithm needs this estimating function.
 -}
 paethBest :: Word8 -> Word8 -> Word8 -> Word8
@@ -199,7 +199,7 @@ paethBest left above upperLeft =
         then left
         else if distanceAbove <= distanceUpperLeft then above else upperLeft
 
-{- |
+{-|
 Returns the predictor function for a specified `Predictor`.
 
 The function works on uncoded samples.
@@ -213,7 +213,7 @@ getPredictorFunction PNGPaeth s =
 getPredictorFunction TIFFPredictor2 s = sCurrent s - sLeft s
 getPredictorFunction _anyOtherPredictor s = sCurrent s
 
-{- |
+{-|
 Returns the un-predictor function for a specified `Predictor`.
 
 The function works on encoded samples.

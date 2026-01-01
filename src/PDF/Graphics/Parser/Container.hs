@@ -65,7 +65,7 @@ arrayP = label "arrayG" $ do
   word8 asciiRIGHTSQUAREBRACKET
   return $ mkGFXArray items
 
-{- |
+{-|
 A binary parser for a key (`GFXName`) value (`GFXObject`) pair.
 
 A `List` of these key-value pairs makes a `GFXDictionary`.

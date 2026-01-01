@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for PDF references.
 
 A PDF reference is an object value used to allow one object to refer to another.
@@ -23,7 +23,7 @@ digit = satisfy isDigit
 integerP :: Get [Word8]
 integerP = some' digit
 
-{- |
+{-|
 Parse a `PDFReference`.
 -}
 referenceP :: Get PDFObject

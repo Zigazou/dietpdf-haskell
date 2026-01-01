@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains parser for empty contents (space or comment) used to
 separate PDF objects.
 -}

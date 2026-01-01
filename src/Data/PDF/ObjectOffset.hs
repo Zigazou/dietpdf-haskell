@@ -1,4 +1,4 @@
-{- |
+{-|
 Module: Data.PDF.ObjectOffset
 Description: Object offset in a PDF file
 -}
@@ -34,7 +34,7 @@ ooObjectNumber (DirectOffset objectNumber _)     = objectNumber
 ooObjectNumber (InObjectStream objectNumber _ _) = objectNumber
 ooObjectNumber (FreeEntry objectNumber)          = objectNumber
 
-{- |
+{-|
 Get the offset value of an object offset.
 
 This is the offset of the object in the PDF file or the index of the object in

@@ -23,7 +23,7 @@ import Util.Name (fromName)
 import Util.Number (fromInt, fromNumber)
 import Util.String (fromHexString, fromString)
 
-{- |
+{-|
 Takes a `List` of `PDFObject`, converts them to the `ByteString` representation
 and inserts spaces between them if necessary.
 -}
@@ -36,7 +36,7 @@ separateObjects (object1 : object2 : others) = BS.concat
   , separateObjects (object2 : others)
   ]
 
-{- |
+{-|
 Converts a `PDFObject` to a `ByteString` ready to be inserted in an output
 PDF file.
 -}

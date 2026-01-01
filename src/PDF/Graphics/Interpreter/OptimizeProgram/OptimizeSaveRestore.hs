@@ -24,7 +24,7 @@ pattern Restore = Command GSRestoreGS Empty
 pattern Save :: Command
 pattern Save = Command GSSaveGS Empty
 
-{- |
+{-|
 Find the save command associated with a restore command.
 
 This function starts from the end of the program and looks for the save command
@@ -60,7 +60,7 @@ findDoubleRestore program = case breakl onRestore program of
     Just (beforeRestore <> singleton Restore <> beforeRestore', afterRestore')
   _anyOtherCase -> Nothing
 
-{- |
+{-|
 Save one save/restore pair just before a restore operator in one pass.
 -}
 reduceSaveRestoreOnePass :: Program -> Program
@@ -74,7 +74,7 @@ reduceSaveRestoreOnePass program = case findDoubleRestore program of
       _anythingElse -> error "unbalanced save/restore"
   _anyOtherCase -> program
 
-{- |
+{-|
 Remove useless save/restore commands.
 -}
 optimizeSaveRestoreOnePass :: Program -> Program
@@ -117,7 +117,7 @@ optimizeSaveRestoreOnePass program = case breakl onRestore program of
       nextRestoreWithoutNewState rest
     _anyOtherCommand -> False
 
-{- |
+{-|
 Check if a program has balanced save/restore commands.
 -}
 balancedProgram :: Int -> Program -> Bool

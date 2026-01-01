@@ -1,4 +1,4 @@
-{- |
+{-|
 This module contains a parser for GFX keywords.
 
 A keyword is a sequence of alphabetical letters only (either lowercase or
@@ -22,7 +22,7 @@ import Data.PDF.GFXObject
   , toGSOperator
   )
 
-{- |
+{-|
 A binary parser for a GFX keyword.
 
 It returns a `GFXBool`, a `GFXNull` or a `GFXKeyword`.

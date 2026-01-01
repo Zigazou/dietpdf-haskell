@@ -1,5 +1,13 @@
--- |
--- This module allows to encode a PDF name.
+{-|
+Encode PDF name objects.
+
+This module encodes a PDF /name/ (as used in dictionaries and other PDF
+structures) into its serialized form.
+
+It prefixes the output with the solidus character (@/@) and escapes bytes that
+are either whitespace or delimiter characters in the PDF grammar by using the
+@#XX@ hexadecimal escape form.
+-}
 module Util.Name
   ( fromName
   ) where
@@ -9,26 +17,36 @@ import Data.ByteString qualified as BS
 import Data.Word (Word8)
 
 import Util.Ascii
-    ( asciiSOLIDUS
-    , pattern AsciiCR
-    , pattern AsciiFF
-    , pattern AsciiGREATERTHANSIGN
-    , pattern AsciiHT
-    , pattern AsciiLEFTCURLYBRACKET
-    , pattern AsciiLEFTPARENTHESIS
-    , pattern AsciiLEFTSQUAREBRACKET
-    , pattern AsciiLESSTHANSIGN
-    , pattern AsciiLF
-    , pattern AsciiNUL
-    , pattern AsciiNUMBERSIGN
-    , pattern AsciiPERCENTSIGN
-    , pattern AsciiRIGHTCURLYBRACKET
-    , pattern AsciiRIGHTPARENTHESIS
-    , pattern AsciiRIGHTSQUAREBRACKET
-    , pattern AsciiSOLIDUS
-    , pattern AsciiSPACE
-    )
+  ( asciiSOLIDUS
+  , pattern AsciiCR
+  , pattern AsciiFF
+  , pattern AsciiGREATERTHANSIGN
+  , pattern AsciiHT
+  , pattern AsciiLEFTCURLYBRACKET
+  , pattern AsciiLEFTPARENTHESIS
+  , pattern AsciiLEFTSQUAREBRACKET
+  , pattern AsciiLESSTHANSIGN
+  , pattern AsciiLF
+  , pattern AsciiNUL
+  , pattern AsciiNUMBERSIGN
+  , pattern AsciiPERCENTSIGN
+  , pattern AsciiRIGHTCURLYBRACKET
+  , pattern AsciiRIGHTPARENTHESIS
+  , pattern AsciiRIGHTSQUAREBRACKET
+  , pattern AsciiSOLIDUS
+  , pattern AsciiSPACE
+  )
 
+{-|
+Escape a single byte according to PDF /Name/ escaping rules.
+
+Certain bytes (whitespace and delimiter characters) are encoded as @#XX@
+sequences (two hexadecimal digits), while other bytes are passed through
+unchanged.
+
+This function throws an error if given an ASCII NUL byte, which is not allowed
+in a PDF name.
+-}
 escapeChar :: Word8 -> ByteString
 escapeChar AsciiNUL                = error "NUL char not allowed in name"
 escapeChar AsciiHT                 = "#09"

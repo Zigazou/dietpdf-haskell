@@ -61,7 +61,7 @@ optimizeProgramOnePass workData
   . optimizeRectangle
   . optimizeSaveRestore
 
-{- |
+{-|
 The 'optimizeProgram' function takes a 'Program' and returns an optimized
 'Program'.
 -}

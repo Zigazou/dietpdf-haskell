@@ -1,3 +1,10 @@
+{-|
+Predictor + LZW filter combination.
+
+Finds an optimal PNG predictor using both Shannon and Deflate-oriented
+heuristics, compresses with LZW, and returns a `FilterCombination` with
+`LZWDecode` and predictor parameters.
+-}
 module PDF.Processing.FilterCombine.PredLzw
   ( predLzw
   ) where
@@ -18,16 +25,21 @@ import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
+{-|
+Apply PNG predictor, then LZW compression, selecting the better result between
+Shannon and Deflate heuristics.
+
+Requires `(width, components)`; returns `InvalidFilterParm` when width is
+missing.
+-}
 predLzw
   :: Maybe (Int, Int)
   -> ByteString
   -> Fallible FilterCombination
 predLzw (Just (width, components)) stream = do
-  -- Try finding optimal predictors with Shannon entropy function
   compressedS <-
     predict EntropyShannon PNGOptimum width components stream >>= LZW.compress
 
-  -- Try finding optimal predictors with Deflate "entropy" function
   compressedD <-
     predict EntropyDeflate PNGOptimum width components stream >>= LZW.compress
 

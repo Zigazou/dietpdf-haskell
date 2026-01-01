@@ -16,7 +16,7 @@ getJpegComponents jpegImage =
        (_, offset:_) -> fromIntegral (BS.index jpegImage (offset + 9))
        _default      -> 3
 
-{- |
+{-|
 Converts a JPEG image to a lossy JPEG 2000 image.
 
 This function is a wrapper around the `grk_compress` command-line tool.

@@ -1,4 +1,4 @@
-{- |
+{-|
 This module handles object streams.
 
 An object stream, is a stream object in which a sequence of indirect objects
@@ -128,7 +128,7 @@ parseObjectNumberOffsets indices =
     Left  err    -> throwE (ParseError ("", 0, err))
     Right result -> return $! result
 
-{- |
+{-|
 Look for every object stream and extract the objects from these object streams.
 
 Any other object is kept as is.
@@ -171,7 +171,7 @@ getObjectStream object = do
                             }
     _anyOtherValue -> throwError ObjectStreamNotFound
 
-{- |
+{-|
 Look for every object stream and extract the objects from these object streams.
 
 Any other object is kept as is.
@@ -200,7 +200,7 @@ explodeObjects objects = mapM explodeObject objects <&> foldr union mempty
     return $ singleton number object
   explodeObject object = return $ singleton 0 object
 
-{- |
+{-|
 Tells if a `PDFObject` may be embedded in an object stream.
 -}
 isObjectStreamable :: PDFObject -> Bool
@@ -231,7 +231,7 @@ insertObjects = foldl' appendObject emptyObjectStream
 dropLastByte :: ByteString -> ByteString
 dropLastByte str = BS.take (BS.length str - 1) str
 
-{- |
+{-|
 Create an object stream from a list of `PDFObject`.
 
 Object which are not streamable are simply ignored.

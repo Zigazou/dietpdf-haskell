@@ -61,7 +61,7 @@ rmap func (ResPattern name)    = ResPattern (func name)
 rmap func (ResShading name)    = ResShading (func name)
 rmap func (ResProcSet name)    = ResProcSet (func name)
 
-{- | Convert a resource type and name to a 'Resource'.
+{-| Convert a resource type and name to a 'Resource'.
 
 If the resource type is not `ColorSpace`, `Font`, `XObject`, `ExtGState`,
 `Properties`, or `Pattern`, then `Nothing` is returned.
@@ -77,7 +77,7 @@ toResource "Shading" name             = Just $ ResShading name
 toResource "ProcSet" name             = Just $ ResProcSet name
 toResource _unknownResourceType _name = Nothing
 
-{- | Create a set of resources from a list of `Maybe Resource`s.
+{-| Create a set of resources from a list of `Maybe Resource`s.
 
 This function is meant to be used with the `toResource` function to create a set
 of resources from a list of resource types and names.

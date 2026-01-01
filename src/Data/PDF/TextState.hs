@@ -8,7 +8,7 @@ import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.PDF.TransformationMatrix (TransformationMatrix)
 
-{- |
+{-|
 The text state is a collection of parameters that define the current page's text
 context. The text state includes the following parameters:
 
@@ -36,7 +36,7 @@ data TextState = TextState
   , tsScaleY            :: !Double
   } deriving stock (Show, Eq)
 
-{- |
+{-|
 The default text state is the initial text state of a page. It has the following
 parameters:
 

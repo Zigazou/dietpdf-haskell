@@ -24,7 +24,7 @@ type FilterList = SQ.Seq Filter
 mkFilterList :: [Filter] -> FilterList
 mkFilterList = SQ.fromList
 
-{- |
+{-|
 Given a list of `Filter`, return the corresponding `PDFObject` of filter names.
 
 If the list is empty, it returns `Nothing`.
@@ -38,7 +38,7 @@ filtersFilter SQ.Empty = Nothing
 filtersFilter (Filter aName@(PDFName _) _ SQ.:<| SQ.Empty) = Just aName
 filtersFilter filters  = Just (PDFArray $ fFilter <$> filters)
 
-{- |
+{-|
 Given a list of `Filter`, return the corresponding `PDFObject` of filters
 decoding parameters.
 

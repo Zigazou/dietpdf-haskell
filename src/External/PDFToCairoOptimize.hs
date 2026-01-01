@@ -8,7 +8,7 @@ import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommand)
 
-{- |
+{-|
 Optimize a PDF file using PDFToCairo.
 
 This function is a wrapper around the `pdftocairo` command-line tool.

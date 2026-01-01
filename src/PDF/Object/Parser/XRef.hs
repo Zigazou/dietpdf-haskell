@@ -1,4 +1,4 @@
-{- |
+{-|
 This module provides a parser for PDF cross-reference tables.
 
 The cross-reference table contains information that permits random access to
@@ -133,7 +133,7 @@ xrefSubsectionP = do
   entries <- takeN count xrefEntryP
   return $ XRefSubsection offset count entries
 
-{- |
+{-|
 Parse a `PDFXRef` object.
 -}
 xrefP :: Get PDFObject

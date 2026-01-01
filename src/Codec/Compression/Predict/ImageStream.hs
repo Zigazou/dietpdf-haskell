@@ -58,7 +58,7 @@ data ImageStream = ImageStream
   , iLines            :: ![Scanline]
   }
 
-{- |
+{-|
 Encode an entire image stream using a specified `Predictor`
 -}
 predictImageStream :: Entropy -> Predictor -> ImageStream -> ImageStream
@@ -72,7 +72,7 @@ predictImageStream entropy predictor imgStm = imgStm
   previousCurrent :: a -> [a] -> [(a, a)]
   previousCurrent previous currents = zip (previous : currents) currents
 
-{- |
+{-|
 Decode an entire image stream using a specified `Predictor`
 -}
 unpredictImageStream :: Predictor -> ImageStream -> ImageStream
@@ -89,7 +89,7 @@ unpredictImageStream predictor imgStm = imgStm
     let decodedLine = applyUnpredictorToScanline predictor (previous, current)
     in  decodedLine : unpredictScanlines decodedLine remain
 
-{- |
+{-|
 Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
 line width.
 -}
@@ -105,7 +105,7 @@ fromPredictedStream predictor width components raw = do
                      , iLines            = scanlines
                      }
 
-{- |
+{-|
 Convert an `ImageStream` to a `ByteString`.
 -}
 packStream :: ImageStream -> ByteString
@@ -118,7 +118,7 @@ packStream = BS.concat . fmap packScanline . iLines
                                      (groupComponents stream)
     | otherwise = groupComponents stream
 
-{- |
+{-|
 Convert an unpredicted `Bytestring` to an `ImageStream` given its line width.
 -}
 fromUnpredictedStream
