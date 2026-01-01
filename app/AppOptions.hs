@@ -1,3 +1,11 @@
+{- |
+Command-line option types and parsers.
+
+This module defines the sum type used to represent command-line options for the
+application, along with optparse-applicative parsers for each subcommand.
+
+The main entry point is 'appOptions', which parses an 'AppOptions' value.
+-}
 module AppOptions
   ( AppOptions
     ( OptimizeOptions
@@ -14,6 +22,7 @@ module AppOptions
     )
   , appOptions
   , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
+  , FileOverwrite(OverwriteFile, DoNotOverwriteFile)
   ) where
 
 import Codec.Compression.Predict (Predictor)
@@ -49,28 +58,56 @@ import Options.Applicative
   , subparser
   , switch
   )
+
+{-|
+Indicates whether to overwrite an existing file or not.
+-}
+type FileOverwrite :: Type
+data FileOverwrite = OverwriteFile
+                   | DoNotOverwriteFile
+                   deriving stock (Eq, Read, Show)
+
+{-|
+Convert a boolean to a `FileOverwrite` value.
+-}
+toOverwriteFile :: Bool -> FileOverwrite
+toOverwriteFile True  = OverwriteFile
+toOverwriteFile False = DoNotOverwriteFile
+
+{-|
+List of supported codecs.
+-}
 type Codec :: Type
-data Codec = LZW
-           | Deflate
-           | NoCompress
-           | RLE
-           | Zopfli
-           | Ascii85
-           | Hex
+data Codec = LZW        -- ^ LZW compression (LZWDecode)
+           | Deflate    -- ^ Deflate compression (FlateDecode)
+           | NoCompress -- ^ No compression
+           | RLE        -- ^ Run-Length Encoding (RunLengthDecode)
+           | Zopfli     -- ^ Zopfli compression (FlateDecode with Zopfli)
+           | Ascii85    -- ^ ASCII85 encoding (ASCII85Decode)
+           | Hex        -- ^ ASCIIHex encoding (ASCIIHexDecode)
            deriving stock (Eq, Read, Show)
 
+{-|
+Help message for codecs.
+-}
 codecsHelp :: String
 codecsHelp =
   "Codec to use (LZW, Deflate, NoCompress, RLE, Zopfli, Ascii85, Hex)"
 
+{-|
+Help message for predictors.
+-}
 predictorsHelp :: String
 predictorsHelp =
   "Predictor to use (TIFFNoPrediction, TIFFPredictor2, PNGNone, PNGSub, PNGUp, \
   \PNGAverage, PNGPaeth, PNGOptimum)"
 
+{-|
+Application options.
+-}
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !FilePath !UseGhostScript !UsePDFToCairo !UseZopfli !OptimizeGFX
+  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseZopfli !OptimizeGFX !FileOverwrite
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -82,6 +119,9 @@ data AppOptions
   | StatOptions ![FilePath]
   | GetOptions !Int !FilePath
 
+{-|
+Parser for the info command.
+-}
 commandInfo :: Mod CommandFields AppOptions
 commandInfo = command
   "info"
@@ -90,6 +130,9 @@ commandInfo = command
     (progDesc "Print information about a PDF file")
   )
 
+{-|
+Parser for the extract command.
+-}
 commandExtract :: Mod CommandFields AppOptions
 commandExtract = command
   "extract"
@@ -104,20 +147,28 @@ commandExtract = command
     )
   )
 
+{-|
+Parser for the optimize command.
+-}
 commandOptimize :: Mod CommandFields AppOptions
 commandOptimize = command
   "optimize"
   (info
     (   OptimizeOptions
     <$> argument str (metavar "<input_pdf_file>" <> help "PDF file to process")
-    <*> argument str (metavar "<output_pdf_file>" <> help "PDF file to create")
+    <*> optional (argument str (metavar "<output_pdf_file>" <> help "PDF file to create"))
     <*> (toUseGhostScript <$> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing"))
     <*> (toUsePDFToCairo <$> switch (long "p2c-optimize" <> short 'p' <> help "Use PDFToCairo before optimizing"))
     <*> (toUseZopfli . not <$> switch (long "no-zopfli" <> short 'z' <> help "Do not use Zopfli"))
     <*> (toOptimizeGFX . not <$> switch (long "no-gfx-optimize" <> short 'x' <> help "Do not optimize graphics stream"))
+    <*> (toOverwriteFile <$> switch (long "overwrite" <> short 'o' <> help "Overwrite existing output file"))
     )
     (progDesc "Optimize a PDF file")
   )
+
+{-|
+Parser for the hash command.
+-}
 commandHash :: Mod CommandFields AppOptions
 commandHash = command
   "hash"
@@ -126,6 +177,9 @@ commandHash = command
     (progDesc "Hash of each stream in a PDF file")
   )
 
+{-|
+Parser for the encode command.
+-}
 commandEncode :: Mod CommandFields AppOptions
 commandEncode = command
   "encode"
@@ -137,6 +191,9 @@ commandEncode = command
     (progDesc "Encode a file as it would be in a stream")
   )
 
+{-|
+Parser for the decode command.
+-}
 commandDecode :: Mod CommandFields AppOptions
 commandDecode = command
   "decode"
@@ -148,6 +205,9 @@ commandDecode = command
     (progDesc "Decode a file as it would be in a stream")
   )
 
+{-|
+Parser for the predict command.
+-}
 commandPredict :: Mod CommandFields AppOptions
 commandPredict = command
   "predict"
@@ -161,6 +221,9 @@ commandPredict = command
     (progDesc "Predict a file as it would be in a stream")
   )
 
+{-|
+Parser for the unpredict command.
+-}
 commandUnpredict :: Mod CommandFields AppOptions
 commandUnpredict = command
   "unpredict"
@@ -174,6 +237,9 @@ commandUnpredict = command
     (progDesc "Unpredict a file as it would be in a stream")
   )
 
+{-|
+Parser for the human command.
+-}
 commandHuman :: Mod CommandFields AppOptions
 commandHuman = command
   "human"
@@ -184,6 +250,9 @@ commandHuman = command
     (progDesc "Print graphics code in a readable human form")
   )
 
+{-|
+Parser for the stat command.
+-}
 commandStat :: Mod CommandFields AppOptions
 commandStat = command
   "stat"
@@ -192,6 +261,9 @@ commandStat = command
     (progDesc "Print statistics about a PDF file")
   )
 
+{-|
+Parser for the get command.
+-}
 commandGet :: Mod CommandFields AppOptions
 commandGet = command
   "get"
@@ -203,6 +275,9 @@ commandGet = command
     (progDesc "Get object from a PDF file")
   )
 
+{-|
+Parser for application options.
+-}
 appOptions :: Parser AppOptions
 appOptions =
   subparser

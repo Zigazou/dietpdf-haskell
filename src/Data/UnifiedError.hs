@@ -5,15 +5,15 @@ Having one type for all errors means the Either monad can be used to avoid
 long if then else if then else.
 -}
 module Data.UnifiedError
-  ( UnifiedError(ParseError, UnableToOpenFile, EncodeNoIndirectObject, EncodeNoVersion, EncodeNoTrailer, EncodeNoRootEntry, RLEDecodeError, RLEEncodeError, FlateDecodeError, LZWStopCodeNotFound, NotEnoughBytes, InternalError, InvalidPredictor, InvalidNumberOfBytes, InvalidFilterParm, InvalidAscii85Stream, NoStream, NoDictionary, InvalidObjectToEmbed, NoObjectToEncode, UnknownScalerType, ObjectStreamNotFound, ObjectNotFound, XRefStreamNoW, ExternalCommandError, PDFTKError, UnsupportedFeature, EncodeEncrypted)
+  ( UnifiedError(CannotOverwriteFile, ParseError, UnableToOpenFile, EncodeNoIndirectObject, EncodeNoVersion, EncodeNoTrailer, EncodeNoRootEntry, RLEDecodeError, RLEEncodeError, FlateDecodeError, LZWStopCodeNotFound, NotEnoughBytes, InternalError, InvalidPredictor, InvalidNumberOfBytes, InvalidFilterParm, InvalidAscii85Stream, NoStream, NoDictionary, InvalidObjectToEmbed, NoObjectToEncode, UnknownScalerType, ObjectStreamNotFound, ObjectNotFound, XRefStreamNoW, ExternalCommandError, PDFTKError, UnsupportedFeature, EncodeEncrypted)
   )
 where
 
 import Data.Binary.Get (ByteOffset)
 import Data.ByteString (ByteString)
 import Data.ErrorType
-    ( ErrorType (EncodingError, ParsingError, ReadingError, StructureError, UnsupportedError)
-    )
+  ( ErrorType (EncodingError, ParsingError, ReadingError, StructureError, UnsupportedError, WritingError)
+  )
 import Data.Kind (Type)
 import Data.Word (Word8)
 
@@ -23,6 +23,8 @@ data UnifiedError
   = ParseError !(ByteString, ByteOffset, String)
   -- | The PDF file cannot be opened
   | UnableToOpenFile
+  -- | Unable to overwrite an existing file
+  | CannotOverwriteFile
   -- | The PDF file contains no indirect object
   | EncodeNoIndirectObject
   -- | The PDF file contains no version comment
@@ -61,18 +63,26 @@ data UnifiedError
   | InvalidObjectToEmbed !String
   -- | No object to encode
   | NoObjectToEncode
+  -- | Unknown scaler type
   | UnknownScalerType !String
+  -- | PDF object stream not found
   | ObjectStreamNotFound
+  -- | PDF object not found
   | ObjectNotFound
+  -- | XRef stream with invalid or missing W field
   | XRefStreamNoW !String
+  -- | External command error (command, return code)
   | ExternalCommandError !String !Int
+  -- | PDFTK error message
   | PDFTKError !String
+  -- | Feature not supported
   | UnsupportedFeature !String
   deriving stock (Eq)
 
 errorType :: UnifiedError -> ErrorType
 errorType (ParseError _)             = ParsingError
 errorType UnableToOpenFile           = ReadingError
+errorType CannotOverwriteFile        = WritingError
 errorType ObjectNotFound             = ReadingError
 errorType (ExternalCommandError _ _) = ReadingError
 errorType (PDFTKError _)             = ReadingError
@@ -107,6 +117,7 @@ instance Show UnifiedError where
   show :: UnifiedError -> String
   show err@(ParseError (_, _, msg))         = show' err msg
   show err@UnableToOpenFile                 = show' err "Unable to open file"
+  show err@CannotOverwriteFile              = show' err "Cannot overwrite file"
   show err@ObjectNotFound                   = show' err "Object not found"
   show err@EncodeNoIndirectObject = show' err "No indirect object to encode"
   show err@EncodeNoVersion                  = show' err "No version to encode"

@@ -8,8 +8,12 @@ module Data.ErrorType ( ErrorType(..) ) where
 
 import Data.Kind (Type)
 
+{-|
+The type of error that can occur during PDF processing.
+-}
 type ErrorType :: Type
 data ErrorType = ReadingError
+               | WritingError
                | ParsingError
                | EncodingError
                | StructureError
@@ -19,6 +23,7 @@ data ErrorType = ReadingError
 instance Show ErrorType where
   show :: ErrorType -> String
   show ReadingError     = "reading"
+  show WritingError     = "writing"
   show ParsingError     = "parsing"
   show EncodingError    = "encoding"
   show StructureError   = "structure"

@@ -4,6 +4,7 @@ module Main
 
 import AppOptions
   ( AppOptions (DecodeOptions, EncodeOptions, ExtractOptions, GetOptions, HashOptions, HumanOptions, InfoOptions, OptimizeOptions, PredictOptions, StatOptions, UnpredictOptions)
+  , FileOverwrite(DoNotOverwriteFile)
   , appOptions
   )
 
@@ -20,8 +21,9 @@ import Command.Stat (showStat)
 import Command.Unpredict (unpredictByteString)
 
 import Control.Exception (tryJust)
-import Control.Monad (guard)
+import Control.Monad (guard, when)
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Except (runExceptT, throwE)
 
 import Data.ByteString (ByteString)
@@ -35,7 +37,8 @@ import Data.PDF.Settings
   , UseGhostScript (DoNotUseGhostScript, UseGhostScript)
   , UsePDFToCairo (DoNotUsePDFToCairo, UsePDFToCairo)
   )
-import Data.UnifiedError (UnifiedError (ParseError, UnableToOpenFile))
+import Data.UnifiedError
+  (UnifiedError (CannotOverwriteFile, ParseError, UnableToOpenFile))
 
 import External.GhostScriptOptimize (ghostScriptOptimize)
 import External.PDFToCairoOptimize (pdfToCairoOptimize)
@@ -74,6 +77,12 @@ getFileSize path = do
     stat <- getFileStatus path
     return $ fromIntegral (fileSize stat)
 
+doesFileExist :: FilePath -> IO Bool
+doesFileExist path = do
+  tryJust (guard . isDoesNotExistError) (getFileStatus path) >>= \case
+    Right _stat -> return True
+    Left  _err  -> return False
+
 hexCfg :: Int -> Cfg
 hexCfg offset = defaultCfg { startByte = offset }
 
@@ -89,7 +98,7 @@ runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 
-runApp (OptimizeOptions inputPDF outputPDF useGS usePTC useZopfli optimizeGFX) = do
+runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useZopfli optimizeGFX overwriteFile) = do
   let settings = Settings { sOptimizeGFX    = optimizeGFX
                           , sZopfli         = useZopfli
                           , sUseGhostScript = useGS
@@ -111,7 +120,7 @@ runApp (OptimizeOptions inputPDF outputPDF useGS usePTC useZopfli optimizeGFX) =
         sayComparisonF (ctx ("ghostscript" :: String))
                       "GhostScripted PDF" originalSize ghostScriptSize
 
-        go ghostscriptPDF settings
+        go ghostscriptPDF settings overwriteFile
 
     (DoNotUseGhostScript, UsePDFToCairo) ->
       withSystemTempFile (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
@@ -128,7 +137,7 @@ runApp (OptimizeOptions inputPDF outputPDF useGS usePTC useZopfli optimizeGFX) =
         sayComparisonF (ctx ("pdftocairo" :: String))
                       "PDFToCairo'd PDF" originalSize pdfToCairoSize
 
-        go pdfToCairoPDF settings
+        go pdfToCairoPDF settings overwriteFile
 
     (UseGhostScript, UsePDFToCairo) ->
       withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
@@ -148,12 +157,27 @@ runApp (OptimizeOptions inputPDF outputPDF useGS usePTC useZopfli optimizeGFX) =
           sayComparisonF (ctx ("ghostscript+pdftocairo" :: String))
                         "optimized PDF" originalSize pdfToCairoSize
 
-          go pdfToCairoPDF settings
+          go pdfToCairoPDF settings overwriteFile
 
-    (DoNotUseGhostScript, DoNotUsePDFToCairo) -> go inputPDF settings
+    (DoNotUseGhostScript, DoNotUsePDFToCairo) -> go inputPDF settings overwriteFile
  where
-  go :: FilePath -> Settings -> FallibleT IO ()
-  go pdfToOptimize settings = do
+  go :: FilePath -> Settings -> FileOverwrite -> FallibleT IO ()
+  go pdfToOptimize settings overwriteFile' = do
+    -- Get output PDF path.
+    let outputPDF = case mOutputPDF of
+          Just path -> path
+          Nothing ->
+            case reverse inputPDF of
+                c1:c2:c3:'.':rest | (c1 == 'f' || c1 == 'F') && (c2 == 'd' || c2 == 'D') && (c3 == 'p' || c3 == 'P') ->
+                  reverse rest <> ".dietpdf.pdf"
+                _anyOtherCase ->
+                  inputPDF <> ".dietpdf.pdf"
+
+    outputFileExists <- liftIO (doesFileExist outputPDF)
+
+    when (outputFileExists && overwriteFile' == DoNotOverwriteFile) $
+      throwE CannotOverwriteFile
+
     -- Read the optimized PDF and optimize it further.
     tryF (readPDF pdfToOptimize) >>= \case
       Right document -> optimize outputPDF document settings
