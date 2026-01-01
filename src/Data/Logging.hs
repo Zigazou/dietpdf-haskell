@@ -151,7 +151,7 @@ sayComparisonF
 sayComparisonF intro label sizeBefore sizeAfter = sayF
   intro
   (T.concat
-    [ padText label 32
+    [ padText label 42
     , padText (T.pack (show sizeBefore)) 12
     , padText (T.pack (show sizeAfter)) 12
     , padText ((if ratio > 0 then "+" else "") <> T.pack (show (round' 2 ratio)) <> "%") 8
