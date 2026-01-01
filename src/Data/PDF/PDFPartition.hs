@@ -1,7 +1,9 @@
--- |
--- This modules allows partitioning of PDF objects.
---
--- Partitioning is used when encoded a whole PDF file from PDF objects.
+{- |
+This module defines `PDFPartition`, a structure used to separate and organize
+parts of a PDF file: numbered objects (with and without streams), headers (PDF
+versions), and trailers. The partition preserves ordering where relevant to
+facilitate reconstruction and analysis.
+-}
 module Data.PDF.PDFPartition
   ( PDFPartition(PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
   , lastTrailer
@@ -15,20 +17,18 @@ import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.PDFObject (PDFObject (PDFNull, PDFTrailer, PDFVersion))
 import Data.PDF.PDFObjects (PDFObjects)
 
-
--- | A partition separates numbered objects from PDF versions and trailers.
+{- |
+A partition separates numbered objects from PDF versions and trailers.
+-}
 type PDFPartition :: Type
 data PDFPartition = PDFPartition
-  { -- | Numbered objects with stream
+  { {- | Numbered objects with stream -}
     ppObjectsWithStream    :: !PDFObjects
-  ,
-    -- | Numbered objects without stream
+  , {- | Numbered objects without stream -}
     ppObjectsWithoutStream :: !PDFObjects
-  ,
-    -- | PDF versions in order of appearance
+  , {- | PDF versions in order of appearance -}
     ppHeads                :: !PDFDocument
-  ,
-    -- | Trailers in reverse order of appearance
+  , {- | Trailers in reverse order of appearance -}
     ppTrailers             :: !PDFDocument
   }
   deriving stock (Eq, Show)
@@ -40,7 +40,12 @@ instance Semigroup PDFPartition where
 
 instance Monoid PDFPartition where
   mempty :: PDFPartition
-  mempty = PDFPartition mempty mempty mempty mempty
+  mempty = PDFPartition
+    { ppObjectsWithStream = mempty
+    , ppObjectsWithoutStream = mempty
+    , ppHeads = mempty
+    , ppTrailers = mempty
+    }
 
 {-|
 Return the last trailer if any.

@@ -1,6 +1,13 @@
-{-|
-This modules implements several optimization techniques targeted at PDF objects.
+{- |
+Optimization passes for PDF objects and their streams.
+
+This module decides which optimization to apply based on object type and
+filters, performs safe unfiltering, stream-level optimizations (XML, graphics,
+JPEG, TrueType), and then re-filters using suitable combinations. It integrates
+with the `PDFWork` monad to report progress and errors with contextual
+information.
 -}
+
 module PDF.Processing.Optimize
   ( optimize
   ) where
@@ -45,6 +52,12 @@ import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 
+{- |
+Run a stream optimization process for a given `PDFObject`.
+
+If the optimization succeeds, logs a size comparison and returns the optimized
+stream; on failure, logs the error and returns the original stream.
+-}
 optimizeStreamOrIgnore
   :: Logging m
   => T.Text
@@ -63,6 +76,11 @@ optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
       sayErrorP "cannot optimize" anError
       return stream
 
+{- |
+Apply an appropriate stream-level optimization based on the object content (XML,
+graphics, JPEG, TrueType font). Returns the object with its stream updated when
+applicable.
+-}
 streamOptimize :: PDFObject -> PDFWork IO PDFObject
 streamOptimize object = do
   whatOptimizationFor object >>= \case
@@ -106,6 +124,9 @@ refilter object = do
         >>= filterOptimize optimization
     else return stringOptimized
 
+{- |
+Return whether a filter is known and supported for optimization.
+-}
 isFilterOK :: Filter -> Bool
 isFilterOK f = case fFilter f of
   (PDFName "FlateDecode"   ) -> True
