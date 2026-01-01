@@ -181,6 +181,8 @@ Right "Hello, World!"
 
 >>> decode "z~>"
 Right "\x00\x00\x00\x00"
+
+On invalid input, returns 'InvalidAscii85Stream'.
 -}
 decode
   :: ByteString -- ^ Data to encode
@@ -192,6 +194,9 @@ decode stream =
       Left  msg     -> Left (InvalidAscii85Stream msg)
       Right decoded -> Right decoded
 
+{-|
+Encodes 4 bytes of binary data into 5 ASCII base-85 characters.
+-}
 fourBytesP :: Get ByteString
 fourBytesP = do
   b1      <- anyWord8
@@ -201,6 +206,10 @@ fourBytesP = do
   encoded <- base256ToBase85 b1 b2 b3 b4
   if encoded == "!!!!!" then return "z" else return encoded
 
+{-|
+Encodes 3 bytes of binary data into the corresponding number of ASCII base-85
+characters.
+-}
 threeBytesP :: Get ByteString
 threeBytesP = do
   b1 <- anyWord8
@@ -208,17 +217,28 @@ threeBytesP = do
   b3 <- anyWord8
   BS.take 4 <$> base256ToBase85 b1 b2 b3 0
 
+{-|
+Encodes 2 bytes of binary data into the corresponding number of ASCII base-85
+characters.
+-}
 twoBytesP :: Get ByteString
 twoBytesP = do
   b1 <- anyWord8
   b2 <- anyWord8
   BS.take 3 <$> base256ToBase85 b1 b2 0 0
 
+{-|
+Encodes 1 byte of binary data into the corresponding number of ASCII base-85
+characters.
+-}
 oneBytesP :: Get ByteString
 oneBytesP = do
   b1 <- anyWord8
   BS.take 2 <$> base256ToBase85 b1 0 0 0
 
+{-|
+Encodes binary data in an ASCII base-85 representation.
+-}
 encodeAscii85P :: Get ByteString
 encodeAscii85P = label "ascii85" $ do
   values <- many' (fourBytesP <|> threeBytesP <|> twoBytesP <|> oneBytesP)
@@ -235,6 +255,9 @@ Right "5sdq,77Kd<8P/~>"
 
 >>> encode "ABCDEFGHIJK"
 Right "5sdq,77Kd<8P2V~z"
+
+The output ends with the EOD marker "~>". On failure, returns
+'InvalidAscii85Stream'.
 -}
 encode
   :: ByteString -- ^ Data to encode
