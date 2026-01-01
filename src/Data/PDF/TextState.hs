@@ -1,3 +1,10 @@
+{-|
+Parameters controlling text rendering state.
+
+This module models the current text state for PDF content rendering: spacing,
+scaling, font selection and size, rendering mode, baseline rise, and the text
+matrix. It also tracks derived scale factors for convenience.
+-}
 module Data.PDF.TextState
   ( TextState (..)
   , defaultTextState

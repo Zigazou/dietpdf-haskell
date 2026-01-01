@@ -1,3 +1,12 @@
+{-|
+Representation of PDF objects after encoding.
+
+This module defines `EncodedObject`, a compact representation of a PDF object
+once it has been serialized/encoded, along with utilities to inspect which PDF
+object numbers are involved.
+
+The equality and ordering instances compare objects by their object number.
+-}
 module Data.PDF.EncodedObject
   ( EncodedObject (EncodedObject, eoObjectNumber, eoObjectLength, eoBinaryData, eoEmbeddedObjects)
   , objectCount
@@ -9,7 +18,17 @@ import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.Sequence (Seq ((:<|)))
 
--- | An object that has been encoded
+{-|
+An object that has been encoded.
+
+`EncodedObject` stores:
+
+* The object number.
+* The byte length of the encoded representation.
+* The encoded bytes.
+* The list of embedded object numbers (for objects that reference/contain
+  other objects).
+-}
 type EncodedObject :: Type
 data EncodedObject = EncodedObject
   { eoObjectNumber    :: !Int -- ^ Object number

@@ -26,9 +26,12 @@ calc n = do
   say NoContext "end calc"
   return n'
 
+resultsTrim :: (Int, [T.Text]) -> (Int, [T.Text])
+resultsTrim (result, logs) = (result, fmap T.strip logs)
+
 spec :: Spec
 spec =
   describe "logging"
     $          it "should give right messages"
-    $          runWriter (calc 1)
+    $          resultsTrim (runWriter (calc 1))
     `shouldBe` (1, ["start calc", "start calc2", "end calc2", "end calc"])

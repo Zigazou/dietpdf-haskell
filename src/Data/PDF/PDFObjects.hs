@@ -1,7 +1,8 @@
--- |
--- This module manipulates collections of `PDFObject`.
---
--- These functions are meant to be used when optimizing/encoding a PDF.
+{- |
+This module manipulates collections of `PDFObject`.
+
+These functions are meant to be used when optimizing/encoding a PDF.
+-}
 module Data.PDF.PDFObjects
   ( -- * Encoding of object collections
     PDFObjects,
@@ -17,17 +18,25 @@ import Data.Kind (Type)
 import Data.List (find)
 import Data.PDF.PDFDocument (PDFDocument, fromList, toList)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream)
-    , getObjectNumber
-    )
+  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream)
+  , getObjectNumber
+  )
 
--- | A collection of objects indexed by the object number
+{-|
+A collection of objects indexed by the object number
+-}
 type PDFObjects :: Type
 type PDFObjects = IM.IntMap PDFObject
 
+{-|
+Convert a `PDFObjects` map to a `PDFDocument`.
+-}
 toPDFDocument :: PDFObjects -> PDFDocument
 toPDFDocument = fromList . fmap snd . IM.toAscList
 
+{-|
+Convert a `PDFDocument` to a `PDFObjects` map.
+-}
 fromPDFDocument :: PDFDocument -> PDFObjects
 fromPDFDocument = IM.fromList . fmap createCouple . toList
   where
@@ -38,16 +47,23 @@ fromPDFDocument = IM.fromList . fmap createCouple . toList
     createCouple object@(PDFIndirectObjectWithStream number _ _ _) =
       (number, object)
     createCouple object@(PDFXRefStream number _ _ _) = (number, object)
-    createCouple object = (0, object)
+    createCouple object                              = (0, object)
 
+{-|
+Insert a `PDFObject` into a `PDFObjects` map.
+
+If the object is indirect, it is indexed by its object number. Otherwise, the
+map is unchanged.
+-}
 insertObject :: PDFObject -> PDFObjects -> PDFObjects
 insertObject object = case getObjectNumber object of
   Just number -> IM.insert number object
   Nothing     -> id
 
--- |
--- Find last value in a `CollectionOf` satisfying a predicate.
---
--- If the predicate is never satisfied, the function returns `Nothing`.
+{-|
+Find last value in a `CollectionOf` satisfying a predicate.
+
+If the predicate is never satisfied, the function returns `Nothing`.
+-}
 findLast :: (PDFObject -> Bool) -> PDFObjects -> Maybe PDFObject
 findLast p = find p . fmap snd . IM.toDescList

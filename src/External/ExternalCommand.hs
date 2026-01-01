@@ -1,3 +1,14 @@
+{-|
+Helpers for running external commands.
+
+This module provides a small API to:
+
+* Run a command and fail fast when its exit code is non-zero.
+* Provide input either via stdin or via a temporary file.
+* Capture output either from stdout or from a temporary output file.
+
+All failures are reported as `ExternalCommandError` in the `FallibleT` context.
+-}
 module External.ExternalCommand
   ( externalCommand
   , externalCommandBuf
@@ -57,7 +68,7 @@ The input is passed to the command's stdin, and the output is captured and
 returned.
 
 For unknown reason, this function may fail with some commands. If you encounter
-such a problem, try using `externalCommandBuf' or externalCommandBuf'' instead.
+such a problem, try using `externalCommandBuf'` or `externalCommandBuf''` instead.
 -}
 externalCommandBuf
   :: FilePath
@@ -151,6 +162,12 @@ externalCommandBuf' command args input = do
   injectInput _ _ _ _ =
     return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)
 
+{-|
+Replaces each "-" placeholder in an argument list with a filename.
+
+This is used by `externalCommandBuf''` to inject the temporary input and output
+paths into a command line.
+-}
 insertFileNames :: [String] -> [FilePath] -> [String]
 insertFileNames [] _ = []
 insertFileNames args [] = args

@@ -3,7 +3,7 @@ This module defines what is a GFX object and functions in relation with the
 PDF specification.
 -}
 module Data.PDF.GFXObject
-  ( -- * GFX object
+  ( {-| * GFX object -}
     GFXObject
     ( GFXComment
     , GFXNumber
@@ -24,16 +24,16 @@ module Data.PDF.GFXObject
   , mkGFXDictionary
   , objectInfo
 
-    -- * Operators
+    {-| * Operators -}
   , GSOperator(..)
 
-    -- * Conversion
+    {-| * Conversion -}
   , fromGFXObject
   , toGSOperator
   , separateGfx
   , reducePrecision
 
-    -- * GFX characters
+    {-| * GFX characters -}
   , isDelimiter
   , isPlusMinus
   , isWhiteSpace
@@ -93,7 +93,9 @@ The following characters are considered delimiters: `()<>[]{}/%`.
 isDelimiter :: Word8 -> Bool
 isDelimiter = isJust . flip BS.elemIndex "()<>[]{}/%"
 
--- | Test if a byte is a plus or minus sign.
+{-|
+Test if a byte is a plus or minus sign.
+-}
 isPlusMinus :: Word8 -> Bool
 isPlusMinus = isJust . flip BS.elemIndex "-+"
 
@@ -178,226 +180,239 @@ isNameRegularChar byte | isWhiteSpace byte       = False
                        | isDelimiter byte        = False
                        | otherwise               = True
 
--- | Line cap styles
+{-|
+Line cap styles.
+-}
 type GFXLineCap :: Type
 data GFXLineCap
-  = -- | Butt cap (0)
+  = {-| Butt cap (0). -}
     GFXButtCap
-  | -- | Round cap (1)
+  | {-| Round cap (1). -}
     GFXRoundCap
-    -- | Projecting square cap (2)
-  | GFXProjectingSquareCap
+  | {-| Projecting square cap (2). -}
+    GFXProjectingSquareCap
   deriving stock (Eq, Show, Enum)
 
--- | Line join styles
+{-|
+Line join styles.
+-}
 type GFXLineJoin :: Type
 data GFXLineJoin
-  = -- | Mitter join (0)
+  = {-| Miter join (0). -}
     GFXMiterJoin
-  | -- | Round join (1)
+  | {-| Round join (1). -}
     GFXRoundJoin
-    -- | Bevel join (2)
-  | GFXBevelJoin
+  | {-| Bevel join (2). -}
+    GFXBevelJoin
   deriving stock (Eq, Show, Enum)
 
--- | Text rendering mode
+{-|
+Text rendering modes.
+-}
 type GFXTextRenderMode :: Type
 data GFXTextRenderMode
-  = -- | Fill text (0)
+  = {-| Fill text (0). -}
     GFXFillText
-  | -- | Stroke text (1)
+  | {-| Stroke text (1). -}
     GFXStrokeText
-  | -- | Fill then stroke text (2)
+  | {-| Fill then stroke text (2). -}
     GFXFillStrokeText
-  | -- | Neither fill nor stroke text, invisible (3)
+  | {-| Neither fill nor stroke text, invisible (3). -}
     GFXInvisibleText
-  | -- | Fill text and add to path for clipping (4)
+  | {-| Fill text and add to path for clipping (4). -}
     GFXFillTextClipping
-  | -- | Stroke text and add to path for clipping (5)
+  | {-| Stroke text and add to path for clipping (5). -}
     GFXStrokeTextClipping
-  | -- | Fill then stroke text and add path for clipping (6)
+  | {-| Fill then stroke text and add path for clipping (6). -}
     GFXFillStrokeTextClipping
-  | -- | Add text to path for clipping (7)
+  | {-| Add text to path for clipping (7). -}
     GFXTextClipping
   deriving stock (Eq, Show, Enum)
 
--- | PDF colour spaces
+{-|
+PDF colour spaces.
+-}
 type GFXColorSpace :: Type
 data GFXColorSpace
-  = -- | Gray colour space (/DeviceGray)
+  = {-| Gray colour space (/DeviceGray). -}
     GFXDeviceGray
-  | -- | RGB colour space (/DeviceRGB)
+  | {-| RGB colour space (/DeviceRGB). -}
     GFXDeviceRGB
-  | -- | CMYK colour space (/DeviceCMYK)
+  | {-| CMYK colour space (/DeviceCMYK). -}
     GFXDeviceCMYK
-  | -- | CalGray colour space (/CalGray)
+  | {-| CalGray colour space (/CalGray). -}
     GFXCIECalGray
-  | -- | CalRGB colour space (/CalRGB)
+  | {-| CalRGB colour space (/CalRGB). -}
     GFXCIECalRGB
-  | -- | Lab colour space (/Lab)
+  | {-| Lab colour space (/Lab). -}
     GFXCIELab
-  | -- | ICC-based colour space (/ICCBased)
+  | {-| ICC-based colour space (/ICCBased). -}
     GFXCIEICCBased
-  | -- | Indexed colour space (/Indexed)
+  | {-| Indexed colour space (/Indexed). -}
     GFXSpecialIndexed
-  | -- | Pattern colour space (/Pattern)
+  | {-| Pattern colour space (/Pattern). -}
     GFXSpecialPattern
-  | -- | Separation colour space (/Separation)
+  | {-| Separation colour space (/Separation). -}
     GFXSpecialSeparation
-  | -- | DeviceN colour space (/DeviceN)
+  | {-| DeviceN colour space (/DeviceN). -}
     GFXSpecialDeviceN
   deriving stock (Eq, Show)
 
--- | PDF operator
+{-|
+PDF operators.
+
+These values represent the operators that can appear in PDF content streams.
+Each constructor corresponds to an operator token (shown in parentheses).
+-}
 type GSOperator :: Type
 data GSOperator
-  = -- | Save the current graphics state on the graphics state stack (q)
+  = {-| Save the current graphics state on the graphics state stack (q). -}
     GSSaveGS
-  | -- | Restore the graphics state (Q)
+  | {-| Restore the graphics state (Q). -}
     GSRestoreGS
-  | -- | Modify the current transformation matrix (cm)
+  | {-| Modify the current transformation matrix (cm). -}
     GSSetCTM
-  | -- | Set the line width in the graphics state (w)
+  | {-| Set the line width in the graphics state (w). -}
     GSSetLineWidth
-  | -- | Set the line cap style in the graphics state (J)
+  | {-| Set the line cap style in the graphics state (J). -}
     GSSetLineCap
-  | -- | Set the line join style in the graphics state (j)
+  | {-| Set the line join style in the graphics state (j). -}
     GSSetLineJoin
-  | -- | Set the miter limit in the graphics state (M)
+  | {-| Set the miter limit in the graphics state (M). -}
     GSSetMiterLimit
-  | -- | Set the line dash pattern in the graphics state (d)
+  | {-| Set the line dash pattern in the graphics state (d). -}
     GSSetLineDashPattern
-  | -- | Set the colour rendering intent in the graphics state (ri)
+  | {-| Set the colour rendering intent in the graphics state (ri). -}
     GSSetColourRenderingIntent
-  | -- | Set the flatness tolerance in the graphics state (i)
+  | {-| Set the flatness tolerance in the graphics state (i). -}
     GSSetFlatnessTolerance
-  | -- | Set the specified parameters in the graphics state (gs)
+  | {-| Set the specified parameters in the graphics state (gs). -}
     GSSetParameters
-  | -- | Begin a new subpath by moving the current point to coordinates (m)
+  | {-| Begin a new subpath by moving the current point to coordinates (m). -}
     GSMoveTo
-  | -- | Append a straight line segment from the current point to the point (l)
+  | {-| Append a straight line segment from the current point to the point (l). -}
     GSLineTo
-  | -- | Append a cubic Bézier curve to the current path (c)
+  | {-| Append a cubic Bézier curve to the current path (c). -}
     GSCubicBezierCurve
-  | -- | Append a cubic Bézier curve to the current path. (v)
+  | {-| Append a cubic Bézier curve to the current path (v). -}
     GSCubicBezierCurve1To
-  | -- | Append a cubic Bézier curve to the current path. (y)
+  | {-| Append a cubic Bézier curve to the current path (y). -}
     GSCubicBezierCurve2To
-  | -- | Close the current subpath by appending a straight line segment (h)
+  | {-| Close the current subpath by appending a straight line segment (h). -}
     GSCloseSubpath
-  | -- | Append a rectangle to the current path as a complete subpath (re)
+  | {-| Append a rectangle to the current path as a complete subpath (re). -}
     GSRectangle
-  | -- | Stroke the path (S)
+  | {-| Stroke the path (S). -}
     GSStrokePath
-  | -- | Close and stroke the path (s)
+  | {-| Close and stroke the path (s). -}
     GSCloseStrokePath
-  | -- | Fill the path, using the nonzero winding number rule (f)
+  | {-| Fill the path, using the nonzero winding number rule (f). -}
     GSFillPathNZWR
-  | -- | Fill the path, using the even-odd rule (f*)
+  | {-| Fill the path, using the even-odd rule (f*). -}
     GSFillPathEOR
-  | -- | Fill and then stroke the path, using the NZW rule (B)
+  | {-| Fill and then stroke the path, using the NZW rule (B). -}
     GSFillStrokePathNZWR
-  | -- | Fill and then stroke the path, using the even-odd rule (B*)
+  | {-| Fill and then stroke the path, using the even-odd rule (B*). -}
     GSFillStrokePathEOR
-  | -- | Close, fill, and then stroke the path, using the NZW rule (b)
+  | {-| Close, fill, and then stroke the path, using the NZW rule (b). -}
     GSCloseFillStrokeNZWR
-  | -- | Close, fill, and then stroke the path, using the even-odd rule (b*)
+  | {-| Close, fill, and then stroke the path, using the even-odd rule (b*). -}
     GSCloseFillStrokeEOR
-  | -- | End the path object without filling or stroking it (n)
+  | {-| End the path object without filling or stroking it (n). -}
     GSEndPath
-  | -- | Begin a text object (BT)
+  | {-| Begin a text object (BT). -}
     GSBeginText
-  | -- | End a text object (ET)
+  | {-| End a text object (ET). -}
     GSEndText
-  | -- | Move to start of the next line (Td)
+  | {-| Move to start of the next line (Td). -}
     GSMoveToNextLine
-  | -- | Move to start of the next line while setting the leading parameter (TD)
+  | {-| Move to start of the next line while setting the leading parameter (TD). -}
     GSMoveToNextLineLP
-  | -- | Set the text matrix (Tm)
+  | {-| Set the text matrix (Tm). -}
     GSSetTextMatrix
-  | -- | Move to the start of the next line (T*)
+  | {-| Move to the start of the next line (T*). -}
     GSNextLine
-  | -- | Show a text string (Tj)
+  | {-| Show a text string (Tj). -}
     GSShowText
-  | -- | Move to the next line and show a text string (')
+  | {-| Move to the next line and show a text string ('). -}
     GSNLShowText
-  | -- | Move to the next line and show a text string with word spacing (")
+  | {-| Move to the next line and show a text string with word spacing ("). -}
     GSNLShowTextWithSpacing
-  | -- | Show one or more text strings (TJ)
+  | {-| Show one or more text strings (TJ). -}
     GSShowManyText
-  | -- | Set the character spacing (Tc)
+  | {-| Set the character spacing (Tc). -}
     GSSetCharacterSpacing
-  | -- | Set the word spacing (Tw)
+  | {-| Set the word spacing (Tw). -}
     GSSetWordSpacing
-  | -- | Set the horizontal scaling (Tz)
+  | {-| Set the horizontal scaling (Tz). -}
     GSSetHorizontalScaling
-  | -- | Set the text leading (TL)
+  | {-| Set the text leading (TL). -}
     GSSetTextLeading
-  | -- | Set the text font (Tf)
+  | {-| Set the text font (Tf). -}
     GSSetTextFont
-  | -- | Set the text rendering mode (Tr)
+  | {-| Set the text rendering mode (Tr). -}
     GSSetTextRenderingMode
-  | -- | Set the text rise (Ts)
+  | {-| Set the text rise (Ts). -}
     GSSetTextRise
-  | -- | Set width information for the glyph (d0)
+  | {-| Set width information for the glyph (d0). -}
     GSSetGlyphWidth
-  | -- | Set width and bounding box information for the glyph (d1)
+  | {-| Set width and bounding box information for the glyph (d1). -}
     GSSetBoundingBoxGlyph
-  | -- | Set the current colour space to use for stroking operations (CS)
+  | {-| Set the current colour space to use for stroking operations (CS). -}
     GSSetStrokeColorspace
-  | -- | Set the current colour space to use for nonstroking operations (cs)
+  | {-| Set the current colour space to use for nonstroking operations (cs). -}
     GSSetNonStrokeColorspace
-  | -- | Set the colour to use for stroking operations in a device (SC)
+  | {-| Set the colour to use for stroking operations in a device (SC). -}
     GSSetStrokeColor
-  | -- | Set the colour to use for stroking operations in a deviceN (SCN)
+  | {-| Set the colour to use for stroking operations in a deviceN (SCN). -}
     GSSetStrokeColorN
-  | -- | Set the colour to use for nonstroking operations in a device (sc)
+  | {-| Set the colour to use for nonstroking operations in a device (sc). -}
     GSSetNonStrokeColor
-  | -- | Set the colour to use for nonstroking operations in a deviceN (scn)
+  | {-| Set the colour to use for nonstroking operations in a deviceN (scn). -}
     GSSetNonStrokeColorN
-  | -- | Set the stroking colour space to DeviceGray (G)
+  | {-| Set the stroking colour space to DeviceGray (G). -}
     GSSetStrokeGrayColorspace
-  | -- | Set the nonstroking colour space to DeviceGray (g)
+  | {-| Set the nonstroking colour space to DeviceGray (g). -}
     GSSetNonStrokeGrayColorspace
-  | -- | Set the stroking colour space to DeviceRGB (RG)
+  | {-| Set the stroking colour space to DeviceRGB (RG). -}
     GSSetStrokeRGBColorspace
-  | -- | Set the nonstroking colour space to DeviceRGB (rg)
+  | {-| Set the nonstroking colour space to DeviceRGB (rg). -}
     GSSetNonStrokeRGBColorspace
-  | -- | Set the stroking colour space to DeviceCMYK (K)
+  | {-| Set the stroking colour space to DeviceCMYK (K). -}
     GSSetStrokeCMYKColorspace
-  | -- | Set the nonstroking colour space to DeviceCMYK (k)
+  | {-| Set the nonstroking colour space to DeviceCMYK (k). -}
     GSSetNonStrokeCMYKColorspace
-  | -- | Paint the shape and colour shading (sh)
+  | {-| Paint the shape and colour shading (sh). -}
     GSPaintShapeColourShading
-  | -- | Begin an inline image object (BI)
+  | {-| Paint an XObject (Do). -}
     GSPaintXObject
-  | -- | Designate a marked-content point (MP)
+  | {-| Designate a marked-content point (MP). -}
     GSMarkedContentPoint
-  | -- | Designate a marked-content point with a property list (DP)
+  | {-| Designate a marked-content point with a property list (DP). -}
     GSMarkedContentPointPL
-  | -- | Begin a marked-content sequence (BMC)
+  | {-| Begin a marked-content sequence (BMC). -}
     GSBeginMarkedContentSequence
-  | -- | Begin a marked-content sequence with a property list (BDC)
+  | {-| Begin a marked-content sequence with a property list (BDC). -}
     GSBeginMarkedContentSequencePL
-  | -- | End a marked-content sequence begun by a BMC or BDC operator (EMC)
+  | {-| End a marked-content sequence (EMC). -}
     GSEndMarkedContentSequence
-  | -- | Begin a compatibility section (BX)
+  | {-| Begin a compatibility section (BX). -}
     GSBeginCompatibilitySection
-  | -- | End a compatibility section (EX)
+  | {-| End a compatibility section (EX). -}
     GSEndCompatibilitySection
-  | -- | Modify current clipping path using the NZW rule (W)
+  | {-| Modify current clipping path using the NZW rule (W). -}
     GSIntersectClippingPathNZWR
-  | -- | Modify current clipping path using the even-odd rule (W*)
+  | {-| Modify current clipping path using the even-odd rule (W*). -}
     GSIntersectClippingPathEOR
-  | -- | Begin Inline image (BI)
+  | {-| Begin inline image (BI). -}
     GSBeginInlineImage
-  | -- | Inline image data (ID)
+  | {-| Inline image data (ID). -}
     GSInlineImageData
-  | -- | End Inline image (EI)
+  | {-| End inline image (EI). -}
     GSEndInlineImage
-  | -- | Unknown operator
+  | {-| Unknown operator. -}
     GSUnknown !ByteString
-  | -- | No-op operator
+  | {-| No-op operator. -}
     GSNone
   deriving stock (Eq, Show)
 
@@ -567,29 +582,29 @@ Values contained are decoded, meaning they no longer contain escape sequences.
 -}
 type GFXObject :: Type
 data GFXObject
-  = -- | A comment (without the starting %)
+  = {-| A comment (without the starting @%@). -}
     GFXComment ByteString
-  | -- | A number (always stored as a double)
+  | {-| A number (always stored as a double). -}
     GFXNumber Double
-  | -- | A name (starting with /)
+  | {-| A name (starting with @/@). -}
     GFXName ByteString
-  | -- | A string (unescaped and without parenthesis)
+  | {-| A string (unescaped and without parentheses). -}
     GFXString ByteString
-  | -- | An hexadeicmal string (without less-than/greater-than signs)
+  | {-| A hexadecimal string (without the @<@/@>@ delimiters). -}
     GFXHexString ByteString
-  | -- | A reference, number and generation (two integers followed by an `R`)
+  | {-| A reference (object number and generation), written as @n g R@. -}
     GFXReference Int Int
-  | -- | An array containing a list of objects
+  | {-| An array containing a list of objects. -}
     GFXArray (Array GFXObject)
-  | -- | A dictionary containing key-value pairs
+  | {-| A dictionary containing key-value pairs. -}
     GFXDictionary (Dictionary GFXObject)
-  | -- | A boolean (true or false)
+  | {-| A boolean (true or false). -}
     GFXBool Bool
-  | -- | A null value
+  | {-| A null value. -}
     GFXNull
-  | -- | An inline image
+  | {-| An inline image. -}
     GFXInlineImage (Dictionary GFXObject) ByteString
-  | -- | An operator
+  | {-| An operator token. -}
     GFXOperator GSOperator
   deriving stock (Eq, Show)
 

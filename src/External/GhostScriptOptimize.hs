@@ -36,28 +36,33 @@ ${GS_BIN} \
   -f ${INPUT}
 -}
 
-
+{-|
+Options to pass to GhostScript for PDF optimization.
+-}
 gsOptions :: [(String, String, String)]
 gsOptions =
-  [ ("s", "DEVICE", "pdfwrite")                   -- output device
-  , ("d", "DetectDuplicateImages", "true")        -- group identical images
-  , ("d", "AutoRotatePages", "/None")             -- don't rotate pages
-  , ("d", "CompressFonts", "true")                -- compress fonts
-  , ("d", "DownsampleColorImages", "false")       -- downsample color images
-  , ("d", "DownsampleGrayImages", "false")        -- downsample gray images
-  , ("d", "DownsampleMonoImages", "false")        -- downsample monochrome images
-  , ("d", "ColorImageFilter", "/FlateEncode")     -- color image filter
-  , ("d", "CompatibilityLevel", "1.7")            -- PDF compatibility level
-  , ("d", "ConvertCMYKImagesToRGB", "false")      -- keep CMYK images
-  , ("d", "MaxInlineImageSize", "0")              -- disable inline images
-  , ("r", "300", "")                              -- resolution
-  , ("d", "JPEGQ", "100")                         -- limit JPEG deterioration
-  , ("d", "QUIET", "")                            -- quiet mode
-  , ("d", "SAFER", "")                            -- safe mode
-  , ("d", "NOPAUSE", "")                          -- no pause
-  , ("d", "BATCH", "")                            -- batch mode
+  [ ("s", "DEVICE", "pdfwrite")                -- output device
+  , ("d", "DetectDuplicateImages", "true")     -- group identical images
+  , ("d", "AutoRotatePages", "/None")          -- don't rotate pages
+  , ("d", "CompressFonts", "true")             -- compress fonts
+  , ("d", "DownsampleColorImages", "false")    -- downsample color images
+  , ("d", "DownsampleGrayImages", "false")     -- downsample gray images
+  , ("d", "DownsampleMonoImages", "false")     -- downsample monochrome images
+  , ("d", "ColorImageFilter", "/FlateEncode")  -- color image filter
+  , ("d", "CompatibilityLevel", "1.7")         -- PDF compatibility level
+  , ("d", "ConvertCMYKImagesToRGB", "false")   -- keep CMYK images
+  , ("d", "MaxInlineImageSize", "0")           -- disable inline images
+  , ("r", "300", "")                           -- resolution
+  , ("d", "JPEGQ", "100")                      -- limit JPEG deterioration
+  , ("d", "QUIET", "")                         -- quiet mode
+  , ("d", "SAFER", "")                         -- safe mode
+  , ("d", "NOPAUSE", "")                       -- no pause
+  , ("d", "BATCH", "")                         -- batch mode
   ]
 
+{-|
+Generate command-line options for GhostScript.
+-}
 generateOptions :: [(String, String, String)] -> [String]
 generateOptions = fmap generateOption
  where

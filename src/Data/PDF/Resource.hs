@@ -1,3 +1,13 @@
+{-|
+Typed resource references and utilities.
+
+This module defines a small sum type used to represent entries in a PDF resource
+dictionary (fonts, XObjects, color spaces, etc.).
+
+Each constructor carries the resource name (as a PDF name, represented here as a
+'ByteString'). The module also provides helpers for parsing resource dictionary
+keys, mapping over names, and renaming resources deterministically.
+-}
 module Data.PDF.Resource (
   Resource (
     ResColorSpace,
@@ -23,19 +33,25 @@ import Data.Kind (Type)
 import Data.Set (Set)
 import Data.Set qualified as Set
 
+{-|
+A resource is a typed name used in PDF content streams and resource
+dictionaries.
+-}
 type Resource :: Type
 data Resource
-  = ResColorSpace !ByteString
-  | ResFont !ByteString
-  | ResXObject !ByteString
-  | ResExtGState !ByteString
-  | ResProperties !ByteString
-  | ResPattern !ByteString
-  | ResShading !ByteString
-  | ResProcSet !ByteString
+  = ResColorSpace !ByteString -- ^ Color space resource
+  | ResFont !ByteString       -- ^ Font resource
+  | ResXObject !ByteString    -- ^ External object resource
+  | ResExtGState !ByteString  -- ^ Extended graphics state resource
+  | ResProperties !ByteString -- ^ Properties resource
+  | ResPattern !ByteString    -- ^ Pattern resource
+  | ResShading !ByteString    -- ^ Shading resource
+  | ResProcSet !ByteString    -- ^ Procedure set resource
   deriving stock (Eq, Ord, Show)
 
--- | Get the name of a resource.
+{-|
+Get the name of a resource.
+-}
 resName :: Resource -> ByteString
 resName (ResColorSpace name) = name
 resName (ResFont name)       = name
@@ -50,7 +66,9 @@ instance HasLength Resource where
   objectLength :: Resource -> Int
   objectLength = objectLength . resName
 
--- | Map a function over the name of a resource.
+{-|
+Map a function over the name of a resource.
+-}
 rmap :: (ByteString -> ByteString) -> Resource -> Resource
 rmap func (ResColorSpace name) = ResColorSpace (func name)
 rmap func (ResFont name)       = ResFont (func name)
@@ -91,9 +109,15 @@ createSet = foldr go mempty
   go (Just resource) resources = Set.insert resource resources
   go Nothing resources         = resources
 
+{-|
+Digits used for base conversion in `toNameBase`.
+-}
 baseDigits :: ByteString
 baseDigits = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+{-|
+Convert a resource to a name based on an integer value.
+-}
 toNameBase :: Resource -> Int -> Resource
 toNameBase resource value = rmap (const (toNameBase' value "")) resource
   where

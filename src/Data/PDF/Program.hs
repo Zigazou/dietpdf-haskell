@@ -1,3 +1,13 @@
+{-|
+Representation of a content stream as commands.
+
+This module provides a compact representation of a PDF content stream as a
+sequence of 'Command' values.
+
+A 'Program' is the result of grouping lower-level 'GFXObject' tokens into
+operator invocations. Comments are ignored; inline images are handled as a
+special operator that carries their image object.
+-}
 module Data.PDF.Program
   ( Program
   , mkProgram
@@ -24,12 +34,20 @@ The 'Program' type represents a sequence of 'Command's.
 type Program :: Type
 type Program = Array Command
 
+{-|
+Construct a 'Program' from a list of commands.
+-}
 mkProgram :: [Command] -> Program
 mkProgram = SQ.fromList
 
 {-|
-The 'parseProgram' function takes an array of 'GFXObject's and returns a
-'Program'.
+Parse a flat sequence of graphics objects into a command program.
+
+This groups consecutive non-operator objects as arguments for the next operator
+token.
+
+If the input ends with pending objects (i.e. without a following operator), a
+final 'GSUnknown' command is emitted to retain those objects.
 -}
 parseProgram :: GFXObjects -> Program
 parseProgram objs =
@@ -52,8 +70,10 @@ parseProgram objs =
       (objects |> object, program)
 
 {-|
-The 'extractObjects' function takes a 'Program' and returns an array of
-'GFXObject's.
+Flatten a 'Program' back into a sequence of 'GFXObject' tokens.
+
+The operator of each command is re-emitted as a 'GFXOperator'. Inline image
+commands contribute their embedded objects directly.
 -}
 extractObjects :: Program -> GFXObjects
 extractObjects = foldl' go mempty

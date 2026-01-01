@@ -1,3 +1,14 @@
+{-|
+Extended graphics state (ExtGState) construction.
+
+In PDF, an /ExtGState dictionary collects graphics parameters (line width,
+dash pattern, rendering intent, font selection, etc.). This module provides a
+minimal builder that derives such a dictionary from a sequence of graphics
+`Command`s.
+
+Only a subset of graphics operators is currently translated; unsupported
+commands are ignored.
+-}
 module Data.PDF.ExtGState
   ( ExtGState
   , mkExtGState
@@ -18,9 +29,20 @@ import Data.Sequence (Seq (Empty, (:<|)))
 
 import Util.Dictionary (Dictionary, mkDictionary)
 
+{-|
+An /ExtGState dictionary represented as a `Dictionary` of `PDFObject`s.
+
+The keys follow the PDF specification conventions (for example, @"LW"@ for line
+width, @"LC"@ for line cap style, @"D"@ for dash pattern, ...).
+-}
 type ExtGState :: Type
 type ExtGState = Dictionary PDFObject
 
+{-|
+Converts a graphics-level object (`GFXObject`) into a serializable `PDFObject`.
+
+Unsupported values are mapped to `PDFNull`.
+-}
 gfxToObject :: GFXObject -> PDFObject
 gfxToObject (GFXNumber value)          = PDFNumber value
 gfxToObject (GFXName name)             = PDFName name
@@ -34,6 +56,11 @@ gfxToObject (GFXArray array)           = PDFArray . fmap gfxToObject $ array
 gfxToObject (GFXDictionary dict)       = PDFDictionary . fmap gfxToObject $ dict
 gfxToObject _anyOtherObject            = PDFNull
 
+{-|
+Translates a single graphics `Command` into an /ExtGState fragment.
+
+If the operator is not handled, returns `mempty`.
+-}
 newState :: Command -> ExtGState
 newState (Command GSSetColourRenderingIntent (intent :<| Empty)) =
   mkDictionary [("RI", gfxToObject intent)]
@@ -61,6 +88,12 @@ newState (Command GSSetFlatnessTolerance (tolerance :<| Empty)) =
 
 newState _anyOtherCommand = mempty
 
+{-|
+Builds an /ExtGState dictionary from an array of graphics commands.
+
+Each command contributes a small dictionary, and all contributions are merged
+left-to-right.
+-}
 mkExtGState :: Array Command -> ExtGState
 mkExtGState Empty              = mempty
 mkExtGState (command :<| rest) = newState command <> mkExtGState rest

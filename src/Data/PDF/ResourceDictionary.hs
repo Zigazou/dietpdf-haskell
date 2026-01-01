@@ -1,3 +1,19 @@
+{-|
+Conversions and merges for PDF resource dictionaries.
+
+PDF pages and form XObjects can contain a resource dictionary, which maps
+resource categories (such as @Font@ or @XObject@) to dictionaries of concrete
+resources.
+
+This module provides helpers to:
+
+* Convert between 'PDFObject' and dictionary representations.
+* Interpret nested dictionaries as resource dictionaries.
+* Merge two resource dictionaries in a category-aware way.
+
+The keys used for categories are the PDF standard names (e.g. @"Font"@,
+@"XObject"@).
+-}
 module Data.PDF.ResourceDictionary
   ( ResourceDictionary
   , objectToResourceDictionary
@@ -15,30 +31,70 @@ import Data.PDF.PDFObject (PDFObject (PDFDictionary))
 
 import Util.Dictionary (Dictionary)
 
+{-|
+Dictionary representing a single resource-category dictionary.
+
+This is the inner dictionary at keys like @/Font@ or @/XObject@.
+-}
 type ResourceDictionary :: Type
 type ResourceDictionary = Dictionary PDFObject
 
+{-|
+Extract a 'ResourceDictionary' from a 'PDFObject'.
+
+If the object is not a dictionary, this returns the empty dictionary.
+-}
 objectToResourceDictionary :: PDFObject -> ResourceDictionary
 objectToResourceDictionary (PDFDictionary dictionary) = dictionary
 objectToResourceDictionary _anyOtherObject = mempty
 
+{-|
+Extract a dictionary of resource dictionaries from a 'PDFObject'.
+
+This expects a top-level resource dictionary mapping category names (like
+@"Font"@) to dictionaries.
+
+If the object is not a dictionary, this returns the empty dictionary.
+-}
 objectToResourceDictionaries :: PDFObject -> Dictionary ResourceDictionary
 objectToResourceDictionaries (PDFDictionary dictionary) =
   Map.map objectToResourceDictionary dictionary
 objectToResourceDictionaries _anyOtherObject = mempty
 
+{-|
+Convert a 'ResourceDictionary' back to a 'PDFObject' dictionary.
+-}
 resourceDictionaryToPDFObject :: ResourceDictionary -> PDFObject
 resourceDictionaryToPDFObject = PDFDictionary
 
+{-|
+Convert a dictionary of resource dictionaries back to a 'PDFObject'.
+
+Each inner dictionary is converted using 'resourceDictionaryToPDFObject'.
+-}
 resourceDictionariesToPDFObject :: Dictionary ResourceDictionary -> PDFObject
 resourceDictionariesToPDFObject = PDFDictionary
                                 . fmap resourceDictionaryToPDFObject
 
+{-|
+Interpret each value in a dictionary as a 'ResourceDictionary'.
+
+This is a convenience wrapper around 'objectToResourceDictionary'.
+-}
 dictionaryToResourceDictionaries
   :: Dictionary PDFObject
   -> Dictionary ResourceDictionary
 dictionaryToResourceDictionaries = Map.map objectToResourceDictionary
 
+{-|
+Merge two resource dictionaries.
+
+The merge is performed per standard category key (e.g. @"Font"@, @"XObject"@).
+For each category, the inner dictionaries are combined using the monoidal append
+operation.
+
+Empty category entries are removed from the resulting dictionary.
+-}
 mergeResourceDictionaries
   :: Dictionary ResourceDictionary
   -> Dictionary ResourceDictionary

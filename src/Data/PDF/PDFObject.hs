@@ -151,6 +151,9 @@ instance Eq PDFObject where
   (PDFStartXRef x)          == (PDFStartXRef y)          = x == y
   _anyObjectA               == _anyObjectB               = False
 
+{-|
+Rank PDF objects for ordering.
+-}
 objectRank :: PDFObject -> Int
 objectRank (PDFVersion _)                  = 0
 objectRank (PDFComment _)                  = 1
@@ -249,6 +252,9 @@ hasStream PDFObjectStream{}             = True
 hasStream PDFXRefStream{}               = True
 hasStream _anyOtherObject               = False
 
+{-|
+Determine if a `PDFObject` is an indirect object.
+-}
 isIndirect :: PDFObject -> Bool
 isIndirect PDFIndirectObject{}             = True
 isIndirect PDFIndirectObjectWithStream{}   = True
@@ -257,6 +263,11 @@ isIndirect PDFObjectStream{}               = True
 isIndirect PDFXRefStream{}                 = True
 isIndirect _anyOtherObject                 = False
 
+{-|
+Get the object number of a `PDFObject`, when it is an indirect object.
+
+If the object is not indirect, `Nothing` is returned.
+-}
 getObjectNumber :: PDFObject -> Maybe Int
 getObjectNumber (PDFIndirectObject number _ _)               = Just number
 getObjectNumber (PDFIndirectObjectWithStream number _ _ _)   = Just number
@@ -265,15 +276,24 @@ getObjectNumber (PDFObjectStream number _ _ _)               = Just number
 getObjectNumber (PDFXRefStream number _ _ _)                 = Just number
 getObjectNumber _anyOtherObject                              = Nothing
 
+{-|
+Check whether an object is a member of a collection.
+-}
 isHeader :: PDFObject -> Bool
 isHeader PDFVersion{}    = True
 isHeader _anyOtherObject = False
 
+{-|
+Check whether an object is a trailer object.
+-}
 isTrailer :: PDFObject -> Bool
 isTrailer PDFTrailer{}    = True
 isTrailer PDFXRefStream{} = True
 isTrailer _anyOtherObject = False
 
+{-|
+Check whether an object is a reference.
+-}
 isReference :: PDFObject -> Bool
 isReference PDFReference{}  = True
 isReference _anyOtherObject = False

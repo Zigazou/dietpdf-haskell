@@ -10,7 +10,6 @@ module Data.PDF.Filter
 import Data.Kind (Type)
 import Data.PDF.PDFObject (PDFObject (PDFNull))
 
-
 {-|
 A filter with its parameters.
 -}
@@ -21,5 +20,9 @@ data Filter = Filter
   }
   deriving stock Show
 
+{-|
+Checks whether a `Filter` has no decode parameters (i.e., its `fDecodeParms`
+is `PDFNull`).
+-}
 hasNoDecodeParms :: Filter -> Bool
 hasNoDecodeParms = (== PDFNull) . fDecodeParms

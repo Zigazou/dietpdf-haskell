@@ -1,3 +1,12 @@
+{-|
+Utilities for working with PDF filter chains.
+
+In PDF, a stream can declare one or more filters (in the @/Filter@ entry) and
+optionally per-filter decode parameters (in the @/DecodeParms@ entry).
+
+This module provides the `FilterList` type and helpers to build the
+corresponding `PDFObject` values.
+-}
 module Data.PDF.FilterList
   ( FilterList
   , mkFilterList
@@ -15,12 +24,15 @@ import Data.PDF.Filter
 import Data.PDF.PDFObject (PDFObject (PDFArray, PDFName, PDFNull))
 import Data.Sequence qualified as SQ
 
-
--- | A list of `Filter`.
+{-|
+A list of `Filter` values representing a filter chain.
+-}
 type FilterList :: Type
 type FilterList = SQ.Seq Filter
 
--- | Create a `FilterList`.
+{-|
+Creates a `FilterList` from a regular list.
+-}
 mkFilterList :: [Filter] -> FilterList
 mkFilterList = SQ.fromList
 
@@ -55,6 +67,11 @@ filtersParms (Filter _ aDecodeParms SQ.:<| SQ.Empty) = Just aDecodeParms
 filtersParms filters | all hasNoDecodeParms filters = Nothing
                      | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
 
+{-|
+Checks whether a filter with the given name is present in the filter chain.
+
+The name is compared against the underlying `PDFName` stored in each `Filter`.
+-}
 hasFilter :: ByteString -> FilterList -> Bool
 hasFilter name = any (has name)
   where

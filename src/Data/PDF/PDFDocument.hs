@@ -1,3 +1,15 @@
+{-|
+Ordered collections of PDF objects.
+
+This module defines 'PDFDocument' as an insertion-ordered collection of
+'PDFObject' values with no duplicates.
+
+The underlying representation is an ordered set. As a consequence, most
+operations require an 'Ord' constraint and behave like set operations while
+preserving insertion order.
+
+The helper type 'CollectionOf' generalizes this notion to any element type.
+-}
 module Data.PDF.PDFDocument
   ( PDFDocument
   , CollectionOf(CollectionOf)
@@ -43,6 +55,9 @@ Every function working on `CollectionOf` works on `PDFDocument`.
 type PDFDocument :: Type
 type PDFDocument = CollectionOf PDFObject
 
+{-|
+Check whether an object is a member of a collection.
+-}
 member :: Ord a => a -> CollectionOf a -> Bool
 member object (CollectionOf objects) = OS.member object objects
 
@@ -50,7 +65,11 @@ instance Foldable CollectionOf where
   foldMap :: Monoid m => (a -> m) -> CollectionOf a -> m
   foldMap f (CollectionOf dict) = foldMap f dict
 
--- | The `<>` operator does a concatenation when used with `CollectionOf`.
+{-|
+Concatenate two collections.
+
+This keeps insertion order and removes duplicates according to 'Ord'.
+-}
 instance Ord a => Semigroup (CollectionOf a) where
   (<>) :: CollectionOf a -> CollectionOf a -> CollectionOf a
   (<>) (CollectionOf x) (CollectionOf y) = CollectionOf (x OS.<>| y)
@@ -59,9 +78,16 @@ instance Ord a => Monoid (CollectionOf a) where
   mempty :: CollectionOf a
   mempty = CollectionOf OS.empty
 
+{-|
+Get the size of a `CollectionOf`.
+-}
 cSize :: CollectionOf a -> Int
 cSize (CollectionOf os) = OS.size os
 
+{-|
+A `map` function for objects of type `CollectionOf` which works in a
+`FallibleT` monad.
+-}
 cfMap
   :: (Ord b, Monad m)
   => (a -> FallibleT m b)
@@ -91,6 +117,8 @@ cFilter f (CollectionOf !set) = CollectionOf $! OS.filter f set
 A `map` function for objects of type `CollectionOf` which converts to a `List`.
 
 This allows to get rid of the `Ord` constraint of cMap.
+
+The resulting list respects the collection's ordering.
 -}
 lMap :: (a -> b) -> CollectionOf a -> [b]
 lMap f (CollectionOf !objects) = (fmap f . OS.toAscList) objects
@@ -102,10 +130,10 @@ singleton :: PDFObject -> PDFDocument
 singleton = CollectionOf . OS.singleton
 
 {-|
-Convert a list of `PDFObject` to a `PDFDocument`.
+Build a collection from a list.
 
-Only the last `PDFVersion`, `PDFXRef`, `PDFTrailer` are kept.
-Only the last indirect object with a specific number is kept.
+Duplicates are removed by the underlying ordered set (according to 'Ord') while
+preserving insertion order.
 -}
 fromList :: Ord a => [a] -> CollectionOf a
 fromList = CollectionOf . foldl' (OS.>|) OS.empty
@@ -145,7 +173,7 @@ dFindLast p =
   foldr (\object found -> if p object then Just $! object else found) Nothing
 
 {-|
-Find every `PDFObject` satisfiying a predicate, even when deeply nested in
+Find every `PDFObject` satisfying a predicate, even when deeply nested in
 containers.
 -}
 deepFind :: (PDFObject -> Bool) -> PDFDocument -> PDFDocument

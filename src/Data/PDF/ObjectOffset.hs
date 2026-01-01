@@ -1,6 +1,5 @@
 {-|
-Module: Data.PDF.ObjectOffset
-Description: Object offset in a PDF file
+Object offset in a PDF file
 -}
 module Data.PDF.ObjectOffset
   ( ObjectOffset (DirectOffset, InObjectStream, FreeEntry),
@@ -11,6 +10,9 @@ where
 
 import Data.Kind (Type)
 
+{-|
+Representation of a PDF object offset.
+-}
 type ObjectOffset :: Type
 data ObjectOffset
   = DirectOffset !Int !Int -- ^ Direct object offset (object number, offset)
@@ -26,7 +28,7 @@ instance Ord ObjectOffset where
   compare :: ObjectOffset -> ObjectOffset -> Ordering
   compare oo1 oo2 = compare (ooObjectNumber oo1) (ooObjectNumber oo2)
 
-{-
+{-|
 Get the object number of an object offset. 
 -}
 ooObjectNumber :: ObjectOffset -> Int

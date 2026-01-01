@@ -1,3 +1,22 @@
+{-|
+Pure updates to the PDF graphics and text state.
+
+This module models the parts of the PDF "graphics state" that are needed by
+dietpdf when interpreting page content streams.
+
+The functions in this module are /pure setters/ and /transformers/: they take a
+'GraphicsState' value and return an updated copy. No IO is performed here.
+
+In PDF terminology, the graphics state includes (among other parameters):
+
+* The current transformation matrix (CTM).
+* The current text state (text matrix, font, spacing, etc.).
+* Stroke/non-stroke drawing parameters (line width, dash pattern, alpha, ...).
+
+The "useful precision" helpers are heuristics used to choose a stable decimal
+precision for output, based on the effective scale implied by the CTM and text
+state.
+-}
 module Data.PDF.GraphicsState
   ( GraphicsState (..)
   , defaultGraphicsState
@@ -47,12 +66,15 @@ import Data.PDF.TransformationMatrix
   )
 
 {-|
-The graphics state is a collection of parameters that define the current page's
-graphics context. The graphics state includes the following parameters:
+In-memory representation of the (subset of the) PDF graphics state tracked by
+dietpdf.
 
-* The current user unit
-* The current transformation matrix (CTM)
-* The current text state
+This is a "current" state: it changes as graphics/text operators are
+interpreted.
+
+The record also stores derived values (@gsScaleX@, @gsScaleY@) that represent
+the absolute scaling implied by the CTM, which is used by the precision
+heuristics.
 -}
 type GraphicsState :: Type
 data GraphicsState = GraphicsState
@@ -80,12 +102,10 @@ data GraphicsState = GraphicsState
   } deriving stock (Eq, Show)
 
 {-|
-The default graphics state is the initial graphics state of a page. It has the
-following parameters:
+Initial graphics state for a fresh page/content stream.
 
-* The current user unit is 1.0
-* The current transformation matrix (CTM) is the identity matrix
-* The current text state is the default text state
+This corresponds to the default values used before any graphics operators are
+applied (identity CTM, default text state, opaque painting, etc.).
 -}
 defaultGraphicsState :: GraphicsState
 defaultGraphicsState = GraphicsState
@@ -113,17 +133,21 @@ defaultGraphicsState = GraphicsState
   }
 
 {-|
-Calculates the useful matrix precision for a given scale factor. The useful
-matrix precision is the number of decimal places that are useful for rendering
-purposes.
+Heuristic precision for matrix coefficients at a given scale.
+
+The result is a number of decimal places that are typically meaningful for
+rendering/output after taking scaling into account.
+
+Precondition: the scale should be strictly positive.
 -}
 usefulMatrixPrecisionFor :: Double -> Int
 usefulMatrixPrecisionFor scale = max 0 (6 - floor (logBase 10 (abs scale)))
 
 {-|
-Calculates the useful precision of the current graphics state. The useful
-precision is the number of decimal places that are useful for rendering
-purposes.
+Heuristic precision for coordinates in the current graphics state.
+
+This is based on the maximum absolute scale implied by the CTM and the user
+unit.
 -}
 usefulGraphicsPrecision :: GraphicsState -> Int
 usefulGraphicsPrecision state =
@@ -137,9 +161,10 @@ usefulGraphicsPrecision state =
   scale    = max scaleX scaleY
 
 {-|
-Calculates the useful precision of the current graphics state. The useful
-precision is the number of decimal places that are useful for rendering
-purposes.
+Heuristic precision for text positioning in the current graphics state.
+
+This takes the CTM scale, user unit, and the text state's rendering scale into
+account.
 -}
 usefulTextPrecision :: GraphicsState -> Int
 usefulTextPrecision state =
@@ -157,16 +182,19 @@ usefulTextPrecision state =
   scale    = max scaleX scaleY
 
 {-|
-Calculates the useful precision of the current graphics state. The useful
-precision is the number of decimal places that are useful for rendering
-purposes.
+Heuristic precision for color components.
+
+This is intentionally a small, fixed value (PDF color components are usually
+specified with limited precision in practice).
 -}
 usefulColorPrecision :: GraphicsState -> Int
 usefulColorPrecision _state = 2
 
 {-|
-Applies a transformation matrix to the current transformation matrix (CTM) of
-the graphics state.
+Post-multiply the current transformation matrix (CTM).
+
+This updates both @gsCTM@ and the derived scaling fields (@gsScaleX@, @gsScaleY@)
+based on the resulting CTM.
 -}
 applyGraphicsMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
 applyGraphicsMatrix matrix state = state
@@ -179,7 +207,9 @@ applyGraphicsMatrix matrix state = state
   (scaleX, scaleY) = matrixScale graphicsMatrix (1.0, 1.0)
 
 {-|
-Apply the text matrix of the current text state.
+Post-multiply the current text matrix.
+
+This updates the text state's matrix and its derived scale fields.
 -}
 applyTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
 applyTextMatrix matrix state = state
@@ -194,11 +224,14 @@ applyTextMatrix matrix state = state
   (scaleX, scaleY) = matrixScale textMatrix (1.0, 1.0)
 
 {-|
-Set the text matrix of the current text state.
+Replace the text matrix with the given matrix.
 
-Contrary to the 'applyGraphicsMatrix' function, this function replaces the
-current text matrix with the given matrix. Plus, the resulting text matrix is
-the product of the given matrix and the current text matrix.
+This differs from 'applyTextMatrix': it does not compose with the existing text
+matrix; it overwrites it.
+
+The derived text scale (@tsScaleX@, @tsScaleY@) is computed from the
+"text rendering matrix" (text matrix combined with font size, horizontal
+scaling, and rise).
 -}
 setTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
 setTextMatrix matrix state = state
@@ -224,8 +257,8 @@ setTextMatrix matrix state = state
 {-|
 Set the font and font size of the current text state.
 
-The font name is a byte string that represents the font name. The font size is
-a double that represents the font size in points.
+The font name is the PDF font resource name. The size is in text space units
+(typically points).
 -}
 setFont :: ByteString -> Double -> GraphicsState -> GraphicsState
 setFont fontName fontSize state = state
@@ -239,7 +272,7 @@ setFont fontName fontSize state = state
 Set the horizontal scaling of the current text state.
 
 The scaling is a double that represents the horizontal scaling factor in
-percentages (0..100).
+percent (where @100@ means 1.0).
 -}
 setHorizontalScaling :: Double -> GraphicsState -> GraphicsState
 setHorizontalScaling scaling state = state
@@ -248,8 +281,7 @@ setHorizontalScaling scaling state = state
 {-|
 Set the rise of the current text state.
 
-The rise is a double that represents the distance, in points, to move the
-baseline up or down.
+Rise is the distance, in text space units, to move the baseline up or down.
 -}
 setTextRise :: Double -> GraphicsState -> GraphicsState
 setTextRise rise state = state
@@ -258,15 +290,16 @@ setTextRise rise state = state
 {-|
 Set the leading of the current text state.
 
-The leading is a double that represents the distance, in points, between
-baselines.
+Leading is the distance, in text space units, between baselines.
 -}
 setTextLeading :: Double -> GraphicsState -> GraphicsState
 setTextLeading leading state = state
   { gsTextState = (gsTextState state) { tsLeading = leading } }
 
 {-|
-Set the word spacing of the current text state.
+Set the character spacing of the current text state.
+
+Character spacing is added between glyphs when showing text.
 -}
 setCharacterSpacing :: Double -> GraphicsState -> GraphicsState
 setCharacterSpacing spacing state = state
@@ -274,6 +307,8 @@ setCharacterSpacing spacing state = state
 
 {-|
 Set the word spacing of the current text state.
+
+Word spacing is added to space characters when showing text.
 -}
 setWordSpacing :: Double -> GraphicsState -> GraphicsState
 setWordSpacing spacing state = state
@@ -305,6 +340,8 @@ setMiterLimit miterLimit state = state { gsMiterLimit = miterLimit }
 
 {-|
 Set the dash pattern of the current graphics state.
+
+The dash phase is the initial offset into the dash array.
 -}
 setDashPattern :: Double -> [Double] -> GraphicsState -> GraphicsState
 setDashPattern dashPhase dashArray state = state
@@ -338,6 +375,8 @@ setNonStrokeAlpha alpha state = state { gsNonStrokeAlpha = alpha }
 
 {-|
 Set the start of the current path.
+
+This is used to support path-closing semantics.
 -}
 setPathStart :: Double -> Double -> GraphicsState -> GraphicsState
 setPathStart x y state = state { gsPathStartX = x, gsPathStartY = y }
@@ -348,11 +387,22 @@ Set the current point of the current path.
 setCurrentPoint :: Double -> Double -> GraphicsState -> GraphicsState
 setCurrentPoint x y state = state { gsCurrentPointX = x, gsCurrentPointY = y }
 
+{-|
+Reset the text state matrix to the identity.
+
+This is a convenience wrapper used when beginning/restarting a text object.
+-}
 resetTextState :: GraphicsState -> GraphicsState
 resetTextState = setTextMatrix mempty
 
+{-|
+Set the current stroke color in the graphics state.
+-}
 setStrokeColor :: Color -> GraphicsState -> GraphicsState
 setStrokeColor color state = state { gsStrokeColor = color }
 
+{-|
+Set the current non-stroke color in the graphics state.
+-}
 setNonStrokeColor :: Color -> GraphicsState -> GraphicsState
 setNonStrokeColor color state = state { gsNonStrokeColor = color }
