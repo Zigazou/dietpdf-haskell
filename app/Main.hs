@@ -62,7 +62,7 @@ import Paths_dietpdf qualified
 import System.FilePath (takeFileName)
 import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
-import System.IO.Temp (withSystemTempFile)
+import System.IO.Temp (withTempFile)
 import System.Posix (fileSize, getFileStatus)
 
 {-|
@@ -139,7 +139,7 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useZopfli optimizeGFX o
                           }
   case (useGS, usePTC) of
     (UseGhostScript, DoNotUsePDFToCairo) ->
-      withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
+      withTempFile "." (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
         -- Close the handles so external programs can use the files.
         lift $ hClose ghostscriptHandle
 
@@ -156,7 +156,7 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useZopfli optimizeGFX o
         go ghostscriptPDF settings overwriteFile
 
     (DoNotUseGhostScript, UsePDFToCairo) ->
-      withSystemTempFile (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
+      withTempFile "." (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
         -- Close the handles so external programs can use the files.
         lift $ hClose pdfToCairoHandle
 
@@ -173,8 +173,8 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useZopfli optimizeGFX o
         go pdfToCairoPDF settings overwriteFile
 
     (UseGhostScript, UsePDFToCairo) ->
-      withSystemTempFile (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
-        withSystemTempFile (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
+      withTempFile "." (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
+        withTempFile "." (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
           -- Close the handles so external programs can use the files.
           lift $ hClose ghostscriptHandle
           lift $ hClose pdfToCairoHandle
