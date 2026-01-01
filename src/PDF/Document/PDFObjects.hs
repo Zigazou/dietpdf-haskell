@@ -1,7 +1,13 @@
--- |
--- This module manipulates collections of `PDFObject`.
---
--- These functions are meant to be used when optimizing/encoding a PDF.
+{- |
+Helpers for collections of indirect PDF objects.
+
+This module provides a small wrapper abstraction around collections of
+'Data.PDF.PDFObject.PDFObject' values indexed by object number.
+
+These helpers are primarily intended for encoding, optimizing, and otherwise
+transforming PDF files, where it is convenient to treat the document as a map
+from object numbers to objects.
+-}
 module PDF.Document.PDFObjects
   ( -- * Encoding of object collections
     PDFObjects,
@@ -19,13 +25,28 @@ import Data.PDF.PDFObject
     ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream)
     )
 
--- | A collection of objects indexed by the object number
+{- |
+A collection of PDF objects indexed by object number.
+
+Internally this is an 'IntMap' keyed by the indirect object number.
+-}
 type PDFObjects :: Type
 type PDFObjects = IM.IntMap PDFObject
 
+{- |
+Convert an object map back into a 'PDFDocument'.
+
+Objects are emitted in ascending object-number order.
+-}
 toPDFDocument :: PDFObjects -> PDFDocument
 toPDFDocument = fromList . fmap snd . IM.toAscList
 
+{- |
+Build an object map from a 'PDFDocument'.
+
+The key is taken from the indirect object number for supported constructors.
+Objects that are not indirect objects are currently stored under key @0@.
+-}
 fromPDFDocument :: PDFDocument -> PDFObjects
 fromPDFDocument = IM.fromList . fmap createCouple . toList
   where
@@ -38,9 +59,10 @@ fromPDFDocument = IM.fromList . fmap createCouple . toList
     createCouple object@(PDFXRefStream number _ _ _) = (number, object)
     createCouple object = (0, object)
 
--- |
--- Find last value in a `CollectionOf` satisfying a predicate.
---
--- If the predicate is never satisfied, the function returns `Nothing`.
+{- |
+Find the last object (by descending object number) satisfying a predicate.
+
+Returns 'Nothing' if no object matches.
+  -}
 findLast :: (PDFObject -> Bool) -> PDFObjects -> Maybe PDFObject
 findLast p = find p . fmap snd . IM.toDescList

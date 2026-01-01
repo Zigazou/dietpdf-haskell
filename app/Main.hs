@@ -57,17 +57,17 @@ readPDF :: FilePath -> FallibleT IO PDFDocument
 readPDF filename = do
   lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
     Right bytes -> pdfParse bytes
-    Left  _     -> throwE UnableToOpenFile
+    Left _error -> throwE UnableToOpenFile
 
 readByteString :: Maybe FilePath -> FallibleT IO ByteString
 readByteString (Just filename) = do
   lift (tryJust (guard . isDoesNotExistError) (BS.readFile filename)) >>= \case
     Right bytes -> return bytes
-    Left  _     -> throwE UnableToOpenFile
+    Left _error -> throwE UnableToOpenFile
 readByteString Nothing =
   lift (tryJust (guard . isDoesNotExistError) BS.getContents) >>= \case
     Right bytes -> return bytes
-    Left  _     -> throwE UnableToOpenFile
+    Left _error -> throwE UnableToOpenFile
 
 getFileSize :: String -> IO Int
 getFileSize path = do
@@ -196,5 +196,5 @@ options = info
 
 main :: IO ()
 main = runExceptT (runApp =<< lift (execParser options)) >>= \case
-  Right _       -> return ()
-  Left  anError -> print anError
+  Right _anyValue -> return ()
+  Left anError    -> print anError

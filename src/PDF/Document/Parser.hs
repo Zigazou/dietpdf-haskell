@@ -1,3 +1,14 @@
+{- |
+Top-level PDF parsing entry point.
+
+This module provides the top-level parser used to turn a raw PDF file
+('ByteString') into a structured 'Data.PDF.PDFDocument.PDFDocument'.
+
+Parsing is performed using the project's binary parser infrastructure
+(`Data.Binary.Parser`) and errors are rewrapped into
+'Data.UnifiedError.UnifiedError' so they can flow through the standard
+error-handling stack.
+-}
 module PDF.Document.Parser
   ( pdfParse
   ) where
@@ -7,7 +18,7 @@ import Control.Monad.Trans.Except (throwE)
 
 import Data.Binary.Parser (Get, label, many', parseDetail, satisfy)
 import Data.ByteString (ByteString)
-import Data.Context (Context (NoContext))
+import Data.Context (Context (Context))
 import Data.Fallible (FallibleT)
 import Data.Logging (Logging, sayF)
 import Data.PDF.PDFDocument (PDFDocument, dSepBy)
@@ -22,12 +33,31 @@ import PDF.Object.Parser.StartXRef (startXRefP)
 import PDF.Object.Parser.Trailer (trailerP)
 import PDF.Object.Parser.XRef (xrefP)
 
+{- |
+Parse a run of PDF whitespace characters.
+
+This is used as a separator between top-level objects.
+-}
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)
 
-topObjectP :: Get PDFObject
-topObjectP = eofP <|> commentP <|> indirectObjectP <|> trailerP <|> xrefP <|> startXRefP
+{- |
+Parse one top-level syntactic item.
 
+At the document level, PDF files are modeled here as a sequence of indirect
+objects, trailers, xref tables, comments, and the startxref marker.
+-}
+topObjectP :: Get PDFObject
+topObjectP = eofP
+         <|> commentP
+         <|> indirectObjectP
+         <|> trailerP
+         <|> xrefP
+         <|> startXRefP
+
+{- |
+Parse a whole PDF document as a sequence of top-level objects.
+-}
 pdfRawP :: Get PDFDocument
 pdfRawP = label "pdf" $ topObjectP `dSepBy` whiteSpaces
 
@@ -39,10 +69,10 @@ returning errors.
 -}
 pdfParse
   :: Logging m
-  => ByteString -- ^ The bytestring to parse coming from a file.
-  -> FallibleT m PDFDocument -- ^ Error or a `PDFDocument`.
+  => ByteString
+  -> FallibleT m PDFDocument
 pdfParse source = do
-  sayF NoContext "Parsing PDF file"
+  sayF (Context "pdfParse") "Parsing PDF file"
   case parseDetail pdfRawP source of
     Left  err                      -> throwE (ParseError err)
     Right (""    , _     , result) -> return result

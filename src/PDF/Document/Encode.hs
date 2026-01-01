@@ -1,7 +1,17 @@
+{- |
+Encode a 'PDFDocument' into a PDF file bytestring.
+
+This module contains the high-level PDF encoder used by the application. It
+imports a parsed 'Data.PDF.PDFDocument.PDFDocument' into the working state,
+applies a series of cleanups and optimizations, and finally serializes the
+result into a strict 'ByteString'.
+
+In addition to encoding individual objects, the encoder can generate the cross
+reference information needed by the PDF reader (either as an XRef stream object,
+or by computing offsets for the classic xref table format).
+-}
 module PDF.Document.Encode
-  ( -- * Encoding
-    pdfEncode
-    -- * XRef generation
+  ( pdfEncode
   , calcOffsets
   , encodeObject
   ) where
@@ -61,7 +71,7 @@ import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
   (optimizeOptionalDictionaryEntries)
 import PDF.Document.OptimizeResources (optimizeResources)
--- TODO: import PDF.Document.Resources (updateWithAdditionalResources)
+{- TODO: import PDF.Document.Resources (updateWithAdditionalResources) -}
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
@@ -72,7 +82,8 @@ import PDF.Processing.PDFWork (clean, importObjects, pMapP)
 import System.IO (hSetBuffering, stderr)
 
 import Util.Sequence (mapMaybe)
-{-|
+
+{- |
 Encodes a PDF object and keeps track of its number and length.
 
 Returns an `EncodedObject` which contains the object's number, the length of its
@@ -113,6 +124,9 @@ updateXRefStm trailer xRefStm = do
     >>= setMaybe "Info" mInfo
     >>= setMaybe "ID" mID
 
+{-|
+Merge the contents streams of all pages into a single stream.
+-}
 mergePagesContents :: Logging m => PDFObject -> PDFWork m PDFObject
 mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) = do
   let mType     = getValueForKey "Type"     object
@@ -129,9 +143,13 @@ mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) =
 mergePagesContents object = return object
 
 {-|
-Given a list of PDF objects, generate the PDF file content.
+Encode a 'PDFDocument' into a PDF file.
 
-This function recreates the XRef table in the old format.
+This function imports the provided document into the working state, performs a
+number of normalization and optimization passes, and finally serializes the
+result.
+
+The encoder writes cross-reference information using an XRef stream object.
 
 An error is signaled in the following cases:
 
@@ -140,8 +158,8 @@ An error is signaled in the following cases:
 - no trailer in the list of PDF objects
 -}
 pdfEncode
-  :: PDFDocument -- ^ A collection of PDF objects (order matters)
-  -> PDFWork IO ByteString -- ^ A unified error or a bytestring
+  :: PDFDocument
+  -> PDFWork IO ByteString
 pdfEncode objects = do
   _ <- liftIO $ hSetBuffering stderr LineBuffering
 
@@ -170,11 +188,11 @@ pdfEncode objects = do
 
   clean
 
-  -- Optimize Numbers and resources
+  {- Optimize numbers and resources -}
   optimizeNumbers
   optimizeResources
 
-  -- Find all masks
+  {- Find all masks -}
   sayP "Finding all masks"
   wosMasks <- gets (getAllMasks . toPDFDocument . ppObjectsWithoutStream . wPDF)
   wsMasks <- gets (getAllMasks . toPDFDocument . ppObjectsWithStream . wPDF)
@@ -192,7 +210,7 @@ pdfEncode objects = do
   sayP "Optimizing PDF"
   modifyIndirectObjectsP optimize
 
-  -- TODO: updateWithAdditionalResources
+  {- TODO: updateWithAdditionalResources -}
 
   clean
 
