@@ -12,15 +12,17 @@ module PDF.Processing.FilterCombine.PredZopfli
 
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict
-    ( Entropy (EntropyDeflate, EntropyShannon)
-    , Predictor (PNGOptimum, TIFFPredictor2)
-    , predict
-    )
+  ( Entropy (EntropyDeflate, EntropyShannon)
+  , Predictor (PNGOptimum, TIFFPredictor2)
+  , predict
+  )
+import Codec.Compression.Predict.Entropy (Entropy (EntropySum, EntropyLFS))
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
+import Data.List (minimumBy)
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
 import Data.PDF.PDFObject (PDFObject (PDFName), mkPDFDictionary)
@@ -45,15 +47,17 @@ predZopfli
 predZopfli (Just (width, components)) stream useZopfli = do
   let compressor = getCompressor useZopfli
 
-  compressedS <-
-    predict EntropyShannon PNGOptimum width components stream >>= compressor
+  -- Select entropies based on width.
+  let entropies = if width < 64
+                    then [EntropyShannon, EntropyLFS, EntropySum]
+                    else [EntropyDeflate]
 
-  compressedD <-
-    predict EntropyDeflate PNGOptimum width components stream >>= compressor
-
-  let compressed = if BS.length compressedD < BS.length compressedS
-        then compressedD
-        else compressedS
+  -- Try all entropies and select the best compressed result.
+  compressed <- mapM (\entropy -> 
+                        predict entropy PNGOptimum width components stream
+                        >>= compressor
+                      ) entropies
+                <&> minimumBy (\a b -> BS.length a `compare` BS.length b)
 
   return $ mkFCAppend
     [ Filter
@@ -73,7 +77,7 @@ predZopfli Nothing stream useZopfli =  do
     width      = BS.length stream
     components = 1 :: Int
 
-  predict EntropyShannon
+  predict EntropyDeflate
           TIFFPredictor2
           width
           components

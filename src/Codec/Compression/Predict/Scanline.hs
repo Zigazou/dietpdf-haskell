@@ -27,25 +27,27 @@ module Codec.Compression.Predict.Scanline
 
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict.Entropy
-    ( Entropy (EntropyDeflate, EntropyRLE, EntropyShannon)
-    , entropyShannon
-    )
+  ( Entropy (EntropyDeflate, EntropyLFS, EntropyRLE, EntropyShannon, EntropySum)
+  , entropyLFS
+  , entropyShannon
+  , entropySum
+  )
 import Codec.Compression.Predict.Predictor
-    ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction)
-    , PredictorFunc
-    , Samples (Samples)
-    , decodeRowPredictor
-    , getPredictorFunction
-    , getUnpredictorFunction
-    , isPNGGroup
-    )
+  ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction)
+  , PredictorFunc
+  , Samples (Samples)
+  , decodeRowPredictor
+  , getPredictorFunction
+  , getUnpredictorFunction
+  , isPNGGroup
+  )
 import Codec.Compression.RunLength qualified as RLE
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Kind (Type)
-import Data.List (minimumBy)
+import Data.List (maximumBy, minimumBy)
 import Data.Maybe (fromMaybe)
 import Data.Word (Word8)
 
@@ -80,19 +82,22 @@ scanlineEntropy EntropyShannon = entropyShannon . groupComponents . slStream
 scanlineEntropy EntropyDeflate =
   FL.entropyCompress . groupComponents . slStream
 scanlineEntropy EntropyRLE = RLE.entropyCompress . groupComponents . slStream
+scanlineEntropy EntropySum = entropySum . groupComponents . slStream
+scanlineEntropy EntropyLFS = entropyLFS . groupComponents . slStream
 
 {-|
 Given a `Predictor` and 2 consecutive `Scanline`, encode the last `Scanline`.
 -}
 applyPredictorToScanline :: Entropy -> Predictor -> (Scanline, Scanline) -> Scanline
 applyPredictorToScanline entropy PNGOptimum scanlines =
-  let allPredicted =
+  let comparator = if entropy == EntropyLFS then maximumBy else minimumBy
+      allPredicted =
         applyPredictorToScanline
           <$> [entropy]
           <*> [PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth]
           <*> [scanlines]
       entropies = ((,) =<< scanlineEntropy entropy) <$> allPredicted
-  in  snd $ minimumBy ((. fst) . compare . fst) entropies
+  in  snd $ comparator ((. fst) . compare . fst) entropies
 
 applyPredictorToScanline _ predictor (Scanline _ prior, Scanline _ current) = Scanline
   { slPredictor = Just predictor
