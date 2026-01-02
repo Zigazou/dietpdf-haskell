@@ -16,6 +16,16 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
 
+{-|
+TrueType and OpenType font table identifiers.
+
+Enumerates all standard table types defined by Apple TrueType and Microsoft
+OpenType specifications. Each constructor represents a 4-byte tag identifying
+a specific font table. Tables marked as required are essential for valid fonts;
+optional tables enhance functionality or support advanced features.
+
+See module documentation for specification references.
+-}
 type TableIdentifier :: Type
 data TableIdentifier
   = OTTAccentAttachment               -- ^ 'acnt' (optional)
@@ -62,7 +72,7 @@ data TableIdentifier
   | OTTExtendedKerning                -- ^ 'kerx' (optional)
   | OTTLigatureCaret                  -- ^ 'lcar' (optional)
   | RTTIndexToLocation                -- ^ 'loca' (required)
-  | OTTLanguageTags                   -- ^ 'ltag' (optiional)
+  | OTTLanguageTags                   -- ^ 'ltag' (optional)
   | OOTLinearThreshold                -- ^ 'LTSH' (optional)
   | OOTMathematicalTypesetting        -- ^ 'MATH' (optional)
   | RTTMaximumProfile                 -- ^ 'maxp' (required)
@@ -92,6 +102,12 @@ data TableIdentifier
   | OUnknownIdentifier ByteString
   deriving stock (Eq, Show)
 
+{-|
+Convert a table identifier to its 4-byte tag.
+
+Inverse of 'toTableIdentifier'. Returns the standard ASCII tag for recognized
+table types, or the original 4-byte identifier for 'OUnknownIdentifier' values.
+-}
 fromTableIdentifier :: TableIdentifier -> ByteString
 fromTableIdentifier OTTAccentAttachment             = "acnt"
 fromTableIdentifier OTTAnchorPointTable             = "ankr"
@@ -166,6 +182,13 @@ fromTableIdentifier OTTCrossReference               = "xref"
 fromTableIdentifier OTTGlyphsInformation            = "Zapf"
 fromTableIdentifier (OUnknownIdentifier identifier) = BS.take 4 identifier
 
+{-|
+Convert a 4-byte tag to a table identifier.
+
+Maps standard font table tags (e.g., "head", "glyf", "cmap", "GPOS") to their
+corresponding 'TableIdentifier' constructors. Unrecognized tags are wrapped
+in 'OUnknownIdentifier'.
+-}
 toTableIdentifier :: ByteString -> TableIdentifier
 toTableIdentifier "acnt"     = OTTAccentAttachment
 toTableIdentifier "ankr"     = OTTAnchorPointTable

@@ -1,24 +1,24 @@
 {-|
 This module handles Ascii85 streams.
 
-The ASCII base-85 encoding shall use the ASCII characters ! through u
-((21h) - (75h)) and the character z (7Ah), with the 2-character sequence ~>
-(7Eh)(3Eh) as its EOD marker.
+The ASCII base-85 encoding shall use the ASCII characters ! through u ((21h) -
+(75h)) and the character z (7Ah), with the 2-character sequence ~> (7Eh)(3Eh) as
+its EOD marker.
 
 All white-space characters are ignored.
 
 Any other characters, and any character sequences that represent impossible
 combinations in the ASCII base-85 encoding shall cause an error.
 
-Specifically, ASCII base-85 encoding shall produce 5 ASCII characters for
-every 4 bytes of binary data. Each group of 4 binary input bytes,
-shall be converted to a group of 5 output bytes.
+Specifically, ASCII base-85 encoding shall produce 5 ASCII characters for every
+4 bytes of binary data. Each group of 4 binary input bytes, shall be converted
+to a group of 5 output bytes.
 
 4 bytes of binary data shall be interpreted as a base-256 number and then shall
 be converted to a base-85 number.
 
-The five bytes of the base-85 number shall then be converted to ASCII
-characters by adding 33 (the ASCII code for the character ! ) to each.
+The five bytes of the base-85 number shall then be converted to ASCII characters
+by adding 33 (the ASCII code for the character ! ) to each.
 
 The resulting encoded data shall contain only printable ASCII characters with
 codes in the range 33 (!) to 117 (u). As a special case, if all five bytes are
@@ -31,8 +31,8 @@ characters.
 
 Given n (1, 2, or 3) bytes of binary data, the encoder shall first append 4-n
 zero bytes to make a complete group of 4. It shall encode this group in the
-usual way, but shall not apply the special z case. Finally, it shall write
-only the first n + 1 characters of the resulting group of 5.
+usual way, but shall not apply the special z case. Finally, it shall write only
+the first n + 1 characters of the resulting group of 5.
 
 These characters shall be immediately followed by the ~> EOD marker.
 
@@ -76,25 +76,46 @@ import Util.Ascii
     , asciiTILDE
     )
 
+{-|
+Parser for the special 'z' shorthand representing four zero bytes.
+
+Skips leading whitespace, consumes a single 'z', and returns "\x00\x00\x00\x00".
+-}
 specialZeroP :: Get ByteString
 specialZeroP = label "specialzero" $ do
   skipMany (satisfy isWhiteSpace)
   word8 asciiLOWERZ
   return "\x00\x00\x00\x00"
 
+{-|
+Predicate for valid ASCII85 digit characters (from '!' to 'u').
+-}
 isAscii85Digit :: Word8 -> Bool
 isAscii85Digit byte = byte >= asciiEXCLAMATIONMARK && byte <= asciiLOWERU
 
+{-|
+Parser for a single ASCII85 digit, skipping leading whitespace.
+-}
 a85digitP :: Get Word8
 a85digitP = label "a85digit" $ do
   skipMany (satisfy isWhiteSpace)
   satisfy isAscii85Digit
 
+{-|
+Convert a non-negative integer to a fixed-width list of digits in a given base.
+
+The result has the requested width; higher-order digits are produced first.
+-}
 baseN :: Int -> Int -> Int -> [Int]
 baseN 0 _ _ = []
 baseN width base value =
   let (q, r) = divMod value base in baseN (width - 1) base q ++ [r]
 
+{-|
+Convert four base-256 bytes to five ASCII85 characters.
+
+Outputs the ASCII85-encoded group (without handling the 'z' special case).
+-}
 base256ToBase85 :: Word8 -> Word8 -> Word8 -> Word8 -> Get ByteString
 base256ToBase85 b1 b2 b3 b4 =
   label "base256tobase85"
@@ -108,6 +129,11 @@ base256ToBase85 b1 b2 b3 b4 =
           . fmap ((+ asciiEXCLAMATIONMARK) . fromIntegral)
           $ baseN 5 85 c
 
+{-|
+Convert five ASCII85 characters to four base-256 bytes.
+
+Fails if the computed 32-bit value exceeds @2^32 - 1@.
+-}
 base85ToBase256
   :: Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Get ByteString
 base85ToBase256 c1 c2 c3 c4 c5 =
@@ -122,6 +148,9 @@ base85ToBase256 c1 c2 c3 c4 c5 =
             then fail "Value too big for ASCII85"
             else return . BS.pack . fmap fromIntegral $ baseN 4 256 b
 
+{-|
+Parse five ASCII85 digits and decode to four bytes.
+-}
 fiveAscii85DigitsP :: Get ByteString
 fiveAscii85DigitsP = label "fiveascii85digits" $ do
   c1 <- a85digitP
@@ -131,6 +160,9 @@ fiveAscii85DigitsP = label "fiveascii85digits" $ do
   c5 <- a85digitP
   base85ToBase256 c1 c2 c3 c4 c5
 
+{-|
+Parse four ASCII85 digits and decode to three bytes.
+-}
 fourAscii85DigitsP :: Get ByteString
 fourAscii85DigitsP = label "fourascii85digits" $ do
   c1 <- a85digitP
@@ -139,6 +171,9 @@ fourAscii85DigitsP = label "fourascii85digits" $ do
   c4 <- a85digitP
   BS.take 3 <$> base85ToBase256 c1 c2 c3 c4 0
 
+{-|
+Parse three ASCII85 digits and decode to two bytes.
+-}
 threeAscii85DigitsP :: Get ByteString
 threeAscii85DigitsP = label "threeascii85digits" $ do
   c1 <- a85digitP
@@ -146,12 +181,18 @@ threeAscii85DigitsP = label "threeascii85digits" $ do
   c3 <- a85digitP
   BS.take 2 <$> base85ToBase256 c1 c2 c3 0 0
 
+{-|
+Parse two ASCII85 digits and decode to one byte.
+-}
 twoAscii85DigitsP :: Get ByteString
 twoAscii85DigitsP = label "twoascii85digits" $ do
   c1 <- a85digitP
   c2 <- a85digitP
   BS.take 1 <$> base85ToBase256 c1 c2 0 0 0
 
+{-|
+Parse one group of ASCII85 digits (2..5 chars), handling partial final groups.
+-}
 ascii85GroupP :: Get ByteString
 ascii85GroupP =
   label "ascii85group"
@@ -160,12 +201,20 @@ ascii85GroupP =
     <|> threeAscii85DigitsP
     <|> twoAscii85DigitsP
 
+{-|
+Parse the end-of-data marker for ASCII85: the sequence "~>".
+-}
 endOfDataMarkerP :: Get ()
 endOfDataMarkerP = label "endofdatamarker" $ do
   skipMany (satisfy isWhiteSpace)
   word8 asciiTILDE
   word8 asciiGREATERTHANSIGN
 
+{-|
+Complete ASCII85 decoder parser: groups followed by the EOD marker.
+
+Skips whitespace between groups; returns the decoded bytes.
+-}
 decodeAscii85P :: Get ByteString
 decodeAscii85P = label "ascii85" $ do
   values <- many' (specialZeroP <|> ascii85GroupP)
@@ -185,7 +234,7 @@ Right "\x00\x00\x00\x00"
 On invalid input, returns 'InvalidAscii85Stream'.
 -}
 decode
-  :: ByteString -- ^ Data to encode
+  :: ByteString -- ^ Data to decode
   -> Fallible ByteString
   -- ^ An `InvalidAscii85Stream` is returned if the stream is not valid
 decode stream =

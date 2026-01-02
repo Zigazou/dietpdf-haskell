@@ -1,4 +1,8 @@
--- | Optimize a PDF file using PDFToCairo.
+{-|
+Optimize PDF files using PDFToCairo.
+
+Provides PDF optimization via the `pdftocairo` command-line tool.
+-}
 module External.PDFToCairoOptimize (pdfToCairoOptimize) where
 
 import Data.Context (Contextual (ctx))

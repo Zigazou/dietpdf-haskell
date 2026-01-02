@@ -1,3 +1,10 @@
+{-|
+TrueType font table structures and serialization.
+
+Defines the structure of TrueType font tables including the head (font header)
+table with metadata such as version, timestamps, and bounding boxes. Provides
+utilities for serializing these structures back to binary format.
+-}
 module Font.TrueType.FontTable
   ( FontTable(FTRaw, FTHead)
   , Head
@@ -38,10 +45,16 @@ import Data.Int (Int16, Int64)
 import Data.Kind (Type)
 import Data.Word (Word16, Word32)
 
+{-|
+Fixed-point number in 16.16 format.
+-}
 type Fixed :: Type
 data Fixed = Fixed Word16 Word16
   deriving stock (Eq, Show)
 
+{-|
+TrueType font header.
+-}
 type Head :: Type
 data Head = Head
   { -- | Version, 0x00010000 if (version 1.0)
@@ -84,9 +97,21 @@ data Head = Head
   }
   deriving stock (Eq, Show)
 
+{-|
+Serialize a Fixed-point number to binary (16.16 format).
+
+Writes two 16-bit big-endian words representing the integer and fractional
+parts.
+-}
 putFixed :: Fixed -> PutM ()
 putFixed (Fixed ah al) = putWord16be ah >> putWord16be al
 
+{-|
+Serialize a Head table record to binary bytes.
+
+Converts all fields of a 'Head' record into the binary format specified by the
+TrueType font specification, returning a strict ByteString.
+-}
 fromHead :: Head -> ByteString
 fromHead fontHead = BSL.toStrict $ runPut $ do
   putFixed (hVersion fontHead)
@@ -107,6 +132,9 @@ fromHead fontHead = BSL.toStrict $ runPut $ do
   putInt16be (hIndexToLocFormat fontHead)
   putInt16be (hGlyphDataFormat fontHead)
 
+{-|
+TrueType font table representation.
+-}
 type FontTable :: Type
 data FontTable
   = FTRaw ByteString

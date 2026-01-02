@@ -1,3 +1,10 @@
+{-|
+Parse TrueType font files from binary data.
+
+Provides binary parsing for TrueType font directories and their constituent
+table entries, with validation of scaler types and lazy loading of table
+contents.
+-}
 module Font.TrueType.Parser.Font
   ( ttfParse
   , fontDirectoryP
@@ -24,14 +31,32 @@ import Font.TrueType.Parser.ScalerType (scalerTypeP)
 import Font.TrueType.Parser.TableIdentifier (tableIdentifierP)
 import Font.TrueType.ScalerType (isUnknown)
 
+{-|
+Parse a TrueType font offset subtable.
+
+Reads the offset subtable header containing the scaler type, number of tables,
+and search parameters for the table directory.
+-}
 offsetSubtableP :: Get OffsetSubtable
 offsetSubtableP =
   OffsetSubtable <$> scalerTypeP <*> get <*> get <*> get <*> get
 
+{-|
+Parse a single font table entry from the directory.
+
+Reads the table identifier, checksum, offset, and length. Table content is
+initialized as empty and loaded later via 'loadContent'.
+-}
 tableEntryP :: Get TableEntry
 tableEntryP =
   TableEntry <$> tableIdentifierP <*> get <*> get <*> get <*> pure (FTRaw "")
 
+{-|
+Recursively parse n table entries from the font directory.
+
+Fails if @n@ is 0 (at least one table entry is required). Returns a sequence of
+'TableEntry' values.
+-}
 readNTableEntry :: Int -> Get (Array TableEntry)
 readNTableEntry 0 = fail ""
 readNTableEntry n = do
@@ -42,6 +67,12 @@ readNTableEntry n = do
       entries <- readNTableEntry (n - 1)
       return (entry SQ.:<| entries)
 
+{-|
+Parse a complete TrueType font directory.
+
+Reads the offset subtable and all table entries, validating that the scaler type
+is recognized. Fails if the scaler type is unknown or invalid.
+-}
 fontDirectoryP :: Get FontDirectory
 fontDirectoryP = label "fontDirectory" $ do
   subtable <- offsetSubtableP
@@ -50,7 +81,14 @@ fontDirectoryP = label "fontDirectory" $ do
   return $ FontDirectory subtable entries
 
 {-|
-Parses a True Type font file from a bytestring.
+Parse a TrueType font file from raw binary data.
+
+Decodes the font directory structure and lazily loads table contents from the
+binary stream. Returns the fully populated 'FontDirectory' or an error if
+parsing fails or the scaler type is unrecognized.
+
+@ByteString@: Complete font file data read from disk @Fallible FontDirectory@:
+Parsed directory with all tables loaded, or an error
 -}
 ttfParse
   :: ByteString -- ^ The bytestring to parse coming from a file.

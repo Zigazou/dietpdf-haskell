@@ -1,3 +1,10 @@
+{-|
+Parse the TrueType "head" (font header) table.
+
+The head table contains essential font metadata including version information,
+creation and modification dates, bounding box coordinates, units per em, and
+formatting flags.
+-}
 module Font.TrueType.Parser.Head
   ( headP
   ) where
@@ -11,9 +18,21 @@ import Font.TrueType.FontTable
     , Head (Head, hCheckSumAdjustment, hCreated, hFlags, hFontDirectionHint, hFontRevision, hGlyphDataFormat, hIndexToLocFormat, hLowestRecPPEM, hMacStyle, hMagicNumber, hModified, hUnitsPerEm, hVersion, hXMax, hXMin, hYMax, hYMin)
     )
 
+{-|
+Parse a Fixed-point number (16.16 format).
+
+Reads two 16-bit big-endian words representing the integer and fractional parts.
+-}
 getFixed :: Get Fixed
 getFixed = Fixed <$> getWord16be <*> getWord16be
 
+{-|
+Parse a complete TrueType head table.
+
+Reads all fields of the font header including version, revision, timestamps,
+bounding box, and format hints. Validates the magic number (0x5F0F3CF5). Returns
+a 'Head' record with all fields populated.
+-}
 headP :: Get Head
 headP = do
   version            <- getFixed

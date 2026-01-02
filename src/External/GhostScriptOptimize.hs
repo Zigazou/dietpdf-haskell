@@ -1,4 +1,10 @@
--- | Optimize a PDF file using GhostScript.
+{-|
+Optimize a PDF file using GhostScript.
+
+This module provides a function to optimize PDF files by invoking the
+GhostScript command-line tool with a set of predefined options aimed at reducing
+file size while maintaining quality.
+-}
 module External.GhostScriptOptimize (ghostScriptOptimize) where
 
 import Data.Context (Contextual (ctx))

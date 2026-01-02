@@ -1,3 +1,9 @@
+{-|
+Convert bitmap images to JPEG 2000 format.
+
+Provides lossless JPEG2000 encoding via the Grok (`grk_compress`) command-line
+tool, with support for CMYK and other color spaces.
+-}
 module External.TiffToJpeg2k (tiffToJpeg2k) where
 
 import Data.ByteString (ByteString)
@@ -12,7 +18,16 @@ import Util.SimpleTiff (simpleTiff)
 Converts a bitmap image to a lossless JPEG 2000 image using Grok because it
 supports CMYK JPEG 2000.
 
-This function is a wrapper around the `grk_compress` command-line tool.
+Encodes the input raw bitmap data as TIFF (via 'simpleTiff') then converts to
+JPEG2000 using Grok `grk_compress`, which supports CMYK and other color spaces.
+
+- @Maybe Int@: Optional quality level (0–100). 'Nothing' encodes losslessly;
+'Just q' applies lossy compression at the given quality.
+- @Int@: Image width in pixels
+- @Int@: Image height in pixels
+- @ColorSpace@: Color space of the input (determines TIFF photometric
+  interpretation)
+- @ByteString@: Raw bitmap data
 -}
 tiffToJpeg2k
   :: Maybe Int

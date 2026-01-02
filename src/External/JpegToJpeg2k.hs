@@ -1,3 +1,10 @@
+{-|
+Convert JPEG images to JPEG 2000 format.
+
+Provides lossy JPEG-to-JPEG2000 conversion via the Grok (`grk_compress`)
+command-line tool. Special handling is applied for CMYK color space using
+ImageMagick to preserve color information.
+-}
 module External.JpegToJpeg2k (jpegToJpeg2k) where
 
 import Data.ByteString (ByteString)
@@ -7,6 +14,13 @@ import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommandBuf'')
 
+{-|
+Extract the number of color components from a JPEG image.
+
+Searches for JPEG SOF (Start of Frame) markers (0xFFC0 or 0xFFC2) and reads the
+component count from byte 9 of the marker segment. Defaults to 3 (RGB) if no
+valid marker is found.
+-}
 getJpegComponents :: ByteString -> Int
 getJpegComponents jpegImage =
   let ffc0 = indices "\xff\xc0" jpegImage

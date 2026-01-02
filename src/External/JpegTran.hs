@@ -1,4 +1,9 @@
--- | Optimize a JPG file using JpegTran.
+{-|
+Optimize JPEG files using JpegTran.
+
+Provides JPEG optimization via the `jpegtran` command-line tool, comparing and
+selecting between progressive and baseline encoding modes.
+-}
 module External.JpegTran (jpegtranOptimize) where
 
 import Codec.Compression.Flate (fastCompress)
@@ -12,13 +17,12 @@ import External.ExternalCommand (externalCommandBuf)
 {-|
 Optimize a JPG file using `jpegtran`.
 
-This function is a wrapper around the `jpegtran` command-line tool. It
-optimizes the input JPG file by removing all metadata and optimizing the
-compression.
+This function is a wrapper around the `jpegtran` command-line tool. It optimizes
+the input JPG file by removing all metadata and optimizing the compression.
 
-To find the better optimization, this function runs `jpegtran` twice: once
-with the `-progressive` flag and once without it. It then compares the
-compressed sizes of the two outputs and returns the smaller one.
+To find the better optimization, this function runs `jpegtran` twice: once with
+the `-progressive` flag and once without it. It then compares the compressed
+sizes of the two outputs and returns the smaller one.
 -}
 jpegtranOptimize :: ByteString -> FallibleT IO ByteString
 jpegtranOptimize input = do

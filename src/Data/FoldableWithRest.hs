@@ -1,3 +1,11 @@
+{-|
+FoldableWithRest typeclass for folding with access to the rest of the structure.
+
+This module defines the 'FoldableWithRest' typeclass, which provides methods to
+fold over data structures while having access to the remaining elements in the
+structure. This is useful for scenarios where the folding function needs context
+about the rest of the data.
+-}
 module Data.FoldableWithRest
   ( FoldableWithRest (foldWithRest, foldMWithRest)
   )

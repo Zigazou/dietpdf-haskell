@@ -12,12 +12,12 @@ import Data.Kind (Type)
 The type of error that can occur during PDF processing.
 -}
 type ErrorType :: Type
-data ErrorType = ReadingError
-               | WritingError
-               | ParsingError
-               | EncodingError
-               | StructureError
-               | UnsupportedError
+data ErrorType = ReadingError     -- ^ Error while reading a PDF file.
+               | WritingError     -- ^ Error while writing a PDF file.
+               | ParsingError     -- ^ Error while parsing PDF objects.
+               | EncodingError    -- ^ Error while encoding PDF objects.
+               | StructureError   -- ^ Error in the PDF document structure.
+               | UnsupportedError -- ^ Use of an unsupported PDF feature.
                deriving stock Eq
 
 instance Show ErrorType where

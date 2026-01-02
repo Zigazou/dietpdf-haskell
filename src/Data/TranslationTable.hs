@@ -1,3 +1,9 @@
+{-|
+Translation tables for renaming values with generation and lookup utilities.
+
+Provides mapping construction, value translation, and semantic operations such
+as renaming based on a generation function while prioritizing shorter names.
+-}
 module Data.TranslationTable
   ( TranslationTable
   , mkTranslationTable
@@ -22,25 +28,37 @@ import Data.Map qualified as Map
 import Data.Maybe (fromMaybe)
 
 {-|
-A translation table is a map from values to values.
+Translation table: a bidirectional mapping from values to values.
+
+Used to store renamed or transformed mappings of elements, typically for
+compression or canonicalization.
 -}
 type TranslationTable :: Type -> Type
 type TranslationTable a = Map a a
 
 {-|
-Create a translation table from a list of pairs.
+Create a translation table from a list of key-value pairs.
+
+Entries are inserted into the underlying 'Map'; later duplicates override
+earlier ones.
 -}
 mkTranslationTable :: Ord a => [(a, a)] -> TranslationTable a
 mkTranslationTable = fromList
 
 {-|
-Convert a value using a translation table.
+Translate a value using the given table.
 
-If the value is not in the table, it returns the original value.
+If the value appears as a key in the table, its corresponding value is returned.
+Otherwise, the original value is returned unchanged.
 -}
 convert :: Ord a => TranslationTable a -> a -> a
 convert table value = fromMaybe value (Map.lookup value table)
 
+{-|
+Comparison function that orders by length first, then by value.
+
+Used to sort containers so shorter ones are prioritized for renaming/indexing.
+-}
 shortFirst :: (Ord a, HasLength a) => a -> a -> Ordering
 shortFirst x y | xLength /= yLength = compare xLength yLength
                | otherwise          = compare x y
@@ -49,10 +67,11 @@ shortFirst x y | xLength /= yLength = compare xLength yLength
   yLength = objectLength y
 
 {-|
-Rename a list of strings.
-The corresponding `Map` is returned.
+Generate a translation table by renaming elements, starting from index 0.
 
-Shortest strings are renamed first, giving them the shortest name.
+Removes duplicates and sorts by length (shortest first) to assign optimal
+names. The generator function takes an element and an index and produces its
+renamed form.
 -}
 getTranslationTable
   :: (Ord a, HasLength a, Foldable t)
@@ -62,10 +81,11 @@ getTranslationTable
 getTranslationTable = getTranslationTableFrom 0
 
 {-|
-Rename a list of strings.
-The corresponding `Map` is returned.
+Generate a translation table by renaming elements, starting from a custom index.
 
-Shortest strings are renamed first, giving them the shortest name.
+Removes duplicates and sorts by length (shortest first) to assign optimal names.
+The generator function takes an element and its 0-based index (offset by 'from')
+and produces its renamed form.
 -}
 getTranslationTableFrom
   :: (Ord a, HasLength a, Foldable t)
@@ -77,11 +97,17 @@ getTranslationTableFrom from generator names =
   let terms = (sortBy shortFirst . nubOrd . toList) names
   in mkTranslationTable $ zipWith (liftM2 (.) (,) generator) terms [from..]
 
+{-|
+Check whether a value is a key in the translation table.
+-}
 hasTerm :: Ord a => TranslationTable a -> a -> Bool
 hasTerm = flip Map.member
 
 {-|
-Merge two translation tables.
+Combine two translation tables using left-biased union.
+
+If both tables contain a mapping for the same key, the mapping from the first
+table is retained.
 -}
 mergeTranslationTables
   :: Ord a
@@ -91,7 +117,9 @@ mergeTranslationTables
 mergeTranslationTables = Map.union
 
 {-|
-Get the next free index in a translation table.
+Return the number of entries in the translation table.
+
+Useful for determining the next available index when generating new names.
 -}
 nextFreeIndex :: TranslationTable a -> Int
 nextFreeIndex = Map.size

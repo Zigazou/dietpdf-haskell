@@ -1,3 +1,10 @@
+{-|
+TrueType font directory and table structures.
+
+Defines the font directory structure containing offset subtables and table
+entries, with utilities for loading table content and computing checksums
+for validation.
+-}
 module Font.TrueType.FontDirectory
   ( TableDirectory
   , FontDirectory(FontDirectory, fdOffsetSubtable, fdTableDirectory)
@@ -33,6 +40,12 @@ import Font.TrueType.Parser.Head (headP)
 import Font.TrueType.ScalerType (ScalerType)
 import Font.TrueType.TableIdentifier (TableIdentifier (RTTFontHeader))
 
+{-|
+Compute the checksum of raw binary data.
+
+Sums all 32-bit big-endian words in the byte string, handling any trailing
+bytes less than 4 bytes by left-padding with zeros. Returns the total sum.
+-}
 calcChecksum :: ByteString -> Word32
 calcChecksum raw =
   foldr (+) lastValue . fromRight [] . parseOnly (many' getWord32be) $ raw
@@ -49,6 +62,9 @@ calcChecksum raw =
           + (fromIntegral c `shiftL` 8)
       _anyError -> 0
 
+{-|
+Offset subtable header for a TrueType font.
+-}
 type OffsetSubtable :: Type
 data OffsetSubtable = OffsetSubtable
   { osScalerType    :: ScalerType -- ^ Scaler to be used to rasterize this font
@@ -59,6 +75,9 @@ data OffsetSubtable = OffsetSubtable
   }
   deriving stock (Eq, Show)
 
+{-|
+Font table entry in the TrueType font directory.
+-}
 type TableEntry :: Type
 data TableEntry = TableEntry
   { teTag      :: TableIdentifier -- ^ 4-byte identifier
@@ -69,11 +88,24 @@ data TableEntry = TableEntry
   }
   deriving stock (Eq, Show)
 
+{-|
+Extract raw table data from a font file.
+
+Extracts exactly @teLength@ bytes starting at @teOffset@ from the font
+bytestring for the given table entry.
+-}
 getBytes :: ByteString -> TableEntry -> ByteString
 getBytes bytes entry = BS.take
   (fromIntegral $ teLength entry)
   (BS.drop (fromIntegral $ teOffset entry) bytes)
 
+{-|
+Load and parse table content from font bytes.
+
+Extracts raw bytes for a table entry and attempts to parse them according to
+the table type. The head (font header) table is parsed into a structured format;
+all other tables remain as raw 'FTRaw' data.
+-}
 loadContent :: ByteString -> TableEntry -> TableEntry
 loadContent bytes entry@TableEntry { teTag = RTTFontHeader } =
   let raw = getBytes bytes entry
@@ -82,6 +114,12 @@ loadContent bytes entry@TableEntry { teTag = RTTFontHeader } =
         Right teHead -> entry { teData = FTHead teHead }
 loadContent bytes entry = entry { teData = FTRaw (getBytes bytes entry) }
 
+{-|
+Compute the checksum of a table entry.
+
+Calculates the 32-bit checksum of the table data. For head tables, the
+checksum is computed with 'hCheckSumAdjustment' set to 0 before calculation.
+-}
 calcTableChecksum :: TableEntry -> Word32
 calcTableChecksum TableEntry { teData = FTRaw raw } = calcChecksum raw
 calcTableChecksum TableEntry { teData = FTHead fontHead } =
