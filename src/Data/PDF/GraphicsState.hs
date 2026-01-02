@@ -141,7 +141,7 @@ rendering/output after taking scaling into account.
 Precondition: the scale should be strictly positive.
 -}
 usefulMatrixPrecisionFor :: Double -> Int
-usefulMatrixPrecisionFor scale = max 0 (6 - floor (logBase 10 (abs scale)))
+usefulMatrixPrecisionFor scale = max 0 (5 - floor (logBase 10 (abs scale)))
 
 {-|
 Heuristic precision for coordinates in the current graphics state.
