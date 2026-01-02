@@ -1,3 +1,9 @@
+{-|
+Generic optimization for graphics stream commands.
+
+Provides category-based optimization that applies appropriate precision
+reduction depending on command type (path, text, clipping, etc.).
+-}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGeneric
   ( optimizeGeneric
   ) where
@@ -19,8 +25,19 @@ import Data.PDF.Program (Program)
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 {-|
-The 'optimizeGeneric' function takes a 'GraphicsState' and a 'Command' and
-returns an optimized 'Command'.
+Optimize a graphics command based on its category.
+
+Applies precision reduction appropriate to the command's operator category:
+
+* __Graphics State__: No optimization (kept as-is)
+* __Path Construction, Painting, Clipping__: Reduced graphics precision
+* __Text State, Type3 Font, Text Positioning, Text Showing__: Reduced text
+  precision
+* __Color Operations__: No optimization (handled separately)
+* __Other__: Reduced graphics precision
+
+Precision values are obtained from interpreter settings and applied via
+'optimizeParameters'.
 -}
 optimizeGeneric
   :: Command

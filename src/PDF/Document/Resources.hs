@@ -1,3 +1,10 @@
+{-|
+Manage PDF resource dictionaries and names.
+
+Provides utilities for extracting resource names and dictionaries from PDF
+objects, merging resources, and updating documents with additional resources
+such as graphics states created during optimization.
+-}
 module PDF.Document.Resources
   ( getAllResourceNames
   , updateWithAdditionalResources
@@ -41,6 +48,13 @@ import PDF.Object.Object.Properties (getValueForKey)
 import Util.Dictionary (Dictionary, dictHasKey)
 
 
+{-|
+Extract resource names of a specific type from a PDF object.
+
+Looks for a dictionary stored under the given key (e.g., "Font", "XObject",
+"ColorSpace") and returns all dictionary keys wrapped as resources. Returns an
+empty set if the key is absent or the value is not a dictionary.
+-}
 getResourceKeys
   :: Logging m
   => ByteString
@@ -56,6 +70,13 @@ getResourceKeys key object =
       return $ createSet (toResource key <$> Map.keys dict)
     _notFound -> return mempty
 
+{-|
+Extract all resource names from a resource dictionary.
+
+Searches for standard resource types (ColorSpace, Font, XObject, ExtGState,
+Properties, Pattern, Shading, ProcSet) and returns the union of all resource
+names found in each section.
+-}
 getResourceKeysFromDictionary
   :: Logging m
   => PDFObject
@@ -80,6 +101,13 @@ getResourceKeysFromDictionary dictionary = do
           <> sProcSet
           )
 
+{-|
+Accumulate resource names from a PDF object.
+
+Looks for a "Resources" entry in the object, loads the resource dictionary, and
+extracts all resource names. Merges them with the provided resource set. Returns
+the input set unchanged if no "Resources" entry is found.
+-}
 getResourceNames
   :: Logging m
   => Set Resource
@@ -93,9 +121,11 @@ getResourceNames resources object = case getValueForKey "Resources" object of
   _notFound -> return resources
 
 {-|
-Finds all resource names in a collection of PDF objects.
+Find all resource names in the entire PDF document.
 
-Resources are typically stored in a dictionary object with a "Resources" key.
+Searches both objects with and without streams, collecting all resource names
+from entries with a "Resources" key. Returns the union of all resource names
+across the document.
 -}
 getAllResourceNames :: Logging m => PDFWork m (Set Resource)
 getAllResourceNames = do
@@ -112,6 +142,13 @@ getAllResourceNames = do
 
   return (wosResources <> wsResources)
 
+{-|
+Extract all resource dictionaries from the PDF document.
+
+Collects and merges all resource dictionaries from objects in both streams and
+non-stream sections. Returns a single unified resource dictionary mapping
+resource types to their component dictionaries.
+-}
 getAllResources :: Logging m => PDFWork m (Dictionary ResourceDictionary)
 getAllResources = do
   wosObjects <- gets (toPDFDocument . ppObjectsWithoutStream . wPDF)
@@ -140,6 +177,12 @@ getAllResources = do
       return (mergeResourceDictionaries resources newResources)
     _notFound  -> return resources
 
+{-|
+Create a new resource object with additional graphics states.
+
+Merges the current document resources with any new graphics states that were
+generated during optimization. Returns a reference to the new resource object.
+-}
 createResources :: Logging m => PDFWork m PDFObject
 createResources = do
   currentResources <- getAllResources
@@ -152,6 +195,13 @@ createResources = do
   major <- putNewObject (PDFIndirectObject 0 0 (resourceDictionariesToPDFObject newResources))
   return (PDFReference major 0)
 
+{-|
+Update the Resources entry in an indirect object's dictionary.
+
+If the object is an indirect object with a dictionary containing a "Resources"
+key, replaces the resources with the new resource object. Otherwise, returns the
+object unchanged.
+-}
 modifyResources :: Monad m => PDFObject -> PDFObject -> PDFWork m PDFObject
 modifyResources newResources object@(PDFIndirectObject major minor (PDFDictionary dictionary)) =
   if dictHasKey "Resources" dictionary
@@ -162,6 +212,14 @@ modifyResources newResources object@(PDFIndirectObject major minor (PDFDictionar
       return object
 modifyResources _newResources object = return object
 
+{-|
+Update all objects in the document with additional resources.
+
+Creates a merged resource dictionary that combines existing resources with any
+new graphics states or other resources generated during optimization. Updates
+all indirect objects with the new resources and clears the temporary additional
+graphics states store.
+-}
 updateWithAdditionalResources :: Logging IO => PDFWork IO ()
 updateWithAdditionalResources = do
   newResources <- createResources

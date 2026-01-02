@@ -1,3 +1,10 @@
+{-|
+Optimize graphics color commands in PDF streams.
+
+Provides utilities for eliminating redundant color-setting commands by tracking
+color state and detecting unchanged colors. Also optimizes color representations
+to use more efficient color spaces when possible.
+-}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand
   ( optimizeColorCommand
   ) where
@@ -25,6 +32,13 @@ import Data.Sequence (Seq (Empty, (:<|)))
 import PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
   (mkColor, mkNonStrokeCommand, mkStrokeCommand, optimizeColor)
 
+{-|
+Optimize a stroke color command by eliminating redundancy.
+
+Parses the color command and extracts its color value. If the new color matches
+the current stroke color in graphics state, deletes the command. Otherwise,
+updates state and replaces the command with an optimized version.
+-}
 strokeDeleteIfNoChange
   :: Command
   -> State InterpreterState InterpreterAction
@@ -38,6 +52,13 @@ strokeDeleteIfNoChange command = do
                       command
                       (optimizeColor $ mkStrokeCommand newColor)
 
+{-|
+Optimize a non-stroke (fill) color command by eliminating redundancy.
+
+Parses the color command and extracts its color value. If the new color matches
+the current non-stroke color in graphics state, deletes the command. Otherwise,
+updates state and replaces the command with an optimized version.
+-}
 nonStrokeDeleteIfNoChange
   :: Command
   -> State InterpreterState InterpreterAction
@@ -52,8 +73,13 @@ nonStrokeDeleteIfNoChange command = do
                       (optimizeColor $ mkNonStrokeCommand newColor)
 
 {-|
-The 'optimizeColorCommand' function takes a 'GraphicsState' and a 'Command' and
-returns an optimized 'Command'.
+Optimize a color or rendering intent command.
+
+Optimizes graphics color commands by eliminating redundant settings when the
+color does not change, and by simplifying color representations (e.g., RGB to
+grayscale). Also tracks rendering intent changes and removes redundant rendering
+intent settings. Returns KeepCommand, DeleteCommand, or a replaced optimized
+command as appropriate.
 -}
 optimizeColorCommand
   :: Command

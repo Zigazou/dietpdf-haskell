@@ -1,3 +1,10 @@
+{-|
+Optimize text matrix transformation commands in PDF streams.
+
+Provides utilities for simplifying text transformation matrices by eliminating
+identity matrices, merging consecutive transformations, and converting between
+matrix forms.
+-}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
   ( optimizeTextMatrix
   ) where
@@ -30,8 +37,21 @@ import Data.Sequence (Seq (Empty, (:<|)))
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 {-|
-The 'optimizeCommand' function takes a 'GraphicsState' and a 'Command' and
-returns an optimized 'Command'.
+Optimize text positioning and transformation matrix commands.
+
+Implements multiple optimization strategies:
+
+* __Begin/End Text__: Resets or tracks text state
+* __MoveToNextLine__: Updates text matrix and optimizes precision
+* __NextLine__: Uses stored text leading to compute vertical movement
+* __SetTextLeading__: Records leading value; used by NextLine operations
+* __MoveToNextLineLP__: Sets leading and applies translation in one operation
+* __SetTextMatrix__: Detects and removes identity matrices; converts diagonal
+  matrices to scale+translate form; converts back to MoveToNextLine when only
+  translation differs from current state
+* __NLShowText__: Applies leading-based vertical translation
+
+Updates text state with applied transformations and reduces precision as needed.
 -}
 optimizeTextMatrix
   :: Command

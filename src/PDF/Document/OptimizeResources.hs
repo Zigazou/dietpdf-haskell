@@ -1,3 +1,10 @@
+{-|
+Optimize resource names in PDF documents.
+
+Provides utilities for renaming resource objects (fonts, images, graphics
+states) to shorter identifiers to reduce file size. Resource renaming is
+performed based on a translation table when graphics optimization is enabled.
+-}
 module PDF.Document.OptimizeResources
   ( optimizeResources
   ) where
@@ -20,6 +27,15 @@ import Data.TranslationTable (getTranslationTable)
 import PDF.Document.Resources (getAllResourceNames)
 import PDF.Object.Object.RenameResources (containsResources, renameResources)
 
+{-|
+Optimize resource names throughout a PDF document.
+
+Extracts all resource names from the document and generates a translation table
+if graphics optimization is enabled. Resources are renamed to shorter
+identifiers and all references are updated. Non-graphics-optimized documents
+skip translation to preserve original resource names. Logs progress of
+optimization stages.
+-}
 optimizeResources :: Logging m => PDFWork m ()
 optimizeResources = do
   sayP "Optimizing resource names"

@@ -1,3 +1,29 @@
+{-|
+Program-level optimization orchestration for PDF graphics
+
+Coordinates all optimization passes over PDF graphics programs, applying both
+command-level optimizations and program-wide structural optimizations.
+
+The optimization pipeline includes:
+
+* Program-wide structural optimizations:
+  - Removing useless save/restore pairs
+  - Converting line paths to rectangle operators
+  - Removing ineffective (empty) operations
+  - Eliminating duplicated consecutive operators
+  - Removing redundant marked content sequences
+
+* Command-level optimizations:
+  - Reordering operators for optimization opportunities
+  - Removing redundant graphics state settings
+  - Simplifying transformation matrices
+  - Optimizing text operations and positioning
+  - Simplifying drawing paths
+  - Removing redundant color specifications
+  - Generic precision reduction
+
+Optimizations are applied iteratively until convergence (no further changes).
+-}
 module PDF.Graphics.Interpreter.OptimizeProgram ( optimizeProgram )
 where
 
@@ -26,6 +52,27 @@ import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
 
 import Util.Transform (untilNoChange)
 
+{-|
+Apply command-level optimizations to a program.
+
+Processes a program sequentially, applying the optimization pipeline to each
+command in turn. The current program is accumulated in the first parameter,
+while commands to be processed are in the second parameter.
+
+Each command goes through the optimization system and returns an action
+indicating whether to keep, delete, replace, or reorder it. The accumulated
+result respects these actions:
+
+* @KeepCommand@ - add the command to the output program as-is
+* @DeleteCommand@ - skip the command
+* @ReplaceCommand cmd@ - add the optimized command to the output
+* @ReplaceAndDeleteNextCommand cmd@ - replace current command and skip the next
+  one
+* @SwitchCommand@ - swap the current command with the next one (for reordering)
+
+@param program@ the accumulated optimized program so far @param rest@ the
+remaining commands to process @return@ the fully optimized program
+-}
 optimizeCommands
   :: Program
   -> Program
@@ -50,6 +97,26 @@ optimizeCommands program (command :<| rest) =
       (nextCommand :<| rest') ->
         optimizeCommands program (nextCommand <| command <| rest')
 
+{-|
+Perform one complete optimization pass over a program.
+
+Applies all program-wide structural optimizations followed by all command-level
+optimizations:
+
+Program-wide passes (applied in sequence):
+1. Remove useless save/restore pairs
+2. Convert line paths to rectangle operators
+3. Remove empty/ineffective operations
+4. Remove duplicated consecutive operators
+5. Remove redundant marked content sequences
+
+Then applies command-level optimizations via @optimizeCommands@ to each command
+in the optimized structure.
+
+@param workData@ the PDF work context containing document information @param
+program@ the graphics program to optimize in one pass @return@ the result after
+all optimizations in a single pass
+-}
 optimizeProgramOnePass :: WorkData -> Program -> Program
 optimizeProgramOnePass workData
   = ( flip evalState defaultInterpreterState { iWorkData = workData }
@@ -62,8 +129,21 @@ optimizeProgramOnePass workData
   . optimizeSaveRestore
 
 {-|
-The 'optimizeProgram' function takes a 'Program' and returns an optimized
-'Program'.
+Optimize a PDF graphics program through iterative refinement.
+
+Repeatedly applies program-wide optimizations until no further changes are
+possible (fixed point). This ensures that optimizations which create
+opportunities for subsequent optimizations are fully exploited.
+
+For example, removing a save/restore pair might expose duplicate operators that
+can then be eliminated, which in turn might create new opportunities for
+optimization.
+
+If the result is empty (all commands removed), returns the original program
+unchanged to preserve the document's semantics.
+
+@param workData@ the PDF work context containing document information @param
+program@ the graphics program to optimize @return@ the fully optimized program
 -}
 optimizeProgram :: WorkData -> Program -> Program
 optimizeProgram workData program =

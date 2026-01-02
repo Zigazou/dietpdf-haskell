@@ -1,3 +1,10 @@
+{-|
+Optimize the order of graphics commands.
+
+Provides utilities for reordering graphics state commands to improve efficiency
+by executing independent operations in a canonical order that maximizes
+opportunities for subsequent optimization passes.
+-}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeOrder
   ( optimizeOrder
   ) where
@@ -19,11 +26,32 @@ import Data.PDF.OperatorCategory
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq ((:<|)))
 
+{-|
+Weight value for operator ordering.
+
+Operators are assigned weights that determine their preferred execution order.
+Lower weights should be executed before higher weights. 'NoWeight' operators are
+not reordered.
+-}
 type OperatorWeight :: Type
 data OperatorWeight = Weight Int
                     | NoWeight
                     deriving stock (Eq, Ord)
 
+{-|
+Assign an execution weight to a graphics operator.
+
+Weights determine the canonical ordering of operators. Lower weights execute
+first. Operators with the same functional category may share weights. Operators
+with 'NoWeight' are not reordered relative to other commands.
+
+Weighting priority (lowest to highest):
+1. Transformation matrices (CTM, TextMatrix)
+2. Stroke colors
+3. Line style parameters
+4. Text state parameters
+5. Non-stroke colors
+-}
 operatorWeight :: GSOperator -> OperatorWeight
 operatorWeight GSSetCTM                     = Weight 0
 operatorWeight GSSetTextMatrix              = Weight 1
@@ -59,6 +87,19 @@ operatorWeight GSSetGlyphWidth              = Weight 25
 operatorWeight GSSetBoundingBoxGlyph        = Weight 26
 operatorWeight _anyOtherOperator            = NoWeight
 
+{-|
+Optimize the order of graphics commands.
+
+Compares the current command with the next command and determines if they should
+be swapped. Swapping occurs when:
+
+* Text or Color state operators appear before transformation commands
+* Operators are assigned weights and the next operator has lower weight (should
+  execute first)
+
+Returns 'SwitchCommand' to swap the current and next commands, or 'KeepCommand'
+to maintain their order.
+-}
 optimizeOrder
   :: Command
   -> Program

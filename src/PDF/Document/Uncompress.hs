@@ -1,3 +1,9 @@
+{-|
+Uncompress and extract PDF objects from compressed streams.
+
+Provides utilities for decompressing PDF documents by extracting objects
+embedded in object streams and removing stream filters from all objects.
+-}
 module PDF.Document.Uncompress
   ( uncompressObjects
   , uncompressDocument
@@ -14,14 +20,12 @@ import PDF.Document.ObjectStream (explodeDocument, explodeObjects)
 import PDF.Processing.Unfilter (unfilter)
 
 {-|
-Uncompress all `PDFObject` contained in a `PDFDObjects`.
+Uncompress all objects in a PDF object collection.
 
-Objects embedded in object streams are extracted and the object stream is
-removed.
-
-If a `PDFObject` cannot be uncompressed (meaning its processing generated an
-error), the object is left as is. Thus this function may leave object
-uncompressed.
+Extracts objects embedded in object streams and removes those streams. Applies
+stream filters (unfilter) to all objects. Objects that fail decompression are
+left in their original state. Thus the function may leave some objects
+compressed if errors occur during processing.
 -}
 uncompressObjects :: Logging m => PDFObjects -> PDFWork m PDFObjects
 uncompressObjects pdf = withContext (ctx ("uncompressobjects" :: String)) $ do
@@ -32,14 +36,13 @@ uncompressObjects pdf = withContext (ctx ("uncompressobjects" :: String)) $ do
   mapM unfilter objects
 
 {-|
-Uncompress all `PDFObject` contained in a `PDFDocument`.
+Uncompress all objects in a PDF document.
 
-Objects embedded in object streams are extracted and the object stream is
-removed.
-
-If a `PDFObject` cannot be uncompressed (meaning its processing generated an
-error), the object is left as is. Thus this function may leave object
-uncompressed.
+Extracts objects embedded in object streams and removes those streams. Applies
+stream filters (unfilter) to all objects. Objects that fail decompression are
+left in their original state. Thus the function may leave some objects
+compressed if errors occur during processing. Returns a new document with all
+successfully decompressed objects.
 -}
 uncompressDocument :: Logging m => PDFDocument -> PDFWork m PDFDocument
 uncompressDocument pdf = withContext (ctx ("uncompressDocument" :: String)) $ do

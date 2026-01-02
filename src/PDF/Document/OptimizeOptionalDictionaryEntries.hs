@@ -1,3 +1,10 @@
+{-|
+Optimize PDF dictionary entries by removing optional defaults.
+
+Provides utilities to remove dictionary entries that have default values per the
+PDF specification, and to eliminate optional Type entries from objects. This
+reduces PDF file size without affecting functionality or appearance.
+-}
 module PDF.Document.OptimizeOptionalDictionaryEntries
   ( optimizeOptionalDictionaryEntries
   ) where
@@ -9,6 +16,13 @@ import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
 import PDF.Object.Object.Properties (getValueForKey, setValueForKey)
 import PDF.Processing.PDFWork (deepMapP)
 
+{-|
+Test whether a PDF object represents an optional dictionary type.
+
+Returns 'True' if the object is a 'PDFName' matching one of the optional Type
+values (e.g., "Annot", "ExtGState", "XObject", etc.) that can be safely removed
+from dictionaries. Returns 'False' for other types.
+-}
 isOptionalType :: PDFObject -> Bool
 isOptionalType (PDFName "Annot")              = True
 isOptionalType (PDFName "ExtGState")          = True
@@ -75,6 +89,14 @@ isOptionalType (PDFName "OutputIntent")       = True
 isOptionalType (PDFName "OPI")                = True
 isOptionalType _anyOtherType                  = False
 
+{-|
+Default values for PDF dictionary entries per the PDF specification.
+
+A comprehensive lookup table of dictionary keys and their default values.
+Entries with these default values can be safely removed from dictionaries to
+reduce file size. Includes defaults for document, page, annotation, encryption,
+graphics state, and advanced feature entries.
+-}
 defaultValues :: [(ByteString, PDFObject)]
 defaultValues =
   [ ("AccurateScreens", PDFBool False)
@@ -210,6 +232,13 @@ defaultValues =
   , ("Zoom", PDFNumber 0)
   ]
 
+{-|
+Remove a dictionary entry if it matches its default value.
+
+Checks whether a specific dictionary entry has its default value and removes it
+if so. Returns the modified object unchanged if the entry is absent or has a
+non-default value.
+-}
 removeEntryIfDefaultP
   :: Monad m
   => (ByteString, PDFObject)
@@ -220,6 +249,13 @@ removeEntryIfDefaultP (key, defaultValue) object =
     Just value | value == defaultValue -> setValueForKey key Nothing object
     _anyOtherValue                     -> object
 
+{-|
+Remove all dictionary entries with default values.
+
+Applies deep recursive removal of all dictionary entries that match their
+default values from the provided list. Recursively processes nested objects to
+remove defaults throughout the entire object tree.
+-}
 removeEntryIfDefaults :: [(ByteString, PDFObject)] -> PDFObject -> PDFObject
 removeEntryIfDefaults defaults object = foldl deepGo object defaults
  where
@@ -229,12 +265,26 @@ removeEntryIfDefaults defaults object = foldl deepGo object defaults
       Right (Right object'') -> object''
       _anyOtherValue         -> object'
 
+{-|
+Remove optional Type entries from a dictionary.
+
+Checks the Type field of a dictionary. If it is an optional type (recognized as
+removable per the PDF specification), removes the Type entry. Otherwise, returns
+the object unchanged.
+-}
 removeOptionalTypeEntries :: PDFObject -> PDFObject
 removeOptionalTypeEntries object =
   case getValueForKey "Type" object of
     Just aType | isOptionalType aType -> setValueForKey "Type" Nothing object
     _anythingElse                     -> object
 
+{-|
+Optimize a PDF object by removing optional dictionary entries.
+
+Applies all optimization strategies: removes optional Type entries and removes
+all dictionary entries that have default values. Returns a functionally
+equivalent but smaller object.
+-}
 optimizeOptionalDictionaryEntries :: PDFObject -> PDFObject
 optimizeOptionalDictionaryEntries  = removeEntryIfDefaults defaultValues
                                    . removeOptionalTypeEntries

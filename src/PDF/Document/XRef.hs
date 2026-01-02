@@ -1,3 +1,10 @@
+{-|
+Generate PDF cross-reference tables and streams.
+
+Provides utilities for creating both old-format XRef tables and modern XRef
+streams, including offset calculation, cross-reference entry generation, and
+handling of compressed object streams.
+-}
 module PDF.Document.XRef
   ( -- * XRef generation
     calcOffsets,
@@ -47,9 +54,11 @@ import Util.Dictionary (Dictionary, mkDictionary)
 import Util.Number (bytesNeededToEncode, encodeIntToBytes)
 
 {-|
-Given an encoded object, returns a list of tuples where the first element is the
-object number and the second element is the index of the object in the object
-stream.
+Extract indexed objects from an encoded object.
+
+Returns a sorted sequence of tuples containing object numbers and their
+cross-reference offsets within the object stream. Used to track objects embedded
+in a single object stream.
 -}
 indexedObjects :: EncodedObject -> Seq (Int, ObjectOffset)
 indexedObjects (EncodedObject number _len _bin embedded) =
@@ -60,8 +69,11 @@ indexedObjects (EncodedObject number _len _bin embedded) =
                               :<| go (index + 1) remains
 
 {-|
-Given an encoded object, calculates the offset of the object and the offsets of
-the embedded objects.
+Calculate the offset of an encoded object and its embedded objects.
+
+Given a starting byte offset, computes the next offset and generates
+cross-reference entries for both the direct object and any embedded objects
+within it.
 -}
 calcOffset :: Int -> EncodedObject -> (Int, ObjectOffsets)
 calcOffset startOffset object =
@@ -72,7 +84,12 @@ calcOffset startOffset object =
  where
   number = eoObjectNumber object
 
--- | Given a collection of encoded objects, calculates their offsets
+{-|
+Calculate offsets for all encoded objects in a collection.
+
+Iterates through encoded objects starting from the given offset and builds a
+complete map of object numbers to their cross-reference offsets.
+-}
 calcOffsets :: Int -> EncodedObjects -> ObjectOffsets
 calcOffsets startOffset = snd . go . fmap snd . IM.toAscList
   where
@@ -86,16 +103,28 @@ calcOffsets startOffset = snd . go . fmap snd . IM.toAscList
           )
           (startOffset, IM.empty)
 
--- |
--- Given the objects offsets, return the range of numbers of the objects.
+{-|
+Find the minimum and maximum object numbers in a cross-reference table.
+
+Returns a tuple of (minNumber, maxNumber) spanning all objects. Returns (0, 0)
+if the offset table is empty.
+-}
 objectsNumberRange :: ObjectOffsets -> (Int, Int)
 objectsNumberRange offsets =
   case (IM.minViewWithKey offsets, IM.maxViewWithKey offsets) of
     (Just ((minKey, _), _), Just ((maxKey, _), _)) -> (minKey, maxKey)
     _anyOtherCase                                  -> (0, 0)
 
--- |
--- Given a collection of encoded objects, generates an old format XRef table
+{-|
+Generate an old-format PDF cross-reference table.
+
+Creates a traditional XRef table with subsections mapping object numbers to byte
+offsets or free object chains. Used for PDF files without stream compression
+support.
+
+@Int@: Absolute byte offset of the first object @EncodedObjects@: Collection of
+encoded objects to reference
+-}
 xrefTable ::
   -- | Absolute offset of the first object
   Int ->
@@ -117,6 +146,13 @@ xrefTable startOffset objects
       ]
     xrefSubsection = XRefSubsection (fst numRange) (rangeSize numRange) entries
 
+{-|
+Extract the width field from an XRef stream object.
+
+Reads the W (width) dictionary entry which specifies the byte widths for type,
+offset, and object number fields in the cross-reference stream. Returns the sum
+of all three widths, or fails if the W field is missing or malformed.
+-}
 xrefStreamWidth :: (Logging m) => PDFObject -> PDFWork m Int
 xrefStreamWidth object@PDFXRefStream {} = do
   w <- getValue "W" object
@@ -138,29 +174,27 @@ xrefStreamWidth object@PDFXRefStream {} = do
     getWidth _anyOtherCase = Nothing
 xrefStreamWidth _anyOtherCase = throwError (XRefStreamNoW "Not a PDFXRefStream")
 
+{-|
+Encode integer pairs to binary bytes.
+
+Converts a list of (width, value) pairs into their binary representation,
+concatenating the results. Used to build variable-width cross-reference stream
+entries.
+-}
 mkBinary :: [(Int, Int)] -> ByteString
 mkBinary = BS.concat . fmap (uncurry encodeIntToBytes)
 
-{-| Create an entry for the cross-reference stream.
+{-|
+Create a binary entry for a cross-reference stream.
 
-There are three types of entries in a cross-reference stream:
+Generates a variable-width entry based on the object's cross-reference type:
 
-- Type 0 entries define the linked list of free objects (corresponding to f
-  entries in a cross-reference table).
-  - column 0: The type of this entry, which must be 0.
-  - column 1: The object number of the next free object.
-  - column 2: The generation number to use if this object number is used again.
-- Type 1 entries define objects that are in use but are not compressed
-  (corresponding to n entries in a cross-reference table).
-  - column 0: The type of this entry, which must be 1.
-  - column 1: The byte offset of the object, starting from the beginning of the
-    file.
-  - column 2: The generation number of the object. Default value: 0.
-- Type 2 entries define compressed objects.
-  - column 0: The type of this entry, which must be 2.
-  - column 1: The object number of the object stream in which this object is
-    stored. (The generation number of the object stream is implicitly 0.)
-  - column 2: The index of this object within the object stream.
+* Type 0 (free entry): links to next free object; records type, next object
+  number, and generation number
+* Type 1 (direct entry): in-use non-compressed object; records type, byte offset
+  from file start, and generation number
+* Type 2 (compressed entry): object within an object stream; records type,
+  object stream number, and object index within stream
 -}
 mkEntry :: Int -> Int -> Int -> ObjectOffset -> ByteString
 mkEntry _number offsetWidth numberWidth FreeEntry{} =
@@ -171,7 +205,16 @@ mkEntry _number offsetWidth numberWidth (InObjectStream _ objStream index) =
   mkBinary [(1, 2), (offsetWidth, objStream), (numberWidth, index)]
 
 {-|
-Given a collection of encoded objects, generates a cross-reference stream.
+Generate a modern PDF XRef stream (PDF 1.5+).
+
+Creates a new-format cross-reference stream containing entries for all objects
+and the objects they contain (including compressed objects in object streams).
+Incorporates free entry tracking and calculates appropriate field widths.
+Returns a PDFXRefStream object ready to be embedded in the PDF.
+
+- @Int@: Object number for the XRef stream itself
+- @Int@: Absolute byte offset of the first object
+- @EncodedObjects@: Collection of encoded objects to reference
 -}
 xrefStreamTable
   :: Int -- ^ Number of the object to create

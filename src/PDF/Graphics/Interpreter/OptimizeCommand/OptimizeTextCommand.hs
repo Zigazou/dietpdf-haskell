@@ -1,3 +1,9 @@
+{-|
+Optimize text-related graphics commands in PDF streams.
+
+Provides utilities for eliminating redundant text state settings, simplifying
+text show operations, and tracking text rendering state.
+-}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextCommand
   ( optimizeTextCommand
   ) where
@@ -37,7 +43,15 @@ import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 import Util.Number (round')
 
 {-|
-Delete the command if the new value is the same as the current value.
+Delete or optimize a text state command if its value hasn't changed.
+
+Compares the new value (after text precision reduction) with the current text
+state value. If they match, deletes the command as redundant. Otherwise, updates
+the state and returns an optimized version of the command with reduced
+precision.
+
+Used for text state parameters like character spacing, word spacing, horizontal
+scaling, and text rise.
 -}
 deleteIfNoChange
   :: Command
@@ -57,8 +71,20 @@ deleteIfNoChange command newValue getter setter = do
           <&> replaceCommandWith command
 
 {-|
-The 'optimizeTextCommand' function takes a 'GraphicsState' and a 'Command' and
-returns an optimized 'Command'.
+Optimize text and text state commands.
+
+Optimizes various text-related operations:
+
+* __Save/Restore/Text Object__: Tracked but kept (state management)
+* __Text Font__: Deleted if font and size unchanged; otherwise updated
+* __ShowText__: Deleted if empty string; optimized with reduced precision
+* __ShowManyText__: Deleted if empty array; converted to ShowText if only one
+  item; otherwise optimized with reduced precision
+* __Text Rise, Character Spacing, Word Spacing, Horizontal Scaling__: Deleted if
+  unchanged; otherwise optimized with reduced precision and state updated
+
+Returns appropriate action (KeepCommand, DeleteCommand, or optimized command)
+based on the specific operation and current text state.
 -}
 optimizeTextCommand
   :: Command

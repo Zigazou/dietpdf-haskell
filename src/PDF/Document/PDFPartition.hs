@@ -1,7 +1,11 @@
--- |
--- This modules allows partitioning of PDF objects.
---
--- Partitioning is used when encoded a whole PDF file from PDF objects.
+{-|
+Partition PDF objects by type and content.
+
+Provides utilities for organizing PDF objects into separate categories (with
+streams, without streams, headers, trailers) for efficient encoding and
+deduplication. Includes dead-object elimination and object stream embedding
+logic.
+-}
 module PDF.Document.PDFPartition
   ( removeUnused
   , partitionDocument
@@ -33,6 +37,14 @@ import Data.Set qualified as Set
 import PDF.Document.Uncompress (uncompressDocument, uncompressObjects)
 import PDF.Object.Object.Properties (hasKey)
 
+{-|
+Remove unused objects from a PDF partition.
+
+Uncompresses all objects in the partition, traces all references starting from
+headers and trailers, and removes any objects not reachable through references.
+Returns the cleaned partition with only referenced objects. Linearized document
+markers are also removed during this process.
+-}
 removeUnused :: Logging m => PDFPartition -> PDFWork m PDFPartition
 removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers) =
   withContext (ctx ("removeUnused" :: String)) $ do
@@ -95,26 +107,35 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
   used refs object = isNotLinearized object && isReferenced refs object
 
 {-|
-Determines if a PDF object should be embedded in an object stream (ObjStm).
+Test whether a PDF object can be embedded in an object stream.
 
-Returns `True` for indirect objects that do not have a stream.
+Returns 'True' for indirect objects that do not contain streams. These objects
+are suitable for inclusion in ObjStm (object stream) containers to reduce file
+size.
 -}
 objectToEmbed :: PDFObject -> Bool
 objectToEmbed object = isIndirect object && not (hasStream object)
 
 {-|
-Checks if a PDF object contains content (i.e., it has a stream but is not a
-trailer).
+Test whether a PDF object contains stream content.
 
-Returns `True` if the object has a stream and is not a trailer.
+Returns 'True' for objects that have a stream but are not trailer objects. These
+are typically page or graphics stream objects that require special handling.
 -}
 objectWithContent :: PDFObject -> Bool
 objectWithContent object = hasStream object && not (isTrailer object)
 
 {-|
-Partitions a collection of PDF objects (`PDFDocument`) into a `PDFPartition`,
-separating objects with streams, objects without streams, header objects, and
-trailers.
+Partition a PDF document into typed object categories.
+
+Separates objects into four categories based on their type and content:
+
+* Objects with streams (pages, graphics): stored separately
+* Objects without streams: candidates for object stream embedding
+* Header objects: document catalog and related metadata
+* Trailer objects: PDF trailer dictionary
+
+Returns a 'PDFPartition' organizing objects for efficient encoding.
 -}
 partitionDocument :: PDFDocument -> PDFPartition
 partitionDocument objs =

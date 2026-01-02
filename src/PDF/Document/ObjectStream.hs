@@ -1,15 +1,14 @@
 {-|
 This module handles object streams.
 
-An object stream, is a stream object in which a sequence of indirect objects
-may be stored, as an alternative to their being stored at the outermost file
-level.
+An object stream, is a stream object in which a sequence of indirect objects may
+be stored, as an alternative to their being stored at the outermost file level.
 
 Object streams are first introduced in PDF 1.5.
 
-The purpose of object streams is to allow indirect objects other than streams
-to be stored more compactly by using the facilities provided by stream
-compression filters.
+The purpose of object streams is to allow indirect objects other than streams to
+be stored more compactly by using the facilities provided by stream compression
+filters.
 
 The term “compressed object” is used regardless of whether the stream is
 actually encoded with a compression filter.
@@ -71,6 +70,18 @@ import Util.Ascii (asciiDIGITZERO)
 import Util.Dictionary (Dictionary, mkDictionary)
 import Util.Number (fromInt)
 
+{-|
+Representation of a PDF object stream.
+
+An object stream stores compressed indirect objects with their offsets and
+counts. The stream is split into two regions: number/offset index pairs and the
+actual object data.
+
+* @osCount@: Number of objects in the stream
+* @osOffset@: Byte offset where object data starts (end of index section)
+* @osIndices@: Binary index containing object numbers and offsets
+* @osObjects@: Binary data containing the actual objects
+-}
 type ObjectStream :: Type
 data ObjectStream = ObjectStream
   { osCount   :: !Int
@@ -79,13 +90,30 @@ data ObjectStream = ObjectStream
   , osObjects :: !ByteString
   }
 
+{-|
+Object number and byte offset pair from an object stream index.
+
+Stores the object number and its byte offset within the object stream's object
+data section.
+-}
 type NumberOffset :: Type
 data NumberOffset = NumberOffset !Int !Int
 
+{-|
+Construct an empty object stream.
+
+Initializes an object stream with zero count and empty index/object sections.
+-}
 emptyObjectStream :: ObjectStream
 emptyObjectStream =
   ObjectStream { osCount = 0, osOffset = 0, osIndices = "", osObjects = "" }
 
+{-|
+Parse a single PDF object from binary data.
+
+Matches any valid PDF object type: names, strings, references, numbers,
+keywords, hex strings, arrays, or dictionaries.
+-}
 itemP :: Get PDFObject
 itemP =
   nameP
@@ -97,6 +125,12 @@ itemP =
     <|> arrayP
     <|> dictionaryP
 
+{-|
+Parse a single PDF object, skipping surrounding whitespace.
+
+Reads one complete PDF object from the input stream and strips leading and
+trailing whitespace.
+-}
 oneObjectP :: Get PDFObject
 oneObjectP = do
   skipWhile isWhiteSpace
@@ -104,6 +138,11 @@ oneObjectP = do
   skipWhile isWhiteSpace
   return $! item
 
+{-|
+Parse a decimal integer from ASCII digits.
+
+Reads one or more digit characters and converts them to an integer value.
+-}
 integerP :: Get Int
 integerP = takeWhile1 isDigit <&> toInt
  where
@@ -112,6 +151,12 @@ integerP = takeWhile1 isDigit <&> toInt
     (\num digit -> num * 10 + fromIntegral (digit - asciiDIGITZERO))
     0
 
+{-|
+Parse an object number and byte offset pair from the object stream index.
+
+Reads whitespace-separated object number and byte offset values that form the
+index of an object stream.
+-}
 objectNumberOffsetP :: Get NumberOffset
 objectNumberOffsetP = do
   skipWhile isWhiteSpace
@@ -121,6 +166,12 @@ objectNumberOffsetP = do
   skipWhile isWhiteSpace
   return $! NumberOffset objectNumber offset
 
+{-|
+Parse all object number and offset pairs from an index section.
+
+Decodes the entire object stream index into a list of 'NumberOffset' pairs,
+returning parse errors if the index format is invalid.
+-}
 parseObjectNumberOffsets
   :: Logging m => ByteString -> FallibleT m [NumberOffset]
 parseObjectNumberOffsets indices =
@@ -129,13 +180,21 @@ parseObjectNumberOffsets indices =
     Right result -> return $! result
 
 {-|
-Look for every object stream and extract the objects from these object streams.
+Extract all objects from object streams in a PDF document.
 
-Any other object is kept as is.
+Searches the document for object stream objects and extracts their embedded
+indirect objects. Other objects are kept unchanged. Returns a new document with
+flattened object structure.
 -}
 explodeDocument :: Logging m => PDFDocument -> PDFWork m PDFDocument
 explodeDocument = (<&> D.fromList) . explodeList . D.toList
 
+{-|
+Extract all indirect objects from an object stream.
+
+Parses the object stream's index and object data sections, reconstructing
+indirect objects with their original numbers from the stream.
+-}
 extractList :: Logging m => ObjectStream -> FallibleT m [PDFObject]
 extractList (ObjectStream _ _ indices objects) = do
   numOffsets <- parseObjectNumberOffsets indices
@@ -145,6 +204,12 @@ extractList (ObjectStream _ _ indices objects) = do
       Right object -> return $! PDFIndirectObject objectNumber 0 object
   return $! exploded
 
+{-|
+Recursively extract objects from object streams in a list.
+
+Processes a list of PDF objects, extracting contents of object stream objects
+and leaving other objects unchanged. Returns a flattened list of all objects.
+-}
 explodeList :: Logging m => [PDFObject] -> PDFWork m [PDFObject]
 explodeList (objstm@PDFObjectStream{} : xs) = do
   extracted <- getObjectStream objstm >>= lift . extractList
@@ -155,6 +220,13 @@ explodeList (object : xs) = do
   return (object : remains)
 explodeList [] = return []
 
+{-|
+Extract and parse the object stream metadata from a PDF object.
+
+Reads the N (object count) and First (index size) dictionary entries, unfilters
+the stream, and partitions it into index and object data sections. Fails if the
+object is not a valid object stream.
+-}
 getObjectStream :: Logging m => PDFObject -> PDFWork m ObjectStream
 getObjectStream object = do
   objectN      <- getValue "N" object
@@ -172,9 +244,11 @@ getObjectStream object = do
     _anyOtherValue -> throwError ObjectStreamNotFound
 
 {-|
-Look for every object stream and extract the objects from these object streams.
+Extract all objects from object streams in a collection.
 
-Any other object is kept as is.
+Converts a collection of PDF objects into a map, extracting any embedded objects
+from object streams and flattening the structure. Returns a unified IntMap keyed
+by object number.
 -}
 explodeObjects :: Logging m => PDFObjects -> PDFWork m PDFObjects
 explodeObjects objects = mapM explodeObject objects <&> foldr union mempty
@@ -201,12 +275,22 @@ explodeObjects objects = mapM explodeObject objects <&> foldr union mempty
   explodeObject object = return $ singleton 0 object
 
 {-|
-Tells if a `PDFObject` may be embedded in an object stream.
+Test whether a PDF object can be embedded in an object stream.
+
+Returns 'True' for indirect objects, 'False' for all other types. Only
+'PDFIndirectObject' types are streamable according to PDF specification.
 -}
 isObjectStreamable :: PDFObject -> Bool
 isObjectStreamable PDFIndirectObject{} = True
 isObjectStreamable _anyOtherValue      = False
 
+{-|
+Append an indirect object to an object stream.
+
+Adds an object to the stream by appending its serialized form to the object data
+section and updating the index with its object number and byte offset.
+Non-indirect objects are ignored.
+-}
 appendObject :: ObjectStream -> PDFObject -> ObjectStream
 appendObject objStm (PDFIndirectObject num _ object) = ObjectStream
   { osCount   = osCount objStm + 1
@@ -225,18 +309,34 @@ appendObject objStm (PDFIndirectObject num _ object) = ObjectStream
   newObjects = BS.concat [osObjects objStm, fromPDFObject object, " "]
 appendObject objStm _ = objStm
 
+{-|
+Build an object stream from all streamable objects in a document.
+
+Iterates through a PDF document, appending all streamable indirect objects to
+create a single object stream. Non-streamable objects are skipped.
+-}
 insertObjects :: PDFDocument -> ObjectStream
 insertObjects = foldl' appendObject emptyObjectStream
 
+{-|
+Remove the trailing byte from a byte string.
+
+Returns all bytes except the last one. Used to remove trailing space from object
+stream data.
+-}
 dropLastByte :: ByteString -> ByteString
 dropLastByte str = BS.take (BS.length str - 1) str
 
 {-|
-Create an object stream from a list of `PDFObject`.
+Create a PDF object stream from a collection of objects.
 
-Object which are not streamable are simply ignored.
+Filters the document to include only streamable indirect objects, embeds them
+into a new object stream with the given number, and returns the stream object.
+The stream is uncompressed; compression can be applied later. Fails if no
+streamable objects are present.
 
-The object stream is uncompressed. It can be compressed later.
+@PDFDocument@: Collection of objects to embed (non-streamable objects ignored)
+@Int@: Object number for the resulting object stream
 -}
 makeObjectStreamFromObjects
   :: Logging m

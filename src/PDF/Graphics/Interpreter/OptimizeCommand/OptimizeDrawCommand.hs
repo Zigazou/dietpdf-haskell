@@ -1,3 +1,10 @@
+{-|
+Optimize drawing commands in PDF graphics streams.
+
+Provides utilities for simplifying path drawing commands by eliminating
+redundant line segments, merging collinear segments, optimizing cubic Bézier
+curves, and reducing coordinate precision while tracking graphics state.
+-}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeDrawCommand
   ( optimizeDrawCommand
   ) where
@@ -33,8 +40,22 @@ import Util.Number (round')
 
 
 {-|
-The 'optimizeDrawCommand' function takes a 'GraphicsState' and a 'Command' and
-returns an optimized 'Command'.
+Optimize a path drawing command.
+
+Implements multiple optimization strategies:
+
+* __MoveTo__: Records path start position
+* __LineTo__: Removes redundant collinear segments; converts to CloseSubpath
+  when returning to path start; tracks current position
+* __Cubic Bézier__: Converts to 1-control-point form when first control point
+  equals current point; converts to 2-control-point form when second control
+  point equals current point; optimizes precision
+* __Path operations__: Merges CloseSubpath with following Stroke/Fill commands
+  into single combined operations (CloseStroke, CloseFillStroke)
+* __EndPath/CloseSubpath__: Updates path state tracking
+
+All coordinates are rounded to useful precision. Returns optimized command,
+deleted command, or command merged with the next one as appropriate.
 -}
 optimizeDrawCommand
   :: Command

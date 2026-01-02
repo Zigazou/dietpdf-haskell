@@ -1,3 +1,9 @@
+{-|
+Compute PDF document statistics.
+
+Provides utilities for analyzing PDF objects by category (bitmaps, vectors,
+fonts, files, XML, other) and computing size statistics for each category type.
+-}
 module PDF.Document.Stat
   ( stat
   ) where
@@ -22,6 +28,13 @@ import PDF.Document.PDFPartition (partitionDocument)
 import PDF.Object.State (getStream)
 import PDF.Processing.ObjectCategory (objectCategory)
 
+{-|
+Update statistics with a single PDF object.
+
+Extracts the stream content, determines the object's category (bitmap, vector,
+font, file, XML, or other), and increments the corresponding counters and size
+totals in the statistics record.
+-}
 updateStatistics
   :: Logging IO
   => Statistics
@@ -59,6 +72,13 @@ updateStatistics statistics object = do
     Other -> return statistics
       { otherTotal = otherTotal statistics + objectSize }
 
+{-|
+Compute comprehensive statistics for a PDF document.
+
+Partitions the document and iterates through all objects with streams,
+categorizing each and accumulating statistics. Returns a 'Statistics' record
+containing counts and total sizes for each object category.
+-}
 stat
   :: Logging IO
   => PDFDocument

@@ -1,3 +1,10 @@
+{-|
+Optimize graphics state parameter commands.
+
+Provides utilities for eliminating redundant graphics state settings by tracking
+state values and detecting unchanged parameters (line width, line cap, line
+join, miter limit, flatness).
+-}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeStateCommand
   ( optimizeStateCommand
   ) where
@@ -32,6 +39,16 @@ import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 import Util.Number (round')
 
+{-|
+Delete or optimize a graphics state command if its value hasn't changed.
+
+Compares the new value (after precision reduction) with the current graphics
+state value. If they match, deletes the command as redundant. Otherwise, updates
+the state and returns an optimized version of the command with reduced
+precision.
+
+Used for state parameters like line width, line cap, line join, etc.
+-}
 deleteIfNoChange
   :: Command
   -> Double
@@ -50,8 +67,17 @@ deleteIfNoChange command newValue getter setter = do
           <&> replaceCommandWith command
 
 {-|
-The 'optimizeStateCommand' function takes a 'GraphicsState' and a 'Command' and
-returns an optimized 'Command'.
+Optimize a graphics state parameter command.
+
+Optimizes commands that modify graphics state parameters:
+
+* __Save/Restore__: Tracked but kept (save/restore state stack)
+* __Line Width, Cap, Join, Miter Limit, Flatness__: Deleted if the value hasn't
+  changed since last setting; otherwise optimized with reduced precision and the
+  state is updated
+
+Returns 'KeepCommand' for save/restore, 'DeleteCommand' if no change, or
+optimized command with updated state for parameter changes.
 -}
 optimizeStateCommand
   :: Command
