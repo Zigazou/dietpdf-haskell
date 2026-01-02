@@ -1,7 +1,10 @@
 {-|
-Main module of the application.
+CLI entry point for dietpdf.
 
-Provides the 'main' function to run the application.
+Parses command-line options, dispatches actions (optimize, info, extract,
+encode/decode, hashing, human-readable dump, stats, prediction transforms), and
+prints results or writes files accordingly. The 'main' function initializes
+option parsing and runs 'runApp'.
 -}
 module Main
   ( main
@@ -120,7 +123,20 @@ hexDump offset bytes = do
   putStrLn $ prettyHexCfg (hexCfg offset) bytes'
 
 {-|
-Run the application with given options.
+Run the application with the given options.
+
+Dispatches on 'AppOptions' to perform operations such as:
+
+* 'VersionOptions' — print the current version.
+* 'InfoOptions' — display per-object info for a PDF.
+* 'ExtractOptions' — extract a stream by object number.
+* 'OptimizeOptions' — optimize a PDF (optionally via GhostScript/PDFToCairo),
+  then further optimize and write the output; respects overwrite policy.
+* 'HashOptions' — compute hashes of stream objects.
+* 'EncodeOptions'/'DecodeOptions' — run filters on raw bytes from a file/STDIN.
+* 'PredictOptions'/'UnpredictOptions' — apply/reverse prediction transforms.
+* 'HumanOptions' — print a human-readable graphics program.
+* 'StatOptions' — compute and display multi-document statistics.
 -}
 runApp :: AppOptions -> FallibleT IO ()
 runApp VersionOptions = do
@@ -194,6 +210,14 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useZopfli optimizeGFX o
 
     (DoNotUseGhostScript, DoNotUsePDFToCairo) -> go inputPDF settings overwriteFile
  where
+  {-
+  Helper to perform final optimization and writing.
+
+  Determines the output file path (deriving a ".dietpdf.pdf" suffix when
+  appropriate), enforces the overwrite policy, parses the input, and calls
+  'optimize'. On parse errors, prints a short hexdump around the failing
+  offset before rethrowing.
+  -}
   go :: FilePath -> Settings -> FileOverwrite -> FallibleT IO ()
   go pdfToOptimize settings overwriteFile' = do
     -- Get output PDF path.

@@ -1,3 +1,11 @@
+{-|
+Pretty-prints a PDF indirect object by number, following references and
+rendering a human-readable representation to standard output.
+
+This module provides utilities to render 'PDFObject' values with indentation
+control ('Level'), avoid infinite recursion via a processed set, and an entry
+point 'getObjectByNumber' that fetches and prints the requested object.
+-}
 module Command.GetObjectByNumber
   ( getObjectByNumber
   ) where
@@ -24,21 +32,45 @@ import PDF.Processing.PDFWork (importObjects)
 
 import Util.Number (fromInt, fromNumber)
 
+{-|
+Indentation control for pretty-printing.
+
+Carries the current indentation level (in steps of spaces) and a display flag
+indicating whether indentation should be applied for the current element.
+-}
 type Level :: Type
 data Level = Level !Int !Bool
 
+{-|
+Increase indentation level and enable display.
+-}
 inc :: Level -> Level
 inc (Level level _display) = Level (level + 1) True
 
+{-|
+Increase indentation level while preserving the display flag.
+-}
 inc' :: Level -> Level
 inc' (Level level display) = Level (level + 1) display
 
+{-|
+Keep the same indentation level but disable display (no leading spaces).
+-}
 hide :: Level -> Level
 hide (Level level _display) = Level level False
 
+{-|
+Keep the same indentation level and enable display (apply leading spaces).
+-}
 disp :: Level -> Level
 disp (Level level _display) = Level level True
 
+{-|
+Apply indentation to a 'ByteString' according to 'Level'.
+
+If display is disabled, returns the input unchanged. If enabled, prefixes
+spaces based on the current level.
+-}
 infixl 9 %>
 (%>) :: Level -> ByteString -> ByteString
 (%>) (Level _level False) bytestring = bytestring
@@ -46,9 +78,20 @@ infixl 9 %>
                                   <> BS.replicate level 32
                                   <> bytestring
 
+{-|
+Set of already visited indirect object numbers to avoid infinite recursion
+when following references.
+-}
 type Processed :: Type
 type Processed = Set Int
 
+{-|
+Render a 'PDFObject' to a pretty 'ByteString' with indentation and recursion
+control.
+
+Takes the set of processed object numbers, the current 'Level', and the object
+to render. Uses 'PDFWork' to fetch referenced objects as needed.
+-}
 pretty :: Monad m => Processed -> Level -> PDFObject -> PDFWork m ByteString
 pretty _processed level (PDFComment comment) =
   return $ level %> "%" <> comment <> "\n"
@@ -170,6 +213,13 @@ pretty processed level (PDFTrailer trailer) = do
 pretty _processed level (PDFStartXRef start) =
   return $ level %> "startxref\n" <> fromInt start <> "\n"
 
+{-|
+Fetch an indirect object by number and pretty-print it.
+
+Imports the given 'PDFDocument' into the current 'PDFWork' context, then
+renders the object using 'pretty'. If the object cannot be found, returns a
+diagnostic message.
+-}
 printObject :: Logging m => Int -> PDFDocument -> PDFWork m ByteString
 printObject objectNumber objects = do
   importObjects objects
@@ -177,6 +227,12 @@ printObject objectNumber objects = do
     Just object -> pretty Set.empty (Level 0 True) object
     Nothing -> return "Object not found"
 
+{-|
+Entry point: pretty-print the object with the given number to standard output.
+
+Evaluates 'printObject' within 'PDFWork' and writes the resulting
+'ByteString' via 'lift'/'BS.putStr'.
+-}
 getObjectByNumber :: Int -> PDFDocument -> FallibleT IO ()
 getObjectByNumber objectNumber objects =
   evalPDFWork (printObject objectNumber objects) >>= lift . BS.putStr
