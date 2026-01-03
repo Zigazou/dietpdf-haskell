@@ -6,3 +6,4 @@ stack.yaml.lock
 test/real
 stan.html
 tmp/
+dist/
