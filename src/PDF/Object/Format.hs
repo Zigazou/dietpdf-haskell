@@ -1,4 +1,9 @@
--- | This modules contains functions to help dealing with Text strings.
+{-|
+Text formatting utilities for PDF objects
+
+This module provides utility functions for formatting PDF objects as text,
+particularly for object identification and debugging purposes.
+-}
 module PDF.Object.Format
   ( txtObjectNumberVersion
   ) where
@@ -11,6 +16,30 @@ import PDF.Object.Object
 
 import Util.Text (txtNumberVersion)
 
+{-|
+Format a PDF object as its object number and version, or an anonymous label.
+
+For indirect objects (those with object number and generation number), returns a
+formatted string like "42 0" representing the object number and version.
+
+For direct (non-indirect) objects, returns "anonymous" followed by the object
+type in parentheses, such as:
+
+- "anonymous (PDFComment)"
+- "anonymous (PDFNumber)"
+- "anonymous (PDFString)"
+- "anonymous (PDFArray)"
+- etc.
+
+This is useful for debugging and logging to identify which objects are indirect
+(named) versus inline (anonymous) and to display their object references.
+
+__Parameters:__
+
+- A PDF object (indirect, direct, or special structure)
+
+__Returns:__ A text representation of the object's identity.
+-}
 txtObjectNumberVersion :: PDFObject -> T.Text
 txtObjectNumberVersion (PDFIndirectObject number version _) =
   txtNumberVersion number version

@@ -1,13 +1,19 @@
 {-|
-This module contains a parser for PDF start XREF object.
+Parser for the startxref offset in PDF documents
 
-The last line of the file shall contain only the end-of-file marker, %%EOF.
+This module provides a binary parser for the startxref section of PDF documents.
 
-The two preceding lines shall contain, one per line and in order, the keyword
-startxref and the byte offset in the decoded stream from the beginning of the
-file to the beginning of the xref keyword in the last cross-reference section.
+The startxref section appears near the end of a PDF file and contains the byte
+offset of the last cross-reference section. The structure is:
 
-The startxref line shall be preceded by the trailer dictionary.
+1. The keyword "startxref"
+2. One or more line terminators
+3. A decimal offset value
+4. One or more line terminators
+5. (Followed by the %%EOF marker, parsed separately)
+
+The offset value indicates the byte position from the beginning of the file to
+the start of the xref keyword in the last cross-reference section.
 -}
 module PDF.Object.Parser.StartXRef
   ( startXRefP
@@ -21,7 +27,19 @@ import PDF.Object.Parser.LooseEndOfLine (looseEndOfLineP)
 import Util.Number (toNumber)
 
 {-|
-Parse a `PDFXRef` object.
+Parse the startxref section of a PDF document.
+
+Parses the keyword "startxref" followed by the byte offset of the last
+cross-reference section. The parser handles line terminators (which may include
+carriage returns, line feeds, or both) between components.
+
+The offset value is a decimal integer representing the byte position from the
+beginning of the decoded file to the "xref" keyword in the last cross-reference
+section.
+
+__Returns:__ A PDF startxref object containing the parsed byte offset value.
+
+__Fails:__ If the keyword "startxref" is not found or the format is invalid.
 -}
 startXRefP :: Get PDFObject
 startXRefP = label "startxref" $ do

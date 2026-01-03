@@ -1,4 +1,10 @@
--- | This module contains parsers for GFX containers (array and dictionary).
+{-|
+Parsers for PDF graphics stream containers
+
+This module provides binary parsers for PDF graphics stream container objects.
+Containers include arrays and dictionaries, which are composite data structures
+that may contain nested objects of various types.
+-}
 module PDF.Graphics.Parser.Container
   ( arrayP
   , dictionaryP
@@ -27,6 +33,23 @@ import Util.Ascii
     , asciiRIGHTSQUAREBRACKET
     )
 
+{-|
+Parse a graphics stream object item.
+
+An item can be any of the following graphics object types:
+
+- name
+- string
+- reference
+- number
+- keyword
+- hex string
+- array
+- dictionary
+
+The parser tries each item type in sequence using alternative operators,
+returning the first successful parse.
+-}
 itemP :: Get GFXObject
 itemP =
   nameP
@@ -39,22 +62,24 @@ itemP =
     <|> dictionaryP
 
 {-|
-A binary parser for a GFX array.
+Parse a graphics stream array.
 
-A GFX array is a structure signaled by square brackets.
+A graphics array is a composite data structure delimited by square brackets.
+Arrays may contain zero or more items of any supported graphics object type,
+separated by whitespace or other empty content.
 
-It returns a `GFXArray`.
-
-An array may contain any number of the following items:
+Supported item types:
 
 - name
 - string
 - reference
 - number
 - keyword
-- hexString
-- array
-- dictionary
+- hex string
+- array (nested)
+- dictionary (nested)
+
+Returns a graphics array object containing the parsed items.
 -}
 arrayP :: Get GFXObject
 arrayP = label "arrayG" $ do
@@ -66,9 +91,14 @@ arrayP = label "arrayG" $ do
   return $ mkGFXArray items
 
 {-|
-A binary parser for a key (`GFXName`) value (`GFXObject`) pair.
+Parse a key-value pair for a graphics dictionary.
 
-A `List` of these key-value pairs makes a `GFXDictionary`.
+A key-value pair consists of a name (which becomes the dictionary key) followed
+by a graphics object (which becomes the dictionary value). The key and value are
+separated by whitespace or other empty content.
+
+Multiple key-value pairs can be parsed sequentially to construct a complete
+graphics dictionary.
 -}
 dictionaryKeyValueP :: Get (ByteString, GFXObject)
 dictionaryKeyValueP = label "keyvalueG" $ do
@@ -78,22 +108,27 @@ dictionaryKeyValueP = label "keyvalueG" $ do
   return (key, value)
 
 {-|
-A binary parser for a GFX dictionary.
+Parse a graphics stream dictionary.
 
-A GFX dictionary is a structure signaled by double less-than/greater-than signs.
+A graphics dictionary is a composite data structure delimited by double angle
+brackets (@<<@ and @>>@). Dictionaries are key-value stores where keys are names
+and values are graphics objects.
 
-It returns a `GFXDictionary`.
+Dictionaries may contain zero or more key-value pairs, where each pair is
+separated by whitespace or other empty content.
 
-A dictionary may contain any number of key-value pairs of the following items:
+Supported value types:
 
 - name
 - string
 - reference
 - number
 - keyword
-- hexString
+- hex string
 - array
-- dictionary
+- dictionary (nested)
+
+Returns a graphics dictionary object containing the parsed key-value pairs.
 -}
 dictionaryP :: Get GFXObject
 dictionaryP = label "dictionaryG" $ do

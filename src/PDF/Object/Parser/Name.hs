@@ -1,5 +1,7 @@
 {-|
-This module contains a parser for PDF names.
+Parser for PDF name objects
+
+This module provides a binary parser for PDF name objects.
 
 A name object is an atomic symbol uniquely defined by a sequence of any
 characters (8-bit values) except null (character code 0).
@@ -22,8 +24,8 @@ White space used as part of a name shall always be coded using the 2-digit
 hexadecimal notation and no white space may intervene between the SOLIDUS and
 the encoded name.
 
-Regular characters that are outside the range EXCLAMATION MARK(21h) (!) to
-TILDE (7Eh) (~) should be written using the hexadecimal notation.
+Regular characters that are outside the range EXCLAMATION MARK(21h) (!) to TILDE
+(7Eh) (~) should be written using the hexadecimal notation.
 -}
 module PDF.Object.Parser.Name
   ( nameP
@@ -47,6 +49,21 @@ import Util.Ascii
     , asciiUPPERA
     )
 
+{-|
+Parse a hexadecimal-encoded byte in a name.
+
+Hexadecimal codes in names are represented as a NUMBER SIGN (#) followed by
+exactly two hexadecimal digits. The two digits are decoded to produce a byte
+value (0-255). A value of 0 (null character) is not allowed and causes the
+parser to fail.
+
+Examples:
+
+- @#20@ decodes to space (0x20)
+- @#28@ decodes to '(' (0x28)
+- @#29@ decodes to ')' (0x29)
+- @#23@ decodes to '#' (0x23)
+-}
 hexadecimalCodeP :: Get Word8
 hexadecimalCodeP = do
   word8 asciiNUMBERSIGN
@@ -60,6 +77,15 @@ hexadecimalCodeP = do
     | x >= asciiLOWERA && x <= asciiLOWERF = 10 + x - asciiLOWERA
     | otherwise                            = 10 + x - asciiUPPERA
 
+{-|
+Parse a single character in a name.
+
+A name character is either a hexadecimal-encoded byte (using the # prefix) or a
+regular character that does not require hexadecimal encoding.
+
+The parser tries hexadecimal decoding first, then falls back to parsing a
+regular character directly.
+-}
 charP :: Get Word8
 charP = hexadecimalCodeP <|> satisfy isNameRegularChar
 

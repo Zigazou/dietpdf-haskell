@@ -1,5 +1,12 @@
 {-|
-This module helps with the handling of linearized PDF.
+Support for linearized PDF documents
+
+This module provides support for handling linearized PDF documents.
+
+Linearized PDFs are structured to allow the first page to be displayed quickly
+without downloading or parsing the entire file. The first page objects and
+resources are placed at the beginning, followed by a hint stream that describes
+the structure of the remaining content.
 -}
 module PDF.Object.Linearization
   ( Linearization
@@ -29,6 +36,16 @@ import Data.PDF.PDFObject
     )
 import Data.Sequence qualified as SQ
 
+{-|
+Linearization information extracted from a PDF's linearization dictionary.
+
+A linearized PDF contains a special dictionary in the first page object that
+specifies offsets and lengths for hint streams and page boundaries. This allows
+viewers to display the first page before downloading the entire file.
+
+The hints describe which objects are needed for each page and where
+cross-reference information can be found.
+-}
 type Linearization :: Type
 data Linearization = Linearization
   { lnVersion               :: !Double
@@ -68,10 +85,43 @@ data Linearization = Linearization
   }
   deriving stock (Eq, Show)
 
+{-|
+Extract a numeric value from a PDF object, if present and numeric.
+
+Returns 'Just' the numeric value if the object is a 'PDFNumber', or 'Nothing'
+if the object is absent or of a different type.
+
+__Parameters:__
+
+- Optional PDF object to extract from
+
+__Returns:__ Optional numeric value.
+-}
 getNumberValue :: Maybe PDFObject -> Maybe Double
 getNumberValue (Just (PDFNumber value)) = Just value
 getNumberValue _                        = Nothing
 
+{-|
+Extract linearization information from a PDF indirect object.
+
+Attempts to extract the linearization dictionary from an indirect object and
+parse its entries into a 'Linearization' record. Handles two formats:
+
+1. Without overflow hints: H array with 2 elements [offset, length]
+2. With overflow hints: H array with 4 elements [offset, length,
+   overflow_offset, overflow_length]
+
+The linearization dictionary entries are keyed by both PDF names and their
+abbreviated forms (e.g., "Linearized" or "L").
+
+__Parameters:__
+
+- A PDF indirect object (typically from the first page dictionary)
+
+__Returns:__ 'Just' a 'Linearization' record if successfully parsed, or
+'Nothing' if the object is not an indirect object with a linearization
+dictionary or if parsing fails.
+-}
 extractLinearization :: PDFObject -> Maybe Linearization
 extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
   case dictionaryEntries of
@@ -110,7 +160,19 @@ extractLinearization (PDFIndirectObject _ _ (PDFDictionary dictionary)) =
 extractLinearization _ = Nothing
 
 {-|
-Given a list of `PDFObject`, extract the linearization information.
+Extract linearization information from a PDF document.
+
+Searches through the document's objects to find and parse the linearization
+dictionary (typically stored in the first page object). Returns the parsed
+linearization information if found and valid, or 'Nothing' if the document is
+not linearized or the linearization data is malformed.
+
+__Parameters:__
+
+- A PDF document (collection of objects)
+
+__Returns:__ 'Just' the 'Linearization' data if found and valid, or 'Nothing' if
+not linearized or parsing fails.
 -}
 getLinearization
   :: PDFDocument -- ^ The list of `PDFObject`

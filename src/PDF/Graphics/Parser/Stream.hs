@@ -1,3 +1,10 @@
+{-|
+Parser for complete PDF graphics streams
+
+This module provides the main entry point for parsing PDF graphics streams. It
+coordinates the parsing of graphics objects from a raw bytestring and converts
+them into a structured graphics object array.
+-}
 module PDF.Graphics.Parser.Stream
   ( gfxParse
   ) where
@@ -32,9 +39,33 @@ import Util.Ascii
     , pattern AsciiUPPERB
     )
 
+{-|
+Parse zero or more whitespace characters.
+
+This parser consumes any number of whitespace bytes (including zero) and returns
+them as a list. It is typically used to skip separators between graphics
+objects.
+-}
 whiteSpaces :: Get [Word8]
 whiteSpaces = many' (satisfy isWhiteSpace)
 
+{-|
+Parse a single graphics object by dispatching to the appropriate parser.
+
+This function peeks at the next byte to determine the type of object being
+parsed and delegates to the corresponding parser:
+
+- @/@: name object
+- @<@: dictionary or hex string
+- @(@: string object
+- @[@: array object
+- @%@: comment
+- @B@: inline image or keyword
+- Other: number or keyword
+
+The dispatcher uses greedy parsing, trying more specific parsers first where
+ambiguity exists (e.g., @<@ could start either a dictionary or hex string).
+-}
 gfxObjectP :: Get GFXObject
 gfxObjectP = peek >>= \case
   AsciiSOLIDUS           -> nameP
@@ -45,6 +76,17 @@ gfxObjectP = peek >>= \case
   AsciiUPPERB            -> inlineImageP <|> keywordP
   _anyOtherCharacter     -> numberP <|> keywordP
 
+{-|
+Parse a sequence of graphics objects from a stream.
+
+This parser handles the complete parsing structure of a graphics stream:
+
+1. Skips leading empty content (whitespace and comments)
+2. Parses zero or more graphics objects separated by whitespace
+3. Skips trailing empty content
+
+Returns a list of parsed graphics objects in order.
+-}
 gfxRawP :: Get [GFXObject]
 gfxRawP = label "gfxG" $ do
   emptyContentP
@@ -53,10 +95,24 @@ gfxRawP = label "gfxG" $ do
   return objects
 
 {-|
-Parses a graphics stream from a bytestring.
+Parse a graphics stream from a bytestring.
 
-It encapsulates `parseDetail` in order to use the `UnifiedError` type when
-returning errors.
+This is the main entry point for parsing PDF graphics streams. It takes a raw
+bytestring (typically extracted from a PDF content stream) and parses it into a
+structured array of graphics objects.
+
+The function uses 'parseDetail' internally to obtain detailed error information
+and wraps errors in the 'UnifiedError' type for consistent error handling.
+
+__Parameters:__
+
+- The bytestring to parse, typically from a PDF file
+
+__Returns:__
+
+- 'Right' containing a graphics object array on success
+- 'Left' containing a parse error if parsing fails or if not all input is
+  consumed
 -}
 gfxParse
   :: ByteString -- ^ The bytestring to parse coming from a file.

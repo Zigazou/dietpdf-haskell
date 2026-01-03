@@ -47,6 +47,23 @@ import PDF.Document.ObjectStream (explodeDocument)
 import PDF.Document.PDFPartition (partitionDocument, removeUnused)
 import PDF.Object.State (embedObject)
 
+{-|
+A monad transformer stack for PDF processing operations.
+
+`PDFWork m a` provides a context for applying transformations to PDF documents
+while maintaining state and handling errors. It combines `StateT` for managing
+`WorkData` (the current PDF state) with `FallibleT` for error handling.
+
+This transformer enables:
+  * Stateful manipulation of PDF structures
+  * Concurrent processing of PDF objects
+  * Error propagation and recovery
+  * Logging of operations and comparisons
+
+Type parameters:
+  * @m@ - The underlying monad (typically 'IO' for concurrent operations)
+  * @a@ - The result type of the computation
+-}
 type PDFWork :: (Type -> Type) -> Type -> Type
 type PDFWork m a = StateT WorkData (FallibleT m) a
 

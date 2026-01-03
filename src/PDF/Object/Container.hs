@@ -1,6 +1,14 @@
 {-|
-This module contains functions facilitating container manipulation (`PDFArray`,
-`PDFDictionary` and `PDFIndirectObject`).
+Container manipulation utilities for PDF objects
+
+This module provides utility functions for manipulating PDF container objects:
+
+- 'PDFArray': Sequences of PDF objects
+- 'PDFDictionary': Key-value mappings of PDF objects
+- 'PDFIndirectObject': Objects referenced by number and generation
+
+Key functionality includes deep mapping over nested structures, and filter
+manipulation for stream compression and decompression parameters.
 -}
 module PDF.Object.Container
   ( deepMap
@@ -24,7 +32,28 @@ import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 import PDF.Object.State (embedObject, getValue, updateValue)
 
 {-|
-Apply a function to any object contained by an object at any level.
+Apply a transformation function recursively to all objects in a container.
+
+Traverses a PDF object structure at any depth, applying the given function to
+each nested object. The function handles all container types:
+
+- 'PDFIndirectObject': Recursively processes the contained object
+- 'PDFIndirectObjectWithStream': Processes the dictionary
+- 'PDFObjectStream': Processes the dictionary
+- 'PDFDictionary': Recursively processes all values
+- 'PDFArray': Recursively processes all elements
+- Other objects: Applies the function directly
+
+This enables bulk transformations across complex nested PDF structures.
+
+__Parameters:__
+
+- A transformation function from 'PDFObject' to 'PDFWork'
+- The root container object to process
+
+__Returns:__ The transformed container with all nested objects processed.
+
+__Monadic context:__ Runs in the 'PDFWork' monad with 'Logging' capability.
 -}
 deepMap
   :: Logging m
@@ -46,7 +75,33 @@ deepMap fn container = case container of
   object         -> fn object
 
 {-|
-Return a list of filters contained in a `PDFDictionary`.
+Extract and pair compression filters with their parameters from a PDF object.
+
+Retrieves the 'Filter' and 'DecodeParms' entries from a PDF dictionary and zips
+them into a 'FilterList' of 'Filter' objects. Each 'Filter' consists of a filter
+name and its optional parameters.
+
+Handles multiple input formats:
+
+- Single filter as a name: @/Filter /FlateDecode@
+- Single filter as a reference: @/Filter 42 0 R@
+- Filter array with 'DecodeParms' as null, missing, single object, or array
+- Filter array with corresponding 'DecodeParms' array (zipped together)
+
+If 'DecodeParms' is shorter than the filter list, missing parameters are padded
+with 'PDFNull' values.
+
+__Parameters:__
+
+- A PDF object (typically a dictionary-containing object with stream data)
+
+__Returns:__ A 'FilterList' sequence of 'Filter' objects, or empty sequence if
+no filters are found.
+
+__Fails:__ If filter format is invalid (neither name nor reference, or
+incompatible parameter format).
+
+__Monadic context:__ Runs in the 'PDFWork' monad with 'Logging' capability.
 -}
 getFilters :: Logging m => PDFObject -> PDFWork m FilterList
 getFilters container = do
@@ -88,13 +143,29 @@ getFilters container = do
     (ps SQ.>< SQ.replicate (SQ.length fs - SQ.length ps) PDFNull)
 
 {-|
-Update the Filter and DecodeParms dictionary entries according to a
-`FilterList`.
+Set or update the Filter and DecodeParms dictionary entries in a PDF object.
 
-This function works on any `PDFObject` having a dictionary, it does not check
-that the object has a stream.
+Updates a PDF object's dictionary with new filter and decoding parameter entries
+based on a 'FilterList'. This is typically used after modifying the stream
+compression or decompression chain.
 
-It does nothing on any other object.
+Only operates on objects that have dictionaries (verified via 'hasDictionary').
+Does nothing if the object is not a dictionary-containing type.
+
+Updates both entries:
+
+- 'Filter': Extracted from the filter list (single name or array of names)
+- 'DecodeParms': Extracted from the filter list (single dict or array of dicts)
+
+__Parameters:__
+
+- A 'FilterList' containing the new filters and parameters
+- A PDF object to update
+
+__Returns:__ The updated object with new Filter and DecodeParms entries, or the
+original object unchanged if it has no dictionary.
+
+__Monadic context:__ Runs in the 'PDFWork' monad with 'Logging' capability.
 -}
 setFilters :: Logging m => FilterList -> PDFObject -> PDFWork m PDFObject
 setFilters filters object = if hasDictionary object

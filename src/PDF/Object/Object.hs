@@ -1,6 +1,20 @@
 {-|
-This module defines what is a PDF object and functions in relation with the
-PDF specification.
+PDF object types and operations
+
+This module provides the core PDF object type and related utilities for working
+with PDF documents.
+
+It re-exports and organizes PDF object definitions, constructors, conversion
+functions, character classification predicates, and cross-reference table
+handling from various submodules into a unified interface.
+
+The module covers:
+
+- PDF object types and constructors
+- Type-safe numeric conversions
+- Character classification for PDF syntax
+- Cross-reference (xref) table structures
+- Indirect object and stream operations
 -}
 module PDF.Object.Object
   ( -- * PDF object

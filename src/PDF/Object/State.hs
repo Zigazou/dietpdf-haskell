@@ -1,5 +1,17 @@
 {-|
-This module defines functions working on `StateT` monad with `PDFObject`.
+State monad utilities for PDF object manipulation
+
+This module provides state monad utilities for querying and modifying PDF
+objects in a monadic context.
+
+PDF objects are immutable by design, but this module uses the State and Except
+monads to enable safe functional manipulation of PDF document structures. It
+provides operations for:
+
+- Querying values and streams from PDF objects
+- Setting and removing dictionary entries
+- Managing stream data with automatic length updates
+- Embedding objects within other PDF structures
 -}
 module PDF.Object.State
   ( -- * Query
@@ -41,12 +53,23 @@ import Util.Dictionary (Dictionary)
 import Data.ByteString (ByteString)
 
 {-|
-Returns the stream embedded in a `PDFObject`.
+Extract the binary stream data from a PDF object.
 
-If the object has no stream, a `UnifiedError` `NoStream` stops the evaluation
-of the monad.
+Retrieves the stream data from objects that contain streams. Returns the raw
+bytestring of stream content, which may be compressed or encoded depending on
+the object's filter settings.
 
-Only `PDFIndirectObjectWithStream` and `PDFObjectStream` have stream embedded.
+Only indirect objects with streams, object streams, and cross-reference streams
+contain extractable stream data.
+
+__Parameters:__
+
+- A PDF object (may or may not contain stream data)
+
+__Returns:__ The stream data as a bytestring in the 'PDFWork' monad.
+
+__Fails:__ With 'UnifiedError' 'NoStream' if the object does not contain stream
+data.
 -}
 getStream :: Logging m => PDFObject -> PDFWork m ByteString
 getStream object = case object of
@@ -56,10 +79,25 @@ getStream object = case object of
   _anyOtherObject                            -> throwError (NoStream "")
 
 {-|
-Returns the dictionary embedded in a `PDFObject`.
+Extract the dictionary from a PDF object.
 
-If the object has no dictionary, a `UnifiedError` `NoDictionary` stops the
-evaluation of the monad.
+Retrieves the dictionary embedded in objects that contain one. Works on multiple
+object types:
+
+- 'PDFIndirectObjectWithStream': Dictionary with stream data
+- 'PDFObjectStream': Dictionary with stream data
+- 'PDFDictionary': Direct dictionary object
+- 'PDFIndirectObject': When embedding a dictionary
+- 'PDFTrailer': Trailer dictionary
+- 'PDFXRefStream': Cross-reference stream dictionary
+
+__Parameters:__
+
+- A PDF object (may or may not contain a dictionary)
+
+__Returns:__ The dictionary in the 'PDFWork' monad.
+
+__Fails:__ With 'UnifiedError' 'NoDictionary' if the object has no dictionary.
 -}
 getDictionary :: Logging m => PDFObject -> PDFWork m (Dictionary PDFObject)
 getDictionary object = case object of
@@ -71,11 +109,19 @@ getDictionary object = case object of
   _anyOtherObject                              -> throwError (NoDictionary "")
 
 {-|
-Get value in a dictionary from a `PDFObject`.
+Retrieve a value from a PDF object's dictionary by key.
 
-It works transparently for any `PDFObject` containing a dictionary:
-`PDFDictionary`, `PDFIndirectObjectWithStream`, `PDFObjectStream`,
-`PDFIndirectObject` (when embedding a `Dictionary`) and `PDFTrailer`.
+Works transparently on any PDF object containing a dictionary: 'PDFDictionary',
+'PDFIndirectObjectWithStream', 'PDFObjectStream', 'PDFIndirectObject' (when
+containing a dictionary), 'PDFTrailer', and 'PDFXRefStream'.
+
+__Parameters:__
+
+- The dictionary key name to look up
+- The PDF object to search
+
+__Returns:__ 'Just' the PDF object value if the key exists, or 'Nothing' if the
+key is not found or the object has no dictionary.
 -}
 getValue
   :: Logging m
@@ -92,11 +138,19 @@ getValue name object = case object of
   _anyOtherObject                              -> return Nothing
 
 {-|
-Get value in a dictionary from a `PDFObject`.
+Retrieve a value from a PDF object's dictionary, with a default fallback.
 
-It works transparently for any `PDFObject` containing a dictionary:
-`PDFDictionary`, `PDFIndirectObjectWithStream`, `PDFObjectStream`,
-`PDFIndirectObject` (when embedding a `Dictionary`) and `PDFTrailer`.
+Same as 'getValue' but if the key is not found, returns the provided default
+value instead of 'Nothing'.
+
+__Parameters:__
+
+- The dictionary key name to look up
+- A default PDF object to return if the key is not found
+- The PDF object to search
+
+__Returns:__ 'Just' the value if found, or 'Just' the default value if not
+found, or 'Nothing' if the object has no dictionary.
 -}
 getValueDefault
   :: Logging m
@@ -109,9 +163,18 @@ getValueDefault name defaultValue object = getValue name object >>= \case
   Nothing    -> return $ Just defaultValue
 
 {-|
-Set value in a dictionary contained in a `PDFObject`.
+Set or insert a key-value pair in a PDF object's dictionary.
 
-If the object has no dictionary, it is ignored.
+Adds or updates a dictionary entry in any PDF object containing a dictionary. If
+the object has no dictionary, it is returned unchanged.
+
+__Parameters:__
+
+- The dictionary key to set
+- The PDF object value to assign
+- The PDF object to modify
+
+__Returns:__ The modified PDF object with the updated dictionary entry.
 -}
 setValue
   :: Logging m
@@ -138,7 +201,18 @@ setValue name value object = case object of
   _anyOtherObject -> return object
 
 {-|
-Remove a value in a dictionary contained in a `PDFObject`.
+Delete a key from a PDF object's dictionary.
+
+Removes a dictionary entry from any PDF object containing a dictionary. If the
+key does not exist, the object is returned unchanged. If the object has no
+dictionary, it is returned unchanged.
+
+__Parameters:__
+
+- The dictionary key to remove
+- The PDF object to modify
+
+__Returns:__ The modified PDF object with the specified key deleted.
 -}
 removeValue
   :: Logging m
@@ -160,11 +234,19 @@ removeValue name object = case object of
   _anyOtherObject -> return object
 
 {-|
-Set value (maybe) in a dictionary contained in a `PDFObject`.
+Conditionally set a value in a PDF object's dictionary using a Maybe value.
 
-When the value is `Nothing`, this function does nothing.
-When the value is `Just` something, the entry is set in the dictionary using
-the `setValue` functin.
+If the value is 'Nothing', the object is returned unchanged. If the value is
+'Just' something, 'setValue' is called to set it in the dictionary.
+
+__Parameters:__
+
+- The dictionary key
+- An optional PDF object value
+- The PDF object to modify
+
+__Returns:__ The original object if value is 'Nothing', or the modified object
+with the new entry if value is 'Just'.
 -}
 setMaybe
   :: Logging m
@@ -176,11 +258,22 @@ setMaybe _    Nothing      object = return object
 setMaybe name (Just value) object = setValue name value object
 
 {-|
-Set value (maybe) in a dictionary contained in a `PDFObject`.
+Update or remove a dictionary entry based on a Maybe value.
 
-When the value is `Nothing`, this function does nothing.
-When the value is `Just` something, the entry is set in the dictionary using
-the `setValue` functin.
+If the value is 'Nothing', the entry is deleted using 'removeValue'. If the
+value is 'Just' something, the entry is set using 'setValue'.
+
+This combines deletion and insertion into a single operation for conditional
+dictionary updates.
+
+__Parameters:__
+
+- The dictionary key
+- An optional PDF object value
+- The PDF object to modify
+
+__Returns:__ The modified object with the entry removed (if 'Nothing') or
+updated (if 'Just').
 -}
 updateValue
   :: Logging m
@@ -192,13 +285,21 @@ updateValue name Nothing      object = removeValue name object
 updateValue name (Just value) object = setValue name value object
 
 {-|
-Define the stream part of a `PDFObject` if it has one.
+Replace the stream data in a PDF object and update its Length.
 
-It also updates the Length entry in the associated `Dictionary`.
+Sets new stream data for objects that contain streams. Automatically computes
+and updates the 'Length' dictionary entry to reflect the new stream size in
+bytes.
 
-This function works only on `PDFIndirectObjectStream` and `PDFObjectStream`.
+Only works on objects with streams: 'PDFIndirectObjectWithStream',
+'PDFObjectStream', and 'PDFXRefStream'. Other objects are returned unchanged.
 
-It has no effect on any other `PDFObject`.
+__Parameters:__
+
+- The new stream bytestring data
+- The PDF object to modify
+
+__Returns:__ The modified object with new stream data and updated Length entry.
 -}
 setStream :: Logging m => ByteString -> PDFObject -> PDFWork m PDFObject
 setStream newStream object = case object of
@@ -215,13 +316,20 @@ setStream newStream object = case object of
   newLength = mkPDFNumber . BS.length $ newStream
 
 {-|
-Define the stream part of a `PDFObject` if it has one.
+Replace stream data and update both Length and Length1 entries.
 
-It also updates the Length entry in the associated `Dictionary`.
+Like 'setStream', but also sets the 'Length1' dictionary entry to record the
+uncompressed size. This is used for streams with FlateDecode or other filters
+where the original uncompressed length needs to be preserved.
 
-This function works only on `PDFIndirectObjectStream` and `PDFObjectStream`.
+__Parameters:__
 
-It has no effect on any other `PDFObject`.
+- The uncompressed (original) size in bytes
+- The new stream data (compressed or encoded)
+- The PDF object to modify
+
+__Returns:__ The modified object with new stream data and updated Length and
+Length1 entries.
 -}
 setStream1
   :: Logging m
@@ -294,12 +402,43 @@ embedObject toEmbed (PDFIndirectObject num gen _) =
   return $ PDFIndirectObject num gen toEmbed
 embedObject toEmbed object = cannotEmbed toEmbed object
 
+{-|
+Throw an error indicating an object cannot be embedded in another.
+
+Internal helper function for 'embedObject' that produces a consistent error
+message when an invalid embedding is attempted.
+
+__Parameters:__
+
+- The object that cannot be embedded
+- The container object it cannot be embedded into
+
+__Fails:__ Always throws 'UnifiedError' 'InvalidObjectToEmbed' with a detailed
+error message.
+-}
 cannotEmbed :: Logging m => PDFObject -> PDFObject -> PDFWork m PDFObject
 cannotEmbed source destination = throwError
   (InvalidObjectToEmbed
     (show source ++ " cannot be embedded in " ++ show destination)
   )
 
+{-|
+Execute a monadic query on a PDF object, catching errors and converting to
+Maybe.
+
+Runs a query function that returns 'Maybe' in the 'PDFWork' monad, capturing the
+result and suppressing any errors that occur during execution. Useful for
+optional queries where failure should simply return 'Nothing' rather than
+propagating an error.
+
+__Parameters:__
+
+- A query function that returns 'Maybe PDFObject' in 'PDFWork' 'Identity'
+- The PDF object to query
+
+__Returns:__ 'Just' the value if the query succeeds and returns 'Just', or
+'Nothing' if the query fails or explicitly returns 'Nothing'.
+-}
 maybeQuery
   :: (PDFObject -> PDFWork Identity (Maybe PDFObject))
   -> PDFObject

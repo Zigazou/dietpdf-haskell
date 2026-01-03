@@ -82,9 +82,36 @@ import Util.Ascii
   (asciiDIGITNINE, asciiDIGITZERO, asciiLOWERF, asciiLOWERN, asciiSPACE)
 import Util.Number (toNumber)
 
+{-|
+Parse a variable-width integer.
+
+Parses one or more consecutive decimal digits and converts them to an integer
+value. The width is determined by the number of consecutive digit characters
+found in the input.
+
+__Returns:__ The integer value of the parsed digits.
+-}
 integerP :: Get Int
 integerP = toNumber <$> some' (satisfy isDigit)
 
+{-|
+Parse a fixed-width integer with exactly @width@ digits.
+
+Attempts to scan exactly @width@ bytes, each of which must be a decimal digit.
+Fails if fewer than @width@ digits are found.
+
+This is used for parsing fixed-format xref entries where fields like byte
+offsets (10 digits) and generation numbers (5 digits) have strict width
+requirements.
+
+__Parameters:__
+
+- The required number of digit characters
+
+__Returns:__ The integer value represented by the fixed-width digit sequence.
+
+__Fails:__ If fewer than @width@ consecutive digits are found.
+-}
 fixedSizeInteger :: Int -> Get Int
 fixedSizeInteger width = do
   digits <- scan width getNDigit
@@ -98,6 +125,24 @@ fixedSizeInteger width = do
     | inRange (asciiDIGITZERO, asciiDIGITNINE) byte = Just (n - 1)
     | otherwise = Nothing
 
+{-|
+Apply a parser @count@ times and collect results in a list.
+
+If @count@ is 0, returns an empty list immediately. Otherwise, applies the
+parser once, collects the result, then recursively applies the parser @count -
+1@ more times.
+
+This is useful for parsing a known number of fixed-format entries, such as the
+xref entries in a subsection where the entry count is specified in the
+subsection header.
+
+__Parameters:__
+
+- The number of times to apply the parser
+- The parser to apply repeatedly
+
+__Returns:__ A list of @count@ parsed values.
+-}
 takeN :: Int -> Get a -> Get [a]
 takeN 0     _      = return []
 takeN count parser = do
@@ -105,6 +150,18 @@ takeN count parser = do
   items <- takeN (count - 1) parser
   return (item : items)
 
+{-|
+Parse the state indicator of an xref entry.
+
+Reads a single byte and determines whether it represents a free or in-use entry:
+
+- @f@ (lowercase): Free entry (object has been deleted)
+- @n@ (lowercase): In-use entry (object is current)
+
+__Returns:__ The 'XRefState' indicating whether the entry is free or in-use.
+
+__Fails:__ If the byte is neither 'f' nor 'n'.
+-}
 xrefStateP :: Get XRefState
 xrefStateP = anyWord8 >>= validate
  where
@@ -113,6 +170,26 @@ xrefStateP = anyWord8 >>= validate
                  | value == asciiLOWERN = return InUseEntry
                  | otherwise            = fail "xrefstate"
 
+{-|
+Parse a single cross-reference entry.
+
+A cross-reference entry is exactly 20 bytes and contains:
+
+1. 10-digit byte offset (or next free object number for free entries)
+2. Space character
+3. 5-digit generation number
+4. Space character
+5. State indicator: 'f' (free) or 'n' (in-use)
+6. End-of-line marker (whitespace)
+
+Examples:
+
+- @0000000000 65535 f eol@ - Free entry, next free is object 0
+- @0000025325 00000 n eol@ - In-use entry at byte offset 25325
+
+__Returns:__ An 'XRefEntry' containing the offset (or next free), generation
+number, and state.
+-}
 xrefEntryP :: Get XRefEntry
 xrefEntryP = do
   offset <- fixedSizeInteger 10
@@ -123,6 +200,32 @@ xrefEntryP = do
   skipWhile isWhiteSpace
   return $ XRefEntry offset generation state
 
+{-|
+Parse a cross-reference subsection.
+
+A subsection describes a contiguous range of objects and consists of:
+
+1. Optional leading whitespace
+2. Starting object number
+3. Space and count (number of entries in this subsection)
+4. Empty content (whitespace/comments)
+5. Exactly @count@ xref entries
+
+For example:
+
+@
+0 6
+0000000000 65535 f
+0000000018 00000 n
+...
+@
+
+The starting object number and count allow multiple subsections with non-
+contiguous object ranges (common in incrementally updated files).
+
+__Returns:__ An 'XRefSubsection' containing the starting object number, entry
+count, and the parsed entries.
+-}
 xrefSubsectionP :: Get XRefSubsection
 xrefSubsectionP = do
   skipWhile isWhiteSpace
@@ -134,7 +237,25 @@ xrefSubsectionP = do
   return $ XRefSubsection offset count entries
 
 {-|
-Parse a `PDFXRef` object.
+Parse a complete PDF cross-reference table.
+
+A cross-reference table begins with the keyword "xref" followed by one or more
+subsections. Each subsection describes a contiguous range of indirect objects
+and their locations within the file.
+
+The parser:
+
+1. Matches the keyword "xref"
+2. Consumes line terminators
+3. Parses one or more subsections (the first usually starting at object 0)
+
+For non-incrementally-updated files, there is typically one subsection covering
+all objects. For incrementally-updated files, multiple xref sections may exist
+in the file, with the last one providing access to the current object versions.
+
+__Returns:__ A PDF xref object containing the list of parsed subsections.
+
+__Fails:__ If the keyword "xref" is not found or a subsection format is invalid.
 -}
 xrefP :: Get PDFObject
 xrefP = label "xref" $ do

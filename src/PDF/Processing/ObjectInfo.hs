@@ -1,10 +1,20 @@
 {-|
-Summarize PDF objects into structured `ObjectInfo`.
+PDF object summarization and inspection
 
-This module inspects `PDFObject`s and produces human-readable descriptions,
-categories, optional stream size details (filtered vs unfiltered), and embedded
-child information for compound objects like object streams. It is intended for
-diagnostics and reporting.
+This module inspects PDF objects and produces structured summaries for
+diagnostics and reporting purposes.
+
+The module converts 'PDFObject' instances into human-readable 'ObjectInfo'
+records that include:
+
+- Object type and category classification
+- Human-readable descriptions
+- Stream size information (both filtered and unfiltered byte counts)
+- Embedded child objects for compound structures like object streams
+- Original byte offset in the PDF file
+
+Useful for debugging, analyzing PDF structure, and reporting object details to
+users.
 -}
 module PDF.Processing.ObjectInfo
   ( objectInfo
@@ -40,9 +50,36 @@ import PDF.Processing.Unfilter (unfilter)
 
 import Util.Number (fromNumber)
 
+{-|
+Extract the Type and Subtype of a PDF object as UTF-8 decoded text.
+
+Returns a formatted string combining Type and Subtype dictionary entries in the
+format "Type/Subtype", or just "Type" or "Subtype" if one is missing. Useful for
+describing objects in human-readable form.
+
+__Parameters:__
+
+- A PDF object (typically a dictionary or indirect object containing one)
+
+__Returns:__ 'Just' a text description if Type or Subtype is found, or 'Nothing'
+if neither exists.
+-}
 getTypeSubType :: PDFObject -> Maybe Text
 getTypeSubType object = getTypeSubType' object >>= Just . decodeUtf8Lenient
 
+{-|
+Extract the Type and Subtype of a PDF object as raw bytestring.
+
+Internal helper function that returns the combined Type/Subtype as a bytestring
+before UTF-8 decoding. Handles indirect objects by recursively unwrapping them.
+
+__Parameters:__
+
+- A PDF object (dictionary, indirect object, or other type)
+
+__Returns:__ 'Just' the Type/Subtype bytestring if found, or 'Nothing' if
+neither entry exists or the object is not a dictionary type.
+-}
 getTypeSubType' :: PDFObject -> Maybe ByteString
 getTypeSubType' (PDFDictionary dict) =
   case (Map.lookup "Type" dict, Map.lookup "Subtype" dict) of
@@ -58,6 +95,23 @@ getTypeSubType' (PDFIndirectObjectWithGraphics _major _minor object _stream) =
   getTypeSubType' (PDFDictionary object)
 getTypeSubType' _anyOtherObject = Nothing
 
+{-|
+Format a PDF object as a human-readable type description.
+
+Produces a short text description of a PDF object's type and content. For simple
+scalars, includes the value (e.g., "number=42", "bool=true"). For complex
+objects, includes the type name and any relevant details (e.g., "array[10]",
+"dict[5]").
+
+Useful for logging and diagnostic output where a single-line description of an
+object is needed.
+
+__Parameters:__
+
+- A PDF object of any type
+
+__Returns:__ Text description of the object type and content.
+-}
 getObjectType :: PDFObject -> Text
 getObjectType (PDFComment comment) =
   toStrict $ format ("{- " % utf8 % " -}") comment
@@ -90,19 +144,43 @@ getObjectType (PDFTrailer _) = "invalid trailer"
 getObjectType (PDFStartXRef _startOffset) = "startxref"
 
 {-|
-Build an `ObjectInfo` summary for a `PDFObject`.
+Build a structured summary of a PDF object for diagnostics and reporting.
 
-Parameters:
+Inspects a PDF object and generates an 'ObjectInfo' record containing:
 
-* The `PDFObject` to summarize.
-* An optional byte `offset` where the object begins in the source.
+__Basic info:__
+- Object number (if applicable)
+- Human-readable description
+- Object category (Image, Text, Other, etc.)
+- Original byte offset in the PDF file
 
-Behavior:
+__Stream handling:__ For objects with streams, computes both:
+- Filtered size: Bytes as stored (may be compressed)
+- Unfiltered size: Bytes after decompression (if filters are applied)
 
-* For stream-based objects, computes both filtered and unfiltered sizes by
-  attempting to decode supported filters.
-* For object streams, extracts embedded entries and summarizes each.
-* Otherwise, returns a textual description and category without stream details.
+Attempts to decode supported filters (FlateDecode, ASCII85Decode, etc.) to
+determine the unfiltered size. If decoding fails, the filtered size is reported.
+
+__Embedded objects:__ For object streams, extracts and recursively summarizes
+all embedded objects, providing a complete view of the stream's contents.
+
+__Parameters:__
+
+- A PDF object to analyze
+- Optional byte offset where this object begins in the source file
+
+__Returns:__ An 'ObjectInfo' record in the 'PDFWork' monad.
+
+__Monadic context:__ Runs in 'PDFWork' 'IO' with 'Logging' capability for
+diagnostic output.
+
+__Examples:__
+
+- 'PDFComment' → No stream, simple description
+- 'PDFIndirectObjectWithStream' → Stream info with filtered/unfiltered sizes
+- 'PDFObjectStream' → Stream info plus embedded object summaries
+- 'PDFArray' → Array size in brackets
+- 'PDFXRefStream' → Cross-reference stream with size info
 -}
 objectInfo :: Logging IO => PDFObject -> Maybe Int -> PDFWork IO ObjectInfo
 objectInfo (PDFComment comment) offset = return ObjectInfo

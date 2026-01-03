@@ -1,4 +1,10 @@
--- | This module contains parsers for PDF containers (array and dictionary).
+{-|
+Parsers for PDF container objects (arrays and dictionaries)
+
+This module provides binary parsers for PDF container objects: arrays and
+dictionaries. These are composite data structures that can contain nested
+objects of various types.
+-}
 module PDF.Object.Parser.Container
   ( arrayP
   , dictionaryP
@@ -26,9 +32,25 @@ import Util.Ascii
     , asciiRIGHTSQUAREBRACKET
     )
 
+{-|
+Parse a PDF object that may appear as an item in a container.
+
+An item can be any of the following PDF object types:
+
+- name object
+- string object (literal string)
+- reference to an indirect object
+- number (integer or real)
+- keyword
+- hexadecimal string
+- array (nested)
+- dictionary (nested)
+
+The parser tries each item type in sequence using alternative operators,
+returning the first successful parse.
+-}
 itemP :: Get PDFObject
-itemP =
-  nameP
+itemP = nameP
     <|> stringP
     <|> referenceP
     <|> numberP
@@ -38,22 +60,24 @@ itemP =
     <|> dictionaryP
 
 {-|
-A binary parser for a PDF array.
+Parse a PDF array object.
 
-A PDF array is a structure signaled by square brackets.
+A PDF array is a composite data structure delimited by square brackets (@[@ and
+@]@). Arrays may contain zero or more items of any supported object type,
+separated by whitespace or other empty content (comments).
 
-It returns a `PDFArray`.
+Supported item types:
 
-An array may contain any number of the following items:
-
-- name
-- string
+- name object
+- string object
 - reference
 - number
 - keyword
-- hexString
-- array
-- dictionary
+- hex string
+- array (nested)
+- dictionary (nested)
+
+Returns a PDF array object containing the parsed items in order.
 -}
 arrayP :: Get PDFObject
 arrayP = label "array" $ do
@@ -64,6 +88,18 @@ arrayP = label "array" $ do
   word8 asciiRIGHTSQUAREBRACKET
   return $ mkPDFArray items
 
+{-|
+Parse a key-value pair for a PDF dictionary.
+
+A key-value pair consists of a name object (which becomes the dictionary key)
+followed by a PDF object (which becomes the dictionary value). The key and value
+are separated by whitespace or other empty content (comments).
+
+Multiple key-value pairs parsed sequentially form the entries of a complete PDF
+dictionary.
+
+Returns a tuple of the parsed key (as a bytestring) and its associated value.
+-}
 dictionaryKeyValueP :: Get (ByteString, PDFObject)
 dictionaryKeyValueP = do
   PDFName key <- nameP
@@ -72,22 +108,28 @@ dictionaryKeyValueP = do
   return (key, value)
 
 {-|
-A binary parser for a PDF dictionary.
+Parse a PDF dictionary object.
 
-A PDF dictionary is a structure signaled by double less-than/greater-than signs.
+A PDF dictionary is a composite data structure delimited by double angle
+brackets (@<<@ and @>>@). Dictionaries are associative arrays (maps) with name
+keys and object values.
 
-It returns a `PDFDictionary`.
+A dictionary may contain zero or more key-value pairs, where each pair is
+separated by whitespace or other empty content (comments). Key-value pairs are
+stored in ascending order by key name.
 
-A dictionary may contain any number of key-value pairs of the following items:
+Supported value types:
 
-- name
-- string
+- name object
+- string object
 - reference
 - number
 - keyword
-- hexString
+- hex string
 - array
-- dictionary
+- dictionary (nested)
+
+Returns a PDF dictionary object containing the parsed key-value pairs.
 -}
 dictionaryP :: Get PDFObject
 dictionaryP = label "dictionary" $ do

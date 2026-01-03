@@ -1,5 +1,10 @@
 {-|
-This module contains a parser for PDF comments.
+Parser for PDF comments and file markers
+
+This module provides binary parsers for PDF comments and special comment
+markers. Comments in PDF files start with a percent sign (%) and extend to the
+end of the line. Special comments like %EOF and %PDF- are recognized and parsed
+into dedicated object types.
 -}
 module PDF.Object.Parser.Comment
   ( commentP, eofP
@@ -17,7 +22,13 @@ import PDF.Object.Parser.LooseEndOfLine (isLooseEndOfLine, looseEndOfLineP)
 import Util.Ascii (asciiPERCENTSIGN, asciiUPPERE, asciiUPPERF, asciiUPPERO)
 
 {-|
-A binary parser for the end-of-file comment `%EOF`.
+Parse the end-of-file marker in a PDF document.
+
+The end-of-file marker is a special comment consisting of the five bytes @%EOF@.
+It signals the end of a PDF file and may optionally be followed by whitespace.
+After parsing, the parser consumes any remaining whitespace on the line.
+
+Returns 'PDFEndOfFile' on successful parse.
 -}
 eofP :: Get PDFObject
 eofP = label "eof" $ do
@@ -30,16 +41,23 @@ eofP = label "eof" $ do
   return PDFEndOfFile
 
 {-|
-A binary parser for a PDF comment.
+Parse a PDF comment from a PDF stream.
 
-A PDF comment is a line starting with `asciiPERCENTSIGN`.
+A PDF comment is a line starting with a percent sign (@%@) and extending to the
+end of the line. The parser recognizes three special comment types:
 
-It returns either:
+1. @%EOF@ - The end-of-file marker (returns 'PDFEndOfFile')
+2. @%PDF-version@ - The PDF version header (returns 'PDFVersion' with version
+   string)
+3. Any other comment - A regular comment (returns 'PDFComment' with content)
 
-- `PDFEndOfFile` for the special comment `%EOF` (eofP should be used instead)
-- `PDFVersion` for any comment starting with `PDF-`
-- `PDFComment` for any other string
- -}
+The parser consumes the percent sign prefix and any content until a line
+terminator (CR, LF, or CR+LF), then optionally consumes the line terminator or
+reaches end of input.
+
+Returns a PDF object representing the parsed comment: 'PDFVersion',
+'PDFEndOfFile', or 'PDFComment' depending on the comment content.
+-}
 commentP :: Get PDFObject
 commentP = label "comment" $ do
   word8 asciiPERCENTSIGN

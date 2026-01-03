@@ -1,13 +1,23 @@
 {-|
-Optimization passes for PDF objects and their streams.
+PDF stream optimization with intelligent filter selection
 
-This module decides which optimization to apply based on object type and
-filters, performs safe unfiltering, stream-level optimizations (XML, graphics,
-JPEG, TrueType), and then re-filters using suitable combinations. It integrates
-with the `PDFWork` monad to report progress and errors with contextual
-information.
+This module performs comprehensive optimization of PDF objects and their
+streams.
+
+Optimization includes:
+
+- __Stream-level optimization__: XML formatting, graphics commands, JPEG images,
+  TrueType fonts
+- __Filter optimization__: Selecting the best compression filter combination
+  (Zopfli instead of Zlib, combining Zopfli and RLE, etc.)
+- __String optimization__: Removing unnecessary spaces in nested structures
+- __Filter support__: Handles FlateDecode, RLEDecode, LZWDecode, ASCII85Decode,
+  ASCIIHexDecode, DCTDecode, JPXDecode
+
+Optimization is only applied to objects with supported filters. Unsupported
+filters prevent optimization to avoid data corruption. Progress and errors are
+reported through the 'PDFWork' monad with contextual information.
 -}
-
 module PDF.Processing.Optimize
   ( optimize
   ) where
@@ -53,10 +63,25 @@ import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 
 {-|
-Run a stream optimization process for a given `PDFObject`.
+Attempt to optimize a stream, gracefully handling failures.
 
-If the optimization succeeds, logs a size comparison and returns the optimized
-stream; on failure, logs the error and returns the original stream.
+Extracts the stream from a PDF object, applies the optimization function, and
+reports the result. If optimization succeeds, logs a size comparison. If it
+fails, logs the error and returns the original unoptimized stream.
+
+This safe wrapper prevents optimization failures from disrupting the overall
+optimization process.
+
+__Parameters:__
+
+- A label describing the optimization (e.g., "XML stream optimization")
+- The PDF object containing the stream
+- A function to apply to the extracted stream
+
+__Returns:__ The optimized stream if successful, or the original stream if
+optimization fails.
+
+__Side effects:__ Logs success (with size comparison) or error messages.
 -}
 optimizeStreamOrIgnore
   :: Logging m
@@ -77,9 +102,32 @@ optimizeStreamOrIgnore optimizationLabel object optimizationProcess = do
       return stream
 
 {-|
-Apply an appropriate stream-level optimization based on the object content (XML,
-graphics, JPEG, TrueType font). Returns the object with its stream updated when
-applicable.
+Apply content-specific stream optimizations to a PDF object.
+
+Determines the optimal optimization strategy based on the object's content type
+(XML, graphics, JPEG, TrueType font) and applies the appropriate optimization
+process. Updates the object's stream with the optimized data.
+
+__Optimization types:__
+
+- __XML__: Removes unnecessary whitespace and formatting
+- __Graphics__: Optimizes PDF graphics commands (scaling, color reduction)
+- __JPEG__: Uses jpegtran for lossless JPEG optimization
+- __TrueType__: Uses ttfAutoHint for font hinting optimization
+- __Other__: Returns the object unchanged
+
+Optimization failures are caught and logged, returning the original stream in
+such cases.
+
+__Parameters:__
+
+- A PDF object with stream data
+
+__Returns:__ The object with optimized stream (or unchanged if optimization not
+applicable or fails).
+
+__Side effects:__ External processes may be invoked (jpegtran, ttfAutoHint), and
+size comparisons are logged.
 -}
 streamOptimize :: PDFObject -> PDFWork IO PDFObject
 streamOptimize object = do
@@ -125,7 +173,27 @@ refilter object = do
     else return stringOptimized
 
 {-|
-Return whether a filter is known and supported for optimization.
+Check if a PDF filter is known and supported by DietPDF.
+
+Verifies that a filter name is one that DietPDF can reliably decode and
+re-encode. Supported filters enable safe optimization; unsupported filters
+prevent optimization to avoid data corruption.
+
+__Supported filters:__
+
+- FlateDecode: Standard ZIP compression
+- RLEDecode: Run-length encoding
+- LZWDecode: LZW compression
+- ASCII85Decode: ASCII-85 encoding
+- ASCIIHexDecode: Hexadecimal encoding
+- DCTDecode: JPEG compression
+- JPXDecode: JPEG2000 compression
+
+__Parameters:__
+
+- A PDF filter object
+
+__Returns:__ 'True' if the filter is supported, 'False' otherwise.
 -}
 isFilterOK :: Filter -> Bool
 isFilterOK f = case fFilter f of
@@ -139,8 +207,25 @@ isFilterOK f = case fFilter f of
   _anyOtherCase              -> False
 
 {-|
-Determine if a `PDFObject` is optimizable, whether because its filters are
-known by DietPDF or because its structure is optimizable.
+Determine if a PDF object can be safely optimized.
+
+An object is optimizable if:
+
+- It's an indirect object (always optimizable)
+- It's a trailer or cross-reference stream (always optimizable)
+- It's a stream object whose filters are all known and supported
+- Its structure is inherently optimizable (e.g., dictionary)
+
+Objects with unsupported filters are not optimizable to prevent data corruption.
+Simple objects like comments, numbers, and references are not optimizable.
+
+__Parameters:__
+
+- A PDF object
+
+__Returns:__ 'True' if the object can be optimized, 'False' otherwise.
+
+__Side effects:__ May check object's filters, running in the 'PDFWork' monad.
 -}
 optimizable :: Logging m => PDFObject -> PDFWork m Bool
 optimizable PDFIndirectObject{}                  = return True

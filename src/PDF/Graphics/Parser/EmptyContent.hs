@@ -1,6 +1,9 @@
 {-|
-This module contains parser for empty contents (space or comment) used to
-separate PDF objects.
+Parser for whitespace and comments in PDF graphics streams
+
+This module provides a binary parser for empty content in PDF graphics streams.
+Empty content includes whitespace and comments, which are used as separators
+between PDF objects and are typically ignored during parsing.
 -}
 module PDF.Graphics.Parser.EmptyContent
   ( emptyContentP
@@ -15,12 +18,16 @@ import PDF.Graphics.Parser.Comment (commentP)
 import PDF.Object.Object (isWhiteSpace)
 
 {-|
-A binary parser meant to ignore empty content in a PDF file.
+Parse and discard empty content in PDF graphics streams.
 
-Empty content is either:
+Empty content consists of any combination of:
 
-- white spaces (according to PDF specifications)
-- comments (starting with a percent sign "%" and ending with a line return)
+- whitespace characters (as defined by PDF specifications)
+- comments (lines starting with '%' and ending with a line terminator)
+
+This parser is used to skip separators between PDF objects and consumes zero or
+more occurrences of whitespace or comments. It always succeeds without consuming
+any significant data, returning unit @()@.
 -}
 emptyContentP :: Get ()
 emptyContentP = label "emptycontentG"
