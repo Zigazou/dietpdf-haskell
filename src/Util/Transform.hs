@@ -8,15 +8,25 @@ module Util.Transform
   ) where
 
 {-|
+Apply a transformation repeatedly until reaching a fixed point or iteration
+limit. The function applies @transform@ to the input value until the result
+stops changing according to 'Eq'.
+
+The final (stable) value is returned.
+-}
+untilNoChangeLimit :: Eq a => Int -> (a -> a) -> a -> a
+untilNoChangeLimit 0 _transform original = original
+untilNoChangeLimit limit transform original
+  | original == transformed = transformed
+  | otherwise = untilNoChangeLimit (limit - 1) transform transformed
+ where
+  transformed = transform original
+
+{-|
 Apply a transformation repeatedly until reaching a fixed point.
 
 The function applies @transform@ to the input value until the result stops
 changing according to 'Eq'. The final (stable) value is returned.
-
-This will not terminate if @transform@ does not eventually reach a fixed point.
 -}
 untilNoChange :: Eq a => (a -> a) -> a -> a
-untilNoChange transform original
-  | original == transformed = transformed
-  | otherwise               = untilNoChange transform transformed
-  where transformed = transform original
+untilNoChange = untilNoChangeLimit 64

@@ -88,6 +88,12 @@ indirectObjectExamples =
         )
       )
     )
+  , ( "11 0 obj<</Length 8>>stream\n12345678endstream endobj"
+    , PDFIndirectObjectWithStream 11
+                                  0
+                                  (mkDictionary [("Length", PDFNumber 8.0)])
+                                  "12345678"
+    )
   , ( "1 0 obj\n<</Length 10>>\nstream\n1234567890\nendstream\nendobj"
     , PDFIndirectObjectWithStream 1
                                   0
