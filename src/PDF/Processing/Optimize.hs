@@ -156,19 +156,16 @@ streamOptimize object = do
               setValue "ColorSpace" (PDFName "DeviceGray") object
                 >>= setStream optimizedStream
             else do
-              optimizedStream <- optimizeStreamOrIgnore "RGB parity optimization"
-                                                        object
-                                                        (return . optimizeParity)
+              let optimizedStream = optimizeParity rawStream
+              sayP "RGB parity optimization"
               setStream optimizedStream object
         else do
           if BS.length rawStream `mod` 3 == 0
             then do
-              optimizedStream <- optimizeStreamOrIgnore "Parity optimization"
-                                                        object
-                                                        (return . optimizeParity)
+              let optimizedStream = optimizeParity rawStream
+              sayP "Parity optimization"
               setStream optimizedStream object
-            else do
-              sayP "Cannot optimize bitmap"
+            else
               return object
 
     TTFOptimization -> do
