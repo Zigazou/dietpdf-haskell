@@ -153,7 +153,7 @@ optimizeTextMatrix command _rest = case (operator, parameters) of
   -- Show text with new line.
   (GSNLShowText, _anyParameters) -> do
     textLeading <- gets (tsLeading . gsTextState . iGraphicsState)
-    applyTextMatrixS (TransformationMatrix 1 0 0 1 0 textLeading)
+    applyTextMatrixS (TransformationMatrix 1 0 0 1 0 (- textLeading))
     return KeepCommand
 
   _anyOtherCommand -> return KeepCommand
