@@ -32,20 +32,14 @@ import Data.Context (Contextual (ctx))
 import Data.Logging (Logging)
 import Data.PDF.Filter (Filter (fFilter))
 import Data.PDF.OptimizationType
-    ( OptimizationType (GfxOptimization, JPGOptimization, TTFOptimization, XMLOptimization)
-    )
+  ( OptimizationType (GfxOptimization, JPGOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization)
+  )
 import Data.PDF.PDFObject
-    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
-    , hasStream
-    )
+  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
+  , hasStream
+  )
 import Data.PDF.PDFWork
-    ( PDFWork
-    , sayComparisonP
-    , sayErrorP
-    , sayP
-    , tryP
-    , withContext
-    )
+  (PDFWork, sayComparisonP, sayErrorP, sayP, tryP, withContext)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 
@@ -54,12 +48,14 @@ import External.TtfAutoHint (ttfAutoHintOptimize)
 
 import PDF.Graphics.Optimize (optimizeGFX)
 import PDF.Object.Container (getFilters)
-import PDF.Object.State (getStream, setStream, setStream1)
+import PDF.Object.State (getStream, setStream, setStream1, setValue, getValue)
 import PDF.Object.String (optimizeString)
 import PDF.Processing.Filter (filterOptimize)
 import PDF.Processing.PDFWork (deepMapP)
 import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
+
+import Util.ByteString (containsOnlyGray, convertToGray)
 
 
 {-|
@@ -146,6 +142,20 @@ streamOptimize object = do
                                                 object
                                                 (lift . jpegtranOptimize)
       setStream optimizedStream object
+
+    RawBitmapOptimization -> do
+      rawStream <- getStream object
+      mColorSpace <- getValue "ColorSpace" object
+      if containsOnlyGray rawStream && mColorSpace == Just (PDFName "DeviceRGB")
+        then do
+          optimizedStream <- optimizeStreamOrIgnore "Gray bitmap optimization"
+                                                    object
+                                                    (return . convertToGray)
+          setValue "ColorSpace" (PDFName "DeviceGray") object
+            >>= setStream optimizedStream
+        else do
+          sayP (T.concat ["Cannot convert to gray bitmap: contains non-gray values ", T.pack (show (BS.length rawStream))])
+          return object
 
     TTFOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "TTF stream optimization"

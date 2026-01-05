@@ -22,8 +22,8 @@ where
 import Data.ByteString qualified as BS
 import Data.Logging (Logging)
 import Data.PDF.OptimizationType
-    ( OptimizationType (GfxOptimization, JPGOptimization, NoOptimization, ObjectStreamOptimization, TTFOptimization, XMLOptimization, XRefStreamOptimization)
-    )
+  ( OptimizationType (GfxOptimization, JPGOptimization, NoOptimization, ObjectStreamOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization, XRefStreamOptimization)
+  )
 import Data.PDF.PDFObject (PDFObject (PDFName))
 import Data.PDF.PDFWork (PDFWork, tryP)
 import Data.Sequence qualified as SQ
@@ -58,7 +58,7 @@ whatOptimizationFor object =
       stream <- getStream object
       if BS.take 2 stream == "\xff\xd8"
         then return JPGOptimization
-        else return NoOptimization
+        else return RawBitmapOptimization
     Just (PDFName "Form") -> do
         tryP (getStream object) >>= \case
           Right stream -> case gfxParse stream of

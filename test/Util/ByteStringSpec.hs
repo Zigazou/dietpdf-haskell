@@ -11,11 +11,13 @@ import Data.TranslationTable (getTranslationTable)
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.ByteString
-    ( groupComponents
-    , separateComponents
-    , splitRaw
-    , toNameBase
-    )
+  ( containsOnlyGray
+  , convertToGray
+  , groupComponents
+  , separateComponents
+  , splitRaw
+  , toNameBase
+  )
 
 splitRawExamples :: [(ByteString, Int, [ByteString])]
 splitRawExamples =
@@ -75,6 +77,25 @@ renameStringsExamples =
     )
   ]
 
+containsOnlyGrayExamples :: [(ByteString, Bool)]
+containsOnlyGrayExamples =
+  [ ("AAAAAA", True)
+  , ("AAABBBCCC", True)
+  , ("ABABAB", True)
+  , ("ATXBUZ", False)
+  , ("",       True)
+  , ("AAAAA" , False)
+  ]
+
+convertToGrayExamples :: [(ByteString, ByteString)]
+convertToGrayExamples =
+  [ ("AAAAAA", "AA")
+  , ("AAABBBCCC", "ABC")
+  , ("ABABAB", "AB")
+  , ("",       "")
+  , ("AAAAA" , "AAAAA")
+  ]
+
 spec :: Spec
 spec = do
   describe "splitRaw" $ forM_ splitRawExamples $ \(example, width, expected) ->
@@ -118,4 +139,18 @@ spec = do
     $ \(example, expected) ->
         it ("should rename strings " ++ show example)
           $          getTranslationTable (\_ a -> toNameBase a) example
+          `shouldBe` expected
+
+  describe "containsOnlyGray"
+    $ forM_ containsOnlyGrayExamples
+    $ \(example, expected) ->
+        it ("should detect gray-only RGB ByteString " ++ show example)
+          $          containsOnlyGray example
+          `shouldBe` expected
+
+  describe "convertToGray"
+    $ forM_ convertToGrayExamples
+    $ \(example, expected) ->
+        it ("should convert gray-only RGB ByteString " ++ show example)
+          $          convertToGray example
           `shouldBe` expected

@@ -8,7 +8,7 @@ The constructors correspond to broad families of optimizations (graphics, XML,
 object streams, etc.).
 -}
 module Data.PDF.OptimizationType
-  ( OptimizationType(XMLOptimization, GfxOptimization, ObjectStreamOptimization, XRefStreamOptimization, JPGOptimization, NoOptimization, TTFOptimization)
+  ( OptimizationType(XMLOptimization, GfxOptimization, ObjectStreamOptimization, XRefStreamOptimization, JPGOptimization, NoOptimization, TTFOptimization, RawBitmapOptimization)
   )
 where
 
@@ -26,6 +26,7 @@ data OptimizationType
   | ObjectStreamOptimization  -- ^ Optimize object stream usage/structure.
   | XRefStreamOptimization    -- ^ Optimize cross-reference stream usage/structure.
   | JPGOptimization           -- ^ Optimize JPEG images.
+  | RawBitmapOptimization     -- ^ Optimize raw bitmap images.
   | TTFOptimization           -- ^ Optimize embedded TrueType font programs.
   | NoOptimization            -- ^ Explicitly request no optimization.
-    deriving stock (Eq)
+  deriving stock (Eq)
