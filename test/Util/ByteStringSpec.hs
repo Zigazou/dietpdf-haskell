@@ -14,6 +14,7 @@ import Util.ByteString
   ( containsOnlyGray
   , convertToGray
   , groupComponents
+  , optimizeParity
   , separateComponents
   , splitRaw
   , toNameBase
@@ -96,6 +97,20 @@ convertToGrayExamples =
   , ("AAAAA" , "AAAAA")
   ]
 
+optimizeParityExamples :: [(ByteString, ByteString)]
+optimizeParityExamples =
+  [ ("\xFF\xFF\xFF", "\xFF\xFF\xFF")
+  , ("\x00\x00\x00", "\x00\x00\x00")
+  , ("\xFE\xFE\xFF", "\xFE\xFE\xFE")
+  , ("\xFF\xFE\xFF", "\xFF\xFF\xFF")
+  , ("\xFE\xFF\xFE", "\xFE\xFE\xFE")
+  , ("\x01\x02\x03", "\x01\x03\x03")
+  , ("", "")                            -- Empty ByteString
+  , ("\xFF\xFF", "\xFF\xFF")            -- Incomplete triplet (less than 3 bytes): no change
+  , ("\xFF\xFF\xFF\xFE\xFE\xFE", "\xFF\xFF\xFF\xFE\xFE\xFE")  -- Two triplets
+  , ("012345678", "002355668")  -- Longer ByteString with mixed values
+  ]
+
 spec :: Spec
 spec = do
   describe "splitRaw" $ forM_ splitRawExamples $ \(example, width, expected) ->
@@ -153,4 +168,11 @@ spec = do
     $ \(example, expected) ->
         it ("should convert gray-only RGB ByteString " ++ show example)
           $          convertToGray example
+          `shouldBe` expected
+
+  describe "optimizeParity"
+    $ forM_ optimizeParityExamples
+    $ \(example, expected) ->
+        it ("should optimize parity of RGB triplets " ++ show example)
+          $          optimizeParity example
           `shouldBe` expected

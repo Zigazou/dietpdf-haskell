@@ -55,7 +55,7 @@ import PDF.Processing.PDFWork (deepMapP)
 import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
-import Util.ByteString (containsOnlyGray, convertToGray)
+import Util.ByteString (containsOnlyGray, convertToGray, optimizeParity)
 
 
 {-|
@@ -146,16 +146,30 @@ streamOptimize object = do
     RawBitmapOptimization -> do
       rawStream <- getStream object
       mColorSpace <- getValue "ColorSpace" object
-      if containsOnlyGray rawStream && mColorSpace == Just (PDFName "DeviceRGB")
-        then do
-          optimizedStream <- optimizeStreamOrIgnore "Gray bitmap optimization"
-                                                    object
-                                                    (return . convertToGray)
-          setValue "ColorSpace" (PDFName "DeviceGray") object
-            >>= setStream optimizedStream
+      if mColorSpace == Just (PDFName "DeviceRGB")
+        then
+          if containsOnlyGray rawStream
+            then do
+              optimizedStream <- optimizeStreamOrIgnore "Gray bitmap optimization"
+                                                        object
+                                                        (return . convertToGray)
+              setValue "ColorSpace" (PDFName "DeviceGray") object
+                >>= setStream optimizedStream
+            else do
+              optimizedStream <- optimizeStreamOrIgnore "RGB parity optimization"
+                                                        object
+                                                        (return . optimizeParity)
+              setStream optimizedStream object
         else do
-          sayP (T.concat ["Cannot convert to gray bitmap: contains non-gray values ", T.pack (show (BS.length rawStream))])
-          return object
+          if BS.length rawStream `mod` 3 == 0
+            then do
+              optimizedStream <- optimizeStreamOrIgnore "Parity optimization"
+                                                        object
+                                                        (return . optimizeParity)
+              setStream optimizedStream object
+            else do
+              sayP "Cannot optimize bitmap"
+              return object
 
     TTFOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "TTF stream optimization"

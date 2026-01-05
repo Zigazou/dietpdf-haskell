@@ -16,11 +16,15 @@ module Util.ByteString
   , toNameBase
   , containsOnlyGray
   , convertToGray
+  , optimizeParity
   ) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Builder (byteString, toLazyByteString, word8)
+import Data.ByteString.Lazy qualified as BL
 import Data.Binary (Word8)
+import Data.Kind (Type)
 
 {-|
 Split a `ByteString` in `ByteString` of specific length.
@@ -65,6 +69,61 @@ isNearlyGray red green blue =
   green' = fromIntegral green
   blue' = fromIntegral blue
 
+type Parity :: Type
+data Parity = Even | Odd deriving stock (Eq)
+
+{-|
+Modify a RGB triplet so that all components have the same parity (even/odd).
+The parity is taken from the most used parity among the three components.
+-}
+sameParity :: Word8 -> Word8 -> Word8 -> (Word8, Word8, Word8)
+sameParity red green blue =
+  case (redParity, greenParity, blueParity) of
+    -- Nothing to do: all have same parity
+    (Even, Even, Even) -> (red, green, blue)
+    (Odd,  Odd,  Odd)  -> (red, green, blue)
+
+    -- Two have even parity: adjust the odd one
+    (Even, Even, Odd)  -> (red, green, makeEven blue)
+    (Even, Odd,  Even) -> (red, makeEven green, blue)
+    (Odd,  Even, Even) -> (makeEven red, green, blue)
+
+    -- Two have odd parity: adjust the even one
+    (Odd,  Odd,  Even) -> (red, green, makeOdd blue)
+    (Odd,  Even, Odd)  -> (red, makeOdd green, blue)
+    (Even, Odd,  Odd)  -> (makeOdd red, green, blue)
+ where
+  getParity :: Word8 -> Parity
+  getParity x = if even x then Even else Odd
+
+  redParity, greenParity, blueParity :: Parity
+  redParity   = getParity red
+  greenParity = getParity green
+  blueParity  = getParity blue
+
+  makeEven :: Word8 -> Word8
+  makeEven x = if even x then x else x - 1
+
+  makeOdd :: Word8 -> Word8
+  makeOdd x = if odd x then x else x + 1
+
+{-|
+Modify all triplets in a `ByteString` using a transformer function.
+-}
+modifyTriplets :: (Word8 -> Word8 -> Word8 -> (Word8, Word8, Word8)) -> ByteString -> ByteString
+modifyTriplets transformer bs = BL.toStrict (toLazyByteString (go 0 len))
+ where
+  len = BS.length bs
+  go offset remaining
+    | remaining == 0 = mempty
+    | remaining < 3 = byteString (BS.drop offset bs)
+    | otherwise =
+        let red = BS.index bs offset
+            green = BS.index bs (offset + 1)
+            blue = BS.index bs (offset + 2)
+            (newRed, newGreen, newBlue) = transformer red green blue
+        in word8 newRed <> word8 newGreen <> word8 newBlue <> go (offset + 3) (remaining - 3)
+
 {-|
 Verify all triplets in a `ByteString` using a verifier function.
 -}
@@ -104,6 +163,12 @@ convertToGray rgbRaw = if BS.length rgbRaw `mod` 3 /= 0
     case separateComponents 3 rgbRaw of
       [rComponents, _gComponents, _bComponents] -> rComponents
       _anyOtherCase -> rgbRaw
+
+{-|
+Optimize RGB triplets by adjusting component values to have the same parity.
+-}
+optimizeParity :: ByteString -> ByteString
+optimizeParity = modifyTriplets sameParity
 
 {-|
 Compare lengths of bytestrings in second position of couples.
