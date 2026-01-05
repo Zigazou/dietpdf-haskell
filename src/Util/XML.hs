@@ -33,6 +33,8 @@ Rename an XML 'QName' using a prefix translation table.
 renamePrefixInQName :: TranslationTable String -> QName -> QName
 renamePrefixInQName toNewPrefixes qname@(QName name _uri (Just "xmlns")) =
   qname { qName = convert toNewPrefixes name }
+renamePrefixInQName toNewPrefixes qname@(QName name _uri (Just "xml")) =
+  qname { qName = convert toNewPrefixes name }
 renamePrefixInQName toNewPrefixes qname@(QName _name _uri prefix) =
   qname { qPrefix = convert toNewPrefixes <$> prefix }
 
@@ -61,8 +63,8 @@ This updates:
 - all nested elements.
 
 Prefix renaming is performed via the provided translation table.
-- Special case: attributes in the @xmlns@ namespace are treated as namespace
-  declarations and their /name/ is translated.
+- Special case: attributes in the @xmlns@ and @xml@ namespaces are treated as
+  namespace declarations and their /name/ is translated.
 -}
 renamePrefixesInElement
   :: TranslationTable String
@@ -79,6 +81,7 @@ Collect all namespace prefixes referenced by an XML 'QName'.
 -}
 getAllPrefixesInQName :: QName -> [String]
 getAllPrefixesInQName (QName name _uri (Just "xmlns")) = [name]
+getAllPrefixesInQName (QName name _uri (Just "xml"  )) = [name]
 getAllPrefixesInQName (QName _name _uri prefix)        = maybe [] pure prefix
 
 {-|
@@ -108,10 +111,10 @@ Collect all namespace prefixes referenced by a list of XML contents.
 
 The returned list may contain duplicates.
 
-The reserved prefix @xmlns@ is excluded from the result.
+The reserved prefixes @xmlns@ and @xml@ are excluded from the result.
 -}
 getAllPrefixes :: [Content] -> [String]
-getAllPrefixes contents = concatMap (filter (/= "xmlns")) $ do
+getAllPrefixes contents = concatMap (filter (`notElem` ["xmlns", "xml"])) $ do
   contents >>= \case
     Elem element  -> return $ getAllPrefixesInElement element
     _otherContent -> return []
