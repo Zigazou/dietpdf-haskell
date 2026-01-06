@@ -38,6 +38,9 @@ ghc-options:
 - -threaded
 library:
   source-dirs: src
+  c-sources:
+  - cbits/optimizeParity.c
+  - cbits/optimizeGray.c
   default-extensions:
   - StrictData
   - BangPatterns
