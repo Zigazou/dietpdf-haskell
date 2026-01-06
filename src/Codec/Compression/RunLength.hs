@@ -29,110 +29,85 @@ import Codec.Compression.Flate (fastCompress)
 
 import Control.Monad ((<=<))
 
-import Data.Binary.Parser
-    ( Get
-    , anyWord8
-    , endOfInput
-    , getByteString
-    , many'
-    , parseOnly
-    , peekMaybe
-    , scan
-    )
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.ByteString.Internal qualified as BSI
+import Data.ByteString.Unsafe qualified as BUS
 import Data.Fallible (Fallible)
-import Data.Kind (Type)
 import Data.UnifiedError (UnifiedError (RLEDecodeError, RLEEncodeError))
 import Data.Word (Word8)
 
+import Foreign.C.Types (CSize (CSize))
+import Foreign.ForeignPtr (withForeignPtr)
+import Foreign.Ptr (Ptr, castPtr)
+
 import GHC.Base (maxInt)
 
-type RLEAction :: Type
-data RLEAction
-  = RLERepeat !Int !Word8
-  | RLECopy !ByteString
-  | RLEEndOfData
+import System.IO.Unsafe (unsafePerformIO)
 
-rleEndOfData :: Word8
-rleEndOfData = 128
+{-
+FFI to evaluate the size of a run length decompress.
+-}
+foreign import ccall unsafe "runLengthEvaluateUncompressedSizeFFI"
+  c_run_length_evaluate_uncompressed_size :: Ptr Word8 -> CSize -> IO CSize
 
-decode :: RLEAction -> ByteString
-decode RLEEndOfData            = ""
-decode (RLECopy bytestring   ) = bytestring
-decode (RLERepeat count value) = BS.replicate count value
+{-
+FFI to run length decompress.
+-}
+foreign import ccall unsafe "runLengthDecompressFFI"
+  c_run_length_decompress :: Ptr Word8 -> CSize -> Ptr Word8 -> IO CSize
 
-encode :: RLEAction -> ByteString
-encode RLEEndOfData = BS.singleton rleEndOfData
-encode (RLECopy bytestring) =
-  BS.concat [BS.singleton (fromIntegral (BS.length bytestring - 1)), bytestring]
-encode (RLERepeat count value) = BS.pack [1 - fromIntegral count, value]
+{-
+FFI to run length compress.
+-}
+foreign import ccall unsafe "runLengthCompressFFI"
+  c_run_length_compress :: Ptr Word8 -> CSize -> Ptr Word8 -> IO CSize
 
-rleDecodeP :: Get RLEAction
-rleDecodeP = anyWord8 >>= toRLEAction
- where
-  toRLEAction :: Word8 -> Get RLEAction
-  toRLEAction code = case compare code rleEndOfData of
-    EQ -> return RLEEndOfData
-    GT -> RLERepeat (fromIntegral (1 - code)) <$> anyWord8
-    LT -> RLECopy <$> getByteString (fromIntegral (code + 1))
+evaluateUncompressedSize :: ByteString -> CSize
+evaluateUncompressedSize stream = unsafePerformIO $ do
+  BUS.unsafeUseAsCStringLen stream $ \(inputPtr, inputLen) -> do
+    c_run_length_evaluate_uncompressed_size
+      (castPtr inputPtr)
+      (fromIntegral inputLen :: CSize)
 
 {-|
 Decode a RLE bytestring.
 -}
 decompress :: ByteString -> Fallible ByteString
 decompress stream =
-  case
-      BS.concat
-      .   fmap decode
-      <$> parseOnly (many' rleDecodeP <* endOfInput) stream
-    of
-      Left  msg     -> Left (RLEDecodeError msg)
-      Right decoded -> Right decoded
-
-upToNEqual :: (Int, Word8) -> Get ByteString
-upToNEqual state = scan state updateState
- where
-  updateState :: (Int, Word8) -> Word8 -> Maybe (Int, Word8)
-  updateState (0, _) _ = Nothing
-  updateState (count, previous) byte =
-    if previous == byte then Just (count - 1, byte) else Nothing
-
-upToNNotEqual :: (Int, Word8) -> Get ByteString
-upToNNotEqual state = scan state updateState
- where
-  updateState :: (Int, Word8) -> Word8 -> Maybe (Int, Word8)
-  updateState (0, _) _ = Nothing
-  updateState (count, previous) byte =
-    if previous /= byte then Just (count - 1, byte) else Nothing
-
-
-rleEncodeP :: Get RLEAction
-rleEncodeP = do
-  currentByte <- anyWord8
-  nextByteM   <- peekMaybe
-  case nextByteM of
-    Just nextByte -> if nextByte == currentByte
-      then do
-        bytes <- upToNEqual (127, currentByte)
-        return $! RLERepeat (1 + BS.length bytes) currentByte
+  unsafePerformIO $ do
+    let outputSize = evaluateUncompressedSize stream
+    if outputSize < 0
+      then pure $ Left (RLEDecodeError "RLE decompression failed")
       else do
-        bytes <- upToNNotEqual (127, currentByte)
-        return $! RLECopy (BS.cons currentByte bytes)
-    Nothing       -> return $ RLECopy (BS.singleton currentByte)
+        output <- BSI.mallocByteString (fromIntegral outputSize)
+        BUS.unsafeUseAsCStringLen stream $ \(inputPtr, inputLen) -> do
+          withForeignPtr output $ \outputPtr -> do
+            _ <- c_run_length_decompress
+              (castPtr inputPtr)
+              (fromIntegral inputLen :: CSize)
+              outputPtr
+            pure ()
+        pure $ Right (BSI.PS output 0 (fromIntegral outputSize))
 
 {-|
 Encode a bytestring into an RLE bytestring.
 -}
 compress :: ByteString -> Fallible ByteString
 compress stream =
-  case
-      BS.concat
-      .   fmap encode
-      <$> parseOnly (many' rleEncodeP <* endOfInput) stream
-    of
-      Left  msg     -> Left (RLEEncodeError msg)
-      Right encoded -> Right encoded
+  unsafePerformIO $ do
+    let inputLen = BS.length stream
+        maxOutputLen = inputLen * 3 `div` 2 + 2
+    output <- BSI.mallocByteString maxOutputLen
+    outputLen <- BUS.unsafeUseAsCStringLen stream $ \(inputPtr, _) -> do
+      withForeignPtr output $ \outputPtr -> do
+        c_run_length_compress
+          (castPtr inputPtr)
+          (fromIntegral inputLen :: CSize)
+          outputPtr
+    if outputLen == fromIntegral maxOutputLen
+      then pure $ Left (RLEEncodeError "RLE compression output size exceeded allocated buffer")
+      else pure $ Right (BSI.PS output 0 (fromIntegral outputLen))
 
 {-|
 Gives a number showing the "entropy" of a `ByteString`.

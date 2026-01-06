@@ -242,6 +242,7 @@ library
   c-sources:
       cbits/optimizeParity.c
       cbits/optimizeGray.c
+      cbits/runLength.c
   build-depends:
       async
     , base >=4.7 && <5
