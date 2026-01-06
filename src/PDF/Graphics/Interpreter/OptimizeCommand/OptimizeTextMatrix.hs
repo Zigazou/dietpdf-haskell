@@ -121,8 +121,10 @@ optimizeTextMatrix command _rest = case (operator, parameters) of
               currentScaleY     = tmD currentTextMatrix
               currentTranslateX = tmE currentTextMatrix
               currentTranslateY = tmF currentTextMatrix
+              currentSkewX      = tmB currentTextMatrix
+              currentSkewY      = tmC currentTextMatrix
 
-          if newScaleX /= currentScaleX || newScaleY /= currentScaleY
+          if newScaleX /= currentScaleX || newScaleY /= currentScaleY || currentSkewX /= 0 || currentSkewY /= 0
             then return $ replaceCommandWith
                     command
                     ( optimizeParameters
