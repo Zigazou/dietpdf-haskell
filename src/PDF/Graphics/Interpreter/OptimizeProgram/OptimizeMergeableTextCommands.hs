@@ -16,16 +16,29 @@ import Data.PDF.GFXObject
   , GSOperator (GSShowManyText, GSShowText)
   )
 import Data.PDF.Program (Program)
-import Data.Sequence (Seq (Empty, (:<|)), (<|))
+import Data.Sequence (Seq (Empty, (:<|), (:|>)), (<|))
 
 {-|
 Merge two text objects into one, combining their string contents.
 -}
 mergeObjects :: GFXObject -> GFXObject -> GFXObject
-mergeObjects (GFXString s1) (GFXString s2)       = GFXString (s1 <> s2)
-mergeObjects (GFXHexString s1) (GFXHexString s2) = GFXHexString (s1 <> s2)
-mergeObjects (GFXArray arr1) (GFXArray arr2)     = GFXArray (arr1 <> arr2)
-mergeObjects _object1 object2                    = object2
+mergeObjects (GFXString string1) (GFXString string2) =
+  GFXString (string1 <> string2)
+mergeObjects (GFXHexString string1) (GFXHexString string2) =
+  GFXHexString (string1 <> string2)
+mergeObjects (GFXArray array1) (GFXArray array2) =
+  GFXArray (array1 <> array2)
+mergeObjects (GFXArray array1) (GFXString string2) =
+  case array1 of
+    ( heads :|> GFXString string1) ->
+      GFXArray (heads :|> GFXString (string1 <> string2))
+    _ -> GFXArray (array1 <> (GFXString string2 <| Empty))
+mergeObjects (GFXString string1) (GFXArray array2) =
+  case array2 of
+    (GFXString string2 :<| rest) ->
+      GFXArray (GFXString (string1 <> string2) <| rest)
+    _anyOtherCase -> GFXArray (GFXString string1 <| array2)
+mergeObjects _object1 object2 = object2
 
 {-|
 Optimize a graphics program by merging consecutive text display commands.
@@ -73,6 +86,22 @@ optimizeMergeableTextCommands
   :<| afterShowManyText
   ) = Command GSShowManyText (mergeObjects array1 array2 <| Empty)
   <| afterShowManyText
+
+-- Merge GSShowText followed by GSShowManyText.
+optimizeMergeableTextCommands
+  (   (Command GSShowText (string1 :<| Empty))
+  :<| (Command GSShowManyText (array2 :<| Empty))
+  :<| afterCommands
+  ) = Command GSShowManyText (mergeObjects string1 array2 <| Empty)
+  <| afterCommands
+
+-- Merge GSShowManyText followed by GSShowText.
+optimizeMergeableTextCommands
+  (   (Command GSShowManyText (array1 :<| Empty))
+    :<| (Command GSShowText (string2 :<| Empty))
+    :<| afterCommands
+  ) = Command GSShowManyText (mergeObjects array1 string2 <| Empty)
+  <| afterCommands
 
 -- Preserve other commands and continue optimization.
 optimizeMergeableTextCommands (command :<| rest) =
