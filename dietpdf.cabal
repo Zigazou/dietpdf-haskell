@@ -133,6 +133,7 @@ library
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContent
+      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMergeableTextCommands
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
       PDF.Graphics.Interpreter.RenameResources

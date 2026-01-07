@@ -45,6 +45,8 @@ import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
   (optimizeIneffective)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContent
   (optimizeMarkedContent)
+import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMergeableTextCommands
+  (optimizeMergeableTextCommands)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
   (optimizeRectangle)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
@@ -103,12 +105,13 @@ Perform one complete optimization pass over a program.
 Applies all program-wide structural optimizations followed by all command-level
 optimizations:
 
-Program-wide passes (applied in sequence):
-1. Remove useless save/restore pairs
-2. Convert line paths to rectangle operators
-3. Remove empty/ineffective operations
-4. Remove duplicated consecutive operators
-5. Remove redundant marked content sequences
+Program-wide passes:
+- Remove useless save/restore pairs
+- Convert line paths to rectangle operators
+- Remove empty/ineffective operations
+- Remove duplicated consecutive operators
+- Remove redundant marked content sequences
+- Merge consecutive text display commands
 
 Then applies command-level optimizations via @optimizeCommands@ to each command
 in the optimized structure.
@@ -123,6 +126,7 @@ optimizeProgramOnePass workData
     . optimizeCommands mempty
     )
   . optimizeMarkedContent
+  . optimizeMergeableTextCommands
   . optimizeDuplicates
   . optimizeIneffective
   . optimizeRectangle
