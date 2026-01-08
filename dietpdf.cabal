@@ -396,6 +396,7 @@ test-suite dietpdf-test
       PDF.Object.StringSpec
       PDF.Parser.IndirectObjectSpec
       PDF.Parser.ParserSpec
+      PDF.Processing.PDFWorkSpec
       Util.ByteStringSpec
       Util.GraphicsSpec
       Util.HexSpec

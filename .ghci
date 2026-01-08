@@ -1,0 +1,3 @@
+:set -w
+:set -fno-warn-unused-binds
+:set -fno-warn-unused-imports

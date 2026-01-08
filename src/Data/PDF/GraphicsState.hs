@@ -204,7 +204,7 @@ applyGraphicsMatrix matrix state = state
   }
  where
   graphicsMatrix   = gsCTM state <> matrix
-  (scaleX, scaleY) = matrixScale graphicsMatrix (1.0, 1.0)
+  (scaleX, scaleY) = matrixScale graphicsMatrix (gsScaleX state, gsScaleY state)
 
 {-|
 Post-multiply the current text matrix.

@@ -17,6 +17,7 @@ module PDF.Processing.PDFWork
   , pModifyIndirectObjects
   , pMapP
   , deepMapP
+  , deepMapKeysP
   )
 where
 
@@ -25,6 +26,7 @@ import Control.Monad.State (MonadIO (liftIO), StateT, get, gets, put)
 import Control.Monad.Trans.Except (runExceptT)
 import Control.Monad.Trans.State (evalStateT)
 
+import Data.ByteString (ByteString)
 import Data.Fallible (FallibleT)
 import Data.Functor ((<&>))
 import Data.IntMap qualified as IM
@@ -33,13 +35,13 @@ import Data.Logging (Logging)
 import Data.Map qualified as Map
 import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream)
-    )
+  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream)
+  )
 import Data.PDF.PDFPartition
-    ( PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream)
-    , ppObjectsWithStream
-    , ppObjectsWithoutStream
-    )
+  ( PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream)
+  , ppObjectsWithStream
+  , ppObjectsWithoutStream
+  )
 import Data.PDF.PDFWork (modifyPDF, sayComparisonP, sayErrorP, throwError, tryP)
 import Data.PDF.WorkData (WorkData (wPDF))
 
@@ -142,15 +144,66 @@ deepMapP
   -> PDFObject
   -> PDFWork m PDFObject
 deepMapP fn container = case container of
-  PDFIndirectObject _ _ object ->
+  PDFIndirectObject _number _version object ->
     deepMapP fn object >>= flip embedObject container
-  PDFIndirectObjectWithStream _ _ dict _ ->
+
+  PDFIndirectObjectWithStream _number _version dict _stream ->
     deepMapP fn (PDFDictionary dict) >>= flip embedObject container
-  PDFObjectStream _ _ dict _ ->
+
+  PDFObjectStream _number _version dict _stream ->
     deepMapP fn (PDFDictionary dict) >>= flip embedObject container
+
   PDFDictionary dict ->
     sequence (Map.map (deepMapP fn) dict)
       >>= flip embedObject container
       .   PDFDictionary
+
   PDFArray items -> mapM (deepMapP fn) items <&> PDFArray
-  object         -> fn object
+
+  object -> fn object
+
+{-|
+Apply a function to any object contained by an object at any level, while
+tracking the path of dictionary keys leading to each object.
+
+This function recursively traverses a PDF object structure and applies a
+transformation function to each contained object. Unlike `deepMapP`, it
+accumulates the dictionary keys encountered during traversal, allowing the
+transformation function to know the "path" through nested dictionaries.
+
+The key path is built in reverse order (most recent key first), with each
+dictionary key prepended as the traversal descends into nested structures.
+
+Parameters:
+  * @keys@ - The accumulated path of dictionary keys from parent structures
+  * @fn@ - Transformation function receiving the key path and object to
+    transform
+  * @container@ - The PDF object to traverse and transform
+
+Example use case: Finding and modifying objects at specific dictionary paths,
+such as updating all image resources regardless of their nesting depth.
+-}
+deepMapKeysP
+  :: Logging m
+  => [ByteString]
+  -> ([ByteString] -> PDFObject -> PDFWork m PDFObject)
+  -> PDFObject
+  -> PDFWork m PDFObject
+deepMapKeysP keys fn container = case container of
+  PDFIndirectObject _number _version object ->
+    deepMapKeysP keys fn object >>= flip embedObject container
+
+  PDFIndirectObjectWithStream _number _version dict _stream ->
+    deepMapKeysP keys fn (PDFDictionary dict) >>= flip embedObject container
+
+  PDFObjectStream _number _version dict _stream ->
+    deepMapKeysP keys fn (PDFDictionary dict) >>= flip embedObject container
+
+  PDFDictionary dict ->
+    sequence (Map.mapWithKey (flip deepMapKeysP fn . (: keys)) dict)
+      >>= flip embedObject container
+      .   PDFDictionary
+
+  PDFArray items -> mapM (deepMapKeysP keys fn) items <&> PDFArray
+
+  object -> fn keys object
