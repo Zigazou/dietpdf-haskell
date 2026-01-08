@@ -60,6 +60,26 @@ import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 import Util.ByteString (containsOnlyGray, convertToGray, optimizeParity)
 
 {-|
+Extract width and color component count from a PDF image stream object.
+
+Analyzes a PDF stream object's dictionary to determine its pixel width and the
+number of color components per pixel. This information is essential for
+bitmap optimization operations that work at the pixel level.
+
+__Color space mapping:__
+
+- DeviceRGB: 3 components (red, green, blue)
+- DeviceCMYK: 4 components (cyan, magenta, yellow, black)
+- DeviceGray or other: 1 component (grayscale)
+
+__Parameters:__
+
+- A PDF object (typically an image stream)
+
+__Returns:__ 'Just' @(width, components)@ if both width and color space can be
+determined, 'Nothing' otherwise.
+
+__Note:__ Non-stream objects always return 'Nothing'.
 -}
 getWidthComponents :: Logging m => PDFObject -> PDFWork m (Maybe (Int, Int))
 getWidthComponents object@(PDFIndirectObjectWithStream _number _version _dict _stream) = do
@@ -78,6 +98,37 @@ getWidthComponents object@(PDFIndirectObjectWithStream _number _version _dict _s
 
 getWidthComponents _anyOtherObject = return Nothing
 
+{-|
+Optimize bitmap stream data by aligning color components and reducing color space.
+
+Performs intelligent optimization of raw bitmap streams by:
+
+1. __Unpredicting__: Reverses PNG prediction if width and components are known
+2. __Grayscale conversion__: Detects RGB images containing only gray values and
+   converts them to DeviceGray color space, reducing data size by 66%
+3. __Parity optimization__: Aligns color component bytes for better compression
+   in both RGB and other color spaces
+
+The function safely handles unprediction failures by falling back to the
+original stream data.
+
+__Optimization strategies:__
+
+- __DeviceRGB__: Check if image is actually grayscale; if so, convert to
+  DeviceGray and update color space. Otherwise, optimize RGB parity.
+- __Other color spaces__: Optimize parity if stream length is divisible by 3
+  (suggesting triplet structure).
+
+__Parameters:__
+
+- A PDF object containing bitmap stream data
+
+__Returns:__ The object with optimized stream and potentially updated color space
+dictionary entry.
+
+__Side effects:__ Logs optimization actions ("Gray bitmap optimization", "RGB
+parity optimization", "Parity optimization").
+-}
 optimizeStreamParity :: PDFObject -> PDFWork IO PDFObject
 optimizeStreamParity object = do
   mWidthComponents <- getWidthComponents object
