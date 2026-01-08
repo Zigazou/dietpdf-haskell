@@ -55,7 +55,7 @@ renamePrefixesExamples =
   , ( "<xxx:tag xml:xxx=\"xxx\" xmlns:yyy=\"yyy\">\
       \<xxx:tag2><yyy:tag3>Hello</yyy:tag3>abcd<yyy:tag4>World!Hello</yyy:tag4>\
       \</xxx:tag2></xxx:tag>"
-    , "<a:tag xml:a=\"xxx\" xmlns:b=\"yyy\">\
+    , "<a:tag xml:xxx=\"xxx\" xmlns:b=\"yyy\">\
       \<a:tag2><b:tag3>Hello</b:tag3>abcd<b:tag4>World!Hello</b:tag4>\
       \</a:tag2></a:tag>"
     )

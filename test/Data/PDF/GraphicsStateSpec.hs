@@ -5,19 +5,19 @@ module Data.PDF.GraphicsStateSpec
 import Control.Monad (forM_)
 
 import Data.PDF.GraphicsState
-    ( GraphicsState (gsCTM, gsScaleX, gsScaleY, gsTextState, gsUserUnit)
-    , defaultGraphicsState
-    , usefulGraphicsPrecision
-    )
+  ( GraphicsState (gsCTM, gsScaleX, gsScaleY, gsTextState, gsUserUnit)
+  , applyGraphicsMatrix
+  , defaultGraphicsState
+  , usefulGraphicsPrecision
+  )
 import Data.PDF.TextState (defaultTextState)
 import Data.PDF.TransformationMatrix
-    ( TransformationMatrix (TransformationMatrix)
-    )
+  (TransformationMatrix (TransformationMatrix))
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
-stateExamples :: [(GraphicsState, Int)]
-stateExamples =
+usefulGraphicsPrecisionExamples :: [(GraphicsState, Int)]
+usefulGraphicsPrecisionExamples =
   [ ( defaultGraphicsState
       { gsUserUnit = 1.0
       , gsCTM = TransformationMatrix 1.0 0.0 0.0 1.0 0.0 0.0
@@ -65,9 +65,28 @@ stateExamples =
     )
   ]
 
+applyGraphicsMatrixExamples :: [(GraphicsState, TransformationMatrix, Int)]
+applyGraphicsMatrixExamples =
+  [ ( defaultGraphicsState
+      { gsUserUnit = 1.0
+      , gsCTM = TransformationMatrix 1.0 0.0 0.0 1.0 0.0 0.0
+      , gsTextState = defaultTextState
+      , gsScaleX = 1.0
+      , gsScaleY = 1.0
+      }
+    , TransformationMatrix 1.0 0.0 0.0 1.0 0.0 1000.0
+    , 2
+    )
+  ]
+
 spec :: Spec
-spec =
+spec = do
   describe "usefulGraphicsPrecision" $
-    forM_ stateExamples $ \(example, expected) -> do
+    forM_ usefulGraphicsPrecisionExamples $ \(example, expected) -> do
       it ("should work with " ++ show example)
         $ usefulGraphicsPrecision example `shouldBe` expected
+
+  describe "applyGraphicsMatrix" $
+    forM_ applyGraphicsMatrixExamples $ \(initial, matrix, expected) -> do
+      it ("should work with " ++ show initial ++ " and " ++ show matrix)
+        $ usefulGraphicsPrecision (applyGraphicsMatrix matrix initial) `shouldBe` expected

@@ -73,8 +73,8 @@ optimizeProgramExamples =
         , mkCommand GSSetTextFont [GFXName "R7", GFXNumber 11.04]
         , mkCommand GSShowManyText
             [ mkGFXArray
-                [ GFXString "A", GFXNumber (-4.33874)
-                , GFXString "B", GFXNumber 6.53732
+                [ GFXString "A", GFXNumber (-4.3387)
+                , GFXString "B", GFXNumber 6.5373
                 ]
             ]
         ]

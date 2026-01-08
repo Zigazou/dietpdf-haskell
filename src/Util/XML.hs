@@ -33,8 +33,6 @@ Rename an XML 'QName' using a prefix translation table.
 renamePrefixInQName :: TranslationTable String -> QName -> QName
 renamePrefixInQName toNewPrefixes qname@(QName name _uri (Just "xmlns")) =
   qname { qName = convert toNewPrefixes name }
-renamePrefixInQName toNewPrefixes qname@(QName name _uri (Just "xml")) =
-  qname { qName = convert toNewPrefixes name }
 renamePrefixInQName toNewPrefixes qname@(QName _name _uri prefix) =
   qname { qPrefix = convert toNewPrefixes <$> prefix }
 
