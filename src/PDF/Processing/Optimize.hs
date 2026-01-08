@@ -22,6 +22,7 @@ module PDF.Processing.Optimize
   ( optimize
   ) where
 
+import Codec.Compression.Predict (Predictor (PNGOptimum), unpredict)
 import Codec.Compression.XML (optimizeXML)
 
 import Control.Monad.State (lift)
@@ -48,7 +49,8 @@ import External.TtfAutoHint (ttfAutoHintOptimize)
 
 import PDF.Graphics.Optimize (optimizeGFX)
 import PDF.Object.Container (getFilters)
-import PDF.Object.State (getStream, setStream, setStream1, setValue, getValue)
+import PDF.Object.Object (PDFObject (PDFNumber))
+import PDF.Object.State (getStream, getValue, setStream, setStream1, setValue)
 import PDF.Object.String (optimizeString)
 import PDF.Processing.Filter (filterOptimize)
 import PDF.Processing.PDFWork (deepMapP)
@@ -57,6 +59,61 @@ import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 import Util.ByteString (containsOnlyGray, convertToGray, optimizeParity)
 
+{-|
+-}
+getWidthComponents :: Logging m => PDFObject -> PDFWork m (Maybe (Int, Int))
+getWidthComponents object@(PDFIndirectObjectWithStream _number _version _dict _stream) = do
+  mWidth      <- getValue "Width" object
+  mColorSpace <- getValue "ColorSpace" object
+
+  let components :: Int
+      components = case mColorSpace of
+        Just (PDFName "DeviceRGB" ) -> 3
+        Just (PDFName "DeviceCMYK") -> 4
+        _anyOtherValue              -> 1
+
+  return $ case mWidth of
+    Just (PDFNumber width) -> Just (round width, components)
+    _anyOtherValue         -> Nothing
+
+getWidthComponents _anyOtherObject = return Nothing
+
+optimizeStreamParity :: PDFObject -> PDFWork IO PDFObject
+optimizeStreamParity object = do
+  mWidthComponents <- getWidthComponents object
+
+  stream <- getStream object
+
+  -- Unpredict the stream if needed
+  let rawStream = case mWidthComponents of
+                    Just (width, components) ->
+                      case unpredict PNGOptimum width components stream of
+                        (Right predicted)  -> predicted
+                        (Left  _err      ) -> stream
+                    Nothing -> stream
+
+  mColorSpace <- getValue "ColorSpace" object
+  if mColorSpace == Just (PDFName "DeviceRGB")
+    then
+      if containsOnlyGray rawStream
+        then do
+          optimizedStream <- optimizeStreamOrIgnore "Gray bitmap optimization"
+                                                    object
+                                                    (return . convertToGray)
+          setValue "ColorSpace" (PDFName "DeviceGray") object
+            >>= setStream optimizedStream
+        else do
+          let optimizedStream = optimizeParity rawStream
+          sayP "RGB parity optimization"
+          setStream optimizedStream object
+    else do
+      if BS.length rawStream `mod` 3 == 0
+        then do
+          let optimizedStream = optimizeParity rawStream
+          sayP "Parity optimization"
+          setStream optimizedStream object
+        else
+          return object
 
 {-|
 Attempt to optimize a stream, gracefully handling failures.
@@ -143,30 +200,7 @@ streamOptimize object = do
                                                 (lift . jpegtranOptimize)
       setStream optimizedStream object
 
-    RawBitmapOptimization -> do
-      rawStream <- getStream object
-      mColorSpace <- getValue "ColorSpace" object
-      if mColorSpace == Just (PDFName "DeviceRGB")
-        then
-          if containsOnlyGray rawStream
-            then do
-              optimizedStream <- optimizeStreamOrIgnore "Gray bitmap optimization"
-                                                        object
-                                                        (return . convertToGray)
-              setValue "ColorSpace" (PDFName "DeviceGray") object
-                >>= setStream optimizedStream
-            else do
-              let optimizedStream = optimizeParity rawStream
-              sayP "RGB parity optimization"
-              setStream optimizedStream object
-        else do
-          if BS.length rawStream `mod` 3 == 0
-            then do
-              let optimizedStream = optimizeParity rawStream
-              sayP "Parity optimization"
-              setStream optimizedStream object
-            else
-              return object
+    RawBitmapOptimization -> optimizeStreamParity object
 
     TTFOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "TTF stream optimization"
