@@ -372,6 +372,7 @@ test-suite dietpdf-test
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContentSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestoreSpec
       PDF.Graphics.Interpreter.OptimizeProgramSpec
+      PDF.Graphics.Interpreter.OptimizeScaleSpec
       PDF.Graphics.Interpreter.ResourcesUsedSpec
       PDF.Graphics.Parser.ArraySpec
       PDF.Graphics.Parser.CommentSpec

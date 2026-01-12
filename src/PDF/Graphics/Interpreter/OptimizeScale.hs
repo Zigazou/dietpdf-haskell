@@ -6,15 +6,47 @@ coordinate parameters and prepending a transformation matrix command.
 -}
 module PDF.Graphics.Interpreter.OptimizeScale
   ( optimizeScale
+  , isScaleOptimizable
   ) where
 
+import Data.Foldable qualified as Foldable
 import Data.PDF.Command (Command (cOperator, cParameters), mkCommand)
 import Data.PDF.GFXObject
   ( GFXObject (GFXNumber)
-  , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetLineWidth, GSSetTextFont, GSSetTextMatrix, GSSetWordSpacing, GSSetCharacterSpacing)
+  , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineWidth, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing)
   )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq ((:<|)), (<|), (|>))
+
+{-|
+Check if a program can be safely scaled.
+
+Returns 'False' if the program contains PaintObject operators (XObject or
+Shading), as these should not be scaled. Returns 'True' otherwise.
+
+PaintObject operators that prevent scaling:
+
+- 'GSPaintXObject' (@Do@): Paints an XObject (image, form, etc.)
+- 'GSPaintShapeColourShading' (@sh@): Paints a shading pattern
+
+These operators reference external resources that have their own coordinate
+systems and should not be affected by coordinate scaling optimizations.
+
+__Parameters:__
+
+- @program@: The PDF graphics program to check
+
+__Returns:__ 'True' if the program can be scaled, 'False' if it contains
+PaintObject operators.
+-}
+isScaleOptimizable :: Program -> Bool
+isScaleOptimizable = not . Foldable.any hasPaintObjectOperator
+  where
+    hasPaintObjectOperator :: Command -> Bool
+    hasPaintObjectOperator cmd = case cOperator cmd of
+      GSPaintXObject            -> True
+      GSPaintShapeColourShading -> True
+      _anyOtherOperator         -> False
 
 {-|
 Scale a PDF graphics program by a scaling factor.
@@ -54,10 +86,11 @@ optimizeScale :: Double -> Program -> Program
 optimizeScale scale program
   | scale == 1.0 = program
   | scale == 0.0 = program
-  | otherwise    = (   mkCommand GSSaveGS []
-                    <| scaleMatrixCommand
-                    <| fmap scaleCommand program
-                   ) |> mkCommand GSRestoreGS []
+  | not (isScaleOptimizable program) = program
+  | otherwise= (   mkCommand GSSaveGS []
+                <| scaleMatrixCommand
+                <| fmap scaleCommand program
+               ) |> mkCommand GSRestoreGS []
   where
     invScale = 1.0 / scale
 
@@ -94,6 +127,7 @@ optimizeScale scale program
       GSSetTextFont         -> scaleAllParams cmd
       GSSetWordSpacing      -> scaleAllParams cmd
       GSSetCharacterSpacing -> scaleAllParams cmd
+      GSSetTextLeading      -> scaleAllParams cmd
 
       -- Line width - scale the width parameter
       GSSetLineWidth     -> scaleAllParams cmd

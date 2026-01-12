@@ -14,7 +14,9 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
 import Data.Context (ctx)
 import Data.Functor ((<&>))
+import Data.List (minimumBy)
 import Data.Logging (Logging)
+import Data.Ord (comparing)
 import Data.PDF.GFXObject (separateGfx)
 import Data.PDF.PDFWork
   (PDFWork, getTranslationTable, sayComparisonP, sayP, withContext)
@@ -24,8 +26,8 @@ import Data.PDF.Settings
 import Data.PDF.WorkData (wSettings)
 import Data.Sequence qualified as SQ
 
--- TODO: import PDF.Graphics.Interpreter.OptimizeGState (optimizeGState)
 import PDF.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
+import PDF.Graphics.Interpreter.OptimizeScale (optimizeScale)
 import PDF.Graphics.Interpreter.RenameResources (renameResources)
 import PDF.Graphics.Parser.Stream (gfxParse)
 
@@ -70,12 +72,18 @@ optimizeGFX stream = do
             program <- getTranslationTable
                    <&> flip renameResources (parseProgram objects)
 
-            optimizedProgram <- gets (`optimizeProgram` program)
-                            -- TODO: >>= optimizeGState
+            -- Try multiple scale optimizations and pick the smallest result.
+            optimizedPrograms <- mapM (\scale -> do
+                let scaled = optimizeScale scale program
+                gets ( (separateGfx . extractObjects)
+                     . (`optimizeProgram` scaled)
+                     ) -- TODO: >>= optimizeGState
+              )
+              [ 1.0, 10.0, 100.0, 1000.0 ]
 
-            let optimizedStream = separateGfx
-                                . extractObjects
-                                $ optimizedProgram
+            -- Select the smallest optimized program.
+            let optimizedStream = minimumBy (comparing BS.length)
+                                            optimizedPrograms
 
             sayComparisonP
               "GFX stream optimization"
