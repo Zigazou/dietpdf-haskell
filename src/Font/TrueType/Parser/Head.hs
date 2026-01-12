@@ -13,9 +13,9 @@ import Data.Binary.Get (getInt16be, getInt64be, getWord16be, getWord32be)
 import Data.Binary.Parser (Get)
 import Data.Binary.Parser.Word8 (string)
 
-import Font.TrueType.FontTable
+import Font.TrueType.FontTable.HeadTable
     ( Fixed (Fixed)
-    , Head (Head, hCheckSumAdjustment, hCreated, hFlags, hFontDirectionHint, hFontRevision, hGlyphDataFormat, hIndexToLocFormat, hLowestRecPPEM, hMacStyle, hMagicNumber, hModified, hUnitsPerEm, hVersion, hXMax, hXMin, hYMax, hYMin)
+    , HeadTable (HeadTable, hCheckSumAdjustment, hCreated, hFlags, hFontDirectionHint, hFontRevision, hGlyphDataFormat, hIndexToLocFormat, hLowestRecPPEM, hMacStyle, hMagicNumber, hModified, hUnitsPerEm, hVersion, hXMax, hXMin, hYMax, hYMin)
     )
 
 {-|
@@ -31,9 +31,9 @@ Parse a complete TrueType head table.
 
 Reads all fields of the font header including version, revision, timestamps,
 bounding box, and format hints. Validates the magic number (0x5F0F3CF5). Returns
-a 'Head' record with all fields populated.
+a 'HeadTable' record with all fields populated.
 -}
-headP :: Get Head
+headP :: Get HeadTable
 headP = do
   version            <- getFixed
   fontRevision       <- getFixed
@@ -53,7 +53,7 @@ headP = do
   indexToLocFormat  <- getInt16be
   glyphDataFormat   <- getInt16be
 
-  return Head { hVersion            = version
+  return HeadTable { hVersion            = version
               , hFontRevision       = fontRevision
               , hCheckSumAdjustment = checkSumAdjustment
               , hMagicNumber        = 0x5F0F3CF5

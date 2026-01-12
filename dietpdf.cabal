@@ -47,6 +47,7 @@ library
       Data.Fallible
       Data.FoldableWithRest
       Data.HasLength
+      Data.HasWrittenSize
       Data.Logging
       Data.PDF.Color
       Data.PDF.Command
@@ -95,11 +96,19 @@ library
       External.TtfAutoHint
       Font.TrueType.FontDirectory
       Font.TrueType.FontTable
+      Font.TrueType.FontTable.GlyphTable
+      Font.TrueType.FontTable.HeadTable
+      Font.TrueType.FontTable.LocationTable
+      Font.TrueType.OffsetSubtable
       Font.TrueType.Parser.Font
+      Font.TrueType.Parser.Glyf
       Font.TrueType.Parser.Head
+      Font.TrueType.Parser.Loca
       Font.TrueType.Parser.ScalerType
       Font.TrueType.Parser.TableIdentifier
       Font.TrueType.ScalerType
+      Font.TrueType.TableDirectory
+      Font.TrueType.TableEntry
       Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
       PDF.Document.Encode
@@ -136,6 +145,7 @@ library
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMergeableTextCommands
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
+      PDF.Graphics.Interpreter.OptimizeScale
       PDF.Graphics.Interpreter.RenameResources
       PDF.Graphics.Interpreter.ResourcesUsed
       PDF.Graphics.Optimize
@@ -341,7 +351,9 @@ test-suite dietpdf-test
       Data.PDF.TransformationMatrixSpec
       External.JpegToJpeg2kSpec
       Font.TrueType.Parser.FontSpec
+      Font.TrueType.Parser.GlyfSpec
       Font.TrueType.Parser.HeadSpec
+      Font.TrueType.Parser.LocaSpec
       PDF.Document.DocumentSpec
       PDF.Document.EncodeSpec
       PDF.Document.GetAllMasksSpec

@@ -12,24 +12,22 @@ module Font.TrueType.Parser.Font
 
 import Control.Monad (when)
 
-import Data.Array (Array)
 import Data.Binary (get)
 import Data.Binary.Parser (Get, label, parseOnly)
 import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
-import Data.Sequence qualified as SQ
+import Data.Functor ((<&>))
 import Data.UnifiedError (UnifiedError (UnknownScalerType))
 
-import Font.TrueType.FontDirectory
-    ( FontDirectory (FontDirectory)
-    , OffsetSubtable (OffsetSubtable, osNumTables, osScalerType)
-    , TableEntry (TableEntry)
-    , loadContent
-    )
+import Font.TrueType.FontDirectory (FontDirectory (FontDirectory))
 import Font.TrueType.FontTable (FontTable (FTRaw))
+import Font.TrueType.OffsetSubtable
+  (OffsetSubtable (OffsetSubtable, osScalerType), osNumTables)
 import Font.TrueType.Parser.ScalerType (scalerTypeP)
 import Font.TrueType.Parser.TableIdentifier (tableIdentifierP)
 import Font.TrueType.ScalerType (isUnknown)
+import Font.TrueType.TableDirectory (TableDirectory, prepend, singleton)
+import Font.TrueType.TableEntry (TableEntry (TableEntry), loadContent)
 
 {-|
 Parse a TrueType font offset subtable.
@@ -57,15 +55,15 @@ Recursively parse n table entries from the font directory.
 Fails if @n@ is 0 (at least one table entry is required). Returns a sequence of
 'TableEntry' values.
 -}
-readNTableEntry :: Int -> Get (Array TableEntry)
+readNTableEntry :: Int -> Get TableDirectory
 readNTableEntry 0 = fail ""
 readNTableEntry n = do
   entry <- tableEntryP
   if n == 1
-    then return (SQ.singleton entry)
+    then return (singleton entry)
     else do
       entries <- readNTableEntry (n - 1)
-      return (entry SQ.:<| entries)
+      return (prepend entry entries)
 
 {-|
 Parse a complete TrueType font directory.
@@ -77,8 +75,9 @@ fontDirectoryP :: Get FontDirectory
 fontDirectoryP = label "fontDirectory" $ do
   subtable <- offsetSubtableP
   when (isUnknown $ osScalerType subtable) (fail "Unknown scaler type")
-  entries <- readNTableEntry (fromIntegral $ osNumTables subtable)
-  return $ FontDirectory subtable entries
+
+  readNTableEntry (fromIntegral $ osNumTables subtable)
+    <&> FontDirectory subtable
 
 {-|
 Parse a TrueType font file from raw binary data.

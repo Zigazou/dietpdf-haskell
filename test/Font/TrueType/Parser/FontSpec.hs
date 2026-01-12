@@ -4,22 +4,27 @@ module Font.TrueType.Parser.FontSpec
 
 import Control.Monad (forM_)
 
-import Data.Array (mkArray)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.UnifiedError (UnifiedError (UnableToOpenFile))
 import Data.Word (Word32)
 
 import Font.TrueType.FontDirectory
-    ( FontDirectory (FontDirectory, fdOffsetSubtable, fdTableDirectory)
-    , OffsetSubtable (OffsetSubtable, osEntrySelector, osNumTables, osRangeShift, osScalerType, osSearchRange)
-    , TableEntry (TableEntry, teChecksum, teData, teLength, teOffset, teTag)
-    , calcChecksum
-    , calcTableChecksum
-    , loadContent
-    )
+  ( FontDirectory (FontDirectory, fdOffsetSubtable, fdTableDirectory)
+  , fromFontDirectory
+  )
 import Font.TrueType.FontTable (FontTable (FTRaw))
+import Font.TrueType.OffsetSubtable
+  ( OffsetSubtable (OffsetSubtable, osEntrySelector, osNumTables, osRangeShift, osScalerType, osSearchRange)
+  )
 import Font.TrueType.Parser.Font (ttfParse)
 import Font.TrueType.ScalerType (ScalerType (FontTrueType00010000))
+import Font.TrueType.TableDirectory (mkTableDirectory)
+import Font.TrueType.TableEntry
+  ( TableEntry (TableEntry, teChecksum, teData, teLength, teOffset, teTag)
+  , calcChecksum
+  , loadContent
+  )
 import Font.TrueType.TableIdentifier (toTableIdentifier)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -34,7 +39,7 @@ fontExamples =
                                           , osEntrySelector = 4
                                           , osRangeShift    = 32
                                           }
-      , fdTableDirectory = mkArray
+      , fdTableDirectory = mkTableDirectory
                              [ TableEntry { teTag = toTableIdentifier "GDEF"
                                           , teChecksum = 0xB442B082
                                           , teOffset   = 0x00021B84
@@ -165,6 +170,74 @@ calcChecksumExamples =
   , ("abcdefgh", 0x61626364 + 0x65666768)
   ]
 
+fromFontDirectoryExamples :: [(FontDirectory, ByteString)]
+fromFontDirectoryExamples =
+  [ ( FontDirectory
+      { fdOffsetSubtable = OffsetSubtable { osScalerType = FontTrueType00010000
+                                          , osNumTables     = 1
+                                          , osSearchRange   = 0x0000
+                                          , osEntrySelector = 0x0000
+                                          , osRangeShift    = 0x0000
+                                          }
+      , fdTableDirectory = mkTableDirectory
+                             [ TableEntry { teTag = toTableIdentifier "GDEF"
+                                          , teChecksum = calcChecksum "ABCDEFGH"
+                                          , teOffset   = 0
+                                          , teLength   = fromIntegral $ BS.length "ABCDEFGH"
+                                          , teData     = FTRaw "ABCDEFGH"
+                                          }
+                             ]
+      }
+    , "\x00\x01\x00\x00\x00\x01\x00\x10\x00\x00\x00\x00\
+      \GDEF\x86\x88\x8A\x8C\x00\x00\x00\x1c\x00\x00\x00\x08\&ABCDEFGH"
+    )
+  , ( FontDirectory
+      { fdOffsetSubtable = OffsetSubtable { osScalerType = FontTrueType00010000
+                                          , osNumTables     = 2
+                                          , osSearchRange   = 0x0000
+                                          , osEntrySelector = 0x0000
+                                          , osRangeShift    = 0x0000
+                                          }
+      , fdTableDirectory = mkTableDirectory
+                            [ TableEntry  { teTag = toTableIdentifier "GDEF"
+                                          , teChecksum = calcChecksum "ABCDEFGH"
+                                          , teOffset   = 0
+                                          , teLength   = fromIntegral $ BS.length "ABCDEFGH"
+                                          , teData     = FTRaw "ABCDEFGH"
+                                          }
+                            , TableEntry  { teTag = toTableIdentifier "glyf"
+                                          , teChecksum = calcChecksum "1234"
+                                          , teOffset   = 0
+                                          , teLength   = fromIntegral $ BS.length "1234"
+                                          , teData     = FTRaw "1234"
+                                          }
+                            ]
+      }
+    , "\x00\x01\x00\x00\x00\x02\x00\x20\x00\x01\x00\x00\
+      \glyf\x31\x32\x33\x34\x00\x00\x00\x2c\x00\x00\x00\x04\
+      \GDEF\x86\x88\x8A\x8C\x00\x00\x00\x30\x00\x00\x00\x08\
+      \1234\
+      \ABCDEFGH"
+    )
+  ]
+
+reversibilityExamples :: [FilePath]
+reversibilityExamples =
+  [ "Roboto/Roboto-Regular.ttf"
+  , "Roboto/Roboto-BlackItalic.ttf"
+  , "Roboto/Roboto-Black.ttf"
+  , "Roboto/Roboto-BoldItalic.ttf"
+  , "Roboto/Roboto-Bold.ttf"
+  , "Roboto/Roboto-Italic.ttf"
+  , "Roboto/Roboto-LightItalic.ttf"
+  , "Roboto/Roboto-Light.ttf"
+  , "Roboto/Roboto-MediumItalic.ttf"
+  , "Roboto/Roboto-Medium.ttf"
+  , "Roboto/Roboto-Regular.ttf"
+  , "Roboto/Roboto-ThinItalic.ttf"
+  , "Roboto/Roboto-Thin.ttf"
+  ]
+
 resetData :: FontDirectory -> FontDirectory
 resetData fd = fd { fdTableDirectory = loadContent "" <$> fdTableDirectory fd }
 
@@ -181,14 +254,18 @@ spec = do
       it ("calculates checksum for " ++ show source) $ do
         calcChecksum source `shouldBe` expected
 
-  describe "calcTableChecksum" $ do
-    forM_ fontExamples $ \(filePath, _) ->
-      it ("calculate checksum for " ++ show filePath) $ do
-        fontFile <- BS.readFile ("test/Font/TrueType/Parser/" ++ filePath)
-        case ttfParse fontFile of
-          Left _ -> return ()
-          Right fd ->
-            forM_ (fdTableDirectory fd)
-              $ \entry ->
-                  (entry, calcTableChecksum entry)
-                    `shouldBe` (entry, teChecksum entry)
+  describe "fromFontDirectory" $ do
+    forM_ fromFontDirectoryExamples $ \(fontDirectory, expected) ->
+      it ("serializes font directory " ++ show fontDirectory) $ do
+        fromFontDirectory fontDirectory `shouldBe` expected
+
+  describe "reversibility" $ do
+    forM_ reversibilityExamples $ \filePath ->
+      it ("recreates the original file" ++ show filePath) $ do
+        originalFile <- BS.readFile ("test/Font/TrueType/Parser/" ++ filePath)
+        let binary1 = fromFontDirectory <$> ttfParse originalFile
+            binary2 = case binary1 of
+              Left _         -> Left UnableToOpenFile
+              Right binary1' -> fromFontDirectory <$> ttfParse binary1'
+
+        binary1 `shouldBe` binary2

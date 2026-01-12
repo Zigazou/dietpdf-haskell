@@ -58,6 +58,8 @@ import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 import Util.ByteString (containsOnlyGray, convertToGray, optimizeParity)
+import Font.TrueType.FontDirectory (optimizeFontDirectory, fromFontDirectory)
+import Font.TrueType.Parser.Font (ttfParse)
 
 {-|
 Extract width and color component count from a PDF image stream object.
@@ -158,13 +160,18 @@ optimizeStreamParity object = do
           sayP "RGB parity optimization"
           setStream optimizedStream object
     else do
-      if BS.length rawStream `mod` 3 == 0
-        then do
-          let optimizedStream = optimizeParity rawStream
-          sayP "Parity optimization"
-          setStream optimizedStream object
-        else
-          return object
+      return object
+
+{-|
+Optimize TrueType font stream data using ttfAutoHint and internal optimization.
+-}
+optimizeTTF :: ByteString -> PDFWork IO ByteString
+optimizeTTF fontData = do
+  dehintedFontData <- lift $ ttfAutoHintOptimize fontData
+  case ttfParse dehintedFontData of
+    Left _err -> return fontData
+    Right dehintedFont -> do
+      return (fromFontDirectory (optimizeFontDirectory dehintedFont))
 
 {-|
 Attempt to optimize a stream, gracefully handling failures.
@@ -256,7 +263,7 @@ streamOptimize object = do
     TTFOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "TTF stream optimization"
                                                 object
-                                                (lift . ttfAutoHintOptimize)
+                                                optimizeTTF
       setStream1 (BS.length optimizedStream) optimizedStream object
 
     _anyOtherOptimization -> return object
