@@ -8,9 +8,9 @@ file size while maintaining quality.
 module External.GhostScriptOptimize (ghostScriptOptimize) where
 
 import Data.Context (Contextual (ctx))
+import Data.Fallible (FallibleT)
 import Data.Logging (sayF)
 import Data.Text qualified as T
-import Data.Fallible (FallibleT)
 
 import External.ExternalCommand (externalCommand)
 
@@ -51,10 +51,15 @@ gsOptions =
   , ("d", "DetectDuplicateImages", "true")     -- group identical images
   , ("d", "AutoRotatePages", "/None")          -- don't rotate pages
   , ("d", "CompressFonts", "true")             -- compress fonts
+  , ("d", "NEWPDF", "true")                    -- use new PDF format
+  , ("d", "PreserveMarkedContent", "true")     -- preserve marked content
   , ("d", "DownsampleColorImages", "false")    -- downsample color images
   , ("d", "DownsampleGrayImages", "false")     -- downsample gray images
   , ("d", "DownsampleMonoImages", "false")     -- downsample monochrome images
   , ("d", "ColorImageFilter", "/FlateEncode")  -- color image filter
+  , ("d", "GrayImageFilter", "/FlateEncode")   -- gray image filter
+  , ("d", "AutoFilterColorImages", "false")    -- disable auto filter
+  , ("d", "AutoFilterGrayImages", "false")     -- disable auto filter
   , ("d", "CompatibilityLevel", "1.7")         -- PDF compatibility level
   , ("d", "ConvertCMYKImagesToRGB", "false")   -- keep CMYK images
   , ("d", "MaxInlineImageSize", "0")           -- disable inline images
