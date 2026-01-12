@@ -1,5 +1,5 @@
 name:                dietpdf
-version:             1.1.5.0
+version:             1.1.6.0
 github:              "zigazou/dietpdf"
 license:             BSD3
 author:              "Frédéric BISSON"
@@ -29,7 +29,6 @@ ghc-options:
 - -Weverything
 - -Wno-missing-safe-haskell-mode
 - -Wno-implicit-prelude
-- -Wno-missed-specialisations
 - -Wno-all-missed-specialisations
 - -Wno-unsafe
 - -Wno-safe
