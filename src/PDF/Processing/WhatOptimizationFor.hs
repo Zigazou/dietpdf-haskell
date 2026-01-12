@@ -19,10 +19,12 @@ module PDF.Processing.WhatOptimizationFor
   ( whatOptimizationFor
   )
 where
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.Functor ((<&>))
 import Data.Logging (Logging)
 import Data.PDF.OptimizationType
-  ( OptimizationType (GfxOptimization, JPGOptimization, NoOptimization, ObjectStreamOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization, XRefStreamOptimization)
+  ( OptimizationType (GfxOptimization, JP2Optimization, JPGOptimization, NoOptimization, ObjectStreamOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization, XRefStreamOptimization)
   )
 import Data.PDF.PDFObject (PDFObject (PDFName))
 import Data.PDF.PDFWork (PDFWork, tryP)
@@ -33,6 +35,15 @@ import Font.TrueType.Parser.Font (ttfParse)
 import PDF.Graphics.Parser.Stream (gfxParse)
 import PDF.Object.State (getStream, getValue)
 
+{-
+Identify the image file type based on magic numbers.
+-}
+identifyImageType :: ByteString -> OptimizationType
+identifyImageType stream
+  | BS.take 2 stream == "\xff\xd8" = JPGOptimization
+  |    BS.take 4 stream == "\x00\x00\x00\x0c"
+    && BS.take 8 (BS.drop 4 stream) == "jP  \r\n\x87\n" = JP2Optimization
+  | otherwise = RawBitmapOptimization
 
 {-|
 Classify a `PDFObject` into an `OptimizationType`.
@@ -54,11 +65,7 @@ whatOptimizationFor :: Logging m => PDFObject -> PDFWork m OptimizationType
 whatOptimizationFor object =
   getValue "Subtype" object >>= \case
     Just (PDFName "XML") -> return XMLOptimization
-    Just (PDFName "Image") -> do
-      stream <- getStream object
-      if BS.take 2 stream == "\xff\xd8"
-        then return JPGOptimization
-        else return RawBitmapOptimization
+    Just (PDFName "Image") -> getStream object <&> identifyImageType
     Just (PDFName "Form") -> do
         tryP (getStream object) >>= \case
           Right stream -> case gfxParse stream of
