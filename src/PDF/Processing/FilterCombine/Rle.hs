@@ -10,6 +10,7 @@ module PDF.Processing.FilterCombine.Rle
 
 import Codec.Compression.RunLength qualified as RL
 
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration)
 import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
@@ -22,8 +23,8 @@ Compress a stream using run-length encoding, ignoring width/components metadata.
 Returns a `FilterCombination` with `RunLengthDecode` and the compressed bytes.
 -}
 rle
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> Fallible FilterCombination
-rle _ stream =
+rle _anyBitmapConfig stream =
   RL.compress stream <&> mkFCAppend [Filter (PDFName "RunLengthDecode") PDFNull]

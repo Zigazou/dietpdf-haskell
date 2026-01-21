@@ -69,7 +69,9 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
       otherReferences =
         (Set.fromList . toList)
           (  deepFind isReference (toPDFDocument uObjectsWithStream)
+          <> deepFind isReference (toPDFDocument objectsWithStream)
           <> deepFind isReference (toPDFDocument uObjectsWithoutStream)
+          <> deepFind isReference (toPDFDocument objectsWithoutStream)
           )
 
       references = findUsedReferences startReferences otherReferences

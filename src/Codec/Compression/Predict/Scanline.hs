@@ -43,6 +43,8 @@ import Codec.Compression.Predict.Predictor
   )
 import Codec.Compression.RunLength qualified as RLE
 
+import Data.Bitmap.BitmapConfiguration
+  (BitmapConfiguration (bcComponents, bcLineWidth))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -71,10 +73,11 @@ An empty `Scanline` is used as a default `Scanline` when using PNG predictors
 
 It’s just a serie of zero bytes.
 -}
-emptyScanline :: Int -> Int -> Scanline
-emptyScanline width components = Scanline
+emptyScanline :: BitmapConfiguration -> Scanline
+emptyScanline bitmapConfig = Scanline
   { slPredictor = Just TIFFNoPrediction
-  , slStream    = replicate components (BS.pack $ replicate width 0)
+  , slStream    = replicate (bcComponents bitmapConfig)
+                            (BS.replicate (bcLineWidth bitmapConfig) 0)
   }
 
 scanlineEntropy :: Entropy -> Scanline -> Double
@@ -107,7 +110,7 @@ applyPredictorToScanline _ predictor (Scanline _ prior, Scanline _ current) = Sc
   }
  where
   applyPredictorToScanline'
-    :: PredictorFunc -> (Word8, Word8) -> [(Word8, Word8)] -> [Word8]
+    :: PredictorFunc Word8 -> (Word8, Word8) -> [(Word8, Word8)] -> [Word8]
   applyPredictorToScanline' _ _ [] = []
   applyPredictorToScanline' fn (upperLeft, left) ((above, sample) : remain) =
     fn (Samples upperLeft above left sample)
@@ -129,7 +132,7 @@ applyUnpredictorToScanline predictor (Scanline _ prior, Scanline linePredictor c
     }
  where
   applyUnpredictorToScanline'
-    :: PredictorFunc -> (Word8, Word8) -> [(Word8, Word8)] -> [Word8]
+    :: PredictorFunc Word8 -> (Word8, Word8) -> [(Word8, Word8)] -> [Word8]
   applyUnpredictorToScanline' _ _ [] = []
   applyUnpredictorToScanline' fn (upperLeft, left) ((above, sample) : remain) =
     let decodedSample = fn (Samples upperLeft above left sample)
@@ -139,15 +142,19 @@ applyUnpredictorToScanline predictor (Scanline _ prior, Scanline linePredictor c
 Convert a `ByteString` to a `Scanline` according to a `Predictor`.
 -}
 fromPredictedLine
-  :: Predictor -> Int -> ByteString -> Fallible Scanline
-fromPredictedLine predictor components raw
+  :: Predictor -> BitmapConfiguration -> ByteString -> Fallible Scanline
+fromPredictedLine predictor bitmapConfig raw
   | isPNGGroup predictor = do
     let (predictCode, bytes) = BS.splitAt 1 raw
     linePredictor <- decodeRowPredictor (BS.head predictCode)
     return $ Scanline { slPredictor = Just linePredictor
-                      , slStream    = separateComponents components bytes
+                      , slStream = separateComponents
+                                    (bcComponents bitmapConfig)
+                                    bytes
                       }
   | otherwise =
     return $ Scanline { slPredictor = Just predictor
-                      , slStream = separateComponents components raw
+                      , slStream = separateComponents
+                                    (bcComponents bitmapConfig)
+                                    raw
                       }

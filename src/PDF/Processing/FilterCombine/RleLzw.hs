@@ -10,6 +10,7 @@ module PDF.Processing.FilterCombine.RleLzw
 
 import Codec.Compression.LZW qualified as LZW
 
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration)
 import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
@@ -24,10 +25,10 @@ Apply RLE first, then LZW compression. Returns the combined filters and
 compressed bytes.
 -}
 rleLzw
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> Fallible FilterCombination
-rleLzw _ stream = do
+rleLzw _anyBitmapConfig stream = do
   rle Nothing stream
     >>= LZW.compress . fcBytes
     <&> mkFCAppend

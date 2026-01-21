@@ -11,11 +11,10 @@ module PDF.Processing.FilterCombine.PredDeflate
 
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict
-    ( Entropy (EntropyDeflate, EntropyShannon)
-    , Predictor (PNGOptimum)
-    , predict
-    )
+  (Entropy (EntropyDeflate, EntropyShannon), Predictor (PNGOptimum), predict)
 
+import Data.Bitmap.BitmapConfiguration
+  (BitmapConfiguration (bcComponents, bcLineWidth))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -34,17 +33,18 @@ Requires `(width, components)`; returns `InvalidFilterParm` when width is
 missing.
 -}
 predDeflate
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> Fallible FilterCombination
-predDeflate (Just (width, components)) stream = do
-  compressedS <-
-    predict EntropyShannon PNGOptimum width components stream
-      >>= FL.fastCompress
+predDeflate (Just bitmapConfig) stream = do
+  let width      = bcLineWidth bitmapConfig
+      components = bcComponents bitmapConfig
 
-  compressedD <-
-    predict EntropyDeflate PNGOptimum width components stream
-      >>= FL.fastCompress
+  compressedS <- predict EntropyShannon PNGOptimum bitmapConfig stream
+             >>= FL.fastCompress
+
+  compressedD <- predict EntropyDeflate PNGOptimum bitmapConfig stream
+             >>= FL.fastCompress
 
   let compressed = if BS.length compressedD < BS.length compressedS
         then compressedD
@@ -62,5 +62,5 @@ predDeflate (Just (width, components)) stream = do
     ]
     compressed
 
-predDeflate _noWidth _stream = Left $
+predDeflate _noBitmapConfig _stream = Left $
   InvalidFilterParm "no width given to predDeflate"

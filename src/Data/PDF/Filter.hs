@@ -18,7 +18,7 @@ data Filter = Filter
   { fFilter      :: !PDFObject
   , fDecodeParms :: !PDFObject
   }
-  deriving stock Show
+  deriving stock (Eq, Show)
 
 {-|
 Checks whether a `Filter` has no decode parameters (i.e., its `fDecodeParms`

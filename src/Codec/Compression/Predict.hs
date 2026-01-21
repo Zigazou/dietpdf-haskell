@@ -7,22 +7,27 @@ module Codec.Compression.Predict
 where
 
 import Codec.Compression.Predict.Entropy
-    ( Entropy (EntropyDeflate, EntropyRLE, EntropyShannon)
-    )
+  (Entropy (EntropyDeflate, EntropyRLE, EntropyShannon))
 import Codec.Compression.Predict.ImageStream
-    ( fromPredictedStream
-    , fromUnpredictedStream
-    , packStream
-    , predictImageStream
-    , unpredictImageStream
-    )
+  ( fromPredictedStream
+  , fromUnpredictedStream
+  , packStream
+  , predictImageStream
+  , unpredictImageStream
+  )
 import Codec.Compression.Predict.Predictor
-    ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
-    )
+  ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
+  )
+import Codec.Compression.Predict.TIFF (tiffPredictRow, tiffUnpredictRow)
 
+import Data.Bitmap.BitmapConfiguration
+  (BitmapConfiguration (bcLineWidth), bitmapRawWidth)
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.UnifiedError (UnifiedError (InvalidNumberOfBytes))
+
+import Util.ByteString (splitRaw)
 
 {-|
 Apply a `Predictor` to a `ByteString`, considering its line width.
@@ -30,14 +35,17 @@ Apply a `Predictor` to a `ByteString`, considering its line width.
 predict
   :: Entropy -- ^ Entropy type to use
   -> Predictor -- ^ Predictor to be used to encode
-  -> Int -- ^ Width of the stream
-  -> Int -- ^ Number of color components
+  -> BitmapConfiguration -- ^ Bitmap configuration
   -> ByteString -- ^ Stream to encode
   -> Fallible ByteString -- ^ Encoded stream or an error
-predict entropy predictor width components stream
-  | width < 1 = Left $ InvalidNumberOfBytes 0 0
+predict entropy predictor bitmapConfig stream
+  | bcLineWidth bitmapConfig < 1 = Left $ InvalidNumberOfBytes 0 0
+  | predictor == TIFFPredictor2 =
+     let rows = splitRaw (bitmapRawWidth bitmapConfig) stream
+         predictedRows = tiffPredictRow bitmapConfig <$> rows
+     in  return $ BS.concat predictedRows
   | otherwise = do
-    imgStm <- fromUnpredictedStream width components stream
+    imgStm <- fromUnpredictedStream bitmapConfig stream
     return $ packStream (predictImageStream entropy predictor imgStm)
 
 {-|
@@ -46,13 +54,16 @@ line width.
 -}
 unpredict
   :: Predictor -- ^ Predictor (hint in case of a PNG predictor)
-  -> Int -- ^ Width of the image
-  -> Int -- ^ Number of color components
+  -> BitmapConfiguration -- ^ Bitmap configuration
   -> ByteString -- ^ Stream to decode
   -> Fallible ByteString -- ^ Decoded stream or an error
-unpredict predictor width components stream
-  | width < 1 = Left $ InvalidNumberOfBytes 0 0
+unpredict predictor bitmapConfig stream
+  | bcLineWidth bitmapConfig < 1 = Left $ InvalidNumberOfBytes 0 0
+  | predictor == TIFFPredictor2 =
+     let rows = splitRaw (bitmapRawWidth bitmapConfig) stream
+         unpredictedRows = tiffUnpredictRow bitmapConfig <$> rows
+     in  return $ BS.concat unpredictedRows
   | otherwise = do
-    imgStm <- fromPredictedStream predictor width components stream
+    imgStm <- fromPredictedStream predictor bitmapConfig stream
     let unpredicted = unpredictImageStream predictor imgStm
     return $ packStream unpredicted

@@ -22,6 +22,7 @@ module Font.TrueType.TableDirectory
   , append
   , mkTableDirectory
   , filterTableDirectory
+  , mapOnTableType
   ) where
 
 import Data.Array (Array)
@@ -36,6 +37,7 @@ import Data.Sequence qualified as Seq
 
 import Font.TrueType.TableEntry
   (TableEntry (teTag), fromTableData, fromTableEntry, updateOffsetAndSize)
+import Font.TrueType.TableIdentifier (TableIdentifier)
 
 {-|
 Polymorphic table directory type with phantom type parameter.
@@ -162,6 +164,41 @@ filterTableDirectory predicate (TableDirectory entries) =
   TableDirectory (Seq.filter predicate entries)
 
 {-|
+Apply a transformation function to a specific table type in the directory.
+
+This function searches the table directory for entries matching the given table
+identifier and applies the provided transformation function to them. All other
+entries remain unchanged.
+
+Parameters:
+- Table directory to operate on
+- Table identifier to match (e.g., 'glyf', 'head', 'loca')
+- Transformation function to apply to matching entries
+
+Returns:
+- Updated table directory with the transformation applied
+
+Example:
+
+@
+-- Update the checksum of the 'head' table
+mapOnTableType directory (mkTableIdentifier "head") updateChecksum
+@
+-}
+mapOnTableType
+  :: TableDirectory
+  -> TableIdentifier
+  -> (TableEntry -> TableEntry)
+  -> TableDirectory
+mapOnTableType tableDirectory tableIdentifier fn = update <$> tableDirectory
+  where
+    update :: TableEntry -> TableEntry
+    update tableEntry =
+      if teTag tableEntry == tableIdentifier
+        then fn tableEntry
+        else tableEntry
+
+{-|
 Serialize the table directory entries to binary format.
 
 Returns the raw binary representation of all table directory entries, which
@@ -239,6 +276,7 @@ serializing the font.
 -}
 relativeOffsetsAndSizes :: Int -> TableDirectory -> Array (Int, Int)
 relativeOffsetsAndSizes _anyStart (TableDirectory Empty) = mempty
+
 relativeOffsetsAndSizes start (TableDirectory (entry :<| rest))
   = (start, dataSize)
   <| relativeOffsetsAndSizes (start + alignedSize) (TableDirectory rest)

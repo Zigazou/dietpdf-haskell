@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           dietpdf
-version:        1.1.5.0
+version:        1.1.6.0
 description:    Please see the README on GitHub at <https://github.com/zigazou/dietpdf#readme>
 homepage:       https://github.com/zigazou/dietpdf#readme
 bug-reports:    https://github.com/zigazou/dietpdf/issues
@@ -35,11 +35,14 @@ library
       Codec.Compression.Predict.ImageStream
       Codec.Compression.Predict.Predictor
       Codec.Compression.Predict.Scanline
+      Codec.Compression.Predict.TIFF
       Codec.Compression.RunLength
       Codec.Compression.XML
       Codec.Filter.Ascii85
       Codec.Filter.AsciiHex
       Data.Array
+      Data.Bitmap.BitmapConfiguration
+      Data.Bitmap.BitsPerComponent
       Data.BitsArray
       Data.ColorSpace
       Data.Context
@@ -96,12 +99,15 @@ library
       External.TtfAutoHint
       Font.TrueType.FontDirectory
       Font.TrueType.FontTable
+      Font.TrueType.FontTable.GlyphInstruction
       Font.TrueType.FontTable.GlyphTable
       Font.TrueType.FontTable.HeadTable
       Font.TrueType.FontTable.LocationTable
+      Font.TrueType.LocationTableFormat
       Font.TrueType.OffsetSubtable
       Font.TrueType.Parser.Font
       Font.TrueType.Parser.Glyf
+      Font.TrueType.Parser.GlyphInstruction
       Font.TrueType.Parser.Head
       Font.TrueType.Parser.Loca
       Font.TrueType.Parser.ScalerType
@@ -190,6 +196,13 @@ library
       PDF.Object.Signature
       PDF.Object.State
       PDF.Object.String
+      PDF.Processing.ApplyFilter.Generic
+      PDF.Processing.ApplyFilter.Helpers
+      PDF.Processing.ApplyFilter.ICC
+      PDF.Processing.ApplyFilter.JPG
+      PDF.Processing.ApplyFilter.OnlyZopfli
+      PDF.Processing.ApplyFilter.Text
+      PDF.Processing.ApplyFilter.XRef
       PDF.Processing.Filter
       PDF.Processing.FilterCombine.Deflate
       PDF.Processing.FilterCombine.Jpeg2k
@@ -254,6 +267,9 @@ library
       cbits/optimizeParity.c
       cbits/optimizeGray.c
       cbits/runLength.c
+      cbits/tiff_predict.c
+      cbits/tiff_unpredict.c
+      cbits/tiff_invalid_parameters.c
   build-depends:
       async
     , base >=4.7 && <5
@@ -270,6 +286,7 @@ library
     , monad-loops
     , mtl
     , ordered-containers
+    , pretty-hex
     , process
     , split
     , spool
@@ -326,7 +343,6 @@ executable dietpdf
     , formatting
     , mtl
     , optparse-applicative
-    , pretty-hex
     , temporary
     , text
     , transformers
@@ -343,6 +359,7 @@ test-suite dietpdf-test
       Codec.Compression.RunLengthSpec
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
+      Data.Bitmap.BitmapConfigurationSpec
       Data.BitsArraySpec
       Data.FoldableWithRestSpec
       Data.LoggingSpec
@@ -410,6 +427,7 @@ test-suite dietpdf-test
       PDF.Parser.IndirectObjectSpec
       PDF.Parser.ParserSpec
       PDF.Processing.PDFWorkSpec
+      PDF.Processing.UnfilterSpec
       Util.ByteStringSpec
       Util.GraphicsSpec
       Util.HexSpec

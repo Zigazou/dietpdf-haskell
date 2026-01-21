@@ -22,22 +22,23 @@ module Codec.Compression.Predict.ImageStream
   , fromUnpredictedStream
   , unpredictImageStream
   , predictImageStream
+  , iComponents
+  , iWidth
   ) where
 
 import Codec.Compression.Predict.Entropy (Entropy)
 import Codec.Compression.Predict.Predictor
-    ( Predictor (TIFFNoPrediction)
-    , encodeRowPredictor
-    , isPNGGroup
-    )
+  (Predictor, encodeRowPredictor, isPNGGroup)
 import Codec.Compression.Predict.Scanline
-    ( Scanline (Scanline)
-    , applyPredictorToScanline
-    , applyUnpredictorToScanline
-    , emptyScanline
-    , fromPredictedLine
-    )
+  ( Scanline (Scanline)
+  , applyPredictorToScanline
+  , applyUnpredictorToScanline
+  , emptyScanline
+  , fromPredictedLine
+  )
 
+import Data.Bitmap.BitmapConfiguration
+  (BitmapConfiguration (bcComponents, bcLineWidth), bitmapRawWidth)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -51,12 +52,16 @@ allowing easier handling when applying predictors.
 -}
 type ImageStream :: Type
 data ImageStream = ImageStream
-  { iWidth            :: !Int
-  , iComponents       :: !Int
-  , iBitsPerComponent :: !Int
-  , iPredictor        :: !(Maybe Predictor)
-  , iLines            :: ![Scanline]
+  { iBitmapConfig :: !BitmapConfiguration
+  , iPredictor    :: !(Maybe Predictor)
+  , iLines        :: ![Scanline]
   }
+
+iComponents :: ImageStream -> Int
+iComponents = bcComponents . iBitmapConfig
+
+iWidth :: ImageStream -> Int
+iWidth = bcLineWidth . iBitmapConfig
 
 {-|
 Encode an entire image stream using a specified `Predictor`
@@ -65,7 +70,7 @@ predictImageStream :: Entropy -> Predictor -> ImageStream -> ImageStream
 predictImageStream entropy predictor imgStm = imgStm
   { iPredictor = Just predictor
   , iLines     = applyPredictorToScanline entropy predictor <$> previousCurrent
-                   (emptyScanline (iWidth imgStm) (iComponents imgStm))
+                   (emptyScanline (iBitmapConfig imgStm))
                    (iLines imgStm)
   }
  where
@@ -79,7 +84,7 @@ unpredictImageStream :: Predictor -> ImageStream -> ImageStream
 unpredictImageStream predictor imgStm = imgStm
   { iPredictor = Nothing
   , iLines     = unpredictScanlines
-                   (emptyScanline (iWidth imgStm) (iComponents imgStm))
+                   (emptyScanline (iBitmapConfig imgStm))
                    (iLines imgStm)
   }
  where
@@ -94,15 +99,17 @@ Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
 line width.
 -}
 fromPredictedStream
-  :: Predictor -> Int -> Int -> ByteString -> Fallible ImageStream
-fromPredictedStream predictor width components raw = do
-  let rawWidth = components * width + if isPNGGroup predictor then 1 else 0
-  scanlines <- mapM (fromPredictedLine predictor components) (splitRaw rawWidth raw)
-  return ImageStream { iWidth            = width
-                     , iComponents       = components
-                     , iBitsPerComponent = 8
-                     , iPredictor        = Just TIFFNoPrediction
-                     , iLines            = scanlines
+  :: Predictor -> BitmapConfiguration -> ByteString -> Fallible ImageStream
+fromPredictedStream predictor bitmapConfig raw = do
+  let rawWidth = bitmapRawWidth bitmapConfig
+               + if isPNGGroup predictor then 1 else 0
+
+  scanlines <- mapM (fromPredictedLine predictor bitmapConfig)
+                    (splitRaw rawWidth raw)
+
+  return ImageStream { iBitmapConfig = bitmapConfig
+                     , iPredictor    = Just predictor
+                     , iLines        = scanlines
                      }
 
 {-|
@@ -114,22 +121,22 @@ packStream = BS.concat . fmap packScanline . iLines
   packScanline :: Scanline -> ByteString
   packScanline (Scanline Nothing stream) = groupComponents stream
   packScanline (Scanline (Just predictor) stream)
-    | isPNGGroup predictor = BS.cons (encodeRowPredictor predictor)
-                                     (groupComponents stream)
-    | otherwise = groupComponents stream
+    | BS.length rawLine == 0 = ""
+    | isPNGGroup predictor = BS.cons (encodeRowPredictor predictor) rawLine
+    | otherwise = rawLine
+    where rawLine = groupComponents stream
 
 {-|
 Convert an unpredicted `Bytestring` to an `ImageStream` given its line width.
 -}
 fromUnpredictedStream
-  :: Int -> Int -> ByteString -> Fallible ImageStream
-fromUnpredictedStream width components raw = return ImageStream
-  { iWidth            = width
-  , iComponents       = components
-  , iBitsPerComponent = 8
+  :: BitmapConfiguration
+  -> ByteString
+  -> Fallible ImageStream
+fromUnpredictedStream bitmapConfig raw = return ImageStream
+  { iBitmapConfig     = bitmapConfig
   , iPredictor        = Nothing
   , iLines            = Scanline Nothing
-                        .   separateComponents components
-                        <$> splitRaw (width * components) raw
+                        .   separateComponents (bcComponents bitmapConfig)
+                        <$> splitRaw (bitmapRawWidth bitmapConfig) raw
   }
-

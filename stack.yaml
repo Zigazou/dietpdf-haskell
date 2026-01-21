@@ -44,6 +44,7 @@ packages:
 extra-deps:
 - binary-parsers-0.2.4.0@sha256:3d28bf1bce98c7a0587c4b6569f7b06664eef91c09817f7f99838252e9360c0b,3728
 - spool-0.1@sha256:77780cbfc2c0be23ff2ea9e474062f3df97fcd9db946ee0b3508280a923b83e2,1461
+- th-abstraction-0.6.0.0 # needed to compile and install weeder with GHC 9.8.4
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

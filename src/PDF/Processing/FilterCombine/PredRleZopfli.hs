@@ -16,6 +16,8 @@ import Codec.Compression.Predict
 import Codec.Compression.Predict.Entropy (Entropy (EntropyDeflate))
 import Codec.Compression.RunLength qualified as RL
 
+import Data.Bitmap.BitmapConfiguration
+  (BitmapConfiguration (bcComponents, bcLineWidth))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -40,17 +42,20 @@ Requires `(width, components)`; returns `InvalidFilterParm` when width is
 missing.
 -}
 predRleZopfli
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> UseZopfli
   -> Fallible FilterCombination
-predRleZopfli (Just (width, components)) stream useZopfli = do
-  let compressor = getCompressor useZopfli
-  let entropies = [EntropyDeflate, EntropyRLE]
+predRleZopfli (Just bitmapConfig) stream useZopfli = do
+  let
+    compressor = getCompressor useZopfli
+    entropies = [EntropyDeflate, EntropyRLE]
+    width     = bcLineWidth bitmapConfig
+    components = bcComponents bitmapConfig
 
   -- Try all entropies and select the best compressed result.
   compressed <- mapM (\entropy ->
-                        predict entropy PNGOptimum width components stream
+                        predict entropy PNGOptimum bitmapConfig stream
                         >>= FL.noCompress
                         >>= RL.compress
                         >>= compressor
@@ -71,5 +76,5 @@ predRleZopfli (Just (width, components)) stream useZopfli = do
     ]
     compressed
 
-predRleZopfli _noWidth _stream _useZopfli = Left
+predRleZopfli _noBitmapConfig _stream _useZopfli = Left
   $ InvalidFilterParm "no width given to predRleZopfli"

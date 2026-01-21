@@ -6,11 +6,13 @@ import Control.Monad (forM_)
 
 import Data.Binary.Parser (parseOnly)
 import Data.ByteString (ByteString)
+import Data.Word (Word32)
 
 import Font.TrueType.FontTable.LocationTable
-  ( LocationTable (LocationTable)
-  )
-import Font.TrueType.Parser.Loca (LocaFormat (LongFormat, ShortFormat), locaP)
+  (LocationTable (LocationTable), glyphSlices)
+import Font.TrueType.LocationTableFormat
+  (LocationTableFormat (LongFormat, ShortFormat))
+import Font.TrueType.Parser.Loca (locaP)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -63,6 +65,26 @@ longFormatExamples =
     )
   ]
 
+glyphSlicesExamples :: [(LocationTable, Int, [(Word32, Word32)])]
+glyphSlicesExamples =
+  [ ( LocationTable [0, 20, 20, 55]
+    , 70
+    , [(0, 20), (20, 20), (20, 55), (55, 70)]
+    )
+  , ( LocationTable [0, 100, 250]
+    , 300
+    , [(0, 100), (100, 250), (250, 300)]
+    )
+  , ( LocationTable [0]
+    , 50
+    , [(0, 50)]
+    )
+  , ( LocationTable []
+    , 50
+    , []
+    )
+  ]
+
 spec :: Spec
 spec = do
   describe "locaP with ShortFormat" $ do
@@ -74,3 +96,8 @@ spec = do
     forM_ longFormatExamples $ \(source, numGlyphs, expected) ->
       it ("decodes long format with " ++ show numGlyphs ++ " glyphs") $ do
         parseOnly (locaP LongFormat numGlyphs) source `shouldBe` Right expected
+
+  describe "glyphSlices" $ do
+    forM_ glyphSlicesExamples $ \(locaTable, dataSize, expected) ->
+      it ("computes glyph slices for LocationTable " ++ show locaTable) $ do
+        glyphSlices locaTable dataSize `shouldBe` expected

@@ -26,6 +26,9 @@ module Font.TrueType.TableEntry
   , getBytes
   , fromTableData
   , updateOffsetAndSize
+  , makeTableEntry
+  , makeGlyphsTableEntry
+  , makeLocationTableEntry
   ) where
 
 import Data.Binary (Word32)
@@ -41,11 +44,15 @@ import Data.Kind (Type)
 
 import Font.TrueType.FontTable
   (FontTable (FTGlyf, FTHead, FTLoca, FTRaw), fromFontTable)
+import Font.TrueType.FontTable.GlyphTable (GlyphTable)
 import Font.TrueType.FontTable.HeadTable
   (HeadTable (hCheckSumAdjustment), fromHeadTable)
+import Font.TrueType.FontTable.LocationTable (LocationTable)
 import Font.TrueType.Parser.Head (headP)
 import Font.TrueType.TableIdentifier
-  (TableIdentifier (RTTFontHeader, RTTGlyphData), fromTableIdentifier)
+  ( TableIdentifier (RTTFontHeader, RTTGlyphData, RTTIndexToLocation)
+  , fromTableIdentifier
+  )
 
 {-|
 Compute the checksum of raw binary data.
@@ -208,7 +215,7 @@ This returns the actual table data without padding. Use 'padTo4' from
 TableDirectory if 4-byte alignment is needed.
 -}
 fromTableData :: TableEntry -> ByteString
-fromTableData (TableEntry { teData = FTRaw raw })       = raw
+fromTableData (TableEntry { teData = FTRaw raw }) = raw
 fromTableData (TableEntry { teData = FTHead fontHead }) = fromHeadTable fontHead
 fromTableData (TableEntry { teData = FTLoca locTable }) = fromFontTable (FTLoca locTable)
 fromTableData (TableEntry { teData = FTGlyf glyfTable }) = fromFontTable (FTGlyf glyfTable)
@@ -269,3 +276,33 @@ loadContent bytes entry@TableEntry { teTag = RTTGlyphData } =
   entry { teData = FTRaw (getBytes bytes entry) }
 
 loadContent bytes entry = entry { teData = FTRaw (getBytes bytes entry) }
+
+makeTableEntry :: TableIdentifier -> ByteString -> TableEntry
+makeTableEntry tag raw =
+  TableEntry
+    { teTag      = tag
+    , teChecksum = calcChecksum raw
+    , teOffset   = 0 -- to be updated later
+    , teLength   = fromIntegral (BS.length raw)
+    , teData     = FTRaw raw
+    }
+
+makeGlyphsTableEntry :: GlyphTable -> TableEntry
+makeGlyphsTableEntry glyfTable =
+  TableEntry
+    { teTag      = RTTGlyphData
+    , teChecksum = 0 -- to be updated later
+    , teOffset   = 0 -- to be updated later
+    , teLength   = 0 -- to be updated later
+    , teData     = FTGlyf glyfTable
+    }
+
+makeLocationTableEntry :: LocationTable -> TableEntry
+makeLocationTableEntry locTable =
+  TableEntry
+    { teTag      = RTTIndexToLocation
+    , teChecksum = 0 -- to be updated later
+    , teOffset   = 0 -- to be updated later
+    , teLength   = 0 -- to be updated later
+    , teData     = FTLoca locTable
+    }

@@ -16,6 +16,10 @@ import Codec.Compression.Predict (Entropy (EntropyShannon), Predictor, predict)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
+import Data.Bitmap.BitmapConfiguration
+  ( BitmapConfiguration (BitmapConfiguration, bcBitsPerComponent, bcComponents, bcLineWidth)
+  )
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC8Bits))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
@@ -44,6 +48,11 @@ Side effects: writes to stdout within the 'FallibleT IO' context.
 predictByteString
   :: Predictor -> Int -> Int -> ByteString -> FallibleT IO ()
 predictByteString predictor columns colors binData =
-  case predict EntropyShannon predictor columns colors binData of
+  let bitmapConfig = BitmapConfiguration
+        { bcLineWidth        = columns
+        , bcComponents       = colors
+        , bcBitsPerComponent = BC8Bits
+        }
+  in case predict EntropyShannon predictor bitmapConfig binData of
     (Right predicted) -> lift $ BS.putStr predicted
     (Left  err      ) -> throwE err

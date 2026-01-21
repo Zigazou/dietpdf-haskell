@@ -35,13 +35,18 @@ module Font.TrueType.FontTable.LocationTable
         , ltOffsets
         )
     , fromLocationTable
+    , glyphSlices
+    , bestFormat
     ) where
 
-import Data.Binary.Put (putWord32be, runPut)
+import Data.Binary.Put (putWord16be, putWord32be, runPut)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Kind (Type)
-import Data.Word (Word32)   
+import Data.Word (Word32)
+
+import Font.TrueType.LocationTableFormat
+  (LocationTableFormat (LongFormat, ShortFormat))
 
 {-|
 TrueType location table representation.
@@ -70,6 +75,18 @@ newtype LocationTable = LocationTable
   }
   deriving stock (Eq, Show)
 
+glyphSlices :: LocationTable -> Int -> [(Word32, Word32)]
+glyphSlices (LocationTable (first : second : remain)) dataSize =
+  zip (first : second : remain) (second : remain ++ [fromIntegral dataSize])
+glyphSlices (LocationTable [first]) dataSize = [(first, fromIntegral dataSize)]
+glyphSlices (LocationTable []) _anyDataSize  = []
+
+bestFormat :: LocationTable -> LocationTableFormat
+bestFormat (LocationTable offsets) =
+  if all (\offset -> even offset && offset <= 0xFFFF * 2) offsets
+    then ShortFormat
+    else LongFormat
+
 {-|
 Serialize a LocationTable to binary ByteString.
 
@@ -91,5 +108,11 @@ Each offset is serialized as 4 bytes in big-endian order:
 >  offset1_byte1, ...]
 -}
 fromLocationTable :: LocationTable -> ByteString
-fromLocationTable locTable = 
-  BSL.toStrict $ runPut $ mapM_ putWord32be (ltOffsets locTable)
+fromLocationTable locTable = case bestFormat locTable of
+  ShortFormat -> BSL.toStrict
+    $ runPut
+    $ mapM_ putWord16be ((`div` 2) . fromIntegral <$> ltOffsets locTable)
+
+  LongFormat -> BSL.toStrict
+    $ runPut
+    $ mapM_ putWord32be (ltOffsets locTable)

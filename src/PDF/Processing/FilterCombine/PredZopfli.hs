@@ -16,8 +16,12 @@ import Codec.Compression.Predict
   , Predictor (PNGOptimum, TIFFPredictor2)
   , predict
   )
-import Codec.Compression.Predict.Entropy (Entropy (EntropySum, EntropyLFS))
+import Codec.Compression.Predict.Entropy (Entropy (EntropyLFS, EntropySum))
 
+import Data.Bitmap.BitmapConfiguration
+  ( BitmapConfiguration (bcBitsPerComponent, bcComponents, bcLineWidth)
+  , findBitmapConfigurations
+  )
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -40,12 +44,14 @@ Shannon and Deflate heuristics. If `(width, components)` is missing, falls back
 to `TIFFPredictor2`.
 -}
 predZopfli
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> UseZopfli
   -> Fallible FilterCombination
-predZopfli (Just (width, components)) stream useZopfli = do
+predZopfli (Just bitmapConfig) stream useZopfli = do
   let compressor = getCompressor useZopfli
+      width      = bcLineWidth bitmapConfig
+      components = bcComponents bitmapConfig
 
   -- Select entropies based on width.
   let entropies = if width < 64
@@ -53,17 +59,26 @@ predZopfli (Just (width, components)) stream useZopfli = do
                     else [EntropyDeflate]
 
   -- Try all entropies and select the best compressed result.
-  compressed <- mapM (\entropy -> 
-                        predict entropy PNGOptimum width components stream
+  pngCompressed <- mapM (\entropy ->
+                        predict entropy PNGOptimum bitmapConfig stream
                         >>= compressor
                       ) entropies
-                <&> minimumBy (\a b -> BS.length a `compare` BS.length b)
+                   <&> minimumBy (\a b -> BS.length a `compare` BS.length b)
+
+  -- Also try TIFF predictor.
+  tiffCompressed <- predict EntropyShannon TIFFPredictor2 bitmapConfig stream
+                     >>= compressor
+
+  let (predictor, compressed) =
+        if BS.length pngCompressed < BS.length tiffCompressed
+          then (PNGOptimum, pngCompressed)
+          else (TIFFPredictor2, tiffCompressed)
 
   return $ mkFCAppend
     [ Filter
         (PDFName "FlateDecode")
         (mkPDFDictionary
-          [ ("Predictor", mkPDFNumber PNGOptimum)
+          [ ("Predictor", mkPDFNumber predictor)
           , ("Columns"  , mkPDFNumber width)
           , ("Colors"   , mkPDFNumber components)
           ]
@@ -74,22 +89,23 @@ predZopfli (Just (width, components)) stream useZopfli = do
 predZopfli Nothing stream useZopfli =  do
   let
     compressor = getCompressor useZopfli
-    width      = BS.length stream
-    components = 1 :: Int
+    possibleConfigs = findBitmapConfigurations (BS.length stream)
 
-  predict EntropyDeflate
-          TIFFPredictor2
-          width
-          components
-          stream
-    >>= compressor
-    <&> mkFCAppend
+  (bitmapConfig, compressed) <- mapM (\bitmapConfig ->
+                        predict EntropyShannon TIFFPredictor2 bitmapConfig stream
+                        >>= compressor >>= \c -> return (bitmapConfig, c)
+                      ) possibleConfigs
+                   <&> minimumBy (\(_, a) (_, b) -> BS.length a `compare` BS.length b)
+
+  return $ mkFCAppend
           [ Filter
               (PDFName "FlateDecode")
               (mkPDFDictionary
                 [ ("Predictor", mkPDFNumber TIFFPredictor2)
-                , ("Columns"  , mkPDFNumber width)
-                , ("Colors"   , mkPDFNumber components)
+                , ("Columns"  , mkPDFNumber $ bcLineWidth bitmapConfig)
+                , ("Colors"   , mkPDFNumber $ bcComponents bitmapConfig)
+                , ("BitsPerComponent", mkPDFNumber . fromEnum $ bcBitsPerComponent bitmapConfig)
                 ]
               )
           ]
+          compressed

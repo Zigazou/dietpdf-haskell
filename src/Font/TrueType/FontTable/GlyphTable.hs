@@ -75,7 +75,11 @@ module Font.TrueType.FontTable.GlyphTable
   , generateLocationTable
   ) where
 
-import Data.Binary.Put (PutM, putInt16be, putWord16be, putWord8, runPut)
+import Control.Monad (ap)
+
+import Data.Binary (Word32)
+import Data.Binary.Put
+  (PutM, putByteString, putInt16be, putWord16be, putWord8, runPut)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Lazy qualified as BSL
@@ -83,6 +87,8 @@ import Data.Int (Int16)
 import Data.Kind (Type)
 import Data.Word (Word16, Word8)
 
+import Font.TrueType.FontTable.GlyphInstruction
+  (GlyphInstruction, fromGlyphInstructions)
 import Font.TrueType.FontTable.LocationTable (LocationTable (LocationTable))
 
 {-|
@@ -136,12 +142,12 @@ of the last point in that contour.
 -}
 type SimpleGlyphData :: Type
 data SimpleGlyphData = SimpleGlyphData
-  { sgEndPtsOfContours  :: [Word16]    -- ^ Array of last points of each contour
-  , sgInstructionLength :: Word16      -- ^ Length of instruction array
-  , sgInstructions      :: ByteString  -- ^ Instructions for this glyph
-  , sgFlags             :: [Word8]     -- ^ Array of flags
-  , sgXCoordinates      :: [Int16]     -- ^ Array of x-coordinates
-  , sgYCoordinates      :: [Int16]     -- ^ Array of y-coordinates
+  { sgEndPtsOfContours  :: [Word16]           -- ^ Array of end points of contour
+  , sgInstructionLength :: Word16             -- ^ Length of instruction array
+  , sgInstructions      :: [GlyphInstruction] -- ^ Instructions for this glyph
+  , sgFlags             :: [Word8]            -- ^ Array of flags
+  , sgXCoordinates      :: [Int16]            -- ^ Array of x-coordinates
+  , sgYCoordinates      :: [Int16]            -- ^ Array of y-coordinates
   }
   deriving stock (Eq, Show)
 
@@ -248,7 +254,7 @@ putSimpleGlyphData :: SimpleGlyphData -> PutM ()
 putSimpleGlyphData glyph = do
   mapM_ putWord16be (sgEndPtsOfContours glyph)
   putWord16be (sgInstructionLength glyph)
-  mapM_ putWord8 (BS.unpack $ sgInstructions glyph)
+  putByteString (fromGlyphInstructions (sgInstructions glyph))
   mapM_ putWord8 (sgFlags glyph)
   mapM_ putInt16be (sgXCoordinates glyph)
   mapM_ putInt16be (sgYCoordinates glyph)
@@ -346,29 +352,58 @@ removeHinting (GlyphTable glyphs) = GlyphTable (removeGlyphHinting <$> glyphs)
     removeGlyphHinting (SimpleGlyph header glyphData) =
       SimpleGlyph header glyphData
         { sgInstructionLength = 0
-        , sgInstructions = BS.empty
+        , sgInstructions = mempty
         }
     removeGlyphHinting (CompositeGlyph header components) =
       CompositeGlyph header (removeComponentHinting <$> components)
 
     -- Remove instructions from a composite glyph component
     removeComponentHinting :: CompositeGlyphData -> CompositeGlyphData
-    removeComponentHinting comp = comp { cgInstructions = BS.empty }
+    removeComponentHinting comp = comp { cgInstructions = mempty }
 
 {-|
 Generate a LocationTable from a GlyphTable.
 
-Calculates the offset of each glyph relative to the start of the glyf table. The
-offsets are cumulative based on the serialized size of each glyph. The location
-table will have n+1 entries for n glyphs, with the last entry indicating the
-total size of the glyf table.
+Calculates the offset of each glyph relative to the start of the glyf table and
+determines the appropriate location table format. Returns both the location table
+and the format to use.
+
+== Location Table Format
+
+The location table (loca) format depends on the total size of the glyf table:
+
+* 'ShortFormat': Used when total glyf table size ≤ 0xFFFF bytes. Offsets are
+  stored as Word16 values divided by 2 (since glyphs are word-aligned).
+* 'LongFormat': Used when total glyf table size > 0xFFFF bytes. Offsets are
+  stored as Word32 values.
+
+== Offset Calculation
+
+For n glyphs, generates n+1 offsets where:
+
+* Each offset represents the byte position of a glyph in the serialized glyf table
+* The last offset (n+1) indicates the total size of the glyf table
+* Glyph sizes include padding for word (2-byte) alignment
+
+The offsets are cumulative and account for the actual serialized size of each
+glyph, ensuring correct byte-level positioning in the glyf table.
 -}
 generateLocationTable :: GlyphTable -> LocationTable
-generateLocationTable (GlyphTable glyphs) =
-  LocationTable (scanl (+) 0 glyphSizes)
+generateLocationTable (GlyphTable glyphs) = LocationTable offsets
   where
-    glyphSizes = map (fromIntegral . BS.length . glyphToByteString) glyphs
+    -- Calculate offsets for each glyph.
+    offsets :: [Word32]
+    offsets = scanl (+) 0 glyphSizes
 
-    -- Convert a single glyph to its binary representation for size calculation
+    -- Calculate sizes of each glyph in bytes, including padding for word
+    -- alignment.
+    glyphSizes :: [Word32]
+    glyphSizes = map ( fromIntegral
+                     . ap (+) (`mod` 2)
+                     . BS.length
+                     . glyphToByteString
+                     ) glyphs
+
+    -- Convert a single glyph to its binary representation for size calculation.
     glyphToByteString :: Glyph -> ByteString
     glyphToByteString glyph = BSL.toStrict $ runPut $ putGlyph glyph

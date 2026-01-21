@@ -19,11 +19,15 @@ import Codec.Compression.RunLength qualified as RL
 import Codec.Filter.Ascii85 qualified as A8
 import Codec.Filter.AsciiHex qualified as AH
 
+import Data.Bitmap.BitmapConfiguration
+  ( BitmapConfiguration (BitmapConfiguration, bcBitsPerComponent, bcComponents, bcLineWidth)
+  )
+import Data.Bitmap.BitsPerComponent (BitsPerComponent)
 import Data.ByteString (ByteString)
 import Data.Logging (Logging)
 import Data.PDF.Filter (Filter (fDecodeParms, fFilter))
 import Data.PDF.FilterList (FilterList)
-import Data.PDF.PDFObject (hasStream)
+import Data.PDF.PDFObject (PDFObject, hasStream)
 import Data.PDF.PDFWork (PDFWork, fallibleP, throwError, tryP)
 import Data.Sequence as SQ (Seq ((:<|)))
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
@@ -43,9 +47,9 @@ getPredictor params =
     Right (Just (PDFNumber value)) -> case decodePredictor . round $ value of
       Right predictor -> return predictor
       _anythingElse -> throwError
-        $ InvalidFilterParm ("Predictor=" ++ show value)
+        $ InvalidFilterParm ("Invalid predictor=" ++ show value)
     _anythingElse -> throwError
-      $ InvalidFilterParm ("Predictor=" ++ show params)
+      $ InvalidFilterParm ("Missing predictor for params=" ++ show params)
 
 {-|
 Read the `Columns` parameter; defaults to 1. Throws `InvalidFilterParm` on
@@ -62,10 +66,10 @@ getColumns params =
 Read `BitsPerComponent`; defaults to 8.
 Throws `InvalidFilterParm` on invalid values.
 -}
-getComponents :: Logging m => PDFObject -> PDFWork m Int
+getComponents :: Logging m => PDFObject -> PDFWork m BitsPerComponent
 getComponents params =
   tryP (getValueDefault "BitsPerComponent" (PDFNumber 8) params) >>= \case
-    Right (Just (PDFNumber value)) -> return . round $ value
+    Right (Just (PDFNumber value)) -> return $ (toEnum . round) value
     _anythingElse -> throwError
       $ InvalidFilterParm ("BitsPerComponent=" ++ show params)
 
@@ -92,17 +96,23 @@ unpredictStream
   -> PDFWork m ByteString
 unpredictStream defaultColors pdfFilter stream =
   let params = fDecodeParms pdfFilter
-  in if hasKey "Predictor" params
-    then do
+  in if not (hasKey "Predictor" params)
+    then return stream
+    else do
       predictor  <- getPredictor params
       columns    <- getColumns params
       components <- getComponents params
       colors     <- getColors defaultColors params
-      case unpredict predictor columns (colors * components `div` 8) stream of
+
+      let bitmapConfig = BitmapConfiguration
+            { bcLineWidth        = columns
+            , bcComponents       = colors
+            , bcBitsPerComponent = components
+            }
+
+      case unpredict predictor bitmapConfig stream of
         Right unpredictedStream -> return unpredictedStream
-        _anythingElse           -> throwError
-          $ InvalidFilterParm ("Predictor=" ++ show params)
-    else return stream
+        Left unpredictError     -> throwError unpredictError
 
 {-|
 Decode supported filters in order, threading remaining filters forward. For
@@ -167,8 +177,10 @@ be decoded because (like `DCTDecode`).
 It usually decompresses the stream.
 -}
 unfilter :: Logging m => PDFObject -> PDFWork m PDFObject
-unfilter object = if hasStream object
-  then
-    unfiltered object >>= \(remainingFilters, unfilteredStream) ->
-      setStream unfilteredStream object >>= setFilters remainingFilters
-  else return object
+unfilter object = if not (hasStream object)
+  then return object
+  else do
+    unfiltered object
+      >>= \(remainingFilters, unfilteredStream) ->
+          setStream unfilteredStream object
+      >>= setFilters remainingFilters

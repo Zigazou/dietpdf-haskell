@@ -11,6 +11,7 @@ module PDF.Processing.FilterCombine.RleZopfli
 
 import Codec.Compression.Flate qualified as FL
 
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration)
 import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
@@ -30,11 +31,11 @@ Apply RLE first, then Zopfli/Deflate compression. Returns the combined filters
 and compressed bytes.
 -}
 rleZopfli
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> UseZopfli
   -> Fallible FilterCombination
-rleZopfli _ stream useZopfli = do
+rleZopfli _anyBitmapConfig stream useZopfli = do
   let compressor = getCompressor useZopfli
   rle Nothing stream
     >>= compressor . fcBytes

@@ -20,13 +20,12 @@ module PDF.Processing.WhatOptimizationFor
   )
 where
 import Data.ByteString (ByteString)
-import Data.ByteString qualified as BS
-import Data.Functor ((<&>))
+import Data.Either (isRight)
 import Data.Logging (Logging)
 import Data.PDF.OptimizationType
-  ( OptimizationType (GfxOptimization, JP2Optimization, JPGOptimization, NoOptimization, ObjectStreamOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization, XRefStreamOptimization)
+  ( OptimizationType (GfxOptimization, ICCOptimization, JP2Optimization, JPGOptimization, NoOptimization, ObjectStreamOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization, XRefStreamOptimization)
   )
-import Data.PDF.PDFObject (PDFObject (PDFName))
+import Data.PDF.PDFObject (PDFObject (PDFName, PDFNumber))
 import Data.PDF.PDFWork (PDFWork, tryP)
 import Data.Sequence qualified as SQ
 
@@ -35,15 +34,55 @@ import Font.TrueType.Parser.Font (ttfParse)
 import PDF.Graphics.Parser.Stream (gfxParse)
 import PDF.Object.State (getStream, getValue)
 
+import Util.ByteString (cut)
+
 {-
 Identify the image file type based on magic numbers.
+
+It can identify JPEG, JPEG 2000, ICC profiles, GFX streams.
+
+It defaults to RawBitmapOptimization if no known type is found.
 -}
-identifyImageType :: ByteString -> OptimizationType
-identifyImageType stream
-  | BS.take 2 stream == "\xff\xd8" = JPGOptimization
-  |    BS.take 4 stream == "\x00\x00\x00\x0c"
-    && BS.take 8 (BS.drop 4 stream) == "jP  \r\n\x87\n" = JP2Optimization
-  | otherwise = RawBitmapOptimization
+identifyStreamContent
+  :: Logging m
+  => PDFObject
+  -> PDFWork m (Maybe OptimizationType)
+identifyStreamContent object = do
+  objectType       <- getValue "Type" object
+  objectSubType    <- getValue "Subtype" object
+  bitsPerComponent <- getValue "BitsPerComponent" object >>= \case
+    Just (PDFNumber n) -> return (Just (n == 8))
+    _other             -> return (Just True)
+
+  tryP (getStream object) >>= \case
+    Right stream -> return $ identifyWithMagic objectType
+                                               objectSubType
+                                               bitsPerComponent
+                                               stream
+    _noStream    -> return Nothing
+
+ where
+  identifyWithMagic
+    :: Maybe PDFObject
+    -> Maybe PDFObject
+    -> Maybe Bool
+    -> ByteString
+    -> Maybe OptimizationType
+  identifyWithMagic objectType objectSubType bitsPerComponent stream
+    | objectSubType == Just (PDFName "XML")               = Nothing
+    | objectType == Just (PDFName "ObjStm")               = Nothing
+    | objectType == Just (PDFName "XRef")                 = Nothing
+    | objectType == Just (PDFName "Pattern")              = Nothing
+    | bitsPerComponent == Just False                      = Nothing
+    | cut 36 4 stream == "acsp"                           = Just ICCOptimization
+    | cut 0 2 stream == "\xff\xd8"                        = Just JPGOptimization
+    | cut 0 12 stream == "\x00\x00\x00\x0cjP  \r\n\x87\n" = Just JP2Optimization
+    | objectSubType == Just (PDFName "Image")             = Nothing
+    | isRight (ttfParse stream)                           = Just TTFOptimization
+    | otherwise = case gfxParse stream of
+        Right SQ.Empty -> Nothing
+        Right _        -> Just GfxOptimization
+        _notGfx        -> Nothing
 
 {-|
 Classify a `PDFObject` into an `OptimizationType`.
@@ -63,27 +102,15 @@ Heuristics:
 -}
 whatOptimizationFor :: Logging m => PDFObject -> PDFWork m OptimizationType
 whatOptimizationFor object =
-  getValue "Subtype" object >>= \case
-    Just (PDFName "XML") -> return XMLOptimization
-    Just (PDFName "Image") -> getStream object <&> identifyImageType
-    Just (PDFName "Form") -> do
-        tryP (getStream object) >>= \case
-          Right stream -> case gfxParse stream of
-              Right SQ.Empty -> return NoOptimization
-              Right _        -> return GfxOptimization
-              _notGfx        -> return NoOptimization
-          _noStream -> return NoOptimization
-    _notXMLorImage -> getValue "Type" object >>= \case
-      Just (PDFName "ObjStm")     -> return ObjectStreamOptimization
-      Just (PDFName "XRef")       -> return XRefStreamOptimization
-      Just (PDFName "Pattern")    -> return GfxOptimization
-      Just (PDFName _unknownType) -> return NoOptimization
-      _anyOtherCase -> do
-          tryP (getStream object) >>= \case
-            Right stream -> case ttfParse stream of
-              Right _ttfFont -> return TTFOptimization
-              _notTtfFont    -> case gfxParse stream of
-                Right SQ.Empty -> return NoOptimization
-                Right _        -> return GfxOptimization
-                _notGfx        -> return NoOptimization
-            _noStream -> return NoOptimization
+  identifyStreamContent object >>= \case
+    Just optType -> return optType
+    Nothing -> getValue "Subtype" object >>= \case
+      Just (PDFName "XML") -> return XMLOptimization
+      Just (PDFName "Image") -> return RawBitmapOptimization
+      Just (PDFName "Form") -> return NoOptimization
+      _notXMLorImage -> getValue "Type" object >>= \case
+        Just (PDFName "ObjStm")     -> return ObjectStreamOptimization
+        Just (PDFName "XRef")       -> return XRefStreamOptimization
+        Just (PDFName "Pattern")    -> return GfxOptimization
+        Just (PDFName _unknownType) -> return NoOptimization
+        _anyOtherCase -> return NoOptimization

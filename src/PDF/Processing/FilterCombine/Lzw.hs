@@ -16,6 +16,7 @@ import Data.Functor ((<&>))
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
 import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration)
 
 {-|
 Compress a stream using LZW, ignoring width/components metadata.
@@ -23,8 +24,8 @@ Compress a stream using LZW, ignoring width/components metadata.
 Returns a `FilterCombination` with `LZWDecode` and the compressed bytes.
 -}
 lzw
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> Fallible FilterCombination
-lzw _ stream =
+lzw _anyBitmapConfig stream =
   LZW.compress stream <&> mkFCAppend [Filter (PDFName "LZWDecode") PDFNull]

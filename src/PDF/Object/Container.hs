@@ -109,19 +109,41 @@ getFilters container = do
   parms   <- getValue "DecodeParms" container
 
   case (filters, parms) of
+    -- Array of filters but no parameters.
     (Just (PDFArray fs), Just PDFNull      ) -> return $ group fs SQ.empty
     (Just (PDFArray fs), Nothing           ) -> return $ group fs SQ.empty
+
+    -- Array of filters with an array of parameters.
     (Just (PDFArray fs), Just (PDFArray ps)) -> return $ group fs ps
+
+    -- Array of filters with parameters as a reference.
+    (Just (PDFArray fs), Just reference@(PDFReference _ _)) -> do
+      p <- getReference reference
+      return $ group fs (SQ.singleton p)
+
+    -- Array of filters with a single parameter object.
     (Just (PDFArray fs), Just object) ->
       return $ group fs (SQ.singleton object)
 
+    -- One filter with no parameters.
     (Just f@(PDFName _), Just PDFNull) ->
       return $ group (SQ.singleton f) SQ.empty
     (Just f@(PDFName _), Nothing) -> return $ group (SQ.singleton f) SQ.empty
+
+    -- One filter with an array of parameters.
     (Just f@(PDFName _), Just (PDFArray ps)) ->
       return $ group (SQ.singleton f) ps
+
+    -- Array of filters with parameters as a reference.
+    (Just f@(PDFName _), Just reference@(PDFReference _ _)) -> do
+      p <- getReference reference
+      return $ group (SQ.singleton f) (SQ.singleton p)
+
+    -- One filter with one parameter object.
     (Just f@(PDFName _), Just p) ->
       return $ group (SQ.singleton f) (SQ.singleton p)
+
+    -- One filter as a reference with no parameters.
     (Just reference@(PDFReference  _ _), Just p) -> do
       f <- getReference reference
       return $ group (SQ.singleton f) (SQ.singleton p)
@@ -129,6 +151,7 @@ getFilters container = do
       f <- getReference reference
       return $ group (SQ.singleton f) SQ.empty
 
+    -- No filters.
     (Nothing, _) -> return SQ.empty
     (_      , _) -> throwError (InvalidFilterParm (show filters
                                                 ++ " "

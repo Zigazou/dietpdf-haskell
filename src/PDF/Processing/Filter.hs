@@ -8,242 +8,67 @@ and special cases (JPEG images, XRef streams). It reports size changes via
 logging and updates the object's stream and filter list accordingly.
 -}
 module PDF.Processing.Filter
-  ( filterOptimize
-  ) where
-
-import Control.Monad.State (gets, lift)
-import Control.Monad.Trans.Except (except)
+  ( filterOptimize) where
 
 import Data.Array (mkArray)
-import Data.ByteString (ByteString)
+import Data.Bitmap.BitmapConfiguration
+  ( BitmapConfiguration (BitmapConfiguration, bcBitsPerComponent, bcComponents, bcLineWidth)
+  )
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC8Bits))
 import Data.ByteString qualified as BS
-import Data.ColorSpace (fromComponents)
 import Data.Context (Contextual (ctx))
 import Data.Foldable (minimumBy)
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination
-  ( FilterCombination (FilterCombination)
-  , fcBytes
-  , fcLength
-  , fcList
-  , fcReplace
-  , mkFCAppend
-  , mkFCReplace
-  )
+  (FilterCombination (FilterCombination), fcBytes, fcLength, fcList, fcReplace)
 import Data.PDF.OptimizationType
-  (OptimizationType (JPGOptimization, XRefStreamOptimization))
+  ( OptimizationType (GfxOptimization, ICCOptimization, JPGOptimization, ObjectStreamOptimization, TTFOptimization, XMLOptimization, XRefStreamOptimization)
+  )
 import Data.PDF.PDFObject
-  ( PDFObject (PDFName, PDFNull, PDFNumber, PDFNumber, PDFXRefStream)
+  ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
   , getObjectNumber
   , hasStream
   )
-import Data.PDF.PDFWork (PDFWork, getMasks, sayComparisonP, withContext)
-import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli), sZopfli)
-import Data.PDF.WorkData (wSettings)
+import Data.PDF.PDFWork (PDFWork, getMasks, withContext)
 import Data.Sequence ((><))
 import Data.Set qualified as Set
-import Data.Text qualified as T
-
-import External.JpegToJpeg2k (jpegToJpeg2k)
 
 import PDF.Document.XRef (xrefStreamWidth)
 import PDF.Object.Container (getFilters, setFilters)
 import PDF.Object.Object (fromPDFObject)
-import PDF.Object.State (getStream, getValue, setStream)
-import PDF.Processing.FilterCombine.Jpeg2k (jpeg2k)
-import PDF.Processing.FilterCombine.PredRleZopfli (predRleZopfli)
-import PDF.Processing.FilterCombine.PredZopfli (predZopfli)
-import PDF.Processing.FilterCombine.Rle (rle)
-import PDF.Processing.FilterCombine.RleZopfli (rleZopfli)
-import PDF.Processing.FilterCombine.Zopfli (zopfli)
-
-{-|
-Log a comparison line for a filter application, showing the stream size before
-and after applying a given filter.
--}
-filterInfo
-  :: Logging m
-  => T.Text
-  -> ByteString
-  -> ByteString
-  -> PDFWork m ()
-filterInfo filterName streamBefore streamAfter =
-  sayComparisonP ("filter " <> filterName)
-                 (BS.length streamBefore)
-                 (BS.length streamAfter)
-
-{-|
-Evaluate all generic filter candidates for a stream.
-
-Behavior depends on the presence of width/components metadata:
-
-* When available, considers RLE, Zopfli/Deflate, predictor variants, and
-  JPEG2000; optionally combines RLE with Zopfli/Deflate when beneficial.
-* When missing, limits to RLE and Zopfli/Deflate options.
-
-Returns candidate `FilterCombination`s to compare downstream.
--}
-applyEveryFilterGeneric
-  :: Logging IO
-  => Bool
-  -> Maybe (Int, Int)
-  -> ByteString
-  -> PDFWork IO [FilterCombination]
-applyEveryFilterGeneric objectIsAMask widthComponents@(Just (width, components)) stream = do
-  useZopfli <- gets (sZopfli . wSettings)
-
-  let rNothing = mkFCAppend [] stream
-      jpeg2kParameters = Just ( width
-                              , BS.length stream `div` (width * components)
-                              , fromComponents components
-                              )
-      quality = if objectIsAMask then Just 50 else Nothing
-
-  rJpeg2k <- jpeg2k quality jpeg2kParameters stream
-  filterInfo "JPEG2000" stream (fcBytes rJpeg2k)
-
-  rRle <- lift (except $ rle widthComponents stream)
-  filterInfo "RLE" stream (fcBytes rRle)
-
-  rZopfli <- lift (except $ zopfli widthComponents stream useZopfli)
-
-  case useZopfli of
-    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
-    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
-
-  rleCombine <- if fcLength rRle < BS.length stream
-    then do
-      rRleZopfli <- lift (except $ rleZopfli widthComponents stream useZopfli)
-      case useZopfli of
-        UseZopfli  -> filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
-        UseDeflate -> filterInfo "RLE+Deflate" stream (fcBytes rRleZopfli)
-
-      return [rRle, rRleZopfli]
-    else
-      return []
-
-  rPredZopfli <- lift (except $ predZopfli widthComponents stream useZopfli)
-  case useZopfli of
-    UseZopfli  -> filterInfo "Predictor/Zopfli" stream (fcBytes rPredZopfli)
-    UseDeflate -> filterInfo "Predictor/Deflate" stream (fcBytes rPredZopfli)
-
-  rPredRleZopfli <- lift (except $ predRleZopfli widthComponents stream useZopfli)
-  case useZopfli of
-    UseZopfli  -> filterInfo "Predictor/RLE+Zopfli" stream (fcBytes rPredRleZopfli)
-    UseDeflate -> filterInfo "Predictor/Store+RLE+Deflate" stream (fcBytes rPredRleZopfli)
-
-  return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli, rJpeg2k]
-        ++ rleCombine
-
-applyEveryFilterGeneric _objectIsAMask Nothing stream = do
-  useZopfli <- gets (sZopfli . wSettings)
-
-  let rNothing = mkFCAppend [] stream
-
-  rRle <- lift (except $ rle Nothing stream)
-  filterInfo "RLE" stream (fcBytes rRle)
-
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  case useZopfli of
-    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
-    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
-
-  if fcLength rRle < BS.length stream
-    then do
-      rRleZopfli <- lift (except $ rleZopfli Nothing stream useZopfli)
-      case useZopfli of
-        UseZopfli  -> filterInfo "RLE+Zopfli" stream (fcBytes rRleZopfli)
-        UseDeflate -> filterInfo "RLE+Deflate" stream (fcBytes rRleZopfli)
-
-      return [rNothing, rRle, rZopfli, rRleZopfli]
-    else
-      return [rNothing, rZopfli]
-
-{-|
-Evaluate filter candidates specifically for JPEG content streams.
-
-When width/components are available, tries Zopfli/Deflate and a re-encoding to
-JPEG2000 (`JPXDecode`) with moderate quality; otherwise, falls back to
-Zopfli/Deflate.
--}
-applyEveryFilterJPG
-  :: Logging IO
-  => Bool
-  -> Maybe (Int, Int)
-  -> ByteString
-  -> PDFWork IO [FilterCombination]
-applyEveryFilterJPG _objectIsAMask (Just _imageProperty) stream = do
-  useZopfli <- gets (sZopfli . wSettings)
-  let rNothing = mkFCAppend [] stream
-
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  case useZopfli of
-    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
-    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
-
-  -- Try Jpeg2000 for images with less than 4 components.
-  let jpeg2kQuality :: Int
-      jpeg2kQuality = 60
-
-  rJpeg2k <- lift (jpegToJpeg2k jpeg2kQuality stream)
-         <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
-  filterInfo "JPEG2000" stream (fcBytes rJpeg2k)
-
-  return [rNothing, rZopfli, rJpeg2k]
-
-applyEveryFilterJPG _objectIsAMask Nothing stream = do
-  useZopfli <- gets (sZopfli . wSettings)
-  let rNothing = mkFCAppend [] stream
-
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  case useZopfli of
-    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
-    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
-
-  return [rNothing, rZopfli]
-
-{-|
-Evaluate filter candidates for XRef streams.
-
-Prefers Predictor + Zopfli/Deflate when width/components are known; otherwise
-offers a no-op and Zopfli/Deflate.
--}
-applyEveryFilterXRef
-  :: Logging m
-  => Maybe (Int, Int)
-  -> ByteString
-  -> PDFWork m [FilterCombination]
-applyEveryFilterXRef widthComponents@(Just (_width, _components)) stream = do
-  useZopfli <- gets (sZopfli . wSettings)
-  rPredZopfli <- lift (except $ predZopfli widthComponents stream useZopfli)
-  case useZopfli of
-    UseZopfli  -> filterInfo "Predictor+Zopfli" stream (fcBytes rPredZopfli)
-    UseDeflate -> filterInfo "Predictor+Deflate" stream (fcBytes rPredZopfli)
-  return [rPredZopfli]
-applyEveryFilterXRef Nothing stream = do
-  useZopfli <- gets (sZopfli . wSettings)
-  let rNothing = mkFCAppend [] stream
-
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  case useZopfli of
-    UseZopfli  -> filterInfo "Zopfli" stream (fcBytes rZopfli)
-    UseDeflate -> filterInfo "Deflate" stream (fcBytes rZopfli)
-  return [rNothing, rZopfli]
+import PDF.Object.State (getStream, getValue, getValueDefault, setStream)
+import PDF.Processing.ApplyFilter.Generic (applyEveryFilterGeneric)
+import PDF.Processing.ApplyFilter.ICC (applyEveryFilterICC)
+import PDF.Processing.ApplyFilter.JPG (applyEveryFilterJPG)
+import PDF.Processing.ApplyFilter.OnlyZopfli (applyEveryFilterOnlyZopfi)
+import PDF.Processing.ApplyFilter.Text (applyEveryFilterText)
+import PDF.Processing.ApplyFilter.XRef (applyEveryFilterXRef)
 
 {-|
 Infer stream width and components from object keys (`Width`, `ColorSpace`). For
 `XRef` streams, width is derived by `xrefStreamWidth` and components default to
 1.
 -}
-getWidthComponents :: Logging m => PDFObject -> PDFWork m (Maybe (Int, Int))
-getWidthComponents object@PDFXRefStream{} =
-  xrefStreamWidth object <&> Just . (, 1)
+getBitmapConfiguration
+  :: Logging m
+  => PDFObject
+  -> PDFWork m (Maybe BitmapConfiguration)
+getBitmapConfiguration object@PDFXRefStream{} =
+  xrefStreamWidth object <&> Just . \width ->
+    BitmapConfiguration
+      { bcLineWidth        = width
+      , bcComponents       = 1
+      , bcBitsPerComponent = BC8Bits
+      }
 
-getWidthComponents object = do
-  width      <- getValue "Width" object
+getBitmapConfiguration object = do
+  width <- getValue "Width" object
   colorSpace <- getValue "ColorSpace" object
+  bitsPerComponent <- getValueDefault "BitsPerComponent" (PDFNumber 8) object
+    >>= \case Just (PDFNumber value) -> return $ toEnum . round $ value
+              _anyOtherValue -> return BC8Bits
 
   let components :: Int
       components = case colorSpace of
@@ -252,8 +77,14 @@ getWidthComponents object = do
         _anyOtherValue              -> 1
 
   case width of
-    Just (PDFNumber width') -> return $ Just (round width', components)
-    _anyOtherValue          -> return Nothing
+    Just (PDFNumber width') ->
+      let bitmapConfig = BitmapConfiguration
+            { bcLineWidth        = round width'
+            , bcComponents       = components
+            , bcBitsPerComponent = bitsPerComponent
+            }
+      in return (Just bitmapConfig)
+    _anyOtherValue -> return Nothing
 
 {-|
 Optimize a stream for a `PDFObject` based on the selected `OptimizationType` and
@@ -273,48 +104,51 @@ filterOptimize
   => OptimizationType
   -> PDFObject
   -> PDFWork IO PDFObject
-filterOptimize optimization object =
-  withContext (ctx ("filterOptimize" :: String)) $
-    if hasStream object
-    then do
-      stream          <- getStream object
-      filters         <- getFilters object
-      widthComponents <- getWidthComponents object
-      masks           <- getMasks
+filterOptimize optimization object
+  | not (hasStream object) = return object
+  | otherwise = withContext (ctx ("filterOptimize" :: String)) $ do
+    stream          <- getStream object
+    filters         <- getFilters object
+    bitmapConfig    <- getBitmapConfiguration object
+    masks           <- getMasks
 
-      let objectIsAMask :: Bool
-          objectIsAMask = case getObjectNumber object of
-                            Just major    -> Set.member major masks
-                            _anyOtherCase -> False
+    let
+      objectIsAMask :: Bool
+      objectIsAMask = case getObjectNumber object of
+                        Just major    -> Set.member major masks
+                        _anyOtherCase -> False
+      original = FilterCombination filters stream True
+      applyEveryFilter =
+        case optimization of
+          GfxOptimization          -> applyEveryFilterText
+          XMLOptimization          -> applyEveryFilterText
+          ObjectStreamOptimization -> applyEveryFilterText
+          TTFOptimization          -> applyEveryFilterOnlyZopfi
+          JPGOptimization          -> applyEveryFilterJPG objectIsAMask
+          ICCOptimization          -> applyEveryFilterICC
+          XRefStreamOptimization   -> applyEveryFilterXRef
+          _anyOtherOptimization    -> applyEveryFilterGeneric objectIsAMask
 
-      -- Find appropriate filters for the stream.
-      let applyEveryFilter =
-            case optimization of
-              JPGOptimization        -> applyEveryFilterJPG objectIsAMask
-              XRefStreamOptimization -> applyEveryFilterXRef
-              _anyOtherOptimization  -> applyEveryFilterGeneric objectIsAMask
+    -- Apply every filter to the stream and return the best result.
+    candidates <- applyEveryFilter bitmapConfig stream <&> mkArray
 
-      -- Apply every filter to the stream and return the best result.
-      candidates <- applyEveryFilter widthComponents stream <&> mkArray
+    let
+      bestCandidate = minimumBy resultCompare candidates
 
-      let
-        original      = FilterCombination filters stream True
-        bestCandidate = minimumBy resultCompare candidates
-
-      -- Do nothing if the best result is worse than the original stream.
-      if resultLoad bestCandidate < resultLoad original
-        then
-          if fcReplace bestCandidate
-            then setStream (fcBytes bestCandidate) object
-             >>= setFilters (fcList bestCandidate)
-            else setStream (fcBytes bestCandidate) object
-             >>= setFilters (fcList bestCandidate >< fcList original)
-        else return object
-    else return object
+    -- Do nothing if the best result is worse than the original stream.
+    if resultLoad bestCandidate >= resultLoad original
+      then return object
+      else
+        if fcReplace bestCandidate
+          then setStream (fcBytes bestCandidate) object
+            >>= setFilters (fcList bestCandidate)
+          else setStream (fcBytes bestCandidate) object
+            >>= setFilters (fcList bestCandidate >< fcList original)
  where
   resultCompare :: FilterCombination -> FilterCombination -> Ordering
   resultCompare load1 load2 = compare (resultLoad load1) (resultLoad load2)
 
+  -- The total load of a filter combination: compressed size + filter overhead.
   resultLoad :: FilterCombination -> Int
   resultLoad filterCombination =
       fcLength filterCombination

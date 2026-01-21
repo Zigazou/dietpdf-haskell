@@ -27,29 +27,59 @@ module Font.TrueType.FontDirectory
   , fromFontDirectory
   , deleteTables
   , optimizeFontDirectory
+  , removeHintingInstructions
+  , getTable
+  , getLocationTable
+  , getNumGlyphs
+  , getLocationTableFormat
+  , getTableBytes
+  , getGlyphs
+  , updateLocationTable
+  , setLocationTableFormat
   ) where
 
+import Data.Binary.Get (getWord16be, getWord32be)
+import Data.Binary.Parser (parseOnly)
 import Data.ByteString (ByteString)
+import Data.Either.Extra (eitherToMaybe)
+import Data.Foldable (find)
+import Data.Functor ((<&>))
 import Data.HasLength (HasLength (objectLength))
 import Data.HasWrittenSize (HasWrittenSize (writtenSize))
 import Data.Kind (Type)
+import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Data.Set qualified as Set
 
+import Font.TrueType.FontTable (FontTable (FTGlyf, FTHead, FTRaw))
+import Font.TrueType.FontTable.GlyphTable
+  (GlyphTable (GlyphTable), generateLocationTable, removeHinting)
+import Font.TrueType.FontTable.HeadTable (HeadTable (hIndexToLocFormat))
+import Font.TrueType.FontTable.LocationTable (LocationTable)
+import Font.TrueType.LocationTableFormat
+  (LocationTableFormat (ShortFormat), fromLocationTableFormat)
 import Font.TrueType.OffsetSubtable
   ( OffsetSubtable (osEntrySelector, osNumTables, osRangeShift, osSearchRange)
   , fromOffsetSubtable
   )
+import Font.TrueType.Parser.Glyf (glyphP)
+import Font.TrueType.Parser.Loca (fromIndexToLocFormat, locaP)
 import Font.TrueType.TableDirectory
   ( TableDirectory
   , filterTableDirectory
   , fromTableDirectory
   , fromTablesData
+  , mapOnTableType
   , updateEntries
   )
-import Font.TrueType.TableEntry (teTag)
+import Font.TrueType.TableEntry
+  ( TableEntry (TableEntry, teData)
+  , makeGlyphsTableEntry
+  , makeLocationTableEntry
+  , teTag
+  )
 import Font.TrueType.TableIdentifier
-  ( TableIdentifier (OOTBaseline, OOTColor, OOTColorBitmapData, OOTColorBitmapLocation, OOTColorPalette, OOTDigitalSignature, OOTDigitalSignature, OOTEmbeddedBitmapData, OOTEmbeddedBitmapLocation, OOTGlyphDefinition, OOTGlyphPositioning, OOTGlyphSubstitution, OOTJustification, OOTLinearThreshold, OOTSVG, OOTVerticalDeviceMetrics, OTTAnchorPointTable, OTTBaseline, OTTBitmapData, OTTBitmapLocation, OTTControlValueProgram, OTTCrossReference, OTTEmbeddedBitmapScaling, OTTExtendedGlyphMetamorphosis, OTTExtendedKerning, OTTExtendedKerning, OTTFeatureName, OTTFontProgram, OTTGlyphMetamorphosis, OTTGlyphsInformation, OTTGridFittingAndScanConversion, OTTHorizontalDeviceMetrics, OTTKerning, OTTKerning, OTTLanguageTags, OTTLigatureCaret, OTTMetadata, OTTOpticalBounds, OTTStandardBitmapGraphics, OTTTracking)
+  ( TableIdentifier (OOTBaseline, OOTColor, OOTColorBitmapData, OOTColorBitmapLocation, OOTColorPalette, OOTDigitalSignature, OOTDigitalSignature, OOTEmbeddedBitmapData, OOTEmbeddedBitmapLocation, OOTGlyphDefinition, OOTGlyphPositioning, OOTGlyphSubstitution, OOTJustification, OOTLinearThreshold, OOTSVG, OOTVerticalDeviceMetrics, OTTAnchorPointTable, OTTBaseline, OTTBitmapData, OTTBitmapLocation, OTTControlValueProgram, OTTCrossReference, OTTEmbeddedBitmapScaling, OTTExtendedGlyphMetamorphosis, OTTExtendedKerning, OTTExtendedKerning, OTTFeatureName, OTTFontProgram, OTTGlyphMetamorphosis, OTTGlyphsInformation, OTTGridFittingAndScanConversion, OTTHorizontalDeviceMetrics, OTTKerning, OTTKerning, OTTLanguageTags, OTTLigatureCaret, OTTMetadata, OTTOpticalBounds, OTTStandardBitmapGraphics, OTTTracking, RTTFontHeader, RTTGlyphData, RTTIndexToLocation, RTTMaximumProfile)
   )
 
 {-|
@@ -141,8 +171,14 @@ updateStructure fontDir@(FontDirectory subtable directory) =
     -- numTables*16-searchRange
     rangeShift :: Int
     rangeShift = tablesCount * 16 - (limit * 16)
-  in
-    FontDirectory
+
+    -- Determine the location table format from the head table
+    locaFormat :: LocationTableFormat
+    locaFormat = fromMaybe ShortFormat (getLocationTableFormat fontDir)
+
+    -- Update entries to reflect new offsets.
+    updatedEntries :: FontDirectory
+    updatedEntries = FontDirectory
       { fdOffsetSubtable = subtable
           { osNumTables     = fromIntegral tablesCount
           , osSearchRange   = fromIntegral searchRange
@@ -151,6 +187,8 @@ updateStructure fontDir@(FontDirectory subtable directory) =
           }
       , fdTableDirectory = updateEntries tablesOffset directory
       }
+  in
+    setLocationTableFormat updatedEntries locaFormat
 
 {-|
 Serialize a font directory to its binary representation.
@@ -294,3 +332,112 @@ Example:
 -}
 optimizeFontDirectory :: FontDirectory -> FontDirectory
 optimizeFontDirectory = deleteTables removableTables
+
+getTable :: FontDirectory -> TableIdentifier -> Maybe TableEntry
+getTable fontDirectory tableId =
+  find ((tableId ==) . teTag) (fdTableDirectory fontDirectory)
+
+getNumGlyphs :: FontDirectory -> Maybe Int
+getNumGlyphs fontDirectory = do
+  maxpEntry <- getTable fontDirectory RTTMaximumProfile
+  case teData maxpEntry of
+    FTRaw maxpBytes -> eitherToMaybe
+      $ parseOnly (getWord32be >> getWord16be <&> fromIntegral) maxpBytes
+    _anyOtherCase -> Nothing
+
+getLocationTableFormat :: FontDirectory -> Maybe LocationTableFormat
+getLocationTableFormat fontDirectory = do
+  headEntry <- getTable fontDirectory RTTFontHeader
+  case teData headEntry of
+    FTHead headTable -> Just
+      $ fromIndexToLocFormat (hIndexToLocFormat headTable)
+    _otherTable -> Nothing
+
+setLocationTableFormat :: FontDirectory -> LocationTableFormat -> FontDirectory
+setLocationTableFormat fontDirectory locaFormat =
+  fontDirectory { fdTableDirectory =
+    mapOnTableType (fdTableDirectory fontDirectory)
+                   RTTFontHeader
+                   updateHeadEntry }
+ where
+  updateHeadEntry :: TableEntry -> TableEntry
+  updateHeadEntry entry@(TableEntry { teData = FTHead headTable }) =
+    entry { teData = FTHead (headTable { hIndexToLocFormat = fromLocationTableFormat locaFormat }) }
+  updateHeadEntry otherEntry = otherEntry
+
+getTableBytes :: FontDirectory -> TableIdentifier -> Maybe ByteString
+getTableBytes fontDirectory tableId = do
+  tableEntry <- getTable fontDirectory tableId
+  case teData tableEntry of
+    FTRaw bytes -> Just bytes
+    _otherData  -> Nothing
+
+getLocationTable :: FontDirectory -> Maybe LocationTable
+getLocationTable fontDirectory = do
+  numGlyphs <- getNumGlyphs fontDirectory
+  locaFormat <- getLocationTableFormat fontDirectory
+  locaBytes <- getTableBytes fontDirectory RTTIndexToLocation
+
+  eitherToMaybe $ parseOnly (locaP locaFormat numGlyphs) locaBytes
+
+getGlyphs :: FontDirectory -> Maybe GlyphTable
+getGlyphs fontDirectory = do
+  glyfEntry <- getTable fontDirectory RTTGlyphData
+  case teData glyfEntry of
+    FTRaw glyfBytes -> do
+      locaTable <- getLocationTable fontDirectory
+      eitherToMaybe $ parseOnly (glyphP locaTable) glyfBytes
+    FTGlyf glyphTable -> Just glyphTable
+    _otherData        -> Nothing
+
+{-|
+Remove hinting instructions from all glyphs in the font.
+
+This function removes TrueType hinting instructions from the glyph data table
+(glyf), which can significantly reduce font file size for PDF embedding where
+hinting is typically not needed.
+
+The process:
+
+1. Locate and parse the 'loca' (Index to Location) table to get glyph offsets
+2. Locate and parse the 'glyf' (Glyph Data) table using the location information
+3. Remove hinting instructions from all glyphs using 'removeHinting'
+4. Serialize the modified glyph table back to binary format
+5. Update the 'glyf' table entry in the font directory with the new data
+
+Note: This function requires both the 'head' table (for indexToLocFormat) and
+the 'maxp' table (for numGlyphs) to be present in order to properly parse the
+'loca' table. If these tables are missing or if parsing fails, the font
+directory is returned unchanged.
+
+Example:
+
+> let slimmedFont = removeHintingInstructions originalFont
+-}
+removeHintingInstructions :: FontDirectory -> FontDirectory
+removeHintingInstructions fontDirectory =
+  fromMaybe fontDirectory dehintedFontdirectory
+ where
+  dehintedFontdirectory :: Maybe FontDirectory
+  dehintedFontdirectory = do
+    glyphs <- getGlyphs fontDirectory
+    let newGlyphs = removeHinting glyphs
+        newGlyphsEntry = makeGlyphsTableEntry newGlyphs
+        newTableDirectory = mapOnTableType (fdTableDirectory fontDirectory)
+                                           RTTGlyphData
+                                           (const newGlyphsEntry)
+    return $ FontDirectory (fdOffsetSubtable fontDirectory)
+                           newTableDirectory
+
+updateLocationTable :: FontDirectory -> FontDirectory
+updateLocationTable fontDirectory =
+  fontDirectory { fdTableDirectory =
+    mapOnTableType (fdTableDirectory fontDirectory)
+                   RTTIndexToLocation
+                   (const newLocationTable) }
+ where
+  glyphTable :: GlyphTable
+  glyphTable = fromMaybe (GlyphTable []) (getGlyphs fontDirectory)
+
+  newLocationTable :: TableEntry
+  newLocationTable = makeLocationTableEntry (generateLocationTable glyphTable)

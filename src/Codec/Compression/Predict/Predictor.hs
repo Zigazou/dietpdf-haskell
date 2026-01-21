@@ -13,8 +13,8 @@ PNG predictors group supports predictors defined in the RFC 2083
 (https://www.rfc-editor.org/rfc/rfc2083.html).
 
 Main difference between TIFF predictors and PNG predictors is that TIFF
-predictors is enabled globally for the image while PNG predictors can be
-changed on every scanline.
+predictors is enabled globally for the image while PNG predictors can be changed
+on every scanline.
 -}
 module Codec.Compression.Predict.Predictor
   ( Predictor
@@ -51,27 +51,27 @@ data Predictor
   = TIFFNoPrediction
     -- ^ No prediction.
   | TIFFPredictor2
-    -- ^ TIFF Predictor 2 predicts that each colour component of a sample is
-    --   the same as the corresponding colour component of the sample
-    --   immediately to its left.
+    -- ^ TIFF Predictor 2 predicts that each colour component of a sample is the
+    --   same as the corresponding colour component of the sample immediately to
+    --   its left.
   | PNGNone
-    -- ^ With the None filter, the scanline is transmitted unmodified; it
-    --   is only necessary to insert a filter type byte before the data.
+    -- ^ With the None filter, the scanline is transmitted unmodified; it is
+    --   only necessary to insert a filter type byte before the data.
   | PNGSub
-    -- ^ The Sub filter transmits the difference between each byte and the
-    --   value of the corresponding byte of the prior pixel.
+    -- ^ The Sub filter transmits the difference between each byte and the value
+    --   of the corresponding byte of the prior pixel.
   | PNGUp
     -- ^ The Up filter is just like the Sub filter except that the pixel
-    --   immediately above the current pixel, rather than just to its left,
-    --   is used as the predictor.
+    --   immediately above the current pixel, rather than just to its left, is
+    --   used as the predictor.
   | PNGAverage
-    -- ^ The Average filter uses the average of the two neighboring pixels
-    --   (left and above) to predict the value of a pixel.
+    -- ^ The Average filter uses the average of the two neighboring pixels (left
+    --   and above) to predict the value of a pixel.
   | PNGPaeth
     -- ^ The Paeth filter computes a simple linear function of the three
-    --   neighboring pixels (left, above, upper left), then chooses as
-    --   predictor the neighboring pixel closest to the computed value.
-    --   This technique is due to Alan W. Paeth.
+    --   neighboring pixels (left, above, upper left), then chooses as predictor
+    --   the neighboring pixel closest to the computed value. This technique is
+    --   due to Alan W. Paeth.
   | PNGOptimum
     -- ^ The optimum predictor is determined for each scanline.
   deriving stock (Eq, Read, Show)
@@ -156,42 +156,51 @@ isTIFFGroup = not . isPNGGroup
 {-|
 A `Samples` is a utilitary structure used to facilitate computations of
 predictors. It holds a sample and it’s 3 preceding samples.
+
+The type parameter `a` represents the sample type, which can be:
+- `Word8` for 8-bit samples (PNG and 8-bit TIFF)
+- `Word16` for 16-bit samples (16-bit TIFF)
+- Other integral types for 2-bit or 4-bit samples (unpacked from bytes)
 -}
-type Samples :: Type
-data Samples = Samples
-  { sUpperLeft :: !Word8
-  , sAbove     :: !Word8
-  , sLeft      :: !Word8
-  , sCurrent   :: !Word8
+type role Samples representational
+type Samples :: Type -> Type
+data Samples a = Samples
+  { sUpperLeft :: !a
+  , sAbove     :: !a
+  , sLeft      :: !a
+  , sCurrent   :: !a
   }
 
 {-|
 A predictor function is a function taking samples as input and returning the
 resulting sample.
+
+The function is generic over the sample type to support different bit depths.
 -}
-type PredictorFunc :: Type
-type PredictorFunc = Samples -> Word8
+type PredictorFunc :: Type -> Type
+type PredictorFunc a = Samples a -> a
 
 {-|
 The `PNGAverage` predictor needs to do average on a larger scale than a simple
-byte.
+byte. Works with any integral type to support different bit depths.
 -}
-average :: Word8 -> Word8 -> Word8
+average :: Integral a => a -> a -> a
 average a b =
-  let a', b' :: Int
+  let a', b' :: Integer
       (a', b') = (fromIntegral a, fromIntegral b)
   in  (fromIntegral . fst) (divMod (a' + b') 2)
 
 {-|
 The Paeth algorithm needs this estimating function.
+Works with any integral type to support different bit depths.
 -}
-paethBest :: Word8 -> Word8 -> Word8 -> Word8
+paethBest :: Integral a => a -> a -> a -> a
 paethBest left above upperLeft =
-  let estimate :: Int
+  let estimate :: Integer
       estimate =
         fromIntegral left + fromIntegral above - fromIntegral upperLeft
 
-      distanceLeft, distanceAbove, distanceUpperLeft :: Int
+      distanceLeft, distanceAbove, distanceUpperLeft :: Integer
       distanceLeft      = abs (estimate - fromIntegral left)
       distanceAbove     = abs (estimate - fromIntegral above)
       distanceUpperLeft = abs (estimate - fromIntegral upperLeft)
@@ -202,9 +211,10 @@ paethBest left above upperLeft =
 {-|
 Returns the predictor function for a specified `Predictor`.
 
-The function works on uncoded samples.
+The function works on uncoded samples and is generic over the sample type to
+support different bit depths (8-bit, 16-bit, etc.).
 -}
-getPredictorFunction :: Predictor -> Samples -> Word8
+getPredictorFunction :: Integral a => Predictor -> Samples a -> a
 getPredictorFunction PNGSub     s = sCurrent s - sLeft s
 getPredictorFunction PNGUp      s = sCurrent s - sAbove s
 getPredictorFunction PNGAverage s = sCurrent s - average (sLeft s) (sAbove s)
@@ -216,9 +226,10 @@ getPredictorFunction _anyOtherPredictor s = sCurrent s
 {-|
 Returns the un-predictor function for a specified `Predictor`.
 
-The function works on encoded samples.
+The function works on encoded samples and is generic over the sample type to
+support different bit depths (8-bit, 16-bit, etc.).
 -}
-getUnpredictorFunction :: Predictor -> Samples -> Word8
+getUnpredictorFunction :: Integral a => Predictor -> Samples a -> a
 getUnpredictorFunction PNGSub     s = sCurrent s + sLeft s
 getUnpredictorFunction PNGUp      s = sCurrent s + sAbove s
 getUnpredictorFunction PNGAverage s = sCurrent s + average (sLeft s) (sAbove s)

@@ -11,11 +11,11 @@ The table comes in two formats:
 - Long format (indexToLocFormat = 1): Uses 32-bit offsets that are the actual
   byte offsets
 
-Reference: https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6loca.html
+Reference:
+https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6loca.html
 -}
 module Font.TrueType.Parser.Loca
-  ( LocaFormat(..)
-  , fromIndexToLocFormat
+  ( fromIndexToLocFormat
   , locaP
   ) where
 
@@ -24,26 +24,18 @@ import Control.Monad (replicateM)
 import Data.Binary.Get (getWord16be, getWord32be)
 import Data.Binary.Parser (Get, label)
 import Data.Int (Int16)
-import Data.Kind (Type)
 import Data.Word (Word32)
 
 import Font.TrueType.FontTable.LocationTable (LocationTable (LocationTable))
+import Font.TrueType.LocationTableFormat
+  (LocationTableFormat (LongFormat, ShortFormat))
 
 {-|
-Format of the loca table, determined by the indexToLocFormat field in the head table.
+Convert an Int16 from the head table's indexToLocFormat to LocationTableFormat.
 -}
-type LocaFormat :: Type
-data LocaFormat
-  = ShortFormat  -- ^ 0: Short offsets (Offset16), actual offset = value * 2
-  | LongFormat   -- ^ 1: Long offsets (Offset32), actual offset = value
-  deriving stock (Eq, Show)
-
-{-|
-Convert an Int16 from the head table's indexToLocFormat to LocaFormat.
--}
-fromIndexToLocFormat :: Int16 -> LocaFormat
-fromIndexToLocFormat 0 = ShortFormat
-fromIndexToLocFormat _ = LongFormat
+fromIndexToLocFormat :: Int16 -> LocationTableFormat
+fromIndexToLocFormat 0              = ShortFormat
+fromIndexToLocFormat _anyOtherValue = LongFormat
 
 {-|
 Parse a short format loca entry (16-bit offset).
@@ -77,12 +69,12 @@ Parameters:
 Returns:
 - A LocationTable containing all glyph offsets
 -}
-locaP :: LocaFormat -> Int -> Get LocationTable
+locaP :: LocationTableFormat -> Int -> Get LocationTable
 locaP format numGlyphs = label "loca" $ do
   let numEntries = numGlyphs + 1
       offsetParser = case format of
         ShortFormat -> shortOffsetP
         LongFormat  -> longOffsetP
-  
+
   offsets <- replicateM numEntries offsetParser
   return (LocationTable offsets)

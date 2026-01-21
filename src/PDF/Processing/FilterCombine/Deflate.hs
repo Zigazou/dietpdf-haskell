@@ -10,6 +10,7 @@ module PDF.Processing.FilterCombine.Deflate
 
 import Codec.Compression.Flate qualified as FL
 
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration)
 import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
@@ -24,8 +25,8 @@ Returns a `FilterCombination` with a `FlateDecode` filter and the compressed
 bytes.
 -}
 deflate
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> Fallible FilterCombination
-deflate _ stream =
+deflate _anyBitmapConfig stream =
   FL.fastCompress stream <&> mkFCAppend [Filter (PDFName "FlateDecode") PDFNull]

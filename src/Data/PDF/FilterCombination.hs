@@ -17,6 +17,7 @@ module Data.PDF.FilterCombination
   , mkFCAppend
   , mkFCReplace
   , fcLength
+  , firstPredictor
   )
 where
 
@@ -24,8 +25,13 @@ import Data.Array (mkArray)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
-import Data.PDF.Filter (Filter)
+import Data.PDF.Filter (Filter(fDecodeParms))
 import Data.PDF.FilterList (FilterList)
+import Data.Sequence (Seq((:<|)))
+import Codec.Compression.Predict (Predictor)
+import Data.PDF.PDFObject (PDFObject(PDFNumber, PDFDictionary))
+import Codec.Compression.Predict.Predictor (decodePredictor)
+import Data.Map qualified as Map
 
 {-|
 A candidate encoding for a PDF stream.
@@ -61,3 +67,17 @@ Builds a `FilterCombination` whose filters should replace the existing ones.
 -}
 mkFCReplace :: [Filter] -> ByteString -> FilterCombination
 mkFCReplace fList bytes = FilterCombination (mkArray fList) bytes True
+
+{-|
+Returns the first `Predictor` found in the filter combination, if any.
+-}
+firstPredictor :: FilterCombination -> Maybe Predictor
+firstPredictor fc = case fcList fc of
+  (filterCombination :<| _) -> case fDecodeParms filterCombination of
+    (PDFDictionary dict) -> dict Map.!? "Predictor" >>= \case
+      PDFNumber value -> case decodePredictor . round $ value of
+        Right predictor -> return predictor
+        _anythingElse  -> Nothing
+      _anyOtherObject -> Nothing
+    _anyOtherObject -> Nothing
+  _anyOtherCase -> Nothing

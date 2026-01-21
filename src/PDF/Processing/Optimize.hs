@@ -22,11 +22,17 @@ module PDF.Processing.Optimize
   ( optimize
   ) where
 
-import Codec.Compression.Predict (Predictor (PNGOptimum), unpredict)
+import Codec.Compression.Predict (unpredict)
+import Codec.Compression.Predict.Predictor (decodePredictor)
 import Codec.Compression.XML (optimizeXML)
 
 import Control.Monad.State (lift)
 
+import Data.Binary (Word8)
+import Data.Bitmap.BitmapConfiguration
+  ( BitmapConfiguration (BitmapConfiguration, bcBitsPerComponent, bcComponents, bcLineWidth)
+  )
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC8Bits))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
@@ -47,6 +53,9 @@ import Data.Text qualified as T
 import External.JpegTran (jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)
 
+import Font.TrueType.FontDirectory (fromFontDirectory, optimizeFontDirectory)
+import Font.TrueType.Parser.Font (ttfParse)
+
 import PDF.Graphics.Optimize (optimizeGFX)
 import PDF.Object.Container (getFilters)
 import PDF.Object.Object (PDFObject (PDFNumber))
@@ -58,8 +67,6 @@ import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 import Util.ByteString (containsOnlyGray, convertToGray, optimizeParity)
-import Font.TrueType.FontDirectory (optimizeFontDirectory, fromFontDirectory)
-import Font.TrueType.Parser.Font (ttfParse)
 
 {-|
 Extract width and color component count from a PDF image stream object.
@@ -83,8 +90,8 @@ determined, 'Nothing' otherwise.
 
 __Note:__ Non-stream objects always return 'Nothing'.
 -}
-getWidthComponents :: Logging m => PDFObject -> PDFWork m (Maybe (Int, Int))
-getWidthComponents object@(PDFIndirectObjectWithStream _number _version _dict _stream) = do
+getBitmapConfiguration :: Logging m => PDFObject -> PDFWork m (Maybe BitmapConfiguration)
+getBitmapConfiguration object@(PDFIndirectObjectWithStream _number _version _dict _stream) = do
   mWidth      <- getValue "Width" object
   mColorSpace <- getValue "ColorSpace" object
 
@@ -95,10 +102,16 @@ getWidthComponents object@(PDFIndirectObjectWithStream _number _version _dict _s
         _anyOtherValue              -> 1
 
   return $ case mWidth of
-    Just (PDFNumber width) -> Just (round width, components)
+    Just (PDFNumber width) ->
+      let bitmapConfig = BitmapConfiguration
+            { bcLineWidth        = round width
+            , bcComponents       = components
+            , bcBitsPerComponent = BC8Bits
+            }
+      in Just bitmapConfig
     _anyOtherValue         -> Nothing
 
-getWidthComponents _anyOtherObject = return Nothing
+getBitmapConfiguration _anyOtherObject = return Nothing
 
 {-|
 Optimize bitmap stream data by aligning color components and reducing color space.
@@ -133,17 +146,20 @@ parity optimization", "Parity optimization").
 -}
 optimizeStreamParity :: PDFObject -> PDFWork IO PDFObject
 optimizeStreamParity object = do
-  mWidthComponents <- getWidthComponents object
+  mBitmapConfig <- getBitmapConfiguration object
+  mPredictor <- getValue "Predictor" object >>= \case
+    Just (PDFNumber n) -> return $ Just (decodePredictor (round n :: Word8))
+    _other             -> return Nothing
 
   stream <- getStream object
 
   -- Unpredict the stream if needed
-  let rawStream = case mWidthComponents of
-                    Just (width, components) ->
-                      case unpredict PNGOptimum width components stream of
+  let rawStream = case (mBitmapConfig, mPredictor) of
+                    (Just bitmapConfig, Just (Right predictor)) ->
+                      case unpredict predictor bitmapConfig stream of
                         (Right predicted)  -> predicted
                         (Left  _err      ) -> stream
-                    Nothing -> stream
+                    _anyOtherCase -> stream
 
   mColorSpace <- getValue "ColorSpace" object
   if mColorSpace == Just (PDFName "DeviceRGB")
@@ -167,11 +183,11 @@ Optimize TrueType font stream data using ttfAutoHint and internal optimization.
 -}
 optimizeTTF :: ByteString -> PDFWork IO ByteString
 optimizeTTF fontData = do
-  dehintedFontData <- lift $ ttfAutoHintOptimize fontData
-  case ttfParse dehintedFontData of
-    Left _err -> return fontData
-    Right dehintedFont -> do
-      return (fromFontDirectory (optimizeFontDirectory dehintedFont))
+  case ttfParse fontData of
+    Left _unableToParse -> return fontData
+    Right fontDirectory -> do
+      let prepared = fromFontDirectory $ optimizeFontDirectory fontDirectory
+      lift $ ttfAutoHintOptimize prepared
 
 {-|
 Attempt to optimize a stream, gracefully handling failures.
@@ -279,10 +295,9 @@ refilter object = do
 
   if hasStream object
     then do
-      optimization <- whatOptimizationFor object
-      unfilter stringOptimized
-        >>= streamOptimize
-        >>= filterOptimize optimization
+      unfiltered <- unfilter stringOptimized
+      optimization <- whatOptimizationFor unfiltered
+      streamOptimize unfiltered >>= filterOptimize optimization
     else return stringOptimized
 
 {-|

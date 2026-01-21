@@ -38,20 +38,24 @@ module Font.TrueType.Parser.Glyf
 
 import Control.Monad (replicateM)
 
-import Data.Binary.Get (getInt16be, getWord16be, getWord8)
-import Data.Binary.Parser (Get, getByteString, isEmpty, label)
+import Data.Binary.Get
+  (getInt16be, getRemainingLazyByteString, getWord16be, getWord8)
+import Data.Binary.Parser (Get, getByteString, getLazyByteString, isEmpty, label, runGet)
 import Data.Bits (testBit, (.&.))
+import Data.ByteString.Lazy qualified as BSL
 import Data.Int (Int16)
-import Data.Word (Word8, Word16)
+import Data.Word (Word16, Word8)
 
 import Font.TrueType.FontTable.GlyphTable
   ( CompositeGlyphData (CompositeGlyphData, cgArgument1, cgArgument2, cgFlags, cgGlyphIndex, cgInstructions, cgTransformation)
   , Glyph (CompositeGlyph, EmptyGlyph, SimpleGlyph)
-  , GlyphTable (GlyphTable)
   , GlyphHeader (GlyphHeader, ghNumberOfContours, ghXMax, ghXMin, ghYMax, ghYMin)
+  , GlyphTable (GlyphTable)
   , SimpleGlyphData (SimpleGlyphData, sgEndPtsOfContours, sgFlags, sgInstructionLength, sgInstructions, sgXCoordinates, sgYCoordinates)
   , TransformationMatrix (NoScale, Transform2x2, UniformScale, XYScale)
   )
+import Font.TrueType.FontTable.LocationTable (LocationTable, glyphSlices)
+import Font.TrueType.Parser.GlyphInstruction (glyphInstructionsP)
 
 -- | Bit 0: Arguments are 16-bit words (vs 8-bit bytes)
 argWordsFlag :: Word16
@@ -225,8 +229,8 @@ simpleGlyphP header = label "simpleGlyph" $ do
   endPtsOfContours <- replicateM numContours getWord16be
 
   -- Read instructions
-  instructionLength <- getWord16be
-  instructions <- getByteString (fromIntegral instructionLength)
+  instructionLength <- fromIntegral <$> getWord16be
+  instructions <- runGet glyphInstructionsP <$> getLazyByteString instructionLength
 
   -- Calculate number of points
   let numPoints = if null endPtsOfContours
@@ -242,7 +246,7 @@ simpleGlyphP header = label "simpleGlyph" $ do
 
   return SimpleGlyphData
     { sgEndPtsOfContours  = endPtsOfContours
-    , sgInstructionLength = instructionLength
+    , sgInstructionLength = fromIntegral instructionLength
     , sgInstructions      = instructions
     , sgFlags             = flags
     , sgXCoordinates      = xCoordinates
@@ -404,7 +408,8 @@ singleGlyphP :: Get Glyph
 singleGlyphP = label "singleGlyph" $ do
   empty <- isEmpty
   if empty
-    then return EmptyGlyph
+    then do
+      return EmptyGlyph
     else do
       header <- glyphHeaderP
       case ghNumberOfContours header of
@@ -412,7 +417,7 @@ singleGlyphP = label "singleGlyph" $ do
         n | n > 0 -> do
           glyphData <- simpleGlyphP header
           return (SimpleGlyph header glyphData)
-        _ -> do  -- n < 0, composite glyph
+        _compositeGlyph -> do
           components <- compositeGlyphP header
           return (CompositeGlyph header components)
 
@@ -424,20 +429,16 @@ table, which specifies the offset and length of each glyph. The raw glyf table
 data is just a concatenation of variable-length glyph descriptions with no
 delimiters or length fields.
 
-This function currently returns an empty GlyphTable as a placeholder.
-
-To properly parse glyphs:
-
-1. Parse the loca table to get offsets
-2. For each glyph i, extract bytes from offset[i] to offset[i+1]
-3. Use 'singleGlyphP' to parse each glyph's byte range
-4. Collect results into a GlyphTable
-
 See 'singleGlyphP' for parsing individual glyphs.
 -}
-glyphP :: Get GlyphTable
-glyphP = label "glyphTable" $ do
-  -- Cannot parse glyf table without loca table offsets
-  -- Return empty table for now
-  return (GlyphTable [])
+glyphP :: LocationTable -> Get GlyphTable
+glyphP locaTable = label "glyphTable" $ do
+  glyphTableBytes <- getRemainingLazyByteString
+  let offsets = glyphSlices locaTable
+                            (fromIntegral $ BSL.length glyphTableBytes)
 
+  GlyphTable <$> mapM (\(start, end) -> do
+      let glyphBytes = BSL.take (fromIntegral (end - start))
+                     $ BSL.drop (fromIntegral start) glyphTableBytes
+      return $ runGet singleGlyphP glyphBytes
+    ) offsets

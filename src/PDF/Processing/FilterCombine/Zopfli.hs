@@ -10,6 +10,7 @@ module PDF.Processing.FilterCombine.Zopfli
 
 import Codec.Compression.Flate qualified as FL
 
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration)
 import Data.ByteString (ByteString)
 import Data.Fallible (Fallible)
 import Data.Functor ((<&>))
@@ -28,10 +29,10 @@ larger). Returns a `FilterCombination` with `FlateDecode` and the compressed
 bytes.
 -}
 zopfli
-  :: Maybe (Int, Int)
+  :: Maybe BitmapConfiguration
   -> ByteString
   -> UseZopfli
   -> Fallible FilterCombination
-zopfli _ stream useZopfli = do
+zopfli _anyBitmapConfig stream useZopfli = do
   let compressor = getCompressor useZopfli
   compressor stream <&> mkFCAppend [Filter (PDFName "FlateDecode") PDFNull]

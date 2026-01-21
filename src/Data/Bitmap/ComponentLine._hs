@@ -1,0 +1,58 @@
+module Data.Bitmap.ComponentLine
+  ( ComponentLine (ComponentLine)
+  ) where
+
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration (bcComponents, bcBitsPerComponent))
+import Data.ByteString (ByteString)
+import Data.Kind (Type)
+import Data.Vector.Unboxed qualified as VSU
+import Data.Word (Word16)
+
+{-|
+A structure representing one line of a component elements from a bitmap image.
+-}
+type ComponentLine :: Type
+data ComponentLine = ComponentLine
+  { clBitsWidth  :: !BitsPerComponent
+  , clComponents :: !(VSU.Vector Word16)
+  }
+  deriving stock (Eq, Show)
+
+bytesToComponentLine :: BitsPerComponent -> ByteString -> ComponentLine
+bytesToComponentLine BC16Bits raw = 
+bytesToComponentLine bitsPerComponent raw =
+  ComponentLine bitsPerComponent
+                (VSU.fromList $ concatMap (byteToWord16 bitsPerComponent)
+                                          (BS.unpack raw)
+                )
+
+{-|
+Divide a `ByteString` into `List` of (color) `ComponentLine`.
+
+>>> separateComponents 3 "ABCDEFGHIJKLMNO"
+["ADGJM", "BEHKN", "CFILO"]
+-}
+separateComponents
+  :: BitmapConfiguration -- ^ Number of components.
+  -> ByteString
+  -> [ComponentLine]
+separateComponents bitmapConfig raw
+  | components == 1 = unpackBits bitsPerComponent raw
+  | otherwise       = map (ComponentLine bitsPerComponent) $
+                      BS.transpose (splitRaw components raw)
+  where 
+    components :: Int
+    components = bcComponents bitmapConfig
+
+    bitsPerComponent :: Int
+    bitsPerComponent = bcBitsPerComponent bitmapConfig
+
+{-|
+Group a `List` of `ByteString` (color components) into a `ByteString`.
+
+>>> groupComponents ["ADGJM", "BEHKN", "CFILO"]
+"ABCDEFGHIJKLMNO"
+-}
+groupComponents :: [ComponentLine] -> ByteString
+groupComponents = BS.concat . BS.transpose
+

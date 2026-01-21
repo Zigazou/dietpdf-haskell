@@ -47,18 +47,15 @@ import Data.PDF.Settings
   )
 import Data.UnifiedError
   (UnifiedError (CannotOverwriteFile, ParseError, UnableToOpenFile))
+import Data.Version (showVersion)
 
 import External.GhostScriptOptimize (ghostScriptOptimize)
 import External.PDFToCairoOptimize (pdfToCairoOptimize)
-
-import Hexdump (Cfg, defaultCfg, prettyHexCfg, startByte)
 
 import Options.Applicative
   (ParserInfo, execParser, fullDesc, header, helper, info, progDesc, (<**>))
 
 import PDF.Document.Parser (pdfParse)
-
-import Data.Version (showVersion)
 
 import Paths_dietpdf qualified
 
@@ -67,6 +64,8 @@ import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
 import System.IO.Temp (withTempFile)
 import System.Posix (fileSize, getFileStatus)
+
+import Util.ByteString (hexDump)
 
 {-|
 Read a PDF file and parse it.
@@ -106,21 +105,6 @@ doesFileExist path = do
   tryJust (guard . isDoesNotExistError) (getFileStatus path) >>= \case
     Right _stat -> return True
     Left  _err  -> return False
-
-{-|
-Configuration for hexdump starting at a given offset.
--}
-hexCfg :: Int -> Cfg
-hexCfg offset = defaultCfg { startByte = offset }
-
-{-|
-Display a hexdump of a ByteString starting at a given offset.
--}
-hexDump :: Int -> ByteString -> IO ()
-hexDump offset bytes = do
-  let bytes' = BS.take 256 (BS.drop offset bytes)
-
-  putStrLn $ prettyHexCfg (hexCfg offset) bytes'
 
 {-|
 Run the application with the given options.
@@ -239,7 +223,7 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useZopfli optimizeGFX o
     tryF (readPDF pdfToOptimize) >>= \case
       Right document -> optimize outputPDF document settings
       Left  anError@(ParseError (_, offset, _)) -> do
-        lift $ BS.readFile inputPDF >>= hexDump (fromIntegral offset)
+        lift $ BS.readFile inputPDF >>= \bytes -> putStrLn (hexDump (fromIntegral offset) bytes)
         throwE anError
       Left anError -> throwE anError
 
