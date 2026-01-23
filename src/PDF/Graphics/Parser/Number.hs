@@ -41,8 +41,8 @@ module PDF.Graphics.Parser.Number
 import Control.Applicative ((<|>))
 
 import Data.Binary.Parser (Get, isDigit, label, option, satisfy, some', word8)
-import Data.List (foldl')
 import Data.PDF.GFXObject (GFXObject (GFXNumber), isPlusMinus)
+import Data.List (foldl')
 import Data.Word (Word8)
 
 import Util.Ascii (asciiDIGITZERO, asciiFULLSTOP, asciiHYPHENMINUS)

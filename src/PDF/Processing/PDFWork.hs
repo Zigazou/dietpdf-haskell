@@ -13,7 +13,7 @@ error reporting.
 -}
 module PDF.Processing.PDFWork
   ( importObjects
-  , clean
+  , removeUnusedObjects
   , pModifyIndirectObjects
   , pMapP
   , deepMapP
@@ -83,8 +83,8 @@ importObjects objects = do
 Cleans a `PDFPartition` by removing unused objects and logs the number of
 removed objects.
 -}
-clean :: Logging m => PDFWork m ()
-clean = do
+removeUnusedObjects :: Logging m => PDFWork m ()
+removeUnusedObjects = do
   pdf <- gets wPDF
   tryP (removeUnused pdf) >>= \case
     Right unusedRemoved -> do

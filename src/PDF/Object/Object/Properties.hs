@@ -18,7 +18,7 @@ module PDF.Object.Object.Properties
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
-import Data.List (foldl')
+import Data.Foldable (foldl')
 import Data.Map.Strict qualified as Map
 import Data.PDF.PDFObject
     ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRef, PDFXRefStream)

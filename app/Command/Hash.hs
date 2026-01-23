@@ -14,33 +14,12 @@ module Command.Hash
 import Data.Context (ctx)
 import Data.Fallible (FallibleT)
 import Data.Foldable (foldrM)
-import Data.Kind (Type)
 import Data.Maybe (mapMaybe)
+import Data.PDF.ObjectHash (ObjectHash (ObjectHash), objectHash)
 import Data.PDF.PDFDocument (PDFDocument, toList)
-import Data.PDF.PDFObject (PDFObject (PDFIndirectObjectWithStream))
 import Data.PDF.PDFWork (PDFWork, evalPDFWork, sayP, withContext)
 import Data.Set (Set, empty, insert, member)
 import Data.Text qualified as T
-
-import PDF.Object.Signature (streamHash)
-
-{-|
-Hash record for an indirect object with stream.
-
-Stores the object number and its textual hash representation. Equality and
-ordering consider only the hash; the object number is ignored to allow
-de-duplication by content.
--}
-type ObjectHash :: Type
-data ObjectHash = ObjectHash !Int !T.Text
-
-instance Eq ObjectHash where
-  (==) :: ObjectHash -> ObjectHash -> Bool
-  (ObjectHash _ hash1) == (ObjectHash _ hash2) = hash1 == hash2
-
-instance Ord ObjectHash where
-  compare :: ObjectHash -> ObjectHash -> Ordering
-  (ObjectHash _ hash1) `compare` (ObjectHash _ hash2) = hash1 `compare` hash2
 
 {-|
 Compute and print hashes for all stream objects in the given document.
@@ -63,17 +42,6 @@ objectHashes document = evalPDFWork $ do
   _ <- foldrM printHashForObject empty hashes
   return ()
  where
-  {-
-  Attempt to compute an 'ObjectHash' for a 'PDFObject'.
-
-  Returns 'Just' when the object is an indirect object with a stream, using
-  'streamHash' to compute the hash; otherwise returns 'Nothing'.
-  -}
-  objectHash :: PDFObject -> Maybe ObjectHash
-  objectHash object@(PDFIndirectObjectWithStream number _ _ _) =
-    ObjectHash number . T.pack . show <$> streamHash object
-  objectHash _anyOtherObject = Nothing
-
   {-
   Print a single 'ObjectHash', updating the set of seen hashes.
 

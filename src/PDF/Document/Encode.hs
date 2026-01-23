@@ -77,11 +77,12 @@ import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
 import PDF.Object.State (getValue, setMaybe)
 import PDF.Processing.Optimize (optimize)
-import PDF.Processing.PDFWork (clean, importObjects, pMapP)
+import PDF.Processing.PDFWork (removeUnusedObjects, importObjects, pMapP)
 
 import System.IO (hSetBuffering, stderr)
 
 import Util.Sequence (mapMaybe)
+import PDF.Processing.DuplicatedObjects (findDuplicatedObjects, duplicateCount, convertDuplicatedReferences)
 
 {- |
 Encodes a PDF object and keeps track of its number and length.
@@ -161,8 +162,9 @@ pdfEncode
   :: PDFDocument
   -> PDFWork IO ByteString
 pdfEncode objects = do
-  _ <- liftIO $ hSetBuffering stderr LineBuffering
+  liftIO $ hSetBuffering stderr LineBuffering
 
+  -- Import objects and validate prerequisites.
   importObjects objects
   whenM isEmptyPDF (throwError EncodeNoIndirectObject)
   whenM hasNoVersion (throwError EncodeNoVersion)
@@ -182,22 +184,39 @@ pdfEncode objects = do
 
   setTrailer pdfTrailer
 
+  -- Remove duplicate objects and assigns references accordingly.
+  duplicated <- gets wPDF >>= findDuplicatedObjects
+  let dupCount = duplicateCount duplicated
+  if dupCount == 0
+    then
+      sayP "No duplicated objects found"
+    else do
+      sayP $ T.concat [ "Cleaning duplicate objects ("
+                      , T.pack (show (duplicateCount duplicated))
+                      , " duplicate(s) found)"
+                      ]
+
+      convertDuplicatedReferences duplicated
+      removeUnusedObjects
+
+  -- Merge page contents streams.
   sayP "Merging pages contents"
   gets (ppObjectsWithoutStream . wPDF)
     >>= mapM_ (mergePagesContents >=> putObject)
 
-  clean
+  removeUnusedObjects
 
-  {- Optimize numbers and resources -}
+  -- Optimize numbers and resources.
   optimizeNumbers
   optimizeResources
 
-  {- Find all masks -}
+  -- Find all masks (masks supports more "destruction" than standard images).
   sayP "Finding all masks"
   wosMasks <- gets (getAllMasks . toPDFDocument . ppObjectsWithoutStream . wPDF)
   wsMasks <- gets (getAllMasks . toPDFDocument . ppObjectsWithStream . wPDF)
   setMasks (wosMasks <> wsMasks)
 
+  -- Optimize optional dictionary entries (entries which can be omitted).
   sayP "Optimizing optional dictionary entries"
   modifyIndirectObjects optimizeOptionalDictionaryEntries
 
@@ -210,12 +229,13 @@ pdfEncode objects = do
   sayP "Optimizing PDF"
   modifyIndirectObjectsP optimize
 
-  {- TODO: updateWithAdditionalResources -}
+  -- TODO: updateWithAdditionalResources
 
-  clean
+  removeUnusedObjects
 
   nextObjectNumber <- (+ 1) <$> lastObjectNumber
 
+  -- Group objects without stream into an object stream.
   sayP "Grouping objects without stream"
   objectsWithoutStream <- gets ( fromList
                                . fmap snd
@@ -228,6 +248,7 @@ pdfEncode objects = do
   objectStream <- makeObjectStreamFromObjects objectsWithoutStream
                                               nextObjectNumber
 
+  -- Encode all objects.
   sayP "Encoding PDF"
   encodedObjStm  <- optimize objectStream >>= encodeObject
   encodedStreams <- gets (ppObjectsWithStream . wPDF) >>= pMapP encodeObject
@@ -239,7 +260,8 @@ pdfEncode objects = do
   let pdfHead = fromPDFObject (PDFVersion "1.7")
       pdfEnd  = fromPDFObject PDFEndOfFile
 
-  sayP "Optimize XRef stream table"
+  -- Generate the XRef table.
+  sayP "Optimizing XRef stream table"
   xref <- do
     let
       xrefst = xrefStreamTable (nextObjectNumber + 1)
@@ -255,4 +277,5 @@ pdfEncode objects = do
 
   sayP "PDF has been optimized!"
 
+  -- Return the final PDF bytestring.
   return $ BS.concat [pdfHead, body, encodedXRef, startxref, pdfEnd]

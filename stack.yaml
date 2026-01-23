@@ -17,9 +17,8 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-22.39
-#resolver: nightly-2024-11-09
 compiler: ghc-9.8.4
+resolver: lts-23.28
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -32,6 +31,13 @@ compiler: ghc-9.8.4
 #   - wai
 packages:
 - .
+
+#allow-newer: true
+#allow-newer-deps:
+#- binary
+#- zlib
+#- ghc-lib-parser
+
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
 # forks / in-progress versions pinned to a git hash. For example:
@@ -42,9 +48,32 @@ packages:
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
 extra-deps:
-- binary-parsers-0.2.4.0@sha256:3d28bf1bce98c7a0587c4b6569f7b06664eef91c09817f7f99838252e9360c0b,3728
-- spool-0.1@sha256:77780cbfc2c0be23ff2ea9e474062f3df97fcd9db946ee0b3508280a923b83e2,1461
-- th-abstraction-0.6.0.0 # needed to compile and install weeder with GHC 9.8.4
+#- hopfli-0.2.2.1
+#- bytestring-0.12.2.0
+#- spool-0.1
+#- zlib-0.7.1.1
+#- binary-0.10.0.0
+#- directory-1.3.10.1
+#- os-string-2.0.10
+#- process-1.6.26.1
+#- text-2.1.3
+#- unix-2.8.8.0
+#- filepath-1.5.4.0
+#- binary-parsers-0.2.4.0@sha256:3d28bf1bce98c7a0587c4b6569f7b06664eef91c09817f7f99838252e9360c0b,3728
+#- spool-0.1@sha256:77780cbfc2c0be23ff2ea9e474062f3df97fcd9db946ee0b3508280a923b83e2,1461
+#- th-abstraction-0.6.0.0 # needed to compile and install weeder with GHC 9.8.4
+
+- hopfli-0.2.2.1
+- binary-parsers-0.2.4.0
+- spool-0.1
+- bytestring-0.11.5.4
+- zlib-0.6.3.0
+- binary-0.8.9.3
+- directory-1.3.10.1
+- process-1.6.26.1
+- text-2.1.3
+- unix-2.8.8.0
+- filepath-1.4.301.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

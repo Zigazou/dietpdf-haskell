@@ -1,11 +1,11 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.38.1.
+-- This file has been generated from package.yaml by hpack version 0.39.1.
 --
 -- see: https://github.com/sol/hpack
 
 name:           dietpdf
-version:        1.1.6.0
+version:        1.1.7.0
 description:    Please see the README on GitHub at <https://github.com/zigazou/dietpdf#readme>
 homepage:       https://github.com/zigazou/dietpdf#readme
 bug-reports:    https://github.com/zigazou/dietpdf/issues
@@ -67,6 +67,7 @@ library
       Data.PDF.InterpreterAction
       Data.PDF.InterpreterState
       Data.PDF.ObjectCategory
+      Data.PDF.ObjectHash
       Data.PDF.ObjectInfo
       Data.PDF.ObjectOffset
       Data.PDF.ObjectOffsets
@@ -203,6 +204,7 @@ library
       PDF.Processing.ApplyFilter.OnlyZopfli
       PDF.Processing.ApplyFilter.Text
       PDF.Processing.ApplyFilter.XRef
+      PDF.Processing.DuplicatedObjects
       PDF.Processing.Filter
       PDF.Processing.FilterCombine.Deflate
       PDF.Processing.FilterCombine.Jpeg2k
