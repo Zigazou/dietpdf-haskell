@@ -43,6 +43,7 @@ bytes.
 findBitmapConfigurations
   :: Int                   -- ^ Raw line width in bytes
   -> [BitmapConfiguration] -- ^ Possible bitmap configurations
+findBitmapConfigurations 0 = []
 findBitmapConfigurations rawLineWidth =
   [ BitmapConfiguration
       { bcLineWidth        = lineWidth
