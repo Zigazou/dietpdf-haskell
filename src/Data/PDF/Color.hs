@@ -26,9 +26,9 @@ Constructors:
 -}
 type Color :: Type
 data Color
-  = ColorGray !Double
-  | ColorRGB !Double !Double !Double
-  | ColorCMYK !Double !Double !Double !Double
-  | ColorGeneric ![Double] !(Maybe ByteString)
-  | ColorNotSet
+  = ColorGray !Double -- ^ Grayscale color
+  | ColorRGB !Double !Double !Double -- ^ RGB color
+  | ColorCMYK !Double !Double !Double !Double -- ^ CMYK color
+  | ColorGeneric ![Double] !(Maybe ByteString) -- ^ Generic color with components and optional color space name
+  | ColorNotSet -- ^ Sentinel for unset color
   deriving stock (Show, Eq)

@@ -24,8 +24,8 @@ import Data.Kind (Type)
 Flag indicating whether to use Zopfli compression or standard deflate.
 -}
 type UseZopfli :: Type
-data UseZopfli = UseZopfli
-               | UseDeflate
+data UseZopfli = UseZopfli -- ^ Use Zopfli compression
+               | UseDeflate -- ^ Use standard deflate compression
                deriving stock Eq
 
 {-|
@@ -41,8 +41,8 @@ toUseZopfli False = UseDeflate
 Flag indicating whether to optimize graphics content.
 -}
 type OptimizeGFX :: Type
-data OptimizeGFX = OptimizeGFX
-                 | DoNotOptimizeGFX
+data OptimizeGFX = OptimizeGFX -- ^ Enable graphics optimization
+                 | DoNotOptimizeGFX -- ^ Disable graphics optimization
                  deriving stock Eq
 
 {-|
@@ -58,8 +58,8 @@ toOptimizeGFX False = DoNotOptimizeGFX
 Flag indicating whether to use GhostScript for certain optimizations.
 -}
 type UseGhostScript :: Type
-data UseGhostScript = UseGhostScript
-                    | DoNotUseGhostScript
+data UseGhostScript = UseGhostScript -- ^ Use GhostScript
+                    | DoNotUseGhostScript -- ^ Do not use GhostScript
                     deriving stock Eq
 
 {-|
@@ -75,8 +75,8 @@ toUseGhostScript False = DoNotUseGhostScript
 Flag indicating whether to use pdf-to-cairo for certain optimizations.
 -}
 type UsePDFToCairo :: Type
-data UsePDFToCairo = UsePDFToCairo
-                   | DoNotUsePDFToCairo
+data UsePDFToCairo = UsePDFToCairo -- ^ Use pdf-to-cairo
+                   | DoNotUsePDFToCairo -- ^ Do not use pdf-to-cairo
                    deriving stock Eq
 
 {-|

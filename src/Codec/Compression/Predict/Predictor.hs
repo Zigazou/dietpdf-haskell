@@ -165,10 +165,10 @@ The type parameter `a` represents the sample type, which can be:
 type role Samples representational
 type Samples :: Type -> Type
 data Samples a = Samples
-  { sUpperLeft :: !a
-  , sAbove     :: !a
-  , sLeft      :: !a
-  , sCurrent   :: !a
+  { sUpperLeft :: !a -- ^ Sample at upper-left
+  , sAbove     :: !a -- ^ Sample above
+  , sLeft      :: !a -- ^ Sample to the left
+  , sCurrent   :: !a -- ^ Current sample
   }
 
 {-|

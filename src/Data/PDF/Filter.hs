@@ -15,8 +15,8 @@ A filter with its parameters.
 -}
 type Filter :: Type
 data Filter = Filter
-  { fFilter      :: !PDFObject
-  , fDecodeParms :: !PDFObject
+  { fFilter      :: !PDFObject -- ^ The filter type.
+  , fDecodeParms :: !PDFObject -- ^ The decode parameters for the filter.
   }
   deriving stock (Eq, Show)
 

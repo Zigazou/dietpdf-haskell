@@ -41,9 +41,9 @@ to an existing filter list.
 -}
 type FilterCombination :: Type
 data FilterCombination = FilterCombination
-  { fcList    :: !FilterList
-  , fcBytes   :: !ByteString
-  , fcReplace :: !Bool
+  { fcList    :: !FilterList -- ^ List of filters applied
+  , fcBytes   :: !ByteString -- ^ Encoded bytes
+  , fcReplace :: !Bool -- ^ Whether to replace existing filters (True) or append (False)
   }
   deriving stock (Show)
 

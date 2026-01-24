@@ -72,8 +72,8 @@ and inserted in 'dMap' with the next available index.
 -}
 type Dictionary :: Type
 data Dictionary = Dictionary
-  { dList :: !(Seq ByteString)
-  , dMap  :: !(Map ByteString Int)
+  { dList :: !(Seq ByteString) -- ^ Sequence of words indexed by code
+  , dMap  :: !(Map ByteString Int) -- ^ Reverse mapping from word to code
   } deriving stock (Eq, Show)
 
 {-|
@@ -147,7 +147,10 @@ replace it.
 -}
 type MonadDictionary :: (Type -> Type) -> Constraint
 class Monad m => MonadDictionary m where
+  -- | Get the current LZW dictionary.
   getDictionary :: m Dictionary
+
+  -- | Set the current LZW dictionary.
   putDictionary :: Dictionary -> m ()
 
 {-|

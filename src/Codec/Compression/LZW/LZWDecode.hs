@@ -13,19 +13,19 @@ module Codec.Compression.LZW.LZWDecode
   ) where
 
 import Codec.Compression.LZW.LZWDictionary
-    ( Dictionary
-    , MonadDictionary (getDictionary, putDictionary)
-    , addWordM
-    , clearTableMarker
-    , dictionaryLength
-    , dictionaryLengthM
-    , endOfDataMarker
-    , getWordM
-    , minBitsPerCode
-    , newDictionary
-    , resetDictionaryM
-    , validBitsPerCode
-    )
+  ( Dictionary
+  , MonadDictionary (getDictionary, putDictionary)
+  , addWordM
+  , clearTableMarker
+  , dictionaryLength
+  , dictionaryLengthM
+  , endOfDataMarker
+  , getWordM
+  , minBitsPerCode
+  , newDictionary
+  , resetDictionaryM
+  , validBitsPerCode
+  )
 
 import Control.Monad.Loops (whileM)
 import Control.Monad.State.Lazy (State, get, put, runState)
@@ -37,19 +37,18 @@ import Data.Fallible (Fallible)
 import Data.Kind (Type)
 import Data.Maybe (isNothing)
 import Data.UnifiedError
-    ( UnifiedError (InternalError, NotEnoughBytes, ParseError)
-    )
+  (UnifiedError (InternalError, NotEnoughBytes, ParseError))
 
 {-|
 A structure representing bit slicing information for LZW decoding.
 -}
 type BitsRange :: Type
 data BitsRange = BitsRange
-  { brByteMask0 :: Int
-  , brByteMask1 :: Int
-  , brByteMask2 :: Int
-  , brShift     :: Int
-  , brLength    :: Int
+  { brByteMask0 :: Int -- ^ Mask for the first byte
+  , brByteMask1 :: Int -- ^ Mask for the second byte
+  , brByteMask2 :: Int -- ^ Mask for the third byte
+  , brShift     :: Int -- ^ Number of bits to shift right after masking
+  , brLength    :: Int -- ^ Number of bytes involved in the code
   }
   deriving stock (Eq, Show)
 
@@ -75,11 +74,11 @@ A structure representing the state of an LZW decoding step.
 -}
 type DecodeStep :: Type
 data DecodeStep = DecodeStep
-  { psPreviousWordIndex :: Int
-  , psBitPosition       :: Int
-  , psBitsPerCode       :: Int
-  , psDictionary        :: Dictionary
-  , psError             :: Maybe UnifiedError
+  { psPreviousWordIndex :: Int -- ^ Index of the previous word
+  , psBitPosition       :: Int -- ^ Current bit position in the stream
+  , psBitsPerCode       :: Int -- ^ Current bits-per-code
+  , psDictionary        :: Dictionary -- ^ Current LZW dictionary
+  , psError             :: Maybe UnifiedError -- ^ Any error encountered during decoding
   }
   deriving stock (Eq, Show)
 

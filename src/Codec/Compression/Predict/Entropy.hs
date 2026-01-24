@@ -17,11 +17,11 @@ import Data.Kind (Type)
 Supported entropy heuristics.
 -}
 type Entropy :: Type
-data Entropy = EntropyShannon
-             | EntropyDeflate
-             | EntropyRLE
-             | EntropySum
-             | EntropyLFS
+data Entropy = EntropyShannon -- ^ Shannon entropy
+             | EntropyDeflate -- ^ Deflate-based entropy
+             | EntropyRLE -- ^ RLE-based entropy
+             | EntropySum -- ^ Simple sum-based entropy
+             | EntropyLFS -- ^ Simple LFS-based entropy
              deriving stock Eq
 
 {-|

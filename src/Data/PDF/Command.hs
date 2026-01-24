@@ -23,8 +23,8 @@ import Data.Sequence (fromList)
 -}
 type Command :: Type
 data Command = Command
-  { cOperator   :: !GSOperator
-  , cParameters :: !GFXObjects
+  { cOperator   :: !GSOperator -- ^ Graphics-state operator
+  , cParameters :: !GFXObjects -- ^ Graphics-state operands
   }
   deriving stock (Eq, Show)
 

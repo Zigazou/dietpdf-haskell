@@ -10,11 +10,11 @@ import Data.Word (Word16, Word8)
 
 type BitsPerComponent :: Type
 data BitsPerComponent
-  = BC1Bit
-  | BC2Bits
-  | BC4Bits
-  | BC8Bits
-  | BC16Bits
+  = BC1Bit -- ^ 1 bit per component
+  | BC2Bits -- ^ 2 bits per component
+  | BC4Bits -- ^ 4 bits per component
+  | BC8Bits -- ^ 8 bits per component
+  | BC16Bits -- ^ 16 bits per component
   deriving stock (Eq, Show)
 
 instance Enum BitsPerComponent where

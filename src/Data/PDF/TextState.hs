@@ -30,17 +30,17 @@ context. The text state includes the following parameters:
 -}
 type TextState :: Type
 data TextState = TextState
-  { tsCharacterSpacing  :: !Double
-  , tsWordSpacing       :: !Double
-  , tsHorizontalScaling :: !Double
-  , tsLeading           :: !Double
-  , tsFont              :: !ByteString
-  , tsFontSize          :: !Double
-  , tsRenderingMode     :: !Int
-  , tsRise              :: !Double
-  , tsMatrix            :: !TransformationMatrix
-  , tsScaleX            :: !Double
-  , tsScaleY            :: !Double
+  { tsCharacterSpacing  :: !Double -- ^ Character spacing
+  , tsWordSpacing       :: !Double -- ^ Word spacing
+  , tsHorizontalScaling :: !Double -- ^ Horizontal scaling
+  , tsLeading           :: !Double -- ^ Leading
+  , tsFont              :: !ByteString -- ^ Font name
+  , tsFontSize          :: !Double -- ^ Font size
+  , tsRenderingMode     :: !Int -- ^ Rendering mode
+  , tsRise              :: !Double -- ^ Rise
+  , tsMatrix            :: !TransformationMatrix -- ^ Text matrix
+  , tsScaleX            :: !Double -- ^ Scale factor in X direction
+  , tsScaleY            :: !Double -- ^ Scale factor in Y direction
   } deriving stock (Show, Eq)
 
 {-|

@@ -44,11 +44,11 @@ Fields:
 -}
 type EncodeStep :: Type
 data EncodeStep = EncodeStep
-  { esCurrentWord  :: !ByteString
-  , esCurrentIndex :: !Int
-  , esBitsPerCode  :: !Int
-  , esDictionary   :: !Dictionary
-  , esOutput       :: !BitsArray
+  { esCurrentWord  :: !ByteString -- ^ Current word under construction
+  , esCurrentIndex :: !Int -- ^ Code index of the current word
+  , esBitsPerCode  :: !Int -- ^ Current bits-per-code
+  , esDictionary   :: !Dictionary -- ^ Current LZW dictionary
+  , esOutput       :: !BitsArray -- ^ Accumulated output bitstream
   }
   deriving stock (Eq, Show)
 

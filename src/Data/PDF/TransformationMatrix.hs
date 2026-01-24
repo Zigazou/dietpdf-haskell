@@ -37,20 +37,20 @@ transformations are represented by 'TransformationMatrix'.
 -}
 type TransformationType :: Type
 data TransformationType
-  = Translation
-  | Scaling
-  | Rotation
-  | Skew
+  = Translation -- ^ Translation transformation
+  | Scaling -- ^ Scaling transformation
+  | Rotation -- ^ Rotation transformation
+  | Skew -- ^ Skew transformation
   deriving stock (Eq, Show)
 
 type TransformationMatrix :: Type
 data TransformationMatrix = TransformationMatrix
-  { tmA :: !Double
-  , tmB :: !Double
-  , tmC :: !Double
-  , tmD :: !Double
-  , tmE :: !Double
-  , tmF :: !Double
+  { tmA :: !Double -- ^ Element a (scale in X direction)
+  , tmB :: !Double -- ^ Element b (shear in Y direction)
+  , tmC :: !Double -- ^ Element c (shear in X direction)
+  , tmD :: !Double -- ^ Element d (scale in Y direction)
+  , tmE :: !Double -- ^ Element e (translation in X direction)
+  , tmF :: !Double -- ^ Element f (translation in Y direction)
   } deriving stock (Eq, Show)
 
 {-|

@@ -33,17 +33,17 @@ Opaque bit buffer.
 
 Fields:
 
-* 'baCursorOffset': reserved for future cursor use (currently 0).
-* 'baCursorWidth' : reserved for future cursor use (currently 1).
+* 'baCursorOffset': current cursor offset in bits.
+* 'baCursorWidth' : current cursor width in bits.
 * 'baLength'      : number of bits written to the buffer.
 * 'baBytes'       : underlying storage as a storable vector of bytes.
 -}
 type BitsArray :: Type
 data BitsArray = BitsArray
-  { baCursorOffset :: !Int
-  , baCursorWidth  :: !Int
-  , baLength       :: !Int
-  , baBytes        :: !(VS.Vector Word8)
+  { baCursorOffset :: !Int -- ^ Current cursor offset in bits
+  , baCursorWidth  :: !Int -- ^ Current cursor width in bits
+  , baLength       :: !Int -- ^ Number of bits written to the buffer
+  , baBytes        :: !(VS.Vector Word8) -- ^ Underlying storage as a storable vector of bytes
   }
   deriving stock (Eq, Show)
 

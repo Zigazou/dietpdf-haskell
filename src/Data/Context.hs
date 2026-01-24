@@ -38,10 +38,10 @@ A human-readable context value. Constructors:
 * `NoContext` — absence of context.
 -}
 type Context :: Type
-data Context = Context !T.Text                -- ^ A textual context segment.
-             | ContextProgress !Int           -- ^ Current progress value.
-                               !Int           -- ^ Total progress value.
-             | NoContext                      -- ^ No context.
+data Context = Context !T.Text      -- ^ A textual context segment.
+             | ContextProgress !Int -- ^ Current progress value.
+                               !Int -- ^ Total progress value.
+             | NoContext            -- ^ No context.
              deriving stock (Eq, Show)
 
 -- | The empty context value.

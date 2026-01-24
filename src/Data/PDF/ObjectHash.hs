@@ -18,8 +18,8 @@ de-duplication by content.
 -}
 type ObjectHash :: Type
 data ObjectHash = ObjectHash
-  { ohObjectNumber :: !Int
-  , ohHash         :: !T.Text
+  { ohObjectNumber :: !Int -- ^ The PDF object number.
+  , ohHash         :: !T.Text -- ^ The hash of the object's stream content.
   }
 
 instance Eq ObjectHash where

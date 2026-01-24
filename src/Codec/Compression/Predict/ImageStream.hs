@@ -52,9 +52,9 @@ allowing easier handling when applying predictors.
 -}
 type ImageStream :: Type
 data ImageStream = ImageStream
-  { iBitmapConfig :: !BitmapConfiguration
-  , iPredictor    :: !(Maybe Predictor)
-  , iLines        :: ![Scanline]
+  { iBitmapConfig :: !BitmapConfiguration -- ^ Bitmap configuration
+  , iPredictor    :: !(Maybe Predictor) -- ^ Applied predictor, if any
+  , iLines        :: ![Scanline] -- ^ Image scanlines
   }
 
 iComponents :: ImageStream -> Int

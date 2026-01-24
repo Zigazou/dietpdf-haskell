@@ -78,27 +78,27 @@ heuristics.
 -}
 type GraphicsState :: Type
 data GraphicsState = GraphicsState
-  { gsUserUnit       :: !Double
-  , gsCTM            :: !TransformationMatrix
-  , gsScaleX         :: !Double
-  , gsScaleY         :: !Double
-  , gsTextState      :: !TextState
-  , gsLineWidth      :: !Double
-  , gsLineCap        :: !Double
-  , gsLineJoin       :: !Double
-  , gsMiterLimit     :: !Double
-  , gsDashArray      :: ![Double]
-  , gsDashPhase      :: !Double
-  , gsIntent         :: !ByteString
-  , gsFlatness       :: !Double
-  , gsStrokeAlpha    :: !Double
-  , gsNonStrokeAlpha :: !Double
-  , gsStrokeColor    :: !Color
-  , gsNonStrokeColor :: !Color
-  , gsPathStartX     :: !Double
-  , gsPathStartY     :: !Double
-  , gsCurrentPointX  :: !Double
-  , gsCurrentPointY  :: !Double
+  { gsUserUnit       :: !Double -- ^ User unit scaling factor
+  , gsCTM            :: !TransformationMatrix -- ^ Current transformation matrix
+  , gsScaleX         :: !Double -- ^ Absolute horizontal scale from CTM
+  , gsScaleY         :: !Double -- ^ Absolute vertical scale from CTM
+  , gsTextState      :: !TextState -- ^ Current text state
+  , gsLineWidth      :: !Double -- ^ Line width for stroking operations
+  , gsLineCap        :: !Double -- ^ Line cap style for stroking operations
+  , gsLineJoin       :: !Double -- ^ Line join style for stroking operations
+  , gsMiterLimit     :: !Double -- ^ Miter limit for stroking operations
+  , gsDashArray      :: ![Double] -- ^ Dash array for stroking operations
+  , gsDashPhase      :: !Double -- ^ Dash phase for stroking operations
+  , gsIntent         :: !ByteString -- ^ Rendering intent
+  , gsFlatness       :: !Double -- ^ Flatness tolerance
+  , gsStrokeAlpha    :: !Double -- ^ Stroke alpha value
+  , gsNonStrokeAlpha :: !Double -- ^ Non-stroke alpha value
+  , gsStrokeColor    :: !Color -- ^ Current stroke color
+  , gsNonStrokeColor :: !Color -- ^ Current non-stroke color
+  , gsPathStartX     :: !Double -- ^ X coordinate of path start
+  , gsPathStartY     :: !Double -- ^ Y coordinate of path start
+  , gsCurrentPointX  :: !Double -- ^ X coordinate of current point
+  , gsCurrentPointY  :: !Double -- ^ Y coordinate of current point
   } deriving stock (Eq, Show)
 
 {-|

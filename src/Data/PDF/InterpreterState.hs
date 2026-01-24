@@ -97,9 +97,9 @@ The graphics state stack is used to implement save/restore semantics.
 -}
 type InterpreterState :: Type
 data InterpreterState = InterpreterState
-  { iGraphicsState :: !GraphicsState
-  , iStack         :: ![GraphicsState]
-  , iWorkData      :: !WorkData
+  { iGraphicsState :: !GraphicsState -- ^ Current graphics state
+  , iStack         :: ![GraphicsState] -- ^ Stack of saved graphics states
+  , iWorkData      :: !WorkData -- ^ Additional interpreter working data
   }
 
 {-|
