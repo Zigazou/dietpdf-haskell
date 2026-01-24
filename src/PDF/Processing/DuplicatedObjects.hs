@@ -1,36 +1,39 @@
 module PDF.Processing.DuplicatedObjects
   ( findDuplicatedObjects
-  , DuplicatedObjects(DuplicatedObjects)
-  , Duplicates(Duplicates, dHash, dDuplicates)
+  , DuplicatedObjects (DuplicatedObjects)
+  , Duplicates (Duplicates, dHash, dDuplicates)
   , hasNoDuplicates
   , hasDuplicates
   , duplicateCount
   , convertDuplicatedReferences
-  ) where
+  )
+where
 
-import           Data.Context            (Contextual (ctx))
-import           Data.Kind               (Type)
-import           Data.Logging            (Logging)
-import           Data.Map                (Map)
-import Data.Map qualified                as Map
-import           Data.Maybe              (fromMaybe)
-import           Data.PDF.ObjectHash     (ObjectHash, objectHash)
-import           Data.PDF.PDFObject      (PDFObject (PDFIndirectObjectWithStream, PDFReference))
-import           Data.PDF.PDFPartition   (PDFPartition (PDFPartition))
-import           Data.PDF.PDFWork        (PDFWork, sayP, withContext, modifyIndirectObjectsP)
-import           Data.Set                (Set)
-import Data.Set  qualified               as Set
-
-import           PDF.Document.Uncompress (uncompressObjects)
-import Data.List (sort)
+import Data.Context (Contextual (ctx))
 import Data.Foldable (foldl')
+import Data.Kind (Type)
+import Data.List (sort)
+import Data.Logging (Logging)
+import Data.Map (Map)
+import Data.Map qualified as Map
+import Data.Maybe (fromMaybe)
+import Data.PDF.ObjectHash (ObjectHash, objectHash)
+import Data.PDF.PDFObject
+  (PDFObject (PDFIndirectObjectWithStream, PDFReference))
+import Data.PDF.PDFPartition (PDFPartition (PDFPartition))
+import Data.PDF.PDFWork (PDFWork, modifyIndirectObjectsP, sayP, withContext)
+import Data.Set (Set)
+import Data.Set qualified as Set
+
+import PDF.Document.Uncompress (uncompressObjects)
 import PDF.Processing.PDFWork (deepMapP)
 
 type Duplicates :: Type
 data Duplicates = Duplicates
-  { dHash       :: !ObjectHash -- ^ Hash of the stream content.
-  , dDuplicates :: !(Set Int)
-    -- ^ Set of object numbers that share the same stream hash.
+  { -- | Hash of the stream content.
+    dHash :: !ObjectHash,
+    -- | Set of object numbers that share the same stream hash.
+    dDuplicates :: !(Set Int)
   }
 
 instance Eq Duplicates where
@@ -45,12 +48,12 @@ hasDuplicates = (> 1) . Set.size . dDuplicates
 originalAndDuplicates :: Duplicates -> (Int, [Int])
 originalAndDuplicates (Duplicates _hash objects) =
   case sort (Set.toList objects) of
-    (original:remains) -> (original, remains)
-    []                 -> (-1, [])
+    (original : remains) -> (original, remains)
+    []                   -> (-1, [])
 
 type DuplicatedObjects :: Type
-newtype DuplicatedObjects =
-  DuplicatedObjects (Map ObjectHash Duplicates)
+newtype DuplicatedObjects
+  = DuplicatedObjects (Map ObjectHash Duplicates)
 
 instance Show DuplicatedObjects where
   show (DuplicatedObjects mp) =
@@ -62,26 +65,26 @@ duplicateCount (DuplicatedObjects mp) =
       totalCount = Set.size . dDuplicates <$> Map.elems mp
    in sum totalCount - originalCount
 
-{-|
-Find duplicated objects in a PDF partition based on their stream content hash.
--}
-findDuplicatedObjects
-  :: Logging m
-  => PDFPartition
-  -> PDFWork m DuplicatedObjects
+-- |
+-- Find duplicated objects in a PDF partition based on their stream content hash.
+findDuplicatedObjects ::
+  (Logging m) =>
+  PDFPartition ->
+  PDFWork m DuplicatedObjects
 findDuplicatedObjects (PDFPartition objectsWithStream _ _ _) =
   withContext (ctx ("findDuplicatedObjects" :: String)) $ do
     sayP "Finding duplicated objects"
     uObjectsWithStream <- uncompressObjects objectsWithStream
     return
-      (DuplicatedObjects
-         $ Map.filter hasDuplicates
-         $ foldl updateDuplicates mempty uObjectsWithStream)
+      ( DuplicatedObjects $
+          Map.filter hasDuplicates $
+            foldl updateDuplicates mempty uObjectsWithStream
+      )
   where
-    updateDuplicates
-      :: Map ObjectHash Duplicates
-      -> PDFObject
-      -> Map ObjectHash Duplicates
+    updateDuplicates ::
+      Map ObjectHash Duplicates ->
+      PDFObject ->
+      Map ObjectHash Duplicates
     updateDuplicates duplicates object@(PDFIndirectObjectWithStream objectNumber _ _ _) =
       let streamHash = fromMaybe mempty (objectHash object)
           currentObject = Duplicates streamHash (Set.singleton objectNumber)
@@ -97,33 +100,32 @@ findDuplicatedObjects (PDFPartition objectsWithStream _ _ _) =
 
 buildReferenceMap :: DuplicatedObjects -> Map Int Int
 buildReferenceMap (DuplicatedObjects mp) = Map.foldl' insertReferences mempty mp
- where
-  insertReferences :: Map Int Int -> Duplicates -> Map Int Int
-  insertReferences acc duplicates =
-    let (original, duplicatesList) = originalAndDuplicates duplicates
-    in foldl' (flip (`Map.insert` original)) acc duplicatesList
+  where
+    insertReferences :: Map Int Int -> Duplicates -> Map Int Int
+    insertReferences acc duplicates =
+      let (original, duplicatesList) = originalAndDuplicates duplicates
+       in foldl' (flip (`Map.insert` original)) acc duplicatesList
 
-{-|
-Converts references to duplicated objects to point to a single original object.
--}
-convertDuplicatedReferences
-  :: Logging m
-  => DuplicatedObjects
-  -> PDFWork m ()
+-- |
+-- Converts references to duplicated objects to point to a single original object.
+convertDuplicatedReferences ::
+  (Logging m) =>
+  DuplicatedObjects ->
+  PDFWork m ()
 convertDuplicatedReferences duplicatedObjects =
   withContext (ctx ("convertDuplicatedReferences" :: String)) $ do
     sayP "Converting duplicated object references"
     modifyIndirectObjectsP convertAllReferences
- where
-  referenceMap :: Map Int Int
-  referenceMap = buildReferenceMap duplicatedObjects
+  where
+    referenceMap :: Map Int Int
+    referenceMap = buildReferenceMap duplicatedObjects
 
-  convertReference :: Logging m => PDFObject -> PDFWork m PDFObject
-  convertReference (PDFReference objNum genNum) =
-    case Map.lookup objNum referenceMap of
-      Just originalNum -> return $ PDFReference originalNum genNum
-      Nothing -> return $ PDFReference objNum genNum
-  convertReference otherObject = return otherObject
+    convertReference :: (Logging m) => PDFObject -> PDFWork m PDFObject
+    convertReference (PDFReference objNum genNum) =
+      case Map.lookup objNum referenceMap of
+        Just originalNum -> return $ PDFReference originalNum genNum
+        Nothing          -> return $ PDFReference objNum genNum
+    convertReference otherObject = return otherObject
 
-  convertAllReferences :: Logging m => PDFObject -> PDFWork m PDFObject
-  convertAllReferences = deepMapP convertReference
+    convertAllReferences :: (Logging m) => PDFObject -> PDFWork m PDFObject
+    convertAllReferences = deepMapP convertReference
