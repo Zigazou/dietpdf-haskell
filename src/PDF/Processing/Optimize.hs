@@ -394,10 +394,10 @@ optimize object = withContext (ctx ("optimize" :: String) <> ctx object) $ do
     then
       -- refilter object
       tryP (refilter object) >>= \case
-       Right optimizedObject -> return optimizedObject
-       Left  theError         -> do
-         sayErrorP "cannot optimize" theError
-         return object
+        Right optimizedObject -> return optimizedObject
+        Left  theError        -> do
+          sayErrorP "cannot optimize" theError
+          return object
     else do
       sayP "ignored"
       return object

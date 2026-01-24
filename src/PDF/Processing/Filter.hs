@@ -30,6 +30,7 @@ import Data.PDF.PDFObject
   ( PDFObject (PDFName, PDFNumber, PDFNumber, PDFXRefStream)
   , getObjectNumber
   , hasStream
+  , streamLength
   )
 import Data.PDF.PDFWork (PDFWork, getMasks, withContext)
 import Data.Sequence ((><))
@@ -106,6 +107,7 @@ filterOptimize
   -> PDFWork IO PDFObject
 filterOptimize optimization object
   | not (hasStream object) = return object
+  | streamLength object == Just 0 = return object
   | otherwise = withContext (ctx ("filterOptimize" :: String)) $ do
     stream          <- getStream object
     filters         <- getFilters object

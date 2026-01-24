@@ -6,8 +6,8 @@ import Data.ByteString (ByteString)
 import Data.Map.Strict (fromList)
 
 import PDF.Object.Object
-    ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFReference)
-    )
+  ( PDFObject (PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFReference)
+  )
 import PDF.Object.Parser.IndirectObject (indirectObjectP)
 
 import Test.Hspec (Spec, describe)
@@ -77,6 +77,38 @@ indirectObjectExamples =
       \***********************************************************************\
       \***********************************************************************\
       \*****************"
+    )
+  , ( "497 0 obj\x0D<</BBox[0.0 841.89 566.929 0.0]/Filter/FlateDecode/Length 9\
+      \/Matrix[1.0 0.0 0.0 1.0 0.0 0.0]/Resources<<>>/Subtype/Form>>\
+      \stream\x0D\x0A\x48\x89\x02\x0C\x00\x00\x00\x00\x01\rendstream\x0D\
+      \endobj"
+    , PDFIndirectObjectWithStream
+      497
+      0
+      (fromList
+        [ ("BBox", PDFDictionary (fromList
+            [ ("0", PDFNumber 0.0)
+            , ("1", PDFNumber 841.89)
+            , ("2", PDFNumber 566.929)
+            , ("3", PDFNumber 0.0)
+            ])
+          )
+        , ("Filter", PDFName "FlateDecode")
+        , ("Length", PDFNumber 9.0)
+        , ("Matrix", PDFDictionary (fromList
+            [ ("0", PDFNumber 1.0)
+            , ("1", PDFNumber 0.0)
+            , ("2", PDFNumber 0.0)
+            , ("3", PDFNumber 1.0)
+            , ("4", PDFNumber 0.0)
+            , ("5", PDFNumber 0.0)
+            ])
+          )
+        , ("Resources", PDFDictionary mempty)
+        , ("Subtype", PDFName "Form")
+        ]
+      )
+      "\x48\x89\x02\x0C\x00\x00\x00\x00\x01"
     )
   ]
 

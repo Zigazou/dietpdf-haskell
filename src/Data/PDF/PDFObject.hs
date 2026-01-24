@@ -33,6 +33,7 @@ module Data.PDF.PDFObject
   , mkPDFDictionary
   , hasDictionary
   , hasStream
+  , streamLength
   , isIndirect
   , getObjectNumber
   , isHeader
@@ -42,6 +43,7 @@ module Data.PDF.PDFObject
 
 import Data.Array (Array, mkArray, mkEmptyArray)
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Context (Context (Context), Contextual (ctx), ctx2)
 import Data.Kind (Type)
 import Data.PDF.GFXObjects (GFXObjects)
@@ -251,6 +253,15 @@ hasStream PDFIndirectObjectWithStream{} = True
 hasStream PDFObjectStream{}             = True
 hasStream PDFXRefStream{}               = True
 hasStream _anyOtherObject               = False
+
+{-|
+Get the length of the stream contained in a `PDFObject`, if any.
+-}
+streamLength :: PDFObject -> Maybe Int
+streamLength (PDFIndirectObjectWithStream _ _ _ stream) = Just (BS.length stream)
+streamLength (PDFObjectStream _ _ _ stream) = Just (BS.length stream)
+streamLength (PDFXRefStream _ _ _ stream) = Just (BS.length stream)
+streamLength _anyOtherObject = Nothing
 
 {-|
 Determine if a `PDFObject` is an indirect object.
