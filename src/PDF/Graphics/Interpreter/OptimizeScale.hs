@@ -12,8 +12,8 @@ module PDF.Graphics.Interpreter.OptimizeScale
 import Data.Foldable qualified as Foldable
 import Data.PDF.Command (Command (cOperator, cParameters), mkCommand)
 import Data.PDF.GFXObject
-  ( GFXObject (GFXNumber)
-  , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineWidth, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing)
+  ( GFXObject (GFXNumber, GFXArray)
+  , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineWidth, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing, GSSetLineDashPattern)
   )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq ((:<|)), (<|), (|>))
@@ -129,8 +129,9 @@ optimizeScale scale program
       GSSetCharacterSpacing -> scaleAllParams cmd
       GSSetTextLeading      -> scaleAllParams cmd
 
-      -- Line width - scale the width parameter
-      GSSetLineWidth     -> scaleAllParams cmd
+      -- Line style - scale all parameters
+      GSSetLineWidth       -> scaleAllParams cmd
+      GSSetLineDashPattern -> scaleAllParams cmd
 
       -- CTM transformation - scale translation parameters (positions 4 and 5)
       GSSetCTM           -> scaleCTMParams cmd
@@ -144,8 +145,9 @@ optimizeScale scale program
 
     -- Scale a single parameter if it's a number
     scaleParam :: GFXObject -> GFXObject
-    scaleParam (GFXNumber n) = GFXNumber (n * scale)
-    scaleParam other         = other
+    scaleParam (GFXNumber n)  = GFXNumber (n * scale)
+    scaleParam (GFXArray arr) = GFXArray (fmap scaleParam arr)
+    scaleParam other          = other
 
     -- Scale only the translation parameters (e and f) of a CTM command
     scaleCTMParams :: Command -> Command
