@@ -10,7 +10,6 @@ module PDF.Object.Object.PDFCharacter
     isDelimiter
   , isPlusMinus
   , isWhiteSpace
-  , isSpace
   , isKeywordCharacter
   , isOctal
   , isStringEscapeSequence
@@ -76,18 +75,6 @@ isWhiteSpace AsciiHT            = True
 isWhiteSpace AsciiNUL           = True
 isWhiteSpace AsciiFF            = True
 isWhiteSpace _anyOtherCharacter = False
-
-{-|
-Test whether a byte is a space character (subset of whitespace).
-
-The following characters are considered spaces:
-
-- NUL (null, 0x00)
-- HT (horizontal tab, 0x09)
-- SP (space, 0x20)
--}
-isSpace :: Word8 -> Bool
-isSpace = isJust . flip BS.elemIndex "\0\t "
 
 {-|
 Test whether a byte is a valid keyword character.
