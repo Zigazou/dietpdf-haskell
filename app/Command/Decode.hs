@@ -65,11 +65,11 @@ Note: This function produces its result by writing to stdout rather than
 returning the decoded bytes. Redirect stdout if you need to capture the output.
 -}
 decodeByteString :: Codec -> ByteString -> FallibleT IO ()
-decodeByteString RLE        binData = manage $ RL.decompress binData
-decodeByteString Deflate    binData = manage $ FL.decompress binData
-decodeByteString Brotli     binData = manage $ BR.decompress binData
-decodeByteString NoCompress binData = manage $ FL.decompress binData
-decodeByteString Zopfli     binData = manage $ FL.decompress binData
-decodeByteString Ascii85    binData = manage $ A8.decode binData
-decodeByteString Hex        binData = manage $ AH.decode binData
-decodeByteString LZW        binData = manage $ LZ.decompress binData
+decodeByteString RLE        = manage . RL.decompress
+decodeByteString Deflate    = manage . FL.decompress
+decodeByteString Brotli     = manage . BR.decompress
+decodeByteString NoCompress = manage . FL.decompress
+decodeByteString Zopfli     = manage . FL.decompress
+decodeByteString Ascii85    = manage . A8.decode
+decodeByteString Hex        = manage . AH.decode
+decodeByteString LZW        = manage . LZ.decompress

@@ -54,6 +54,7 @@ Codec mappings used:
 
 * 'RLE'        → run-length encoder ('RL.compress').
 * 'Deflate'    → fast Deflate encoder ('FL.fastCompress').
+* 'Brotli'     → Brotli encoder ('BR.compress').
 * 'LZW'        → LZW encoder ('LZW.compress').
 * 'NoCompress' → Deflate stream without compression ('FL.noCompress').
 * 'Zopfli'     → high-density Deflate encoder ('FL.compress').
@@ -64,11 +65,11 @@ Note: This function produces its result by writing to stdout rather than
 returning the encoded bytes. Redirect stdout if you need to capture the output.
 -}
 encodeByteString :: Codec -> ByteString -> FallibleT IO ()
-encodeByteString RLE        binData = manage $ RL.compress binData
-encodeByteString Deflate    binData = manage $ FL.fastCompress binData
-encodeByteString Brotli     binData = manage $ BR.compress binData
-encodeByteString LZW        binData = manage $ LZW.compress binData
-encodeByteString NoCompress binData = manage $ FL.noCompress binData
-encodeByteString Zopfli     binData = manage $ FL.compress binData
-encodeByteString Ascii85    binData = manage $ A8.encode binData
-encodeByteString Hex        binData = manage $ AH.encode binData
+encodeByteString RLE        = manage . RL.compress
+encodeByteString Deflate    = manage . FL.fastCompress
+encodeByteString Brotli     = manage . BR.compress
+encodeByteString LZW        = manage . LZW.compress
+encodeByteString NoCompress = manage . FL.noCompress
+encodeByteString Zopfli     = manage . FL.compress
+encodeByteString Ascii85    = manage . A8.encode
+encodeByteString Hex        = manage . AH.encode
