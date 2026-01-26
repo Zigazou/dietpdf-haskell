@@ -19,11 +19,11 @@ import Data.ByteString (ByteString)
 import Data.Logging (Logging)
 import Data.PDF.FilterCombination (FilterCombination, fcBytes, mkFCAppend)
 import Data.PDF.PDFWork (PDFWork)
-import Data.PDF.Settings (sZopfli)
+import Data.PDF.Settings (sCompressor)
 import Data.PDF.WorkData (wSettings)
 
-import PDF.Processing.ApplyFilter.Helpers (filterInfoZopfli)
-import PDF.Processing.FilterCombine.Zopfli (zopfli)
+import PDF.Processing.ApplyFilter.Helpers (filterInfoCompressor)
+import PDF.Processing.FilterCombine.Compressor (compressor)
 
 {-|
 Evaluate filter candidates.
@@ -36,11 +36,11 @@ applyEveryFilterText
   -> ByteString
   -> PDFWork IO [FilterCombination]
 applyEveryFilterText _anyBitmapConfig stream = do
-  useZopfli <- gets (sZopfli . wSettings)
+  useCompressor <- gets (sCompressor . wSettings)
 
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  filterInfoZopfli useZopfli "" stream (fcBytes rZopfli)
+  rCompressor <- lift (except $ compressor Nothing stream useCompressor)
+  filterInfoCompressor useCompressor "" stream (fcBytes rCompressor)
 
-  return [rNothing, rZopfli]
+  return [rNothing, rCompressor]

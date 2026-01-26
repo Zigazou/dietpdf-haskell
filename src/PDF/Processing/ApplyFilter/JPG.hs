@@ -15,7 +15,7 @@ When image metadata is available, JPEG 2000 conversion is attempted and all
 results are logged for comparison.
 -}
 module PDF.Processing.ApplyFilter.JPG
-  ( applyEveryFilterJPG) where
+  (applyEveryFilterJPG) where
 
 
 import Control.Monad.State (gets, lift)
@@ -30,13 +30,13 @@ import Data.PDF.FilterCombination
   (FilterCombination, fcBytes, mkFCAppend, mkFCReplace)
 import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 import Data.PDF.PDFWork (PDFWork)
-import Data.PDF.Settings (sZopfli)
+import Data.PDF.Settings (sCompressor)
 import Data.PDF.WorkData (wSettings)
 
 import External.JpegToJpeg2k (jpegToJpeg2k)
 
-import PDF.Processing.ApplyFilter.Helpers (filterInfo, filterInfoZopfli)
-import PDF.Processing.FilterCombine.Zopfli (zopfli)
+import PDF.Processing.ApplyFilter.Helpers (filterInfo, filterInfoCompressor)
+import PDF.Processing.FilterCombine.Compressor (compressor)
 
 {-|
 Evaluate filter candidates specifically for JPEG content streams.
@@ -52,11 +52,11 @@ applyEveryFilterJPG
   -> ByteString
   -> PDFWork IO [FilterCombination]
 applyEveryFilterJPG _objectIsAMask (Just _imageProperty) stream = do
-  useZopfli <- gets (sZopfli . wSettings)
+  useCompressor <- gets (sCompressor . wSettings)
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  filterInfoZopfli useZopfli "" stream (fcBytes rZopfli)
+  rCompressor <- lift (except $ compressor Nothing stream useCompressor)
+  filterInfoCompressor useCompressor "" stream (fcBytes rCompressor)
 
   -- Try Jpeg2000 for images with less than 4 components.
   let jpeg2kQuality :: Int
@@ -66,13 +66,13 @@ applyEveryFilterJPG _objectIsAMask (Just _imageProperty) stream = do
          <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
   filterInfo "JPEG2000" stream (fcBytes rJpeg2k)
 
-  return [rNothing, rZopfli, rJpeg2k]
+  return [rNothing, rCompressor, rJpeg2k]
 
 applyEveryFilterJPG _objectIsAMask Nothing stream = do
-  useZopfli <- gets (sZopfli . wSettings)
+  useCompressor <- gets (sCompressor . wSettings)
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  filterInfoZopfli useZopfli "" stream (fcBytes rZopfli)
+  rCompressor <- lift (except $ compressor Nothing stream useCompressor)
+  filterInfoCompressor useCompressor "" stream (fcBytes rCompressor)
 
-  return [rNothing, rZopfli]
+  return [rNothing, rCompressor]

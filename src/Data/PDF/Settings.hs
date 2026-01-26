@@ -6,13 +6,13 @@ optimizations and integrations with external tools (GhostScript, pdf-to-cairo,
 Zopfli). Helpers are provided to convert booleans to these flags.
 -}
 module Data.PDF.Settings
-  ( Settings(Settings, sOptimizeGFX, sZopfli, sUseGhostScript, sUsePDFToCairo)
+  ( Settings(Settings, sOptimizeGFX, sCompressor, sUseGhostScript, sUsePDFToCairo)
   , OptimizeGFX(OptimizeGFX, DoNotOptimizeGFX)
-  , UseZopfli(UseZopfli, UseDeflate)
+  , UseCompressor(UseZopfli, UseDeflate, UseBrotli)
   , UseGhostScript(UseGhostScript, DoNotUseGhostScript)
   , UsePDFToCairo(UsePDFToCairo, DoNotUsePDFToCairo)
   , defaultSettings
-  , toUseZopfli
+  , toUseCompressor
   , toOptimizeGFX
   , toUseGhostScript
   , toUsePDFToCairo
@@ -21,21 +21,18 @@ module Data.PDF.Settings
 import Data.Kind (Type)
 
 {-|
-Flag indicating whether to use Zopfli compression or standard deflate.
+Flag indicating whether to use Zopfli compression, standard deflate, or Brotli.
 -}
-type UseZopfli :: Type
-data UseZopfli = UseZopfli -- ^ Use Zopfli compression
-               | UseDeflate -- ^ Use standard deflate compression
-               deriving stock Eq
+type UseCompressor :: Type
+data UseCompressor = UseZopfli -- ^ Use Zopfli compression
+                   | UseDeflate -- ^ Use standard deflate compression
+                   | UseBrotli -- ^ Use Brotli compression
+                   deriving stock Eq
 
-{-|
-Convert a boolean to a 'UseZopfli' flag.
-
-'True' enables Zopfli; 'False' selects standard deflate.
--}
-toUseZopfli :: Bool -> UseZopfli
-toUseZopfli True  = UseZopfli
-toUseZopfli False = UseDeflate
+toUseCompressor :: Maybe String -> UseCompressor
+toUseCompressor (Just "deflate") = UseDeflate
+toUseCompressor (Just "brotli")  = UseBrotli
+toUseCompressor _anyOtherCase    = UseZopfli
 
 {-|
 Flag indicating whether to optimize graphics content.
@@ -94,7 +91,7 @@ Settings controlling optimizations and external tool usage.
 type Settings :: Type
 data Settings = Settings
   { sOptimizeGFX    :: !OptimizeGFX    -- ^ Graphics optimization flag
-  , sZopfli         :: !UseZopfli      -- ^ Zopfli compression flag
+  , sCompressor     :: !UseCompressor  -- ^ Compressor flag
   , sUseGhostScript :: !UseGhostScript -- ^ GhostScript usage flag
   , sUsePDFToCairo  :: !UsePDFToCairo  -- ^ pdf-to-cairo usage flag
   }
@@ -106,9 +103,9 @@ By default: graphics optimization enabled, Zopfli enabled, GhostScript
 disabled, pdf-to-cairo disabled.
 -}
 defaultSettings :: Settings
-defaultSettings = Settings 
+defaultSettings = Settings
   { sOptimizeGFX    = OptimizeGFX
-  , sZopfli         = UseZopfli
+  , sCompressor     = UseZopfli
   , sUseGhostScript = DoNotUseGhostScript
   , sUsePDFToCairo  = DoNotUsePDFToCairo
   }

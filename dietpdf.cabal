@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Codec.Compression.BrotliForPDF
       Codec.Compression.Flate
       Codec.Compression.LZW
       Codec.Compression.LZW.LZWDecode
@@ -201,23 +202,20 @@ library
       PDF.Processing.ApplyFilter.Helpers
       PDF.Processing.ApplyFilter.ICC
       PDF.Processing.ApplyFilter.JPG
-      PDF.Processing.ApplyFilter.OnlyZopfli
+      PDF.Processing.ApplyFilter.OnlyCompressor
       PDF.Processing.ApplyFilter.Text
       PDF.Processing.ApplyFilter.XRef
       PDF.Processing.DuplicatedObjects
       PDF.Processing.Filter
-      PDF.Processing.FilterCombine.Deflate
+      PDF.Processing.FilterCombine.Compressor
       PDF.Processing.FilterCombine.Jpeg2k
       PDF.Processing.FilterCombine.Lzw
-      PDF.Processing.FilterCombine.PredDeflate
+      PDF.Processing.FilterCombine.PredCompressor
       PDF.Processing.FilterCombine.PredLzw
-      PDF.Processing.FilterCombine.PredRleZopfli
-      PDF.Processing.FilterCombine.PredZopfli
+      PDF.Processing.FilterCombine.PredRleCompressor
       PDF.Processing.FilterCombine.Rle
+      PDF.Processing.FilterCombine.RleCompressor
       PDF.Processing.FilterCombine.RleLzw
-      PDF.Processing.FilterCombine.RleZopfli
-      PDF.Processing.FilterCombine.Zopfli
-      PDF.Processing.FilterCombine.ZopfliRle
       PDF.Processing.ObjectCategory
       PDF.Processing.ObjectInfo
       PDF.Processing.Optimize
@@ -278,6 +276,7 @@ library
     , base64-bytestring
     , binary
     , binary-parsers
+    , brotli
     , bytestring
     , containers
     , cryptonite

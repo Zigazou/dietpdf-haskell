@@ -5,14 +5,14 @@ This module builds candidate 'FilterCombination's using:
 
 * No-op (append)
 * Run-Length Encoding (@RLEDecode@)
-* Deflate/Zopfli (@FlateDecode@), optionally with predictors
-* Predictor + Deflate/Zopfli variants (PNG/TIFF)
-* @RLEDecode@ combined with Deflate/Zopfli when beneficial
+* Deflate/Compressor (@FlateDecode@), optionally with predictors
+* Predictor + Deflate/Compressor variants (PNG/TIFF)
+* @RLEDecode@ combined with Deflate/Compressor when beneficial
 * JPEG 2000 (@JPXDecode@) when width/components are known
 
 Selection depends on available 'BitmapConfiguration': when present, more
 image-aware candidates are considered (predictors and JPEG2000). When missing,
-the set is restricted to RLE and Deflate/Zopfli options.
+the set is restricted to RLE and Deflate/Compressor options.
 
 All candidates are logged via helper functions so downstream code can choose
 the best compression.
@@ -35,26 +35,26 @@ import Data.Logging (Logging)
 import Data.PDF.FilterCombination
   (FilterCombination, fcBytes, fcLength, mkFCAppend)
 import Data.PDF.PDFWork (PDFWork)
-import Data.PDF.Settings (sZopfli)
+import Data.PDF.Settings (sCompressor)
 import Data.PDF.WorkData (wSettings)
 
 import PDF.Processing.ApplyFilter.Helpers
-  (filterInfo, filterInfoZopfli, predictorLabel)
+  (filterInfo, filterInfoCompressor, predictorLabel)
 import PDF.Processing.FilterCombine.Jpeg2k (jpeg2k)
-import PDF.Processing.FilterCombine.PredRleZopfli (predRleZopfli)
-import PDF.Processing.FilterCombine.PredZopfli (predZopfli)
+import PDF.Processing.FilterCombine.PredRleCompressor (predRleCompressor)
+import PDF.Processing.FilterCombine.PredCompressor (predCompressor)
 import PDF.Processing.FilterCombine.Rle (rle)
-import PDF.Processing.FilterCombine.RleZopfli (rleZopfli)
-import PDF.Processing.FilterCombine.Zopfli (zopfli)
+import PDF.Processing.FilterCombine.RleCompressor (rleCompressor)
+import PDF.Processing.FilterCombine.Compressor (compressor)
 
 {-|
 Evaluate all generic filter candidates for a stream.
 
 Behavior depends on the presence of width/components metadata:
 
-* When available, considers RLE, Zopfli/Deflate, predictor variants, and
-  JPEG2000; optionally combines RLE with Zopfli/Deflate when beneficial.
-* When missing, limits to RLE and Zopfli/Deflate options.
+* When available, considers RLE, Compressor/Deflate, predictor variants, and
+  JPEG2000; optionally combines RLE with Compressor/Deflate when beneficial.
+* When missing, limits to RLE and Compressor/Deflate options.
 
 Returns candidate `FilterCombination`s to compare downstream.
 -}
@@ -65,7 +65,7 @@ applyEveryFilterGeneric
   -> ByteString
   -> PDFWork IO [FilterCombination]
 applyEveryFilterGeneric objectIsAMask (Just bitmapConfig) stream = do
-  useZopfli <- gets (sZopfli . wSettings)
+  useCompressor <- gets (sCompressor . wSettings)
 
   let rNothing = mkFCAppend [] stream
       width = bcLineWidth bitmapConfig
@@ -82,35 +82,35 @@ applyEveryFilterGeneric objectIsAMask (Just bitmapConfig) stream = do
   rRle <- lift (except $ rle (Just bitmapConfig) stream)
   filterInfo "RLE" stream (fcBytes rRle)
 
-  rZopfli <- lift (except $ zopfli (Just bitmapConfig) stream useZopfli)
-  filterInfoZopfli useZopfli "" stream (fcBytes rZopfli)
+  rCompressor <- lift (except $ compressor (Just bitmapConfig) stream useCompressor)
+  filterInfoCompressor useCompressor "" stream (fcBytes rCompressor)
 
   rleCombine <- if fcLength rRle < BS.length stream
     then do
-      rRleZopfli <- lift (except $ rleZopfli (Just bitmapConfig) stream useZopfli)
-      filterInfoZopfli useZopfli "RLE+" stream (fcBytes rRleZopfli)
+      rRleCompressor <- lift (except $ rleCompressor (Just bitmapConfig) stream useCompressor)
+      filterInfoCompressor useCompressor "RLE+" stream (fcBytes rRleCompressor)
 
-      return [rRle, rRleZopfli]
+      return [rRle, rRleCompressor]
     else
       return []
 
-  rPredZopfli <- lift (except $ predZopfli (Just bitmapConfig) stream useZopfli)
-  filterInfoZopfli useZopfli
-                   (predictorLabel rPredZopfli <> "/")
+  rPredCompressor <- lift (except $ predCompressor (Just bitmapConfig) stream useCompressor)
+  filterInfoCompressor useCompressor
+                   (predictorLabel rPredCompressor <> "/")
                    stream
-                   (fcBytes rPredZopfli)
+                   (fcBytes rPredCompressor)
 
-  rPredRleZopfli <- lift (except $ predRleZopfli (Just bitmapConfig) stream useZopfli)
-  filterInfoZopfli useZopfli
-                   (predictorLabel rPredRleZopfli <> "/RLE+")
+  rPredRleCompressor <- lift (except $ predRleCompressor (Just bitmapConfig) stream useCompressor)
+  filterInfoCompressor useCompressor
+                   (predictorLabel rPredRleCompressor <> "/RLE+")
                    stream
-                   (fcBytes rPredRleZopfli)
+                   (fcBytes rPredRleCompressor)
 
-  return $ [rNothing, rZopfli, rPredZopfli, rPredRleZopfli, rJpeg2k]
+  return $ [rNothing, rCompressor, rPredCompressor, rPredRleCompressor, rJpeg2k]
         ++ rleCombine
 
 applyEveryFilterGeneric _objectIsAMask Nothing stream = do
-  useZopfli <- gets (sZopfli . wSettings)
+  useCompressor <- gets (sCompressor . wSettings)
 
   let
     rNothing = mkFCAppend [] stream
@@ -128,44 +128,44 @@ applyEveryFilterGeneric _objectIsAMask Nothing stream = do
   rRle <- lift (except $ rle Nothing stream)
   filterInfo "RLE" stream (fcBytes rRle)
 
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  filterInfoZopfli useZopfli "" stream (fcBytes rZopfli)
+  rCompressor <- lift (except $ compressor Nothing stream useCompressor)
+  filterInfoCompressor useCompressor "" stream (fcBytes rCompressor)
 
-  rPredZopfli <- lift (except $ predZopfli Nothing stream useZopfli)
-  filterInfoZopfli useZopfli
-                   (predictorLabel rPredZopfli)
+  rPredCompressor <- lift (except $ predCompressor Nothing stream useCompressor)
+  filterInfoCompressor useCompressor
+                   (predictorLabel rPredCompressor)
                    stream
-                   (fcBytes rPredZopfli)
+                   (fcBytes rPredCompressor)
 
-  rPred4Zopfli <- lift (except $ predZopfli (Just b4bits1comp) stream useZopfli)
-  filterInfoZopfli useZopfli
-                   (predictorLabel rPred4Zopfli <> "4/")
+  rPred4Compressor <- lift (except $ predCompressor (Just b4bits1comp) stream useCompressor)
+  filterInfoCompressor useCompressor
+                   (predictorLabel rPred4Compressor <> "4/")
                    stream
-                   (fcBytes rPred4Zopfli)
+                   (fcBytes rPred4Compressor)
 
-  rPred2Zopfli <- lift (except $ predZopfli (Just b2bits1comp) stream useZopfli)
-  filterInfoZopfli useZopfli
-                   (predictorLabel rPred2Zopfli <> "2/")
+  rPred2Compressor <- lift (except $ predCompressor (Just b2bits1comp) stream useCompressor)
+  filterInfoCompressor useCompressor
+                   (predictorLabel rPred2Compressor <> "2/")
                    stream
-                   (fcBytes rPred2Zopfli)
+                   (fcBytes rPred2Compressor)
 
   if fcLength rRle < BS.length stream
     then do
-      rRleZopfli <- lift (except $ rleZopfli Nothing stream useZopfli)
-      filterInfoZopfli useZopfli "RLE+" stream (fcBytes rRleZopfli)
+      rRleCompressor <- lift (except $ rleCompressor Nothing stream useCompressor)
+      filterInfoCompressor useCompressor "RLE+" stream (fcBytes rRleCompressor)
 
       return [ rNothing
              , rRle
-             , rZopfli
-             , rRleZopfli
-             , rPredZopfli
-             , rPred4Zopfli
-             , rPred2Zopfli
+             , rCompressor
+             , rRleCompressor
+             , rPredCompressor
+             , rPred4Compressor
+             , rPred2Compressor
              ]
     else
       return [ rNothing
-             , rZopfli
-             , rPredZopfli
-             , rPred4Zopfli
-             , rPred2Zopfli
+             , rCompressor
+             , rPredCompressor
+             , rPred4Compressor
+             , rPred2Compressor
              ]

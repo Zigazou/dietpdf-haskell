@@ -41,7 +41,7 @@ import Data.Fallible (FallibleT, tryF)
 import Data.Logging (sayComparisonF)
 import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.Settings
-  ( Settings (Settings, sOptimizeGFX, sUseGhostScript, sUsePDFToCairo, sZopfli)
+  ( Settings (Settings, sCompressor, sOptimizeGFX, sUseGhostScript, sUsePDFToCairo)
   , UseGhostScript (DoNotUseGhostScript, UseGhostScript)
   , UsePDFToCairo (DoNotUsePDFToCairo, UsePDFToCairo)
   )
@@ -131,9 +131,9 @@ runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 
-runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useZopfli optimizeGFX overwriteFile) = do
+runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useCompressor optimizeGFX overwriteFile) = do
   let settings = Settings { sOptimizeGFX    = optimizeGFX
-                          , sZopfli         = useZopfli
+                          , sCompressor     = useCompressor
                           , sUseGhostScript = useGS
                           , sUsePDFToCairo  = usePTC
                           }

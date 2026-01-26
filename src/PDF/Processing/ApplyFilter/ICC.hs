@@ -24,12 +24,12 @@ import Data.ByteString (ByteString)
 import Data.Logging (Logging)
 import Data.PDF.FilterCombination (FilterCombination, fcBytes, mkFCAppend)
 import Data.PDF.PDFWork (PDFWork)
-import Data.PDF.Settings (sZopfli)
+import Data.PDF.Settings (sCompressor)
 import Data.PDF.WorkData (wSettings)
 
-import PDF.Processing.ApplyFilter.Helpers (filterInfoZopfli, predictorLabel)
-import PDF.Processing.FilterCombine.PredZopfli (predZopfli)
-import PDF.Processing.FilterCombine.Zopfli (zopfli)
+import PDF.Processing.ApplyFilter.Helpers (filterInfoCompressor, predictorLabel)
+import PDF.Processing.FilterCombine.Compressor (compressor)
+import PDF.Processing.FilterCombine.PredCompressor (predCompressor)
 
 {-|
 Evaluate filter candidates specifically for ICC profile streams.
@@ -40,12 +40,12 @@ applyEveryFilterICC
   -> ByteString
   -> PDFWork IO [FilterCombination]
 applyEveryFilterICC _anyBitmapConfig stream = do
-  useZopfli <- gets (sZopfli . wSettings)
+  useCompressor <- gets (sCompressor . wSettings)
 
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  filterInfoZopfli useZopfli "" stream (fcBytes rZopfli)
+  rZopfli <- lift (except $ compressor Nothing stream useCompressor)
+  filterInfoCompressor useCompressor "" stream (fcBytes rZopfli)
 
   let bitmapConfig = BitmapConfiguration
         { bcLineWidth        = 1
@@ -53,10 +53,10 @@ applyEveryFilterICC _anyBitmapConfig stream = do
         , bcBitsPerComponent = BC8Bits
         }
 
-  rPred2Zopfli <- lift (except $ predZopfli (Just bitmapConfig) stream useZopfli)
-  filterInfoZopfli useZopfli
-                   (predictorLabel rPred2Zopfli <> "2/")
+  rPred2Compressor <- lift (except $ predCompressor (Just bitmapConfig) stream useCompressor)
+  filterInfoCompressor useCompressor
+                   (predictorLabel rPred2Compressor <> "2/")
                    stream
-                   (fcBytes rPred2Zopfli)
+                   (fcBytes rPred2Compressor)
 
-  return [rNothing, rZopfli, rPred2Zopfli]
+  return [rNothing, rZopfli, rPred2Compressor]

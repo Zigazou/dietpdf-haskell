@@ -22,18 +22,18 @@ import Data.ByteString (ByteString)
 import Data.Logging (Logging)
 import Data.PDF.FilterCombination (FilterCombination, fcBytes, mkFCAppend)
 import Data.PDF.PDFWork (PDFWork)
-import Data.PDF.Settings (sZopfli)
+import Data.PDF.Settings (sCompressor)
 import Data.PDF.WorkData (wSettings)
 
-import PDF.Processing.ApplyFilter.Helpers (filterInfoZopfli, predictorLabel)
-import PDF.Processing.FilterCombine.PredZopfli (predZopfli)
-import PDF.Processing.FilterCombine.Zopfli (zopfli)
+import PDF.Processing.ApplyFilter.Helpers (filterInfoCompressor, predictorLabel)
+import PDF.Processing.FilterCombine.Compressor (compressor)
+import PDF.Processing.FilterCombine.PredCompressor (predCompressor)
 
 {-|
 Evaluate filter candidates for XRef streams.
 
-Prefers Predictor + Zopfli/Deflate when width/components are known; otherwise
-offers a no-op and Zopfli/Deflate.
+Prefers Predictor + Compressor when width/components are known; otherwise
+offers a no-op and Compressor.
 -}
 applyEveryFilterXRef
   :: Logging m
@@ -41,20 +41,20 @@ applyEveryFilterXRef
   -> ByteString
   -> PDFWork m [FilterCombination]
 applyEveryFilterXRef (Just bitmapConfig) stream = do
-  useZopfli <- gets (sZopfli . wSettings)
-  rPredZopfli <- lift (except $ predZopfli (Just bitmapConfig) stream useZopfli)
-  filterInfoZopfli useZopfli
-                   (predictorLabel rPredZopfli <> "/")
+  useCompressor <- gets (sCompressor . wSettings)
+  rPredCompressor <- lift (except $ predCompressor (Just bitmapConfig) stream useCompressor)
+  filterInfoCompressor useCompressor
+                   (predictorLabel rPredCompressor <> "/")
                    stream
-                   (fcBytes rPredZopfli)
+                   (fcBytes rPredCompressor)
 
-  return [rPredZopfli]
+  return [rPredCompressor]
 
 applyEveryFilterXRef Nothing stream = do
-  useZopfli <- gets (sZopfli . wSettings)
+  useCompressor <- gets (sCompressor . wSettings)
   let rNothing = mkFCAppend [] stream
 
-  rZopfli <- lift (except $ zopfli Nothing stream useZopfli)
-  filterInfoZopfli useZopfli "" stream (fcBytes rZopfli)
+  rCompressor <- lift (except $ compressor Nothing stream useCompressor)
+  filterInfoCompressor useCompressor "" stream (fcBytes rCompressor)
 
-  return [rNothing, rZopfli]
+  return [rNothing, rCompressor]

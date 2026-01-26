@@ -5,7 +5,7 @@ Provides:
 
 * 'filterInfo' — logs before/after sizes for any filter.
 * 'filterInfoZopfli' — prefixes the log with “Zopfli” or “Deflate”
-  depending on 'UseZopfli'.
+  depending on 'UseCompressor'.
 * 'predictorLabel' — returns a short text identifying the first predictor
   in a combination (PNG/TIFF group).
 
@@ -13,7 +13,7 @@ These helpers are intended for human-readable comparison output while
 evaluating compression strategies.
 -}
 module PDF.Processing.ApplyFilter.Helpers
-  (predictorLabel, filterInfoZopfli, filterInfo) where
+  (predictorLabel, filterInfoCompressor, filterInfo) where
 
 import Codec.Compression.Predict.Predictor (isPNGGroup)
 
@@ -22,7 +22,7 @@ import Data.ByteString qualified as BS
 import Data.Logging (Logging)
 import Data.PDF.FilterCombination (FilterCombination, firstPredictor)
 import Data.PDF.PDFWork (PDFWork, sayComparisonP)
-import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli))
+import Data.PDF.Settings (UseCompressor (UseBrotli, UseDeflate, UseZopfli))
 import Data.Text (Text)
 import Data.Text qualified as T
 
@@ -44,19 +44,21 @@ filterInfo filterName streamBefore streamAfter =
 
 {-|
 Log a comparison line for Zopfli/Deflate filter application, depending on the
-`UseZopfli` setting.
+`UseCompressor` setting.
 -}
-filterInfoZopfli
+filterInfoCompressor
   :: Logging m
-  => UseZopfli
+  => UseCompressor
   -> T.Text
   -> ByteString
   -> ByteString
   -> PDFWork m ()
-filterInfoZopfli UseZopfli filterName streamBefore streamAfter =
+filterInfoCompressor UseZopfli filterName streamBefore streamAfter =
   filterInfo (filterName <> "Zopfli") streamBefore streamAfter
-filterInfoZopfli UseDeflate filterName streamBefore streamAfter =
+filterInfoCompressor UseDeflate filterName streamBefore streamAfter =
   filterInfo (filterName <> "Deflate") streamBefore streamAfter
+filterInfoCompressor UseBrotli filterName streamBefore streamAfter =
+  filterInfo (filterName <> "Brotli") streamBefore streamAfter
 
 {-|
 Generate a prefix string for logging based on the first predictor in the

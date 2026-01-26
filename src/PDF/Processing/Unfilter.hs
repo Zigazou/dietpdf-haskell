@@ -11,6 +11,7 @@ module PDF.Processing.Unfilter
   ( unfilter
   ) where
 
+import Codec.Compression.BrotliForPDF qualified as BR
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.LZW qualified as LZ
 import Codec.Compression.Predict (Predictor, unpredict)
@@ -126,6 +127,10 @@ unfilterStream
 unfilterStream colors (filters@(pdfFilter :<| otherFilters), stream)
   | fFilter pdfFilter == PDFName "FlateDecode" =
           fallibleP (FL.decompress stream)
+      >>= unpredictStream colors pdfFilter
+      >>= unfilterStream colors . (otherFilters, )
+  | fFilter pdfFilter == PDFName "BrotliDecode" =
+          fallibleP (BR.decompress stream)
       >>= unpredictStream colors pdfFilter
       >>= unfilterStream colors . (otherFilters, )
   | fFilter pdfFilter == PDFName "RunLengthDecode" =

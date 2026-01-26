@@ -86,6 +86,7 @@ library:
   - split
   - zlib
   - hopfli
+  - brotli
   - text
   - formatting
   - xml

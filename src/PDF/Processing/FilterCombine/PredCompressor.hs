@@ -1,15 +1,17 @@
 {-|
-Predictor + Zopfli/Deflate filter combination.
+Predictor + Zopfli/Deflate/Brotli filter combination.
 
 Finds an optimal PNG predictor using both Shannon and Deflate-oriented
-heuristics, then compresses with either Zopfli or fast Deflate, returning a
-`FilterCombination` with predictor parameters. When width is unknown, uses
-`TIFFPredictor2` with width set to stream length and components to 1.
+heuristics, then compresses with either Zopfli, fast Deflate, or Brotli,
+returning a `FilterCombination` with predictor parameters. When width is
+unknown, uses `TIFFPredictor2` with width set to stream length and components to
+1.
 -}
-module PDF.Processing.FilterCombine.PredZopfli
-  ( predZopfli
+module PDF.Processing.FilterCombine.PredCompressor
+  ( predCompressor
   ) where
 
+import Codec.Compression.BrotliForPDF qualified as BR
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict
   ( Entropy (EntropyDeflate, EntropyShannon)
@@ -30,28 +32,29 @@ import Data.List (minimumBy)
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
 import Data.PDF.PDFObject (PDFObject (PDFName), mkPDFDictionary)
-import Data.PDF.Settings (UseZopfli (UseDeflate, UseZopfli))
+import Data.PDF.Settings (UseCompressor (UseBrotli, UseDeflate, UseZopfli))
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
-getCompressor :: UseZopfli -> (ByteString -> Fallible ByteString)
-getCompressor UseZopfli  = FL.compress
-getCompressor UseDeflate = FL.fastCompress
+getCompressor :: UseCompressor -> (ByteString -> Fallible ByteString, PDFObject)
+getCompressor UseZopfli  = (FL.compress    , PDFName "FlateDecode" )
+getCompressor UseDeflate = (FL.fastCompress, PDFName "FlateDecode" )
+getCompressor UseBrotli  = (BR.compress    , PDFName "BrotliDecode")
 
 {-|
-Apply PNG predictor, then Zopfli/Deflate, selecting the better result between
-Shannon and Deflate heuristics. If `(width, components)` is missing, falls back
-to `TIFFPredictor2`.
+Apply PNG predictor, then Zopfli/Deflate/Brotli, selecting the better result
+between Shannon and Deflate heuristics. If `(width, components)` is missing,
+falls back to `TIFFPredictor2`.
 -}
-predZopfli
+predCompressor
   :: Maybe BitmapConfiguration
   -> ByteString
-  -> UseZopfli
+  -> UseCompressor
   -> Fallible FilterCombination
-predZopfli (Just bitmapConfig) stream useZopfli = do
-  let compressor = getCompressor useZopfli
-      width      = bcLineWidth bitmapConfig
-      components = bcComponents bitmapConfig
+predCompressor (Just bitmapConfig) stream useCompressor = do
+  let (compressor, filterName) = getCompressor useCompressor
+      width                    = bcLineWidth bitmapConfig
+      components               = bcComponents bitmapConfig
 
   -- Select entropies based on width.
   let entropies = if width < 64
@@ -76,7 +79,7 @@ predZopfli (Just bitmapConfig) stream useZopfli = do
 
   return $ mkFCAppend
     [ Filter
-        (PDFName "FlateDecode")
+        filterName
         (mkPDFDictionary
           [ ("Predictor", mkPDFNumber predictor)
           , ("Columns"  , mkPDFNumber width)
@@ -86,9 +89,9 @@ predZopfli (Just bitmapConfig) stream useZopfli = do
     ]
     compressed
 
-predZopfli Nothing stream useZopfli =  do
+predCompressor Nothing stream useCompressor =  do
   let
-    compressor = getCompressor useZopfli
+    (compressor, filterName) = getCompressor useCompressor
     possibleConfigs = findBitmapConfigurations (BS.length stream)
 
   (bitmapConfig, compressed) <- mapM (\bitmapConfig ->
@@ -99,7 +102,7 @@ predZopfli Nothing stream useZopfli =  do
 
   return $ mkFCAppend
           [ Filter
-              (PDFName "FlateDecode")
+              filterName
               (mkPDFDictionary
                 [ ("Predictor", mkPDFNumber TIFFPredictor2)
                 , ("Columns"  , mkPDFNumber $ bcLineWidth bitmapConfig)

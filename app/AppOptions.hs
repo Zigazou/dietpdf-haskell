@@ -33,11 +33,11 @@ import Data.PDF.Settings
   ( OptimizeGFX
   , UseGhostScript
   , UsePDFToCairo
-  , UseZopfli
+  , UseCompressor
+  , toUseCompressor
   , toOptimizeGFX
   , toUseGhostScript
   , toUsePDFToCairo
-  , toUseZopfli
   )
 
 import Options.Applicative
@@ -56,6 +56,7 @@ import Options.Applicative
   , progDesc
   , short
   , str
+  , strOption
   , subparser
   , switch
   )
@@ -108,7 +109,7 @@ Application options.
 -}
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseZopfli !OptimizeGFX !FileOverwrite
+  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseCompressor !OptimizeGFX !FileOverwrite
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -145,7 +146,7 @@ commandExtract = command
     )
     (progDesc
       "Extract the stream of a specific object from a PDF file \
-           \(the stream is unfiltered)"
+      \(the stream is unfiltered)"
     )
   )
 
@@ -161,7 +162,7 @@ commandOptimize = command
     <*> optional (argument str (metavar "<output_pdf_file>" <> help "PDF file to create"))
     <*> (toUseGhostScript <$> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing"))
     <*> (toUsePDFToCairo <$> switch (long "p2c-optimize" <> short 'p' <> help "Use PDFToCairo before optimizing"))
-    <*> (toUseZopfli . not <$> switch (long "no-zopfli" <> short 'z' <> help "Do not use Zopfli"))
+    <*> (toUseCompressor <$> optional (strOption (long "compressor" <> short 'c' <> help "Compressor to use (zopfli, deflate, brotli)")))
     <*> (toOptimizeGFX . not <$> switch (long "no-gfx-optimize" <> short 'x' <> help "Do not optimize graphics stream"))
     <*> (toOverwriteFile <$> switch (long "overwrite" <> short 'o' <> help "Overwrite existing output file"))
     )

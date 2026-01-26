@@ -43,7 +43,7 @@ import PDF.Object.State (getStream, getValue, getValueDefault, setStream)
 import PDF.Processing.ApplyFilter.Generic (applyEveryFilterGeneric)
 import PDF.Processing.ApplyFilter.ICC (applyEveryFilterICC)
 import PDF.Processing.ApplyFilter.JPG (applyEveryFilterJPG)
-import PDF.Processing.ApplyFilter.OnlyZopfli (applyEveryFilterOnlyZopfi)
+import PDF.Processing.ApplyFilter.OnlyCompressor (applyEveryFilterOnlyCompressor)
 import PDF.Processing.ApplyFilter.Text (applyEveryFilterText)
 import PDF.Processing.ApplyFilter.XRef (applyEveryFilterXRef)
 
@@ -125,7 +125,7 @@ filterOptimize optimization object
           GfxOptimization          -> applyEveryFilterText
           XMLOptimization          -> applyEveryFilterText
           ObjectStreamOptimization -> applyEveryFilterText
-          TTFOptimization          -> applyEveryFilterOnlyZopfi
+          TTFOptimization          -> applyEveryFilterOnlyCompressor
           JPGOptimization          -> applyEveryFilterJPG objectIsAMask
           ICCOptimization          -> applyEveryFilterICC
           XRefStreamOptimization   -> applyEveryFilterXRef
