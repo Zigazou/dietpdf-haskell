@@ -61,7 +61,6 @@ module PDF.Object.Object
   , isDelimiter
   , isPlusMinus
   , isWhiteSpace
-  , isSpace
   , isKeywordCharacter
   , isOctal
   , isStringEscapeSequence
@@ -103,7 +102,6 @@ import PDF.Object.Object.PDFCharacter
     , isNameRegularChar
     , isOctal
     , isPlusMinus
-    , isSpace
     , isStringEscapeSequence
     , isStringRegularChar
     , isWhiteSpace

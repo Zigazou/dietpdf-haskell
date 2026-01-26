@@ -209,13 +209,10 @@ library
       PDF.Processing.Filter
       PDF.Processing.FilterCombine.Compressor
       PDF.Processing.FilterCombine.Jpeg2k
-      PDF.Processing.FilterCombine.Lzw
       PDF.Processing.FilterCombine.PredCompressor
-      PDF.Processing.FilterCombine.PredLzw
       PDF.Processing.FilterCombine.PredRleCompressor
       PDF.Processing.FilterCombine.Rle
       PDF.Processing.FilterCombine.RleCompressor
-      PDF.Processing.FilterCombine.RleLzw
       PDF.Processing.ObjectCategory
       PDF.Processing.ObjectInfo
       PDF.Processing.Optimize
