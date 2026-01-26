@@ -11,8 +11,10 @@ module Command.Encode
   ( encodeByteString
   ) where
 
-import AppOptions (Codec (Ascii85, Deflate, Hex, LZW, NoCompress, RLE, Zopfli))
+import AppOptions
+  (Codec (Ascii85, Brotli, Deflate, Hex, LZW, NoCompress, RLE, Zopfli))
 
+import Codec.Compression.BrotliForPDF qualified as BR
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.LZW qualified as LZW
 import Codec.Compression.RunLength qualified as RL
@@ -64,6 +66,7 @@ returning the encoded bytes. Redirect stdout if you need to capture the output.
 encodeByteString :: Codec -> ByteString -> FallibleT IO ()
 encodeByteString RLE        binData = manage $ RL.compress binData
 encodeByteString Deflate    binData = manage $ FL.fastCompress binData
+encodeByteString Brotli     binData = manage $ BR.compress binData
 encodeByteString LZW        binData = manage $ LZW.compress binData
 encodeByteString NoCompress binData = manage $ FL.noCompress binData
 encodeByteString Zopfli     binData = manage $ FL.compress binData

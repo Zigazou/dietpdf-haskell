@@ -11,8 +11,10 @@ module Command.Decode
   ( decodeByteString
   ) where
 
-import AppOptions (Codec (Ascii85, Deflate, Hex, LZW, NoCompress, RLE, Zopfli))
+import AppOptions
+  (Codec (Ascii85, Brotli, Deflate, Hex, LZW, NoCompress, RLE, Zopfli))
 
+import Codec.Compression.BrotliForPDF qualified as BR
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.LZW qualified as LZ
 import Codec.Compression.RunLength qualified as RL
@@ -52,6 +54,7 @@ Codec mappings used:
 
 * 'RLE'        → run-length decoder ('RL.decompress').
 * 'Deflate'    → Deflate/Flate decoder ('FL.decompress').
+* 'Brotli'     → Brotli decoder ('BR.decompress').
 * 'NoCompress' → Deflate decoder path (currently routed to 'FL.decompress').
 * 'Zopfli'     → Deflate decoder path (Zopfli-compressed data is Deflate-compatible).
 * 'Ascii85'    → ASCII85 decoder ('A8.decode').
@@ -64,6 +67,7 @@ returning the decoded bytes. Redirect stdout if you need to capture the output.
 decodeByteString :: Codec -> ByteString -> FallibleT IO ()
 decodeByteString RLE        binData = manage $ RL.decompress binData
 decodeByteString Deflate    binData = manage $ FL.decompress binData
+decodeByteString Brotli     binData = manage $ BR.decompress binData
 decodeByteString NoCompress binData = manage $ FL.decompress binData
 decodeByteString Zopfli     binData = manage $ FL.decompress binData
 decodeByteString Ascii85    binData = manage $ A8.decode binData

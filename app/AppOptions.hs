@@ -22,7 +22,7 @@ module AppOptions
     , VersionOptions
     )
   , appOptions
-  , Codec(LZW, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
+  , Codec(LZW, Brotli, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
   , FileOverwrite(OverwriteFile, DoNotOverwriteFile)
   ) where
 
@@ -31,11 +31,11 @@ import Codec.Compression.Predict (Predictor)
 import Data.Kind (Type)
 import Data.PDF.Settings
   ( OptimizeGFX
+  , UseCompressor
   , UseGhostScript
   , UsePDFToCairo
-  , UseCompressor
-  , toUseCompressor
   , toOptimizeGFX
+  , toUseCompressor
   , toUseGhostScript
   , toUsePDFToCairo
   )
@@ -82,6 +82,7 @@ List of supported codecs.
 type Codec :: Type
 data Codec = LZW        -- ^ LZW compression (LZWDecode)
            | Deflate    -- ^ Deflate compression (FlateDecode)
+           | Brotli     -- ^ Brotli compression (BrotliDecode)
            | NoCompress -- ^ No compression
            | RLE        -- ^ Run-Length Encoding (RunLengthDecode)
            | Zopfli     -- ^ Zopfli compression (FlateDecode with Zopfli)
@@ -94,7 +95,7 @@ Help message for codecs.
 -}
 codecsHelp :: String
 codecsHelp =
-  "Codec to use (LZW, Deflate, NoCompress, RLE, Zopfli, Ascii85, Hex)"
+  "Codec to use (LZW, Deflate, Brotli, NoCompress, RLE, Zopfli, Ascii85, Hex)"
 
 {-|
 Help message for predictors.
