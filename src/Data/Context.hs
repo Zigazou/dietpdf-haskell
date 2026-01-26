@@ -14,7 +14,6 @@ sensible ordering.
 module Data.Context
 ( Context(Context, NoContext, ContextProgress)
 , Contextual(ctx)
-, noCtx
 , ctx2
 , compileContexts
 )
@@ -41,10 +40,6 @@ data Context = Context !T.Text      -- ^ A textual context segment.
                                !Int -- ^ Total progress value.
              | NoContext            -- ^ No context.
              deriving stock (Eq, Show)
-
--- | The empty context value.
-noCtx :: Context
-noCtx = NoContext
 
 instance Ord Context where
   compare :: Context -> Context -> Ordering

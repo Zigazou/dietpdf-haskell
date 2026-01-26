@@ -40,7 +40,6 @@ module Data.PDF.InterpreterState
   , resetTextStateS
   , setNonStrokeColorS
   , setStrokeColorS
-  , setWorkData
   , applyTextMatrixS
   , setCharacterSpacingS
   , setWordSpacingS
@@ -304,9 +303,3 @@ State-monad variant of 'setNonStrokeColor'.
 -}
 setNonStrokeColorS :: Color -> State InterpreterState ()
 setNonStrokeColorS = modifyGraphicsStateS . setNonStrokeColor
-
-{-|
-Replace the interpreter working data.
--}
-setWorkData :: WorkData -> InterpreterState -> InterpreterState
-setWorkData workData state = state { iWorkData = workData }

@@ -7,7 +7,6 @@ import Control.Monad (forM_)
 import Data.ByteString (ByteString)
 import Data.Map (Map, fromList)
 import Data.TranslationTable (getTranslationTable)
-import Data.Word (Word16, Word8)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -16,13 +15,9 @@ import Util.ByteString
   , convertToGray
   , groupComponents
   , optimizeParity
-  , pack16BitBE
-  , packBits
   , separateComponents
   , splitRaw
   , toNameBase
-  , unpack16BitBE
-  , unpackBits
   )
 
 splitRawExamples :: [(ByteString, Int, [ByteString])]
@@ -116,57 +111,6 @@ optimizeParityExamples =
   , ("012345678", "002355668")  -- Longer ByteString with mixed values
   ]
 
-unpackBitsExamples :: [(Int, ByteString, [Word8])]
-unpackBitsExamples =
-  [ (2, "\x88", [2, 0, 2, 0])                 -- 10 00 10 00
-  , (2, "\xE4", [3, 2, 1, 0])                 -- 11 10 01 00
-  , (2, "\xE4\x1B", [3, 2, 1, 0, 0, 1, 2, 3]) -- 11 10 01 00 00 01 10 11
-  , (4, "\xA4", [10, 4])                      -- 1010 0100
-  , (4, "\xA4\x7D", [10, 4, 7, 13])           -- 1010 0100 0111 1101
-  , (8, "\xFF\x00\x7F", [255, 0, 127])        -- FFFF FFFF 0000 0000 0111 1111
-  , (1, "\x05", [0, 0, 0, 0, 0, 1, 0, 1])     -- 0 0 0 0 0 1 0 1
-  , (2, "", [])                               -- Empty ByteString
-  , (4, "", [])                               -- Empty ByteString
-  , (8, "", [])                               -- Empty ByteString
-  ]
-
-packBitsExamples :: [(Int, [Word8], ByteString)]
-packBitsExamples =
-  [ (2, [3, 2, 1, 0]            , "\xE4"        ) -- 11 10 01 00
-  , (2, [2, 0, 2, 0]            , "\x88"        ) -- 10 00 10 00
-  , (2, [3, 2, 1, 0, 0, 1, 2, 3], "\xE4\x1B"    ) -- 11 10 01 00 00 01 10 11
-  , (4, [10, 4]                 , "\xA4"        ) -- 1010 0100
-  , (4, [10, 4, 7, 13]          , "\xA4\x7D"    ) -- 1010 0100 0111 1101
-  , (8, [255, 0, 127]           , "\xFF\x00\x7F") -- FFFF FFFF 0000 0000 0111 1111
-  , (1, [0, 0, 0, 0, 0, 1, 0, 1], "\x05"        ) -- 0 0 0 0 0 1 0 1
-  , (2, []                      , ""            ) -- Empty ByteString
-  , (4, []                      , ""            ) -- Empty ByteString
-  , (8, []                      , ""            ) -- Empty ByteString
-  , (1, [1, 0, 1, 0, 1]         , "\xA8"        ) -- 1 0 1 0 1 0 0 0
-  , (2, [2, 2, 1]               , "\xA4"        ) -- 10 10 01 00
-  , (4, [15]                    , "\xF0"        ) -- 1111 0000
-  ]
-
-unpack16BitBEExamples :: [(ByteString, [Word16])]
-unpack16BitBEExamples =
-  [ ("\x12\x34\x56\x78", [0x1234, 0x5678])
-  , ("\xFF\xFF\x00\x00", [0xFFFF, 0x0000])
-  , ("\x00\x01\x00\x02", [0x0001, 0x0002])
-  , ("\x00\x01", [0x0001])
-  , ("", [])
-  , ("\xAB", [0xAB00])
-  ]
-
-pack16BitBEExamples :: [([Word16], ByteString)]
-pack16BitBEExamples =
-  [ ([0x1234, 0x5678], "\x12\x34\x56\x78")
-  , ([0xFFFF, 0x0000], "\xFF\xFF\x00\x00")
-  , ([0x0001, 0x0002], "\x00\x01\x00\x02")
-  , ([0x0001], "\x00\x01")
-  , ([], "")
-  , ([0xAB00], "\xAB\x00")
-  ]
-
 spec :: Spec
 spec = do
   describe "splitRaw" $ forM_ splitRawExamples $ \(example, width, expected) ->
@@ -231,42 +175,4 @@ spec = do
     $ \(example, expected) ->
         it ("should optimize parity of RGB triplets " ++ show example)
           $          optimizeParity example
-          `shouldBe` expected
-
-  describe "unpackBits"
-    $ forM_ unpackBitsExamples
-    $ \(bitWidth, example, expected) ->
-        it
-            (  "should unpack bits of width "
-            ++ show bitWidth
-            ++ " from ByteString "
-            ++ show example
-            )
-          $          unpackBits bitWidth example
-          `shouldBe` expected
-
-  describe "packBits"
-    $ forM_ packBitsExamples
-    $ \(bitWidth, example, expected) ->
-        it
-            (  "should pack bits of width "
-            ++ show bitWidth
-            ++ " from list "
-            ++ show example
-            )
-          $          packBits bitWidth example
-          `shouldBe` expected
-
-  describe "unpack16BitBE"
-    $ forM_ unpack16BitBEExamples
-    $ \(example, expected) ->
-        it ("should unpack 16-bit BE from ByteString " ++ show example)
-          $          unpack16BitBE example
-          `shouldBe` expected
-
-  describe "pack16BitBE"
-    $ forM_ pack16BitBEExamples
-    $ \(example, expected) ->
-        it ("should pack 16-bit BE from list " ++ show example)
-          $          pack16BitBE example
           `shouldBe` expected

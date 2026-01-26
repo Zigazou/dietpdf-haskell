@@ -12,15 +12,11 @@ module Data.PDF.FilterList
   , mkFilterList
   , filtersFilter
   , filtersParms
-  , hasFilter
   ) where
 
-import Data.ByteString (ByteString)
 import Data.Kind (Type)
 import Data.PDF.Filter
-    ( Filter (Filter, fDecodeParms, fFilter)
-    , hasNoDecodeParms
-    )
+  (Filter (Filter, fDecodeParms, fFilter), hasNoDecodeParms)
 import Data.PDF.PDFObject (PDFObject (PDFArray, PDFName, PDFNull))
 import Data.Sequence qualified as SQ
 
@@ -66,15 +62,3 @@ filtersParms (Filter _ PDFNull SQ.:<| SQ.Empty) = Nothing
 filtersParms (Filter _ aDecodeParms SQ.:<| SQ.Empty) = Just aDecodeParms
 filtersParms filters | all hasNoDecodeParms filters = Nothing
                      | otherwise = Just (PDFArray $ fDecodeParms <$> filters)
-
-{-|
-Checks whether a filter with the given name is present in the filter chain.
-
-The name is compared against the underlying `PDFName` stored in each `Filter`.
--}
-hasFilter :: ByteString -> FilterList -> Bool
-hasFilter name = any (has name)
-  where
-    has :: ByteString -> Filter -> Bool
-    has value (Filter (PDFName n) _) = n == value
-    has _ _                          = False

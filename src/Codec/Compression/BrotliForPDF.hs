@@ -11,7 +11,6 @@ module Codec.Compression.BrotliForPDF
   , textCompress
   , fontCompress
   , fastCompress
-  , entropyCompress
   ) where
 
 import Codec.Compression.Brotli qualified as BR
@@ -27,11 +26,6 @@ brotliCompressOptions = BR.defaultCompressParams
   , BR.compressWindowSize = BR.CompressionWindowBits24
   , BR.compressMode       = BR.CompressionModeGeneric
   , BR.compressSizeHint   = 0
-  }
-
-brotliEntropyCompressParams :: BR.CompressParams
-brotliEntropyCompressParams = brotliCompressOptions
-  { BR.compressLevel = BR.CompressionLevel2
   }
 
 brotliFontCompressParams :: BR.CompressParams
@@ -111,20 +105,6 @@ fastCompress
   -> Fallible ByteString -- ^ Either an error or the compressed bytestring
 fastCompress =
   Right . BL.toStrict . BR.compressWith brotliCompressOptions . BL.fromStrict
-
-{-|
-Gives a number showing the "entropy" of a `ByteString`.
-
-The lower the number, the more compressible the `ByteString`.
--}
-entropyCompress
-  :: ByteString -- ^ A strict bytestring to encode
-  -> Double
-entropyCompress =
-  fromIntegral
-    . BL.length
-    . BR.compressWith brotliEntropyCompressParams
-    . BL.fromStrict
 
 {-|
 Decompress a strict bytestring compressed using the Brötli algorithm.

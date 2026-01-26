@@ -22,8 +22,6 @@ module Codec.Compression.Predict.ImageStream
   , fromUnpredictedStream
   , unpredictImageStream
   , predictImageStream
-  , iComponents
-  , iWidth
   ) where
 
 import Codec.Compression.Predict.Entropy (Entropy)
@@ -38,7 +36,7 @@ import Codec.Compression.Predict.Scanline
   )
 
 import Data.Bitmap.BitmapConfiguration
-  (BitmapConfiguration (bcComponents, bcLineWidth), bitmapRawWidth)
+  (BitmapConfiguration (bcComponents), bitmapRawWidth)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -56,12 +54,6 @@ data ImageStream = ImageStream
   , iPredictor    :: !(Maybe Predictor) -- ^ Applied predictor, if any
   , iLines        :: ![Scanline] -- ^ Image scanlines
   }
-
-iComponents :: ImageStream -> Int
-iComponents = bcComponents . iBitmapConfig
-
-iWidth :: ImageStream -> Int
-iWidth = bcLineWidth . iBitmapConfig
 
 {-|
 Encode an entire image stream using a specified `Predictor`
