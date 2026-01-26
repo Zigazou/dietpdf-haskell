@@ -10,7 +10,6 @@ module Data.Fallible
   ( FallibleT
   , Fallible
   , tryF
-  , ifFail
   ) where
 
 import Control.Monad.Except (ExceptT, runExceptT)
@@ -41,19 +40,3 @@ success and 'Left' with the 'UnifiedError' on failure.
 -}
 tryF :: Monad m => FallibleT m a -> FallibleT m (Fallible a)
 tryF = lift . runExceptT
-
-{-|
-Execute a computation, handling failures with a provided recovery function.
-
-When the computation succeeds, its result is returned. On failure, the handler
-is invoked with the 'UnifiedError', and its result is returned.
--}
-ifFail
-  :: Monad m
-  => FallibleT m a
-  -> (UnifiedError -> FallibleT m a)
-  -> FallibleT m a
-ifFail computation inCaseOfFail = do
-  tryF computation >>= \case
-    Right result  -> return result
-    Left  anError -> inCaseOfFail anError

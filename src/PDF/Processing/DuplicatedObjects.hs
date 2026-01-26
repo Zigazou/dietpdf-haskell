@@ -20,7 +20,6 @@ module PDF.Processing.DuplicatedObjects
   ( findDuplicatedObjects
   , DuplicatedObjects (DuplicatedObjects)
   , Duplicates (Duplicates, dHash, dDuplicates)
-  , hasNoDuplicates
   , hasDuplicates
   , duplicateCount
   , convertDuplicatedReferences
@@ -67,15 +66,6 @@ specific objects share that hash.
 -}
 instance Eq Duplicates where
   (Duplicates hash1 _) == (Duplicates hash2 _) = hash1 == hash2
-
-{-|
-Check if a 'Duplicates' group contains no actual duplicates.
-
-Returns 'True' if there is only one or zero objects with this hash, meaning no
-duplication exists.
--}
-hasNoDuplicates :: Duplicates -> Bool
-hasNoDuplicates = (<= 1) . Set.size . dDuplicates
 
 {-|
 Check if a 'Duplicates' group contains actual duplicates.

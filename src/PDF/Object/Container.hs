@@ -11,68 +11,20 @@ Key functionality includes deep mapping over nested structures, and filter
 manipulation for stream compression and decompression parameters.
 -}
 module PDF.Object.Container
-  ( deepMap
-  , setFilters
+  ( setFilters
   , getFilters
   ) where
 
-import Data.Functor ((<&>))
 import Data.Logging (Logging)
-import Data.Map.Strict qualified as Map
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterList (FilterList, filtersFilter, filtersParms)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference)
-    , hasDictionary
-    )
-import Data.PDF.PDFWork (PDFWork, throwError, getReference)
+  (PDFObject (PDFArray, PDFName, PDFNull, PDFReference), hasDictionary)
+import Data.PDF.PDFWork (PDFWork, getReference, throwError)
 import Data.Sequence qualified as SQ
 import Data.UnifiedError (UnifiedError (InvalidFilterParm))
 
-import PDF.Object.State (embedObject, getValue, updateValue)
-
-{-|
-Apply a transformation function recursively to all objects in a container.
-
-Traverses a PDF object structure at any depth, applying the given function to
-each nested object. The function handles all container types:
-
-- 'PDFIndirectObject': Recursively processes the contained object
-- 'PDFIndirectObjectWithStream': Processes the dictionary
-- 'PDFObjectStream': Processes the dictionary
-- 'PDFDictionary': Recursively processes all values
-- 'PDFArray': Recursively processes all elements
-- Other objects: Applies the function directly
-
-This enables bulk transformations across complex nested PDF structures.
-
-__Parameters:__
-
-- A transformation function from 'PDFObject' to 'PDFWork'
-- The root container object to process
-
-__Returns:__ The transformed container with all nested objects processed.
-
-__Monadic context:__ Runs in the 'PDFWork' monad with 'Logging' capability.
--}
-deepMap
-  :: Logging m
-  => (PDFObject -> PDFWork m PDFObject)
-  -> PDFObject
-  -> PDFWork m PDFObject
-deepMap fn container = case container of
-  PDFIndirectObject _ _ object ->
-    deepMap fn object >>= flip embedObject container
-  PDFIndirectObjectWithStream _ _ dict _ ->
-    deepMap fn (PDFDictionary dict) >>= flip embedObject container
-  PDFObjectStream _ _ dict _ ->
-    deepMap fn (PDFDictionary dict) >>= flip embedObject container
-  PDFDictionary dict ->
-    sequence (Map.map (deepMap fn) dict)
-      >>= flip embedObject container
-      .   PDFDictionary
-  PDFArray items -> mapM (deepMap fn) items <&> PDFArray
-  object         -> fn object
+import PDF.Object.State (getValue, updateValue)
 
 {-|
 Extract and pair compression filters with their parameters from a PDF object.

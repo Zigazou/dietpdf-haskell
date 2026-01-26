@@ -32,11 +32,8 @@ module Data.PDF.GraphicsState
   , setCharacterSpacing
   , setWordSpacing
   , setPathStart
-  , setNonStrokeAlpha
-  , setStrokeAlpha
   , setFlatness
   , setRenderingIntent
-  , setDashPattern
   , setMiterLimit
   , setLineJoin
   , setLineCap
@@ -339,17 +336,6 @@ setMiterLimit :: Double -> GraphicsState -> GraphicsState
 setMiterLimit miterLimit state = state { gsMiterLimit = miterLimit }
 
 {-|
-Set the dash pattern of the current graphics state.
-
-The dash phase is the initial offset into the dash array.
--}
-setDashPattern :: Double -> [Double] -> GraphicsState -> GraphicsState
-setDashPattern dashPhase dashArray state = state
-  { gsDashArray = dashArray
-  , gsDashPhase = dashPhase
-  }
-
-{-|
 Set the rendering intent of the current graphics state.
 -}
 setRenderingIntent :: ByteString -> GraphicsState -> GraphicsState
@@ -360,18 +346,6 @@ Set the flatness of the current graphics state.
 -}
 setFlatness :: Double -> GraphicsState -> GraphicsState
 setFlatness flatness state = state { gsFlatness = flatness }
-
-{-|
-Set the stroke alpha of the current graphics state.
--}
-setStrokeAlpha :: Double -> GraphicsState -> GraphicsState
-setStrokeAlpha alpha state = state { gsStrokeAlpha = alpha }
-
-{-|
-Set the non-stroke alpha of the current graphics state.
--}
-setNonStrokeAlpha :: Double -> GraphicsState -> GraphicsState
-setNonStrokeAlpha alpha state = state { gsNonStrokeAlpha = alpha }
 
 {-|
 Set the start of the current path.

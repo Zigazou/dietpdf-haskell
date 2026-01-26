@@ -7,10 +7,20 @@ import Control.Monad (forM_)
 import Data.Binary.Parser (parseOnly)
 import Data.ByteString (ByteString)
 
+import Font.TrueType.FontTable.GlyphInstruction
+  ( DistanceType (DistanceTypeA)
+  , GlyphInstruction (GIElse, GIEndIf, GIIfTest, GIInterpolatePoint, GIInterpolateUntouchedPoints, GIMoveDirectAbsolutePoint, GIMoveDirectRelativePoint, GIMoveIndirectAbsolutePoint, GIPushBytes, GIReadControlValueTableEntry, GISetFreedomAndProjectionVectorsToCoordinateAxis, GISetReferencePoint0, GISetReferencePoint1, GISetReferencePoint2)
+  , InterpolationDirection (InterpolateInXDirection, InterpolateInYDirection)
+  , MinimumDistanceControl (KeepDistanceGreaterThanOrEqual)
+  , ResetRP0 (DoNotResetRP0)
+  , RoundingMode (DoNotRoundValue, RoundValue)
+  , VectorAxis (AxisY)
+  )
 import Font.TrueType.FontTable.GlyphTable
-  ( Glyph (EmptyGlyph)
+  ( Glyph (EmptyGlyph, SimpleGlyph)
   , GlyphHeader (GlyphHeader, ghNumberOfContours, ghXMax, ghXMin, ghYMax, ghYMin)
-  , GlyphTable (GlyphTable)
+  , GlyphTable (GlyphTable, gtGlyphs)
+  , SimpleGlyphData (SimpleGlyphData, sgEndPtsOfContours, sgFlags, sgInstructionLength, sgInstructions, sgXCoordinates, sgYCoordinates)
   )
 import Font.TrueType.FontTable.LocationTable (LocationTable (LocationTable))
 import Font.TrueType.Parser.Glyf (glyphHeaderP, glyphP, singleGlyphP)
@@ -99,7 +109,78 @@ glyphTablePExamples =
       \\x39\xB0\x1D\x2F\xB1\x00\x07\xB0\x0A\x2B\x58\x21\
       \                                                               "
     , LocationTable [ 0x0000 ]
-    , GlyphTable []
+    , GlyphTable {
+        gtGlyphs = [
+          SimpleGlyph
+            GlyphHeader {
+              ghNumberOfContours = 5,
+                ghXMin = 100,
+                ghYMin = 0,
+                ghXMax = 808,
+                ghYMax = 1456
+            }
+            SimpleGlyphData {
+              sgEndPtsOfContours = [3, 6, 9, 12, 15],
+              sgInstructionLength = 80,
+              sgInstructions =
+                [ GISetFreedomAndProjectionVectorsToCoordinateAxis AxisY
+                , GIPushBytes [0]
+                , GIReadControlValueTableEntry
+                , GIIfTest
+                , GIPushBytes [2]
+                , GIMoveDirectAbsolutePoint RoundValue
+                , GIElse
+                , GIPushBytes [2, 31]
+                , GIMoveIndirectAbsolutePoint DoNotRoundValue
+                , GIEndIf
+                , GIPushBytes [0]
+                , GIReadControlValueTableEntry
+                , GIIfTest
+                , GIPushBytes [0]
+                , GIMoveDirectAbsolutePoint RoundValue
+                , GIElse
+                , GIPushBytes [0, 15]
+                , GIMoveIndirectAbsolutePoint DoNotRoundValue
+                , GIEndIf
+                , GIPushBytes [4, 2, 0]
+                , GISetReferencePoint1
+                , GISetReferencePoint2
+                , GIInterpolatePoint
+                , GIPushBytes [5, 2, 0]
+                , GISetReferencePoint1
+                , GISetReferencePoint2
+                , GIInterpolatePoint
+                , GIPushBytes [7, 2, 0]
+                , GISetReferencePoint1
+                , GISetReferencePoint2
+                , GIInterpolatePoint
+                , GIPushBytes [8, 2, 0]
+                , GISetReferencePoint1
+                , GISetReferencePoint2
+                , GIInterpolatePoint
+                , GIPushBytes [10]
+                , GIMoveDirectRelativePoint DoNotResetRP0 KeepDistanceGreaterThanOrEqual RoundValue DistanceTypeA
+                , GIPushBytes [12, 2, 0]
+                , GISetReferencePoint1
+                , GISetReferencePoint2
+                , GIInterpolatePoint
+                , GIPushBytes [13, 2, 0]
+                , GISetReferencePoint1
+                , GISetReferencePoint2
+                , GIInterpolatePoint
+                , GIPushBytes [2]
+                , GISetReferencePoint0
+                , GIPushBytes [14]
+                , GIMoveDirectRelativePoint DoNotResetRP0 KeepDistanceGreaterThanOrEqual RoundValue DistanceTypeA
+                , GIInterpolateUntouchedPoints InterpolateInYDirection
+                , GIInterpolateUntouchedPoints InterpolateInXDirection
+                ],
+              sgFlags = [33, 33, 17, 33, 3, 17, 1, 1, 17, 1, 3, 33, 1, 53, 1, 33],
+              sgXCoordinates = [808, 100, 100, 808, 754, 754, 480, 154, 154, 422, 194, 709, 451, 451, 709, 194],
+              sgYCoordinates = [0, 0, 1456, 1456, 84, 1371, 728, 1359, 96, 728, 54, 54, 660, 796, 1402, 1402]
+            }
+        ]
+      }
     )
   ]
 

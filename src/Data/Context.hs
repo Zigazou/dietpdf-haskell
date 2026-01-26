@@ -16,8 +16,6 @@ module Data.Context
 , Contextual(ctx)
 , noCtx
 , ctx2
-, ctx3
-, ctx4
 , compileContexts
 )
 where
@@ -164,17 +162,3 @@ instance.
 -}
 ctx2 :: (Contextual a, Contextual b) => a -> b -> Context
 ctx2 a b = ctx a <> ctx b
-
--- | Combine three values into a composite `Context`.
-ctx3 :: (Contextual a, Contextual b, Contextual c) => a -> b -> c -> Context
-ctx3 a b c = ctx a <> ctx b <> ctx c
-
--- | Combine four values into a composite `Context`.
-ctx4
-  :: (Contextual a, Contextual b, Contextual c, Contextual d)
-  => a
-  -> b
-  -> c
-  -> d
-  -> Context
-ctx4 a b c d = ctx a <> ctx b <> ctx c <> ctx d

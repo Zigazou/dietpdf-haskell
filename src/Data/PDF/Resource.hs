@@ -33,6 +33,8 @@ import Data.Kind (Type)
 import Data.Set (Set)
 import Data.Set qualified as Set
 
+import Util.ByteString (baseDigits)
+
 {-|
 A resource is a typed name used in PDF content streams and resource
 dictionaries.
@@ -108,12 +110,6 @@ createSet = foldr go mempty
   go :: Maybe Resource -> Set Resource -> Set Resource
   go (Just resource) resources = Set.insert resource resources
   go Nothing resources         = resources
-
-{-|
-Digits used for base conversion in `toNameBase`.
--}
-baseDigits :: ByteString
-baseDigits = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 {-|
 Convert a resource to a name based on an integer value.

@@ -33,7 +33,6 @@ module Codec.Compression.Predict.Predictor
   , encodePredictor
   , encodeRowPredictor
   , isPNGGroup
-  , isTIFFGroup
   , PredictorFunc
   , getPredictorFunction
   , getUnpredictorFunction
@@ -144,14 +143,6 @@ isPNGGroup PNGUp            = True
 isPNGGroup PNGAverage       = True
 isPNGGroup PNGPaeth         = True
 isPNGGroup PNGOptimum       = True
-
-{-|
-Tell if a `Predictor` is from the TIFF group.
-
-The TIFF group is applied globally, it adds no data to the stream.
--}
-isTIFFGroup :: Predictor -> Bool
-isTIFFGroup = not . isPNGGroup
 
 {-|
 A `Samples` is a utilitary structure used to facilitate computations of

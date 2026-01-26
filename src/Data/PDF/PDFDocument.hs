@@ -16,21 +16,17 @@ module Data.PDF.PDFDocument
   , singleton
   , fromList
   , toList
-  , cSize
   , cCons
-  , cfMap
   , cFilter
   , lMap
   , dSepBy1
   , dSepBy
   , deepFind
-  , dFindLast
   , member
   ) where
 
 import Control.Applicative (Alternative, (<|>))
 
-import Data.Fallible (FallibleT)
 import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Data.PDF.PDFObject
@@ -77,34 +73,6 @@ instance Ord a => Semigroup (CollectionOf a) where
 instance Ord a => Monoid (CollectionOf a) where
   mempty :: CollectionOf a
   mempty = CollectionOf OS.empty
-
-{-|
-Get the size of a `CollectionOf`.
--}
-cSize :: CollectionOf a -> Int
-cSize (CollectionOf os) = OS.size os
-
-{-|
-A `map` function for objects of type `CollectionOf` which works in a
-`FallibleT` monad.
--}
-cfMap
-  :: (Ord b, Monad m)
-  => (a -> FallibleT m b)
-  -> CollectionOf a
-  -> FallibleT m (CollectionOf b)
-cfMap f = foldr (accumulate f) (pure mempty)
- where
-  accumulate
-    :: (Monad m, Ord b)
-    => (a -> FallibleT m b)
-    -> a
-    -> FallibleT m (CollectionOf b)
-    -> FallibleT m (CollectionOf b)
-  accumulate transform !a !fc = do
-    collection <- fc
-    result     <- transform a
-    return (cCons result collection)
 
 {-|
 Equivalent to the `filter` function which works on `List` except this one
@@ -162,15 +130,6 @@ The `sepBy` function for `CollectionOf` (`sepBy` only generates `List`).
 dSepBy :: (Alternative f, Ord a) => f a -> f s -> f (CollectionOf a)
 dSepBy !p !s =
   liftA2 cCons p ((s *> dSepBy1 p s) <|> pure mempty) <|> pure mempty
-
-{-|
-Find last value in a `CollectionOf` satisfying a predicate.
-
-If the predicate is never satisfied, the function returns `Nothing`.
--}
-dFindLast :: (a -> Bool) -> CollectionOf a -> Maybe a
-dFindLast p =
-  foldr (\object found -> if p object then Just $! object else found) Nothing
 
 {-|
 Find every `PDFObject` satisfying a predicate, even when deeply nested in

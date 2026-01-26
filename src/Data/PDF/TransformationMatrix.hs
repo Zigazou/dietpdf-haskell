@@ -22,7 +22,6 @@ Transformations:
 -}
 module Data.PDF.TransformationMatrix
 ( TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF)
-, transform
 , matrixScale
 , prod
 ) where
@@ -52,13 +51,6 @@ data TransformationMatrix = TransformationMatrix
   , tmE :: !Double -- ^ Element e (translation in X direction)
   , tmF :: !Double -- ^ Element f (translation in Y direction)
   } deriving stock (Eq, Show)
-
-{-|
-Transforms a point by the given transformation matrix.
--}
-transform :: TransformationMatrix -> (Double, Double) -> (Double, Double)
-transform (TransformationMatrix a b c d e f) (x, y) =
-  (a * x + c * y + e, b * x + d * y + f)
 
 {-|
 Scales a point by the given transformation matrix.

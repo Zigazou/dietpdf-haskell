@@ -32,11 +32,8 @@ module Data.PDF.InterpreterState
   , setLineCapS
   , setLineJoinS
   , setMiterLimitS
-  , setDashPatternS
   , setRenderingIntentS
   , setFlatnessS
-  , setStrokeAlphaS
-  , setNonStrokeAlphaS
   , setPathStartS
   , getPathStartS
   , setCurrentPointS
@@ -65,7 +62,6 @@ import Data.PDF.GraphicsState
   , resetTextState
   , setCharacterSpacing
   , setCurrentPoint
-  , setDashPattern
   , setFlatness
   , setFont
   , setHorizontalScaling
@@ -73,11 +69,9 @@ import Data.PDF.GraphicsState
   , setLineJoin
   , setLineWidth
   , setMiterLimit
-  , setNonStrokeAlpha
   , setNonStrokeColor
   , setPathStart
   , setRenderingIntent
-  , setStrokeAlpha
   , setStrokeColor
   , setTextLeading
   , setTextMatrix
@@ -256,13 +250,6 @@ setMiterLimitS :: Double -> State InterpreterState ()
 setMiterLimitS = modifyGraphicsStateS . setMiterLimit
 
 {-|
-State-monad variant of 'setDashPattern'.
--}
-setDashPatternS :: Double -> [Double] -> State InterpreterState ()
-setDashPatternS dashPhase dashArray =
-  modifyGraphicsStateS (setDashPattern dashPhase dashArray)
-
-{-|
 State-monad variant of 'setRenderingIntent'.
 -}
 setRenderingIntentS :: ByteString -> State InterpreterState ()
@@ -273,18 +260,6 @@ State-monad variant of 'setFlatness'.
 -}
 setFlatnessS :: Double -> State InterpreterState ()
 setFlatnessS = modifyGraphicsStateS . setFlatness
-
-{-|
-State-monad variant of 'setStrokeAlpha'.
--}
-setStrokeAlphaS :: Double -> State InterpreterState ()
-setStrokeAlphaS = modifyGraphicsStateS . setStrokeAlpha
-
-{-|
-State-monad variant of 'setNonStrokeAlpha'.
--}
-setNonStrokeAlphaS :: Double -> State InterpreterState ()
-setNonStrokeAlphaS = modifyGraphicsStateS . setNonStrokeAlpha
 
 {-|
 Set the beginning of the current path and also set the current point.

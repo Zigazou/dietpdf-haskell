@@ -6,14 +6,13 @@ This module provides utilities to:
 
 * split raw bytes into fixed-width chunks,
 * separate and group interleaved component channels,
-* compare by the length of the second element,
 * generate compact base names using an alphanumeric digit set.
 -}
 module Util.ByteString
   ( splitRaw
   , separateComponents
   , groupComponents
-  , sndLengthCompare
+  , baseDigits
   , toNameBase
   , containsOnlyGray
   , convertToGray
@@ -168,12 +167,6 @@ optimizeParity bs = unsafePerformIO $ do
         (fromIntegral inputLen :: CSize)
         outputPtr
   pure $ BSI.PS output 0 (fromIntegral outputLen)
-
-{-|
-Compare lengths of bytestrings in second position of couples.
--}
-sndLengthCompare :: (a, ByteString) -> (a, ByteString) -> Ordering
-sndLengthCompare (_, x) (_, y) = compare (BS.length x) (BS.length y)
 
 {-|
 Digit alphabet used by `toNameBase`: 0–9, a–z, A–Z.

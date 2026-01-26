@@ -8,51 +8,17 @@ import Control.Monad (forM_)
 
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterList (FilterList, mkFilterList)
-import Data.PDF.PDFWork (PDFWork, evalPDFWorkT)
+import Data.PDF.PDFWork (evalPDFWorkT)
 
 import PDF.Object.Container (setFilters)
 import PDF.Object.Object
-    ( PDFObject (PDFIndirectObject, PDFName, PDFNull, PDFNumber, PDFString)
+    ( PDFObject (PDFIndirectObject, PDFName, PDFNull)
     , mkEmptyPDFDictionary
     , mkPDFArray
     , mkPDFDictionary
     )
-import PDF.Processing.PDFWork (deepMapP)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
-
-deepMapExamples
-  :: [(PDFObject, PDFObject -> PDFWork IO PDFObject, PDFObject)]
-deepMapExamples =
-  [ ( mkPDFArray [mkEmptyPDFDictionary, PDFNumber 3.0, PDFName "ABCD"]
-    , addOneToAnyNumber
-    , mkPDFArray [mkEmptyPDFDictionary, PDFNumber 4.0, PDFName "ABCD"]
-    )
-  , ( mkPDFDictionary [("X", PDFNumber 1.0), ("Y", PDFString "abcd")]
-    , addOneToAnyNumber
-    , mkPDFDictionary [("X", PDFNumber 2.0), ("Y", PDFString "abcd")]
-    )
-  , ( PDFIndirectObject
-      2
-      0
-      (mkPDFDictionary [("X", PDFNumber 1.0), ("Y", PDFString "abcd")])
-    , addOneToAnyNumber
-    , PDFIndirectObject
-      2
-      0
-      (mkPDFDictionary [("X", PDFNumber 2.0), ("Y", PDFString "abcd")])
-    )
-  , ( mkPDFArray
-      [mkPDFDictionary [("X", PDFNumber 1.0)], PDFNumber 3.0, PDFName "ABCD"]
-    , addOneToAnyNumber
-    , mkPDFArray
-      [mkPDFDictionary [("X", PDFNumber 2.0)], PDFNumber 4.0, PDFName "ABCD"]
-    )
-  ]
- where
-  addOneToAnyNumber :: PDFObject -> PDFWork IO PDFObject
-  addOneToAnyNumber (PDFNumber x) = return (PDFNumber (x + 1.0))
-  addOneToAnyNumber object        = return object
 
 filtersExamples :: [(FilterList, PDFObject, PDFObject)]
 filtersExamples =
@@ -89,11 +55,6 @@ filtersExamples =
 
 spec :: Spec
 spec = do
-  describe "deepMap" $ forM_ deepMapExamples $ \(example, fn, expected) ->
-    it ("should give right result for " ++ show example) $ do
-      result <- evalPDFWorkT $ deepMapP fn example
-      result `shouldBe` Right expected
-
   describe "setFilters"
     $ forM_ filtersExamples
     $ \(filters, example, expected) ->

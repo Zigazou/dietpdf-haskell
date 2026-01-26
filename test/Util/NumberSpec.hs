@@ -14,7 +14,6 @@ import Util.Number
     , encodeIntToBytes
     , fromNumber
     , round'
-    , roundAndAHalf
     , toNumber
     )
 
@@ -123,33 +122,6 @@ roundExamples =
   , (2, -595.004, -595.0)
   ]
 
-roundAndAHalfExamples :: [(Int, Double, Double)]
-roundAndAHalfExamples =
-  [ (0, 0.0, 0.0)
-  , (0, 0.1, 0.0)
-  , (0, 0.2, 0.0)
-  , (0, 0.3, 0.5)
-  , (0, 0.4, 0.5)
-  , (0, 0.5, 0.5)
-  , (0, 0.6, 0.5)
-  , (0, 0.7, 0.5)
-  , (0, 0.8, 1.0)
-  , (0, 0.9, 1.0)
-  , (0, 1.0, 1.0)
-  , (0, 1.1, 1.0)
-  , (0, 1.2, 1.0)
-  , (0, 1.3, 1.5)
-  , (2, 419.4, 419.4)
-  , (2, 595.02, 595.02)
-  , (2, 0.29999, 0.3)
-  , (2, -595.004, -595.005)
-  , (2, 53.157, 53.155)
-  , (1, -0.5, -0.5)
-  , (1, -0.4, -0.4)
-  , (1, -0.43, -0.45)
-  , (1, -0.04, -0.05)
-  ]
-
 spec :: Spec
 spec = do
   describe "toNumber" $ forM_ toNumberExamples $ \(example, expected) ->
@@ -181,11 +153,4 @@ spec = do
     $ \(limit, example, expected) ->
       it ("should round number " ++ show example)
         $          round' limit example
-        `shouldBe` expected
-
-  describe "roundAndAHalf"
-    $ forM_ roundAndAHalfExamples
-    $ \(limit, example, expected) ->
-      it ("should round and a half number " ++ show example)
-        $          roundAndAHalf limit example
         `shouldBe` expected
