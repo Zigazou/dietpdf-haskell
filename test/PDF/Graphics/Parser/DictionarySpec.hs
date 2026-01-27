@@ -4,17 +4,20 @@ module PDF.Graphics.Parser.DictionarySpec
 
 import Data.ByteString (ByteString)
 import Data.PDF.GFXObject
-    ( GFXObject (GFXName, GFXNumber, GFXReference)
-    , mkEmptyGFXDictionary
-    , mkGFXArray
-    , mkGFXDictionary
-    )
+  ( GFXObject (GFXDictionary, GFXName, GFXNumber, GFXReference)
+  , mkGFXArray
+  , mkGFXDictionary
+  )
 
 import PDF.Graphics.Parser.Container (dictionaryP)
 
 import Test.Hspec (Spec, describe)
 
+import Util.Dictionary (mkEmptyDictionary)
 import Util.ParserHelper (itWith)
+
+mkEmptyGFXDictionary :: GFXObject
+mkEmptyGFXDictionary = GFXDictionary mkEmptyDictionary
 
 dictionaryExamples :: [(ByteString, GFXObject)]
 dictionaryExamples =

@@ -10,10 +10,8 @@ module Data.ColorSpace
   ( ColorSpace (ColorSpaceCMYK, ColorSpaceGray, ColorSpaceRGB, ColorSpaceUnknown)
   , csComponents
   , fromComponents
-  , csTupleType
   ) where
 
-import Data.ByteString (ByteString)
 import Data.Kind (Type)
 
 {-|
@@ -53,14 +51,3 @@ fromComponents 1          = ColorSpaceGray
 fromComponents 3          = ColorSpaceRGB
 fromComponents 4          = ColorSpaceCMYK
 fromComponents components = ColorSpaceUnknown components
-
-{-|
-Short tag name for a 'ColorSpace', used in tuple formatting.
-
-Returns "GRAY", "RGB", "CMYK", or "UNKNOWN".
--}
-csTupleType :: ColorSpace -> ByteString
-csTupleType ColorSpaceGray = "GRAY"
-csTupleType ColorSpaceRGB  = "RGB"
-csTupleType ColorSpaceCMYK = "CMYK"
-csTupleType _              = "UNKNOWN"

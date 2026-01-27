@@ -12,7 +12,6 @@ All failures are reported as `ExternalCommandError` in the `FallibleT` context.
 module External.ExternalCommand
   ( externalCommand
   , externalCommandBuf
-  , externalCommandBuf'
   , externalCommandBuf''
   )
 where
@@ -114,52 +113,6 @@ externalCommandBuf command args input = do
       ExitSuccess    -> return $ Right output
       ExitFailure rc -> return $ Left (ExternalCommandError command rc)
   injectInput _ _ _ _ _ =
-    return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)
-
-{-|
-Runs an external command with the given arguments and input.
-
-If the command fails, this function throws an `ExternalCommandError` error.
-
-The input is written to a file that is then given in the command's arguments.
-The output is captured and returned.
--}
-externalCommandBuf'
-  :: FilePath
-  -> [String]
-  -> ByteString
-  -> FallibleT IO ByteString
-externalCommandBuf' command args input = do
-  withSystemTempFile "dietpdf.temporary" $ \temp tempHandle -> do
-    lift $ hClose tempHandle
-    lift $ BS.writeFile temp input
-    let process = (proc command (args ++ [temp])) { std_out = CreatePipe }
-
-    result <- lift $ withCreateProcess process injectInput
-
-    case result of
-      Right output -> return output
-      Left err     -> throwE err
- where
-  injectInput
-    :: Maybe Handle
-    -> Maybe Handle
-    -> Maybe Handle
-    -> ProcessHandle
-    -> IO (Fallible ByteString)
-  injectInput _stdin (Just stdout) _stderr ph = do
-    -- Configure stdout
-    hSetBinaryMode stdout True
-    hSetBuffering stdout (BlockBuffering Nothing)
-
-    -- Read stdout and stderr
-    output   <- BS.hGetContents stdout
-    exitCode <- waitForProcess ph
-
-    case exitCode of
-      ExitSuccess    -> return $ Right output
-      ExitFailure rc -> return $ Left (ExternalCommandError command rc)
-  injectInput _ _ _ _ =
     return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)
 
 {-|

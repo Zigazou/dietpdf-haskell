@@ -4,7 +4,6 @@ This module defines what is an array at the lowest level.
 module Data.Array
   ( Array
   , mkArray
-  , mkEmptyArray
   ) where
 
 import Data.Kind (Type)
@@ -15,12 +14,6 @@ An `Array` is a `Sequence` of object.
 -}
 type Array :: Type -> Type
 type Array a = SQ.Seq a
-
-{-|
-Create an empty `Array`.
--}
-mkEmptyArray :: Array a
-mkEmptyArray = SQ.empty
 
 {-|
 Create a `PDFArray` from a list of `PDFObject`.

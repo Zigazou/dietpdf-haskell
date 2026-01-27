@@ -7,14 +7,13 @@ facilitate reconstruction and analysis.
 module Data.PDF.PDFPartition
   ( PDFPartition(PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
   , lastTrailer
-  , firstVersion
   ) where
 
 import Data.Foldable (find)
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 import Data.PDF.PDFDocument (PDFDocument)
-import Data.PDF.PDFObject (PDFObject (PDFNull, PDFTrailer, PDFVersion))
+import Data.PDF.PDFObject (PDFObject (PDFNull, PDFTrailer))
 import Data.PDF.PDFObjects (PDFObjects)
 
 {-|
@@ -58,16 +57,3 @@ lastTrailer = fromMaybe (PDFTrailer PDFNull) . find trailer . ppTrailers
   trailer :: PDFObject -> Bool
   trailer (PDFTrailer _) = True
   trailer _              = False
-
-{-|
-Return the first PDF version if any.
-
-If the partition does not have a PDF version, it returns a default PDF
-version of 1.0.
--}
-firstVersion :: PDFPartition -> PDFObject
-firstVersion = fromMaybe (PDFVersion "1.0") . find version . ppHeads
- where
-  version :: PDFObject -> Bool
-  version (PDFVersion _) = True
-  version _              = False

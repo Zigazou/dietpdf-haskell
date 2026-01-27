@@ -187,6 +187,8 @@ tests:
     - bytestring
     - containers
     - binary-parsers
+    - process
+    - temporary
     - text
     - transformers
     - zlib

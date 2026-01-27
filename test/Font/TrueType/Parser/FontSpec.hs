@@ -6,6 +6,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
+import Data.Sequence qualified as Seq
 import Data.UnifiedError (UnifiedError (UnableToOpenFile))
 import Data.Word (Word32)
 
@@ -19,7 +20,8 @@ import Font.TrueType.OffsetSubtable
   )
 import Font.TrueType.Parser.Font (ttfParse)
 import Font.TrueType.ScalerType (ScalerType (FontTrueType00010000))
-import Font.TrueType.TableDirectory (mkTableDirectory)
+import Font.TrueType.TableDirectory
+  (TableDirectory, TableDirectory' (TableDirectory))
 import Font.TrueType.TableEntry
   ( TableEntry (TableEntry, teChecksum, teData, teLength, teOffset, teTag)
   , calcChecksum
@@ -28,6 +30,9 @@ import Font.TrueType.TableEntry
 import Font.TrueType.TableIdentifier (toTableIdentifier)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
+
+mkTableDirectory :: [TableEntry] -> TableDirectory
+mkTableDirectory entries = TableDirectory (Seq.fromList entries)
 
 fontExamples :: [(FilePath, FontDirectory)]
 fontExamples =

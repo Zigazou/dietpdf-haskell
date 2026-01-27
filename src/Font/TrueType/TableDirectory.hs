@@ -20,7 +20,6 @@ module Font.TrueType.TableDirectory
   , singleton
   , prepend
   , append
-  , mkTableDirectory
   , filterTableDirectory
   , mapOnTableType
   ) where
@@ -58,15 +57,6 @@ of font tables.
 -}
 type TableDirectory :: Type
 type TableDirectory = TableDirectory' TableEntry
-
-{-|
-Create a table directory from a list of table entries.
-
-The entries are stored in the order provided, though they will be sorted by tag
-when serialized.
--}
-mkTableDirectory :: [TableEntry] -> TableDirectory
-mkTableDirectory entries = TableDirectory (Seq.fromList entries)
 
 {-|
 Create a table directory containing a single entry.

@@ -9,7 +9,6 @@ module Data.PDF.PDFObjects
     toPDFDocument,
     fromPDFDocument,
     findLast,
-    insertObject,
   )
 where
 
@@ -19,7 +18,6 @@ import Data.List (find)
 import Data.PDF.PDFDocument (PDFDocument, fromList, toList)
 import Data.PDF.PDFObject
   ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream)
-  , getObjectNumber
   )
 
 {-|
@@ -48,17 +46,6 @@ fromPDFDocument = IM.fromList . fmap createCouple . toList
       (number, object)
     createCouple object@(PDFXRefStream number _ _ _) = (number, object)
     createCouple object                              = (0, object)
-
-{-|
-Insert a `PDFObject` into a `PDFObjects` map.
-
-If the object is indirect, it is indexed by its object number. Otherwise, the
-map is unchanged.
--}
-insertObject :: PDFObject -> PDFObjects -> PDFObjects
-insertObject object = case getObjectNumber object of
-  Just number -> IM.insert number object
-  Nothing     -> id
 
 {-|
 Find last value in a `CollectionOf` satisfying a predicate.

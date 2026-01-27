@@ -41,7 +41,7 @@ module Data.PDF.PDFObject
   , isReference
   ) where
 
-import Data.Array (Array, mkArray, mkEmptyArray)
+import Data.Array (Array, mkArray)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Context (Context), Contextual (ctx), ctx2)
@@ -112,7 +112,7 @@ mkEmptyPDFDictionary = PDFDictionary mkEmptyDictionary
 Create an empty `PDFArray`.
 -}
 mkEmptyPDFArray :: PDFObject
-mkEmptyPDFArray = PDFArray mkEmptyArray
+mkEmptyPDFArray = PDFArray mempty
 
 {-|
 Create a `PDFDictionary` from a list of couples (key, value).

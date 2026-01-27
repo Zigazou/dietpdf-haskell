@@ -18,11 +18,8 @@ module Data.PDF.GFXObject
     , GFXOperator
     , GFXInlineImage
     )
-  , mkEmptyGFXArray
-  , mkEmptyGFXDictionary
   , mkGFXArray
   , mkGFXDictionary
-  , objectInfo
 
     {-| * Operators -}
   , GSOperator(..)
@@ -46,7 +43,7 @@ module Data.PDF.GFXObject
   , isKeywordFirstCharacter
   ) where
 
-import Data.Array (Array, mkArray, mkEmptyArray)
+import Data.Array (Array, mkArray)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
@@ -55,11 +52,7 @@ import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (isJust, isNothing)
 import Data.Sequence qualified as SQ
-import Data.Text.Lazy qualified as TL
 import Data.Word (Word8)
-
-import Formatting (format, int, (%))
-import Formatting.ByteStringFormatter (utf8)
 
 import Util.Ascii
   ( asciiDIGITNINE
@@ -80,7 +73,7 @@ import Util.Ascii
   , pattern AsciiQUOTATIONMARK
   , pattern AsciiSPACE
   )
-import Util.Dictionary (Dictionary, mkDictionary, mkEmptyDictionary)
+import Util.Dictionary (Dictionary, mkDictionary)
 import Util.Name (fromName)
 import Util.Number (fromInt, fromNumber, round')
 import Util.String (fromHexString, fromString)
@@ -609,18 +602,6 @@ data GFXObject
   deriving stock (Eq, Show)
 
 {-|
-Create an empty `GFXDictionary`.
--}
-mkEmptyGFXDictionary :: GFXObject
-mkEmptyGFXDictionary = GFXDictionary mkEmptyDictionary
-
-{-|
-Create an empty `GFXArray`.
--}
-mkEmptyGFXArray :: GFXObject
-mkEmptyGFXArray = GFXArray mkEmptyArray
-
-{-|
 Create a `GFXDictionary` from a list of couples (key, value).
 -}
 mkGFXDictionary :: [(ByteString, GFXObject)] -> GFXObject
@@ -698,32 +679,6 @@ fromGFXObject (GFXBool       False     ) = "false"
 fromGFXObject GFXNull                    = "null"
 fromGFXObject (GFXInlineImage dict raw)  = fromInlineImage dict raw
 fromGFXObject (GFXOperator operator   )  = fromGSOperator operator
-
-{-|
-Returns a `Text` string describing a GFXObject.
--}
-objectInfo :: GFXObject -> TL.Text
-objectInfo (GFXComment comment) = format ("{- " % utf8 % " -}") comment
-objectInfo (GFXNumber number) =
-  format ("[number:" % utf8 % "]") (fromNumber number)
-objectInfo (GFXName   name ) = format ("[name:" % utf8 % "]") name
-objectInfo (GFXString bytes) = format ("[string:" % utf8 % "]") bytes
-objectInfo (GFXHexString hexstring) =
-  format ("[hexstring: " % utf8 % "]") hexstring
-objectInfo (GFXReference number revision) =
-  format ("[ref:" % int % "," % int % "]") number revision
-objectInfo (GFXArray objects) =
-  format ("[array:count=" % int % "]") (length objects)
-objectInfo (GFXDictionary dictionary) =
-  format ("[dictionary:count=" % int % "]") (Map.size dictionary)
-objectInfo (GFXBool True )           = "true"
-objectInfo (GFXBool False)           = "false"
-objectInfo GFXNull                   = "null"
-objectInfo (GFXInlineImage dict raw) = format
-  ("[inlineimage:count=" % int % ", size=" % int % "]")
-  (Map.size dict)
-  (BS.length raw)
-objectInfo GFXOperator{} = "operator"
 
 {-|
 Takes an `Array` of `GFXObject`, converts them to the `ByteString`

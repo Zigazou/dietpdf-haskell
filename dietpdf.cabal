@@ -171,7 +171,6 @@ library
       PDF.Graphics.Parser.String
       PDF.Object.Container
       PDF.Object.Format
-      PDF.Object.Linearization
       PDF.Object.Object
       PDF.Object.Object.Delimiter
       PDF.Object.Object.FromPDFObject
@@ -229,7 +228,6 @@ library
       Util.Number
       Util.PdfDocEncoding
       Util.Sequence
-      Util.SimplePam
       Util.SimpleTiff
       Util.String
       Util.Text
@@ -402,7 +400,6 @@ test-suite dietpdf-test
       PDF.Object.DictionarySpec
       PDF.Object.HexStringSpec
       PDF.Object.IndirectObjectSpec
-      PDF.Object.LinearizationSpec
       PDF.Object.NameSpec
       PDF.Object.NumberSpec
       PDF.Object.Object.RenameResourcesSpec
@@ -465,6 +462,8 @@ test-suite dietpdf-test
     , extra
     , hspec
     , mtl
+    , process
+    , temporary
     , text
     , transformers
     , utf8-string

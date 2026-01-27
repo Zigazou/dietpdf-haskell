@@ -3,16 +3,79 @@ module Util.SimpleTiffSpec
   ) where
 
 import Control.Monad.Except (runExceptT)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ColorSpace (ColorSpace (ColorSpaceGray, ColorSpaceRGB))
+import Data.Fallible (Fallible, FallibleT)
+import Data.UnifiedError (UnifiedError (ExternalCommandError))
 
-import External.ExternalCommand (externalCommandBuf')
+import GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
+import GHC.IO.Handle
+  (BufferMode (BlockBuffering), Handle, hClose, hSetBinaryMode, hSetBuffering)
+
+import System.IO.Temp (withSystemTempFile)
+import System.Process.Extra
+  ( ProcessHandle
+  , StdStream (CreatePipe)
+  , proc
+  , waitForProcess
+  , withCreateProcess
+  )
+import System.Process.Internals (CreateProcess (std_out))
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.SimpleTiff (simpleTiff)
+
+{-|
+Runs an external command with the given arguments and input.
+
+If the command fails, this function throws an `ExternalCommandError` error.
+
+The input is written to a file that is then given in the command's arguments.
+The output is captured and returned.
+-}
+externalCommandBuf'
+  :: FilePath
+  -> [String]
+  -> ByteString
+  -> FallibleT IO ByteString
+externalCommandBuf' command args input = do
+  withSystemTempFile "dietpdf.temporary" $ \temp tempHandle -> do
+    lift $ hClose tempHandle
+    lift $ BS.writeFile temp input
+    let process = (proc command (args ++ [temp])) { std_out = CreatePipe }
+
+    result <- lift $ withCreateProcess process injectInput
+
+    case result of
+      Right output -> return output
+      Left err     -> throwE err
+ where
+  injectInput
+    :: Maybe Handle
+    -> Maybe Handle
+    -> Maybe Handle
+    -> ProcessHandle
+    -> IO (Fallible ByteString)
+  injectInput _stdin (Just stdout) _stderr ph = do
+    -- Configure stdout
+    hSetBinaryMode stdout True
+    hSetBuffering stdout (BlockBuffering Nothing)
+
+    -- Read stdout and stderr
+    output   <- BS.hGetContents stdout
+    exitCode <- waitForProcess ph
+
+    case exitCode of
+      ExitSuccess    -> return $ Right output
+      ExitFailure rc -> return $ Left (ExternalCommandError command rc)
+  injectInput _ _ _ _ =
+    return $ Left (ExternalCommandError (command ++ ": invalid handles") 1)
+
 
 rgbImage :: ByteString
 rgbImage = BS.pack
