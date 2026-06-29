@@ -22,7 +22,7 @@ module AppOptions
     , VersionOptions
     )
   , appOptions
-  , Codec(LZW, Brotli, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex)
+  , Codec(LZW, Brotli, Deflate, RLE, NoCompress, Zopfli, Ascii85, Hex, ECT)
   , FileOverwrite(OverwriteFile, DoNotOverwriteFile)
   ) where
 
@@ -88,6 +88,7 @@ data Codec = LZW        -- ^ LZW compression (LZWDecode)
            | Zopfli     -- ^ Zopfli compression (FlateDecode with Zopfli)
            | Ascii85    -- ^ ASCII85 encoding (ASCII85Decode)
            | Hex        -- ^ ASCIIHex encoding (ASCIIHexDecode)
+           | ECT        -- ^ Effective Compression Tool (FlateDecode with ECT)
            deriving stock (Eq, Read, Show)
 
 {-|
@@ -95,7 +96,8 @@ Help message for codecs.
 -}
 codecsHelp :: String
 codecsHelp =
-  "Codec to use (LZW, Deflate, Brotli, NoCompress, RLE, Zopfli, Ascii85, Hex)"
+  "Codec to use (LZW, Deflate, Brotli, NoCompress, RLE, Zopfli, Ascii85, Hex, \
+  \ECT)"
 
 {-|
 Help message for predictors.
@@ -163,7 +165,7 @@ commandOptimize = command
     <*> optional (argument str (metavar "<output_pdf_file>" <> help "PDF file to create"))
     <*> (toUseGhostScript <$> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing"))
     <*> (toUsePDFToCairo <$> switch (long "p2c-optimize" <> short 'p' <> help "Use PDFToCairo before optimizing"))
-    <*> (toUseCompressor <$> optional (strOption (long "compressor" <> short 'c' <> help "Compressor to use (zopfli, deflate, brotli)")))
+    <*> (toUseCompressor <$> optional (strOption (long "compressor" <> short 'c' <> help "Compressor to use (zopfli, deflate, brotli, ect)")))
     <*> (toOptimizeGFX . not <$> switch (long "no-gfx-optimize" <> short 'x' <> help "Do not optimize graphics stream"))
     <*> (toOverwriteFile <$> switch (long "overwrite" <> short 'o' <> help "Overwrite existing output file"))
     )

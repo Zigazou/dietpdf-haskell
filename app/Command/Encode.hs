@@ -12,9 +12,10 @@ module Command.Encode
   ) where
 
 import AppOptions
-  (Codec (Ascii85, Brotli, Deflate, Hex, LZW, NoCompress, RLE, Zopfli))
+  (Codec (Ascii85, Brotli, Deflate, ECT, Hex, LZW, NoCompress, RLE, Zopfli))
 
 import Codec.Compression.BrotliForPDF qualified as BR
+import Codec.Compression.ECT qualified as ECT
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.LZW qualified as LZW
 import Codec.Compression.RunLength qualified as RL
@@ -60,6 +61,7 @@ Codec mappings used:
 * 'Zopfli'     → high-density Deflate encoder ('FL.compress').
 * 'Ascii85'    → ASCII85 encoder ('A8.encode').
 * 'Hex'        → ASCII Hex encoder ('AH.encode').
+* 'ECT'        → Effective Compression Tool encoder ('ECT.compress').
 
 Note: This function produces its result by writing to stdout rather than
 returning the encoded bytes. Redirect stdout if you need to capture the output.
@@ -73,3 +75,4 @@ encodeByteString NoCompress = manage . FL.noCompress
 encodeByteString Zopfli     = manage . FL.compress
 encodeByteString Ascii85    = manage . A8.encode
 encodeByteString Hex        = manage . AH.encode
+encodeByteString ECT        = manage . ECT.compress

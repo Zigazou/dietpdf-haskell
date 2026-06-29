@@ -5,7 +5,7 @@ cabal-version: 1.12
 -- see: https://github.com/sol/hpack
 
 name:           dietpdf
-version:        1.2.0.0
+version:        1.2.1.0
 description:    Please see the README on GitHub at <https://github.com/zigazou/dietpdf#readme>
 homepage:       https://github.com/zigazou/dietpdf#readme
 bug-reports:    https://github.com/zigazou/dietpdf/issues
@@ -26,6 +26,19 @@ source-repository head
 library
   exposed-modules:
       Codec.Compression.BrotliForPDF
+      Codec.Compression.CCITTFax
+      Codec.Compression.CCITTFax.ByteChanges
+      Codec.Compression.CCITTFax.ByteStringChanges
+      Codec.Compression.CCITTFax.FaxCode
+      Codec.Compression.CCITTFax.FaxCodeFinder
+      Codec.Compression.CCITTFax.FaxCodeReader
+      Codec.Compression.CCITTFax.FaxCodeWriter
+      Codec.Compression.CCITTFax.Group4Codes
+      Codec.Compression.CCITTFax.MakeUpBlackCodes
+      Codec.Compression.CCITTFax.MakeUpWhiteCodes
+      Codec.Compression.CCITTFax.TerminatingBlackCodes
+      Codec.Compression.CCITTFax.TerminatingWhiteCodes
+      Codec.Compression.ECT
       Codec.Compression.Flate
       Codec.Compression.LZW
       Codec.Compression.LZW.LZWDecode
@@ -219,6 +232,7 @@ library
       PDF.Processing.Unfilter
       PDF.Processing.WhatOptimizationFor
       Util.Ascii
+      Util.BitStream
       Util.ByteString
       Util.Dictionary
       Util.Display
@@ -349,6 +363,10 @@ test-suite dietpdf-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Codec.Compression.CCITTFax.ByteStringChangesSpec
+      Codec.Compression.CCITTFax.FaxCodeFinderSpec
+      Codec.Compression.CCITTFax.FaxCodeReaderSpec
+      Codec.Compression.CCITTFax.FaxCodeSpec
       Codec.Compression.FlateSpec
       Codec.Compression.LZWSpec
       Codec.Compression.PredictSpec
@@ -423,6 +441,7 @@ test-suite dietpdf-test
       PDF.Parser.ParserSpec
       PDF.Processing.PDFWorkSpec
       PDF.Processing.UnfilterSpec
+      Util.BitStreamSpec
       Util.ByteStringSpec
       Util.GraphicsSpec
       Util.HexSpec

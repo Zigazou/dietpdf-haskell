@@ -12,7 +12,7 @@ module Command.Decode
   ) where
 
 import AppOptions
-  (Codec (Ascii85, Brotli, Deflate, Hex, LZW, NoCompress, RLE, Zopfli))
+  (Codec (Ascii85, Brotli, Deflate, ECT, Hex, LZW, NoCompress, RLE, Zopfli))
 
 import Codec.Compression.BrotliForPDF qualified as BR
 import Codec.Compression.Flate qualified as FL
@@ -73,3 +73,4 @@ decodeByteString Zopfli     = manage . FL.decompress
 decodeByteString Ascii85    = manage . A8.decode
 decodeByteString Hex        = manage . AH.decode
 decodeByteString LZW        = manage . LZ.decompress
+decodeByteString ECT        = manage . FL.decompress

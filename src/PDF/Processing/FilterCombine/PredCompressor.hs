@@ -13,6 +13,7 @@ module PDF.Processing.FilterCombine.PredCompressor
 
 import Codec.Compression.BrotliForPDF qualified as BR
 import Codec.Compression.Flate qualified as FL
+import Codec.Compression.ECT qualified as ECT
 import Codec.Compression.Predict
   ( Entropy (EntropyDeflate, EntropyShannon)
   , Predictor (PNGOptimum, TIFFPredictor2)
@@ -32,7 +33,8 @@ import Data.List (minimumBy)
 import Data.PDF.Filter (Filter (Filter))
 import Data.PDF.FilterCombination (FilterCombination, mkFCAppend)
 import Data.PDF.PDFObject (PDFObject (PDFName), mkPDFDictionary)
-import Data.PDF.Settings (UseCompressor (UseBrotli, UseDeflate, UseZopfli))
+import Data.PDF.Settings
+  (UseCompressor (UseBrotli, UseDeflate, UseECT, UseECT, UseZopfli))
 
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
 
@@ -40,6 +42,7 @@ getCompressor :: UseCompressor -> (ByteString -> Fallible ByteString, PDFObject)
 getCompressor UseZopfli  = (FL.compress    , PDFName "FlateDecode" )
 getCompressor UseDeflate = (FL.fastCompress, PDFName "FlateDecode" )
 getCompressor UseBrotli  = (BR.compress    , PDFName "BrotliDecode")
+getCompressor UseECT     = (ECT.compress   , PDFName "FlateDecode" )
 
 {-|
 Apply PNG predictor, then Zopfli/Deflate/Brotli, selecting the better result

@@ -8,7 +8,7 @@ Zopfli). Helpers are provided to convert booleans to these flags.
 module Data.PDF.Settings
   ( Settings(Settings, sOptimizeGFX, sCompressor, sUseGhostScript, sUsePDFToCairo)
   , OptimizeGFX(OptimizeGFX, DoNotOptimizeGFX)
-  , UseCompressor(UseZopfli, UseDeflate, UseBrotli)
+  , UseCompressor(UseZopfli, UseDeflate, UseBrotli, UseECT)
   , UseGhostScript(UseGhostScript, DoNotUseGhostScript)
   , UsePDFToCairo(UsePDFToCairo, DoNotUsePDFToCairo)
   , defaultSettings
@@ -21,17 +21,19 @@ module Data.PDF.Settings
 import Data.Kind (Type)
 
 {-|
-Flag indicating whether to use Zopfli compression, standard deflate, or Brotli.
+Flag indicating whether to use Zopfli compression, standard deflate, Brotli, or ECT.
 -}
 type UseCompressor :: Type
 data UseCompressor = UseZopfli -- ^ Use Zopfli compression
                    | UseDeflate -- ^ Use standard deflate compression
                    | UseBrotli -- ^ Use Brotli compression
+                   | UseECT -- ^ Use Effective Compression Tool (ECT) for compression
                    deriving stock Eq
 
 toUseCompressor :: Maybe String -> UseCompressor
 toUseCompressor (Just "deflate") = UseDeflate
 toUseCompressor (Just "brotli")  = UseBrotli
+toUseCompressor (Just "ect")     = UseECT
 toUseCompressor _anyOtherCase    = UseZopfli
 
 {-|

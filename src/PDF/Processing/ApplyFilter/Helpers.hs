@@ -22,7 +22,8 @@ import Data.ByteString qualified as BS
 import Data.Logging (Logging)
 import Data.PDF.FilterCombination (FilterCombination, firstPredictor)
 import Data.PDF.PDFWork (PDFWork, sayComparisonP)
-import Data.PDF.Settings (UseCompressor (UseBrotli, UseDeflate, UseZopfli))
+import Data.PDF.Settings
+  (UseCompressor (UseBrotli, UseDeflate, UseECT, UseZopfli))
 import Data.Text (Text)
 import Data.Text qualified as T
 
@@ -59,6 +60,8 @@ filterInfoCompressor UseDeflate filterName streamBefore streamAfter =
   filterInfo (filterName <> "Deflate") streamBefore streamAfter
 filterInfoCompressor UseBrotli filterName streamBefore streamAfter =
   filterInfo (filterName <> "Brotli") streamBefore streamAfter
+filterInfoCompressor UseECT filterName streamBefore streamAfter =
+  filterInfo (filterName <> "ECT") streamBefore streamAfter
 
 {-|
 Generate a prefix string for logging based on the first predictor in the
