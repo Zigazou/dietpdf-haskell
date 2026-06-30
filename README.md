@@ -57,7 +57,7 @@ Optimizes a PDF file.
 * --gs-optimize or -g: (optional) Use GhostScript before optimizing.
 * --p2c-optimize or -p: (optional) Use PDF2Cairo before optimizing.
 * --compressor=<compressor> or -c <compressor>: (optional) Use a specific
-  compressor (deflate, zopfli, brotli).
+  compressor (deflate, zopfli, brotli, ect).
 * --no-gfx-optimize or -x: (optional) Do not try to optimize vector elements.
 * --overwrite or -o: (optional) Overwrite the output file if it exists.
 
@@ -84,6 +84,7 @@ Encodes a file as it would be in a PDF stream.
     * Zopfli
     * Ascii85
     * Hex
+    * ECT
 * *input_pdf_file*: (Optional) The file to encode.
 
 ### decode
@@ -101,6 +102,7 @@ Decodes a file as it would be in a PDF stream.
     * Zopfli
     * Ascii85
     * Hex
+    * ECT
 * *output_pdf_file*: (Optional) The file to decode.
 
 ### predict
@@ -201,6 +203,24 @@ is available as package in most Linux distributions, Grok supports CMYK JPEG
 
 TTFAutoHint is used to reduce size of True Type fonts embedded in a PDF file. It
 does so by removing hinting which is not used by the PDF viewers.
+
+### Efficient Compression Tool
+
+**optional**: `ect`
+
+Efficient Compression Tool (aka ECT) may be used instead of Zopfli to produce an
+optimized Zlib stream. It compresses often better and quicker than Zopfli but is
+generally not available as a package with your favorite Linux distro.
+
+You need to download ECT source code from [Efficient Compression Tool Github
+repository](https://github.com/fhanau/Efficient-Compression-Tool)
+
+**Note**: you have to run the following command to get all the source code
+
+`git clone --recursive https://github.com/fhanau/Efficient-Compression-Tool.git`
+
+In order to have the fastest version of ECT, you will also need to install
+`nasm`.
 
 ## Limitations
 
