@@ -1,6 +1,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#if defined(__SSE2__)
+#include <emmintrin.h>
+#endif
+
 /*
  * Evaluate the uncompressed size of data encoded in run-length format.
  *
@@ -120,7 +124,7 @@ size_t runLengthDecompressFFI(const uint8_t *input, size_t inputLen,
  * - Look for runs of identical bytes
  * - If run is 2+ bytes, encode as repeat run
  * - Otherwise, accumulate literal bytes and encode when maxed out (128) or
- *   when we hit a potential repeat run
+ *   when we hit three identical bytes
  *
  * Parameters:
  *   input: pointer to input buffer with raw data
@@ -135,51 +139,109 @@ size_t runLengthCompressFFI(const uint8_t *input, size_t inputLen,
   size_t writeIdx = 0;
 
   while (readIdx < inputLen) {
-    // Count how many bytes are identical starting at readIdx
-    size_t runLength;
-    for (runLength = 1;
-         readIdx + runLength < inputLen &&
-         input[readIdx + runLength] == input[readIdx] && runLength < 128;
-         runLength++)
-      ;
+    size_t remaining = inputLen - readIdx;
+    size_t limit = remaining < 128 ? remaining : 128;
+    const uint8_t *start = input + readIdx;
 
-    if (runLength >= 2) {
-      // Encode as repeat run
-      // Length byte is (257 - runLength), followed by one byte to repeat
-      uint8_t lengthByte = 257 - runLength;
-      output[writeIdx++] = lengthByte;
-      output[writeIdx++] = input[readIdx];
-      readIdx += runLength;
-    } else {
-      // Start accumulating literal bytes
-      size_t literalStart = writeIdx + 1; // +1 for the length byte
-      size_t literalCount = 0;
+    /* Check if we have a repeat run starting at the current position. */
+    if (limit >= 2 && start[0] == start[1]) {
+      /* Check for a simple repeat run of exactly two bytes. */
+      if (limit == 2 || start[2] != start[0]) {
+        output[writeIdx++] = 255;
+        output[writeIdx++] = start[0];
+        readIdx += 2;
 
-      // Accumulate literals until we hit a repeat or reach max (128)
-      while (readIdx < inputLen && literalCount < 128) {
-        // Check if next 2+ bytes are identical (potential repeat run)
-        size_t peekAhead1 = readIdx + 1;
-        size_t peekAhead2 = readIdx + 2;
+        continue;
+      }
 
-        if (peekAhead2 < inputLen && input[readIdx] == input[peekAhead1] &&
-            input[peekAhead1] == input[peekAhead2]) {
-          // Stop accumulating, we'll handle the repeat run next iteration
+      size_t count = 3;
+
+#if defined(__SSE2__)
+      /* Check for a longer repeat run using SIMD if available. */
+      const __m128i repeated = _mm_set1_epi8((char)start[0]);
+
+      while (limit - count >= 16) {
+        /* Load 16 bytes from the current position and compare with the repeated
+         * byte. */
+        __m128i bytes = _mm_loadu_si128((const __m128i *)(start + count));
+
+        /* Compare the loaded bytes with the repeated byte to create a mask. */
+        unsigned mask =
+            (unsigned)_mm_movemask_epi8(_mm_cmpeq_epi8(bytes, repeated));
+
+        /* If the mask is not all ones, it means not all bytes matched the
+        repeated byte. */
+        if (mask != 0xffffu) {
           break;
         }
 
-        output[literalStart + literalCount] = input[readIdx];
-        literalCount++;
-        readIdx++;
+        count += 16;
+      }
+#endif
+
+      /* Check for any remaining repeat run beyond what SIMD could detect. */
+      while (count < limit && start[count] == start[0]) {
+        count++;
       }
 
-      // Write the literal run
-      output[writeIdx] = literalCount - 1; // Length byte = literalCount - 1
-      writeIdx = literalStart + literalCount;
+      output[writeIdx++] = (uint8_t)(257 - count);
+      output[writeIdx++] = start[0];
+      readIdx += count;
+    } else {
+      /* Start counting literal bytes. */
+      size_t count = 0;
+
+      /* Only triples interrupt literals, including triples that straddle
+       * the 128-byte packet boundary. Pairs inside literals stay literal. */
+      size_t scanLimit = remaining > 2 ? remaining - 2 : 0;
+
+      if (scanLimit > limit) {
+        scanLimit = limit;
+      }
+
+#if defined(__SSE2__)
+      /* Check for a literal run using SIMD if available. */
+      while (scanLimit - count >= 16) {
+        /* Load 16 bytes from the current position and the next two positions to
+        check for triples. */
+        __m128i a = _mm_loadu_si128((const __m128i *)(start + count));
+        __m128i b = _mm_loadu_si128((const __m128i *)(start + count + 1));
+        __m128i c = _mm_loadu_si128((const __m128i *)(start + count + 2));
+
+        /* Check if any of the 16 bytes form a triple with the next two bytes.
+         */
+        unsigned mask = (unsigned)_mm_movemask_epi8(
+            _mm_and_si128(_mm_cmpeq_epi8(a, b), _mm_cmpeq_epi8(b, c)));
+
+        /* If any of the 16 bytes form a triple, the mask will be non-zero. */
+        if (mask != 0) {
+          break;
+        }
+
+        /* Advance the count by 16 as none of the 16 bytes formed a triple. */
+        count += 16;
+      }
+#endif
+
+      /* Check for any remaining literal run beyond what SIMD could detect. */
+      while (count < scanLimit && !(start[count] == start[count + 1] &&
+                                    start[count + 1] == start[count + 2])) {
+        count++;
+      }
+
+      if (count == scanLimit) {
+        count = limit;
+      }
+
+      /* Write the literal run to the output buffer. */
+      output[writeIdx++] = (uint8_t)(count - 1);
+      memcpy(output + writeIdx, start, count);
+
+      /* Update the write and read indices after writing the literal run. */
+      writeIdx += count;
+      readIdx += count;
     }
   }
-
-  // Do not write EOD marker (PDF files may omit it)
-  // output[writeIdx++] = 128;
 
   return writeIdx;
 }
