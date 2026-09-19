@@ -284,6 +284,7 @@ library
     , monad-loops
     , mtl
     , ordered-containers
+    , parallel
     , pretty-hex
     , process
     , split

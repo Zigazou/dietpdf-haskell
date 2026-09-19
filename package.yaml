@@ -99,6 +99,7 @@ library:
   - spool
   - temporary
   - async
+  - parallel
   - extra
   - base64-bytestring
   - pretty-hex
