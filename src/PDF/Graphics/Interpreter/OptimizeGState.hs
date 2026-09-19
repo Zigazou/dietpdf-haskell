@@ -15,21 +15,34 @@ them with parameterized resource references.
 -}
 module PDF.Graphics.Interpreter.OptimizeGState
   ( optimizeGState
+  , planGState
+  , gStateCost
   )
 where
 
+import Control.Monad.State (get, put)
+import Data.ByteString qualified as BS
+import Data.Foldable (toList)
+import Data.List (foldl')
+import Data.Map.Strict qualified as Map
 import Data.Logging (Logging)
 import Data.PDF.Command (Command (Command), mkCommand)
 import Data.PDF.ExtGState (mkExtGState)
 import Data.PDF.GFXObject
-  ( GFXObject (GFXName)
+  ( GFXObject (GFXName, GFXNumber, GFXArray)
+  , separateGfx
   , GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetParameters)
   )
 import Data.PDF.PDFObject (PDFObject (PDFDictionary))
-import Data.PDF.PDFWork (PDFWork, addAdditionalGState)
-import Data.PDF.Program (Program)
-import Data.PDF.Resource (resName)
-import Data.Sequence (Seq (Empty, (:<|)), spanl, (<|))
+import Data.PDF.PDFWork (PDFWork)
+import Data.PDF.WorkData (WorkData (wNameTranslations, wAdditionalGStates, wPDF))
+import PDF.Object.Object.FromPDFObject (fromPDFObject)
+import Data.PDF.PDFPartition (PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream))
+import PDF.Object.Object.Properties (hasKey)
+import Data.PDF.Program (Program, extractObjects)
+import Data.PDF.Resource (Resource (ResExtGState), resName, toNameBase)
+import Data.Sequence (Seq (Empty, (:<|)), spanl)
+import Data.Sequence qualified as SQ
 
 {-|
 Test if a command can be factorized into an ExtGState resource.
@@ -50,62 +63,90 @@ object reference, whereas Tf uses a name in the local resource dictionary. Other
 commands are not factorizable and must be applied directly.
 -}
 isFactorizable :: Command -> Bool
-isFactorizable (Command GSSetLineWidth _parameters)             = True
-isFactorizable (Command GSSetLineCap _parameters)               = True
-isFactorizable (Command GSSetLineJoin _parameters)              = True
-isFactorizable (Command GSSetMiterLimit _parameters)            = True
-isFactorizable (Command GSSetLineDashPattern _parameters)       = True
-isFactorizable (Command GSSetColourRenderingIntent _parameters) = True
-isFactorizable (Command GSSetFlatnessTolerance _parameters)     = True
-isFactorizable _anyOtherCommand                                 = False
+isFactorizable (Command operator (GFXNumber _value :<| Empty)) =
+  operator `elem` [GSSetLineWidth, GSSetLineCap, GSSetLineJoin,
+                  GSSetMiterLimit, GSSetFlatnessTolerance]
+isFactorizable (Command GSSetColourRenderingIntent (GFXName _intent :<| Empty)) = True
+isFactorizable (Command GSSetLineDashPattern
+    (GFXArray values :<| GFXNumber _phase :<| Empty)) = all isNumber values
+ where
+  isNumber GFXNumber{} = True
+  isNumber _other = False
+isFactorizable _other = False
 
-{-|
-Test if a command cannot be factorized into an ExtGState resource.
+-- | Uncompressed serialized cost, including the resource dictionary wrapper.
+-- Compression and indirect-object layout are deliberately not predicted here.
+gStateCost :: WorkData -> Program -> Int
+gStateCost work program = programCost program + resourceCopies work * resourceCost
+ where
+  resourceCost
+    | Map.null (wAdditionalGStates work) = 0
+    | otherwise = BS.length $ fromPDFObject $ PDFDictionary $
+        Map.singleton "ExtGState" (PDFDictionary (wAdditionalGStates work))
 
-Complementary predicate to @isFactorizable@. Returns @True@ for commands that
-must be executed directly and cannot be stored in an ExtGState dictionary.
--}
-isNotFactorizable :: Command -> Bool
-isNotFactorizable = not . isFactorizable
+-- | The writer currently copies generated states into every resource scope.
+-- Count that overhead conservatively; standalone programs use one scope.
+resourceCopies :: WorkData -> Int
+resourceCopies work = max 1 $ length $ filter (hasKey "Resources") $
+  toList (ppObjectsWithStream (wPDF work))
+    ++ toList (ppObjectsWithoutStream (wPDF work))
 
-{-|
-Factorize graphics state parameters into reusable ExtGState resources.
+programCost :: Program -> Int
+programCost = BS.length . separateGfx . extractObjects
 
-Scans the program for contiguous sequences of factorizable graphics state
-commands and replaces each sequence with a single @GSSetParameters@ command that
-references a named ExtGState resource. Preserves non-factorizable commands in
-their original positions.
+-- | Plan resource allocation without mutating the document. Identical runs are
+-- considered together so repeated settings can amortize the dictionary cost.
+-- Each accepted rewrite must reduce the complete serialized cost.
+planGState :: WorkData -> Program -> (Program, WorkData)
+planGState initial program = foldl' choose (program, initial) dictionaries
+ where
+  runs Empty = []
+  runs commands@(command :<| rest)
+    | isFactorizable command =
+        let (run, remaining) = spanl isFactorizable commands
+        in run : runs remaining
+    | otherwise = runs rest
 
-The optimization works by:
+  dictionaries = Map.toList $ Map.fromListWith (++)
+    [(PDFDictionary (mkExtGState run), [programCost run]) | run <- runs program]
 
-* Finding the longest sequence of consecutive factorizable commands
-* Creating an ExtGState dictionary from these commands
-* Adding the dictionary as a resource to the PDF document
-* Replacing the command sequence with a single @GSSetParameters@ call
-  referencing the new resource by name
-* Recursively processing the remaining program
+  choose (current, work) (dictionary, runCosts) =
+    let existing = [existingName | (existingName, value) <- Map.toList (wAdditionalGStates work),
+                           value == dictionary]
+        resource = case existing of
+          existingName : _ -> ResExtGState existingName
+          [] -> toNameBase (ResExtGState "") (Map.size (wNameTranslations work))
+        name = resName resource
+        candidateWork = work
+          { wAdditionalGStates = Map.insert name dictionary (wAdditionalGStates work)
+          , wNameTranslations = Map.insert resource resource (wNameTranslations work)
+          }
+        replacement = SQ.singleton (mkCommand GSSetParameters [GFXName name])
+        rewrite Empty = Empty
+        rewrite commands@(command :<| rest)
+          | isFactorizable command =
+              let (run, remaining) = spanl isFactorizable commands
+                  rewritten = if PDFDictionary (mkExtGState run) == dictionary
+                                    && programCost replacement < programCost run
+                                then replacement else run
+              in rewritten <> rewrite remaining
+          | otherwise = SQ.singleton command <> rewrite rest
+        candidate = rewrite current
+        -- Cheap upper bound avoids rescanning the stream for every unique,
+        -- short run. Full serialization still decides borderline candidates.
+        savings = sum [max 0 (cost - programCost replacement) | cost <- runCosts]
+        entryCost = if null existing
+          then BS.length (fromPDFObject (PDFDictionary (Map.singleton name dictionary))) - 4
+          else 0
+    in if savings > resourceCopies work * entryCost
+          && gStateCost candidateWork candidate < gStateCost work current
+         then (candidate, candidateWork)
+         else (current, work)
 
-Non-factorizable commands are collected and passed through without modification
-until the next factorizable sequence is encountered.
-
-@param program@ the graphics program to optimize @return@ the optimized program
-with factorized graphics state settings
--}
+-- | Commit only profitable resource replacements, preserving all barriers.
 optimizeGState :: Logging m => Program -> PDFWork m Program
-optimizeGState Empty = return Empty
-optimizeGState commands@(command :<| _rest) =
-  if isFactorizable command
-    then do
-      let (factorizables, rest) = spanl isFactorizable commands
-
-      resource <- addAdditionalGState (PDFDictionary $ mkExtGState factorizables)
-      let factorized = mkCommand GSSetParameters
-                                  [GFXName (resName resource)]
-
-      optimizeds <- optimizeGState rest
-      return $ factorized <| optimizeds
-    else do
-      -- No GState command to factorize, find the next one.
-      let (notFactorizables, rest) = spanl isNotFactorizable commands
-      optimizeds <- optimizeGState rest
-      return $ notFactorizables <> optimizeds
+optimizeGState program = do
+  work <- get
+  let (optimized, updated) = planGState work program
+  put updated
+  return optimized

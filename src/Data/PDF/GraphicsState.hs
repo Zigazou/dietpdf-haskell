@@ -38,9 +38,13 @@ module Data.PDF.GraphicsState
   , setLineJoin
   , setLineCap
   , setLineWidth
+  , setDashPattern
+  , invalidateParameters
   , setCurrentPoint
   , resetTextState
   , setStrokeColor
+  , setStrokeColorSpace
+  , setNonStrokeColorSpace
   , setNonStrokeColor
   , usefulMatrixPrecisionFor
   , applyTextMatrix
@@ -48,7 +52,10 @@ module Data.PDF.GraphicsState
 
 import Data.ByteString (ByteString)
 import Data.Kind (Type)
-import Data.PDF.Color (Color (ColorNotSet))
+import Data.PDF.Color (Color (ColorCMYK, ColorGray, ColorNotSet, ColorRGB))
+import Data.PDF.GFXObject
+  ( GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit)
+  )
 import Data.PDF.TextState
   ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsLeading, tsMatrix, tsRise)
   , defaultTextState
@@ -75,27 +82,30 @@ heuristics.
 -}
 type GraphicsState :: Type
 data GraphicsState = GraphicsState
-  { gsUserUnit       :: !Double -- ^ User unit scaling factor
-  , gsCTM            :: !TransformationMatrix -- ^ Current transformation matrix
-  , gsScaleX         :: !Double -- ^ Absolute horizontal scale from CTM
-  , gsScaleY         :: !Double -- ^ Absolute vertical scale from CTM
-  , gsTextState      :: !TextState -- ^ Current text state
-  , gsLineWidth      :: !Double -- ^ Line width for stroking operations
-  , gsLineCap        :: !Double -- ^ Line cap style for stroking operations
-  , gsLineJoin       :: !Double -- ^ Line join style for stroking operations
-  , gsMiterLimit     :: !Double -- ^ Miter limit for stroking operations
-  , gsDashArray      :: ![Double] -- ^ Dash array for stroking operations
-  , gsDashPhase      :: !Double -- ^ Dash phase for stroking operations
-  , gsIntent         :: !ByteString -- ^ Rendering intent
-  , gsFlatness       :: !Double -- ^ Flatness tolerance
-  , gsStrokeAlpha    :: !Double -- ^ Stroke alpha value
-  , gsNonStrokeAlpha :: !Double -- ^ Non-stroke alpha value
-  , gsStrokeColor    :: !Color -- ^ Current stroke color
-  , gsNonStrokeColor :: !Color -- ^ Current non-stroke color
-  , gsPathStartX     :: !Double -- ^ X coordinate of path start
-  , gsPathStartY     :: !Double -- ^ Y coordinate of path start
-  , gsCurrentPointX  :: !Double -- ^ X coordinate of current point
-  , gsCurrentPointY  :: !Double -- ^ Y coordinate of current point
+  { gsUserUnit            :: !Double -- ^ User unit scaling factor
+  , gsCTM                 :: !TransformationMatrix -- ^ Current transformation matrix
+  , gsScaleX              :: !Double -- ^ Absolute horizontal scale from CTM
+  , gsScaleY              :: !Double -- ^ Absolute vertical scale from CTM
+  , gsTextState           :: !TextState -- ^ Current text state
+  , gsUnknownParameters   :: ![GSOperator] -- ^ Parameters invalidated by an opaque gs command
+  , gsStrokeColorSpace    :: !(Maybe ByteString) -- ^ Known stroke color space
+  , gsNonStrokeColorSpace :: !(Maybe ByteString) -- ^ Known fill color space
+  , gsLineWidth           :: !Double -- ^ Line width for stroking operations
+  , gsLineCap             :: !Double -- ^ Line cap style for stroking operations
+  , gsLineJoin            :: !Double -- ^ Line join style for stroking operations
+  , gsMiterLimit          :: !Double -- ^ Miter limit for stroking operations
+  , gsDashArray           :: ![Double] -- ^ Dash array for stroking operations
+  , gsDashPhase           :: !Double -- ^ Dash phase for stroking operations
+  , gsIntent              :: !ByteString -- ^ Rendering intent
+  , gsFlatness            :: !Double -- ^ Flatness tolerance
+  , gsStrokeAlpha         :: !Double -- ^ Stroke alpha value
+  , gsNonStrokeAlpha      :: !Double -- ^ Non-stroke alpha value
+  , gsStrokeColor         :: !Color -- ^ Current stroke color
+  , gsNonStrokeColor      :: !Color -- ^ Current non-stroke color
+  , gsPathStartX          :: !Double -- ^ X coordinate of path start
+  , gsPathStartY          :: !Double -- ^ Y coordinate of path start
+  , gsCurrentPointX       :: !Double -- ^ X coordinate of current point
+  , gsCurrentPointY       :: !Double -- ^ Y coordinate of current point
   } deriving stock (Eq, Show)
 
 {-|
@@ -106,27 +116,30 @@ applied (identity CTM, default text state, opaque painting, etc.).
 -}
 defaultGraphicsState :: GraphicsState
 defaultGraphicsState = GraphicsState
-  { gsUserUnit       = 1.0
-  , gsCTM            = mempty
-  , gsScaleX         = 1.0
-  , gsScaleY         = 1.0
-  , gsTextState      = defaultTextState
-  , gsLineWidth      = 1.0
-  , gsLineCap        = 0.0
-  , gsLineJoin       = 0.0
-  , gsMiterLimit     = 10.0
-  , gsDashArray      = []
-  , gsDashPhase      = 0.0
-  , gsIntent         = "RelativeColorimetric"
-  , gsFlatness       = 1.0
-  , gsStrokeAlpha    = 1.0
-  , gsNonStrokeAlpha = 1.0
-  , gsStrokeColor    = ColorNotSet
-  , gsNonStrokeColor = ColorNotSet
-  , gsPathStartX     = 0.0
-  , gsPathStartY     = 0.0
-  , gsCurrentPointX  = 0.0
-  , gsCurrentPointY  = 0.0
+  { gsUserUnit            = 1.0
+  , gsCTM                 = mempty
+  , gsScaleX              = 1.0
+  , gsScaleY              = 1.0
+  , gsTextState           = defaultTextState
+  , gsUnknownParameters   = mempty
+  , gsStrokeColorSpace    = Nothing
+  , gsNonStrokeColorSpace = Nothing
+  , gsLineWidth           = 1.0
+  , gsLineCap             = 0.0
+  , gsLineJoin            = 0.0
+  , gsMiterLimit          = 10.0
+  , gsDashArray           = []
+  , gsDashPhase           = 0.0
+  , gsIntent              = "RelativeColorimetric"
+  , gsFlatness            = 1.0
+  , gsStrokeAlpha         = 1.0
+  , gsNonStrokeAlpha      = 1.0
+  , gsStrokeColor         = ColorNotSet
+  , gsNonStrokeColor      = ColorNotSet
+  , gsPathStartX          = 0.0
+  , gsPathStartY          = 0.0
+  , gsCurrentPointX       = 0.0
+  , gsCurrentPointY       = 0.0
   }
 
 {-|
@@ -373,10 +386,46 @@ resetTextState = setTextMatrix mempty
 Set the current stroke color in the graphics state.
 -}
 setStrokeColor :: Color -> GraphicsState -> GraphicsState
-setStrokeColor color state = state { gsStrokeColor = color }
+setStrokeColor color state = state
+  { gsStrokeColor = color
+  , gsStrokeColorSpace = colorSpace color (gsStrokeColorSpace state)
+  }
 
 {-|
 Set the current non-stroke color in the graphics state.
 -}
 setNonStrokeColor :: Color -> GraphicsState -> GraphicsState
-setNonStrokeColor color state = state { gsNonStrokeColor = color }
+setNonStrokeColor color state = state
+  { gsNonStrokeColor = color
+  , gsNonStrokeColorSpace = colorSpace color (gsNonStrokeColorSpace state)
+  }
+
+-- | Selecting a color space resets the corresponding color, even if the space
+-- name has not changed. Unknown resource defaults must never be deduplicated.
+setStrokeColorSpace :: Maybe ByteString -> GraphicsState -> GraphicsState
+setStrokeColorSpace space state = state
+  { gsStrokeColorSpace = space, gsStrokeColor = ColorNotSet }
+
+setNonStrokeColorSpace :: Maybe ByteString -> GraphicsState -> GraphicsState
+setNonStrokeColorSpace space state = state
+  { gsNonStrokeColorSpace = space, gsNonStrokeColor = ColorNotSet }
+
+colorSpace :: Color -> Maybe ByteString -> Maybe ByteString
+colorSpace ColorGray{} _previous = Just "DeviceGray"
+colorSpace ColorRGB{} _previous  = Just "DeviceRGB"
+colorSpace ColorCMYK{} _previous = Just "DeviceCMYK"
+colorSpace _generic previous     = previous
+
+-- | Forget parameters an external graphics state may change. Save/restore
+-- carries this knowledge together with the parameter values.
+invalidateParameters :: GraphicsState -> GraphicsState
+invalidateParameters state = state
+  { gsUnknownParameters =
+      [GSSetLineWidth, GSSetLineCap, GSSetLineJoin, GSSetMiterLimit,
+       GSSetFlatnessTolerance, GSSetLineDashPattern, GSSetColourRenderingIntent]
+  }
+
+-- | Set both components of the dash pattern atomically.
+setDashPattern :: [Double] -> Double -> GraphicsState -> GraphicsState
+setDashPattern values phase state = state
+  { gsDashArray = values, gsDashPhase = phase }

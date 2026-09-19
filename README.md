@@ -238,6 +238,28 @@ stack build
 stack exec -- whereis dietpdf
 ```
 
+### Testing
+
+```sh
+stack test
+stack test --test-arguments='--match PDF.Graphics'
+```
+
+Check that Hspec reports a nonzero example count. The filter `/Graphics/`
+does not match the module names used by this suite.
+
+Graphics optimization compares serialized content and generated ExtGState
+resource costs after all passes, including the writer's resource copies across
+pages and forms. Identical state runs share resources only when this reduces
+the estimated total. The model uses uncompressed bytes; final compression and
+object layout can change the file-size outcome.
+
+The shared interpreter state tracks color spaces, dash patterns and whether
+line parameters remain known after external `gs` commands. Save/restore carries
+that knowledge across `q/Q`. Color-space conversions are kept conservative
+when later implicit color commands depend on the selected space. Geometry
+tolerances and more aggressive text rewrites are not changed by this model.
+
 ### Profiling
 
 ```sh

@@ -11,18 +11,26 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeStateCommand
 
 import Control.Monad.State (State, gets)
 
+import Data.Foldable (toList)
 import Data.Functor ((<&>))
-import Data.PDF.Command (Command (cOperator, cParameters))
+import Data.List (delete)
+import Data.PDF.Command (Command (Command, cOperator, cParameters))
 import Data.PDF.GFXObject
-  ( GFXObject (GFXNumber)
-  , GSOperator (GSRestoreGS, GSSaveGS, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit)
+  ( GFXObject (GFXArray, GFXNumber)
+  , GSOperator (GSRestoreGS, GSSaveGS, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetParameters)
   )
 import Data.PDF.GraphicsState
-  (GraphicsState (gsFlatness, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit))
+  ( GraphicsState (gsDashArray, gsDashPhase, gsFlatness, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsUnknownParameters)
+  , invalidateParameters
+  , setDashPattern
+  )
 import Data.PDF.InterpreterAction
-  (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
+  ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceCommand)
+  , replaceCommandWith
+  )
 import Data.PDF.InterpreterState
   ( InterpreterState (iGraphicsState)
+  , modifyGraphicsStateS
   , restoreStateS
   , saveStateS
   , setFlatnessS
@@ -58,10 +66,15 @@ deleteIfNoChange
 deleteIfNoChange command newValue getter setter = do
     newValue' <- usefulGraphicsPrecisionS <&> flip round' newValue
     currentValue <- gets (getter . iGraphicsState)
-    if newValue' == currentValue
+    unknown <- gets ( elem (cOperator command)
+                    . gsUnknownParameters
+                    . iGraphicsState
+                    )
+    if not unknown && newValue' == currentValue
       then return DeleteCommand
       else do
         setter newValue'
+        markKnown (cOperator command)
         optimizeParameters command
           <$> usefulGraphicsPrecisionS
           <&> replaceCommandWith command
@@ -84,6 +97,24 @@ optimizeStateCommand
   -> Program
   -> State InterpreterState InterpreterAction
 optimizeStateCommand command _rest = case (operator, parameters) of
+  (GSSetParameters, _) ->
+    modifyGraphicsStateS invalidateParameters >> return KeepCommand
+
+  (GSSetLineDashPattern, GFXArray values :<| GFXNumber phase :<| Empty)
+    | Just numbers <- traverse asNumber (toList values) -> do
+        state <- gets iGraphicsState
+        -- Preserve dash numbers exactly: rounding can turn a valid pattern
+        -- into an invalid all-zero pattern.
+        if notElem operator (gsUnknownParameters state)
+           && numbers == gsDashArray state
+           && phase == gsDashPhase state
+          then
+            return DeleteCommand
+          else do
+            modifyGraphicsStateS (setDashPattern numbers phase)
+            markKnown operator
+            return $ ReplaceCommand (Command operator parameters)
+
   -- Save graphics state
   (GSSaveGS, Empty) -> saveStateS >> return KeepCommand
 
@@ -109,3 +140,12 @@ optimizeStateCommand command _rest = case (operator, parameters) of
  where
   operator   = cOperator command
   parameters = cParameters command
+
+-- | Record newly known values in the shared graphics state.
+markKnown :: GSOperator -> State InterpreterState ()
+markKnown operator = modifyGraphicsStateS $ \state -> state
+  { gsUnknownParameters = delete operator (gsUnknownParameters state) }
+
+asNumber :: GFXObject -> Maybe Double
+asNumber (GFXNumber value) = Just value
+asNumber _other            = Nothing

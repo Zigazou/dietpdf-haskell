@@ -29,6 +29,7 @@ module Data.PDF.InterpreterState
   , setTextRiseS
   , setTextLeadingS
   , setLineWidthS
+  , modifyGraphicsStateS
   , setLineCapS
   , setLineJoinS
   , setMiterLimitS

@@ -23,7 +23,7 @@ operator setting the same state. Returns 'True' for color, line style, and
 rendering intent operators; 'False' for others.
 -}
 uselessWhenDuplicated :: GSOperator -> Bool
-uselessWhenDuplicated GSSetParameters              = True
+uselessWhenDuplicated GSSetParameters              = False
 uselessWhenDuplicated GSSetStrokeColor             = True
 uselessWhenDuplicated GSSetNonStrokeColor          = True
 uselessWhenDuplicated GSSetStrokeColorN            = True
@@ -82,23 +82,27 @@ Iterates through the program and deletes redundant consecutive commands:
 
 * Identical operators marked as useless when duplicated (color, line style,
   rendering intent) are removed if they appear consecutively
-* Stroke color operators are removed if two consecutive stroke color operators
-  appear (the first becomes redundant)
-* Non-stroke color operators are removed if two consecutive non-stroke color
-  operators appear (the first becomes redundant)
+* Color values may overwrite one another, but implicit SC/SCN/sc/scn commands
+  depend on the space selected by preceding device-color operators
+* Color-space selections are only collapsed when their operands match
+* External gs dictionaries may update disjoint parameters and are preserved
 
 Returns a new program with all redundant consecutive commands removed.
 -}
 optimizeDuplicates :: Program -> Program
 optimizeDuplicates Empty = mempty
-optimizeDuplicates (command1@(Command operator1 _anyParameters1)
-                :<| command2@(Command operator2 _anyParameters2)
+optimizeDuplicates (command1@(Command operator1 parameters1)
+                :<| command2@(Command operator2 parameters2)
                 :<| rest)
   | operator1 == operator2 && uselessWhenDuplicated operator1
+    && (operator1 `notElem` [GSSetStrokeColorspace, GSSetNonStrokeColorspace]
+        || parameters1 == parameters2)
     = optimizeDuplicates (command2 <| rest)
   | isStrokeColorOperator operator1 && isStrokeColorOperator operator2
+    && operator2 `notElem` [GSSetStrokeColor, GSSetStrokeColorN]
     = optimizeDuplicates (command2 <| rest)
   | isNonStrokeColorOperator operator1 && isNonStrokeColorOperator operator2
+    && operator2 `notElem` [GSSetNonStrokeColor, GSSetNonStrokeColorN]
     = optimizeDuplicates (command2 <| rest)
   | otherwise = command1 <| optimizeDuplicates (command2 <| rest)
 optimizeDuplicates (command :<| rest) = command <| optimizeDuplicates rest

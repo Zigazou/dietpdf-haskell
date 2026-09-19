@@ -88,3 +88,38 @@ spec = do
       it ("should work with " ++ show example)
         $          optimizeProgram emptyWorkData . parseProgram <$> gfxParse example
         `shouldBe` Right expected
+
+  describe "graphics state regressions" $ do
+    let parse input = either (error . show) parseProgram (gfxParse input)
+        optimize = optimizeProgram emptyWorkData . parse
+    forM_
+      [ "/DeviceRGB CS 1 0 0 SC 0 0 m 10 10 l S"
+      , "/DeviceRGB cs 1 0 0 sc 0 0 10 10 re f"
+      , "1 0 0 RG 0 1 0 SC 0 0 m 10 10 l S"
+      , "1 0 0 rg 0 1 0 sc 0 0 10 10 re f"
+      , "0.5 0.5 0.5 RG 1 0 0 SC 0 0 m 10 10 l S"
+      , "/First gs /Second gs 0 0 m 10 10 l S"
+      , "/External gs 1 w 0 0 m 10 10 l S"
+      , "/External gs [] 0 d 0 0 m 10 10 l S"
+      , "/External gs /RelativeColorimetric ri 0 0 m 10 10 l S"
+      , "/CS1 CS 0.5 SC 0 0 m 10 10 l S /CS2 CS 0.5 SC 1 1 m 20 20 l S"
+      , "/CS1 cs 0.5 sc 0 0 10 10 re f /CS1 cs 0.5 sc 1 1 20 20 re f"
+      ] $ \input ->
+        it ("preserves state dependencies in " ++ show input) $
+          optimize input `shouldBe` parse input
+
+    it "removes repeated dash settings across painting commands" $
+      optimize "[3 2]1 d 0 0 m 10 10 l S [3 2]1 d 1 1 m 20 20 l S"
+        `shouldBe` parse "[3 2]1 d 0 0 m 10 10 l S 1 1 m 20 20 l S"
+
+    it "restores dash knowledge with q/Q" $
+      optimize "[3 2]1 d q [4 2]0 d 0 0 m 10 10 l S Q [3 2]1 d 1 1 m 20 20 l S"
+        `shouldBe` parse "[3 2]1 d q [4 2]0 d 0 0 m 10 10 l S Q 1 1 m 20 20 l S"
+
+    it "preserves tiny nonzero dash lengths" $
+      optimize "[0.0001 0.0002]0 d 0 0 m 10 10 l S"
+        `shouldBe` parse "[0.0001 0.0002]0 d 0 0 m 10 10 l S"
+
+    it "eliminates overwritten independent state settings before painting" $
+      optimize "2 w 1 J 3 w 0 0 m 10 10 l S"
+        `shouldBe` parse "3 w 1 J 0 0 m 10 10 l S"
