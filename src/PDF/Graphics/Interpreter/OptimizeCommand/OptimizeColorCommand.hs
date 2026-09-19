@@ -11,10 +11,11 @@ module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand
 
 import Control.Monad.State (State, gets)
 
+import Data.PDF.Color (Color (ColorNotSet))
 import Data.PDF.Command (Command (cOperator, cParameters))
 import Data.PDF.GFXObject
   ( GFXObject (GFXName)
-  , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
+  , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
   )
 import Data.PDF.GraphicsState
   (GraphicsState (gsIntent, gsStrokeColor), gsNonStrokeColor)
@@ -93,6 +94,15 @@ optimizeColorCommand command _rest = case (operator, parameters) of
       else do
         setRenderingIntentS intent
         return KeepCommand
+
+  -- CS/cs reset the current color, even when selecting the same color space.
+  -- Resource color spaces have different defaults, so forget the cached value
+  -- rather than treating a later SC/sc setting as redundant.
+  (GSSetStrokeColorspace, _params) ->
+    setStrokeColorS ColorNotSet >> return KeepCommand
+
+  (GSSetNonStrokeColorspace, _params) ->
+    setNonStrokeColorS ColorNotSet >> return KeepCommand
 
   (GSSetStrokeColor, _params)          -> strokeDeleteIfNoChange command
   (GSSetStrokeColorN, _params)         -> strokeDeleteIfNoChange command

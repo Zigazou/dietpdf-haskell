@@ -7,8 +7,8 @@ import Control.Monad.State (State, evalState)
 
 import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
-  ( GFXObject (GFXNumber)
-  , GSOperator (GSFillPathNZWR, GSRectangle, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeGrayColorspace)
+  ( GFXObject (GFXName, GFXNumber)
+  , GSOperator (GSFillPathNZWR, GSRectangle, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeColorspace, GSSetNonStrokeColor, GSSetStrokeColorspace, GSSetStrokeColor)
   )
 import Data.PDF.InterpreterAction
   ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand, SwitchCommand)
@@ -83,3 +83,20 @@ spec = do
         $ ( flip evalState defaultInterpreterState . optimizeColorCommands mempty) program
           `shouldBe` expected
 
+
+  describe "color space changes" $
+    forM_ [(GSSetStrokeColorspace, GSSetStrokeColor),
+           (GSSetNonStrokeColorspace, GSSetNonStrokeColor)] $ \(spaceOperator, colorOperator) -> do
+      forM_ ["CS1", "CS2"] $ \nextSpace ->
+        it ("preserves the color after " ++ show spaceOperator ++ " " ++ show nextSpace) $ do
+          let setSpace name = mkCommand spaceOperator [GFXName name]
+              setColor = mkCommand colorOperator [GFXNumber 0]
+              program = mkProgram [setSpace "CS1", setColor, setSpace nextSpace, setColor]
+          evalState (optimizeColorCommands mempty program) defaultInterpreterState
+            `shouldBe` program
+
+      it ("still removes repeated colors within " ++ show spaceOperator) $ do
+        let setSpace = mkCommand spaceOperator [GFXName "CS1"]
+            setColor = mkCommand colorOperator [GFXNumber 0]
+        evalState (optimizeColorCommands mempty (mkProgram [setSpace, setColor, setColor]))
+          defaultInterpreterState `shouldBe` mkProgram [setSpace, setColor]
