@@ -13,6 +13,10 @@ import Data.PDF.PDFObject
   , mkPDFArray
   , mkPDFDictionary
   )
+import Data.PDF.PDFWork
+  (PDFWork, evalPDFWorkT, getAdditionalGStates, setAdditionalGStates, throwError, tryP)
+import Data.UnifiedError (UnifiedError (InternalError))
+import Util.Dictionary (mkDictionary)
 import Data.PDF.WorkData (WorkData, emptyWorkData)
 
 import PDF.Processing.PDFWork (deepMapKeysP, deepMapP)
@@ -216,6 +220,24 @@ multiplyNumbers _anyContext object = return object
 
 spec :: Spec
 spec = do
+  describe "tryP" $ do
+    it "retains graphics state resources after successful optimization" $ do
+      let states = mkDictionary [("GS1", mkPDFDictionary [("LW", PDFNumber 2)])]
+      result <- evalPDFWorkT $ do
+        attempted <- tryP (setAdditionalGStates states)
+        remaining <- getAdditionalGStates
+        return (attempted, remaining)
+      result `shouldBe` Right (Right (), states)
+
+    it "rolls back graphics state resources after failed optimization" $ do
+      result <- evalPDFWorkT $ do
+        attempted <- tryP $ do
+          setAdditionalGStates (mkDictionary [("GS1", PDFNull)])
+          throwError InternalError :: PDFWork IO ()
+        remaining <- getAdditionalGStates
+        return (attempted, remaining)
+      result `shouldBe` Right (Left InternalError, mempty)
+
   describe "deepMapP" $ do
     forM_ deepMapPExamples $ \(input, description, expected) ->
       it ("should handle " ++ description) $ do

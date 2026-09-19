@@ -14,7 +14,6 @@ import Control.Monad (foldM)
 import Control.Monad.State (gets)
 
 import Data.ByteString (ByteString)
-import Data.Functor ((<&>))
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
 import Data.PDF.PDFDocument (cFilter)
@@ -25,27 +24,21 @@ import Data.PDF.PDFPartition
   (PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream))
 import Data.PDF.PDFWork
   ( PDFWork
-  , flattenObject
   , getAdditionalGStates
+  , getReference
   , loadFullObject
   , modifyIndirectObjectsP
-  , putNewObject
   , setAdditionalGStates
   )
 import Data.PDF.Resource (Resource, createSet, toResource)
-import Data.PDF.ResourceDictionary
-  ( ResourceDictionary
-  , mergeResourceDictionaries
-  , objectToResourceDictionaries
-  , resourceDictionariesToPDFObject
-  )
+import Data.PDF.ResourceDictionary (ResourceDictionary)
 import Data.PDF.WorkData (WorkData (wPDF))
 import Data.Set (Set)
 
 import PDF.Object.Object (PDFObject (PDFIndirectObjectWithStream), hasKey)
 import PDF.Object.Object.Properties (getValueForKey)
 
-import Util.Dictionary (Dictionary, dictHasKey)
+import Util.Dictionary (Dictionary)
 
 
 {-|
@@ -143,85 +136,70 @@ getAllResourceNames = do
   return (wosResources <> wsResources)
 
 {-|
-Extract all resource dictionaries from the PDF document.
-
-Collects and merges all resource dictionaries from objects in both streams and
-non-stream sections. Returns a single unified resource dictionary mapping
-resource types to their component dictionaries.
--}
-getAllResources :: Logging m => PDFWork m (Dictionary ResourceDictionary)
-getAllResources = do
-  wosObjects <- gets (toPDFDocument . ppObjectsWithoutStream . wPDF)
-  wsObjects <- gets (toPDFDocument . ppObjectsWithStream . wPDF)
-
-  wosResources <- foldM accResources
-                        mempty
-                        (cFilter (hasKey "Resources") wosObjects)
-
-  wsResources <-  foldM accResources
-                        mempty
-                        (cFilter (hasKey "Resources") wsObjects)
-
-  return (mergeResourceDictionaries wosResources wsResources)
- where
-  accResources
-    :: Logging m
-    => Dictionary ResourceDictionary
-    -> PDFObject
-    -> PDFWork m (Dictionary ResourceDictionary)
-  accResources resources object = case getValueForKey "Resources" object of
-    Just value -> do
-      newResources <- loadFullObject value
-                  <&> objectToResourceDictionaries . flattenObject
-
-      return (mergeResourceDictionaries resources newResources)
-    _notFound  -> return resources
-
-{-|
-Create a new resource object with additional graphics states.
-
-Merges the current document resources with any new graphics states that were
-generated during optimization. Returns a reference to the new resource object.
--}
-createResources :: Logging m => PDFWork m PDFObject
-createResources = do
-  currentResources <- getAllResources
-  newExtGStates <- getAdditionalGStates
-
-  let newResources = mergeResourceDictionaries
-        currentResources
-        (Map.singleton "ExtGState" newExtGStates)
-
-  major <- putNewObject (PDFIndirectObject 0 0 (resourceDictionariesToPDFObject newResources))
-  return (PDFReference major 0)
-
-{-|
-Update the Resources entry in an indirect object's dictionary.
-
-If the object is an indirect object with a dictionary containing a "Resources"
-key, replaces the resources with the new resource object. Otherwise, returns the
-object unchanged.
--}
-modifyResources :: Monad m => PDFObject -> PDFObject -> PDFWork m PDFObject
-modifyResources newResources object@(PDFIndirectObject major minor (PDFDictionary dictionary)) =
-  if dictHasKey "Resources" dictionary
-    then do
-      let newDictionary = Map.insert "Resources" newResources dictionary
-      return $ PDFIndirectObject major minor (PDFDictionary newDictionary)
-    else
-      return object
-modifyResources _newResources object = return object
-
-{-|
-Update all objects in the document with additional resources.
-
-Creates a merged resource dictionary that combines existing resources with any
-new graphics states or other resources generated during optimization. Updates
-all indirect objects with the new resources and clears the temporary additional
-graphics states store.
+Add generated graphics states to each resource scope without merging unrelated
+fonts, XObjects, or other resources from different pages and forms.
 -}
 updateWithAdditionalResources :: Logging IO => PDFWork IO ()
 updateWithAdditionalResources = do
-  newResources <- createResources
-  setAdditionalGStates mempty
-  modifyIndirectObjectsP (modifyResources newResources)
+  additional <- getAdditionalGStates
+
+  if Map.null additional
+    then return ()
+    else do
+      modifyIndirectObjectsP (modifyResources additional)
+      setAdditionalGStates mempty
+
+ where
+  modifyResources
+    :: Monad m
+    => ResourceDictionary
+    -> PDFObject
+    -> PDFWork m PDFObject
+  modifyResources additional object = case object of
+    PDFIndirectObject major minor (PDFDictionary dictionary) ->
+      PDFIndirectObject major minor
+        . PDFDictionary <$> updateDictionary additional dictionary
+
+    PDFIndirectObjectWithStream major minor dictionary stream -> do
+      updated <- updateDictionary additional dictionary
+      return (PDFIndirectObjectWithStream major minor updated stream)
+
+    _other -> return object
+
+  updateDictionary
+    :: Monad m
+    => ResourceDictionary
+    -> Dictionary PDFObject
+    -> PDFWork m (Dictionary PDFObject)
+  updateDictionary additional dictionary =
+    case Map.lookup "Resources" dictionary of
+      Nothing -> return dictionary
+      Just resources -> do
+        resolved <- loadObject resources
+        case resolved of
+          PDFDictionary resourceDictionary -> do
+            existing <- maybe (return (PDFDictionary mempty)) loadObject
+                          (Map.lookup "ExtGState" resourceDictionary)
+            let states = case existing of
+                  PDFDictionary values -> values
+                  _other               -> mempty
+
+                updated = Map.insert
+                            "ExtGState"
+                            (PDFDictionary (additional <> states))
+                            resourceDictionary
+
+            return (Map.insert "Resources" (PDFDictionary updated) dictionary)
+
+          _other -> return dictionary
+
+  -- Resolve only the dictionary itself, preserving references to its resources.
+  loadObject :: Monad m => PDFObject -> PDFWork m PDFObject
+  loadObject reference@PDFReference{} = do
+    object <- getReference reference
+
+    case object of
+      PDFIndirectObject _major _minor value -> return value
+      _other                                -> return object
+
+  loadObject object = return object

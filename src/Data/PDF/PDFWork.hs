@@ -55,7 +55,7 @@ where
 import Control.Monad.State (StateT, get, gets, put)
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Except (runExceptT, throwE)
-import Control.Monad.Trans.State (evalStateT)
+import Control.Monad.Trans.State (evalStateT, runStateT)
 
 import Data.ByteString (ByteString)
 import Data.Context (Context (ContextProgress), compileContexts)
@@ -550,7 +550,15 @@ lastObjectNumber = do
 
 {-|
 Attempts to execute a `PDFWork` action, returning the result wrapped in a
-`Fallible`. This allows for error handling within the `PDFWork` monad.
+`Fallible`. Successful actions retain their state changes; failed actions
+leave the original state unchanged.
 -}
 tryP :: Logging m => PDFWork m a -> PDFWork m (Fallible a)
-tryP = (get >>=) . ((lift . lift . runExceptT) .) . evalStateT
+tryP action = do
+  original <- get
+  result <- lift . lift $ runExceptT (runStateT action original)
+  case result of
+    Left err -> return (Left err)
+    Right (value, updated) -> do
+      put updated
+      return (Right value)

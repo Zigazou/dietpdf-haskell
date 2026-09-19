@@ -5,7 +5,7 @@ Optimizes PDF graphics programs by factorizing sequences of graphics state
 setting commands into reusable external graphics state (ExtGState) resources.
 
 Multiple consecutive graphics state commands (line width, line cap, line join,
-miter limit, dash pattern, color rendering intent, text font, flatness) can be
+miter limit, dash pattern, color rendering intent, flatness) can be
 replaced with a single @GSSetParameters@ command referencing a named ExtGState
 resource. This reduces the size of graphics streams when the same state
 combinations are used multiple times or can be shared across the PDF.
@@ -23,7 +23,7 @@ import Data.PDF.Command (Command (Command), mkCommand)
 import Data.PDF.ExtGState (mkExtGState)
 import Data.PDF.GFXObject
   ( GFXObject (GFXName)
-  , GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetParameters, GSSetTextFont)
+  , GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetParameters)
   )
 import Data.PDF.PDFObject (PDFObject (PDFDictionary))
 import Data.PDF.PDFWork (PDFWork, addAdditionalGState)
@@ -43,10 +43,11 @@ stored in an ExtGState dictionary. These include:
 * Miter limit (M operator)
 * Line dash pattern (d operator)
 * Color rendering intent (ri operator)
-* Text font (Tf operator)
 * Flatness tolerance (i operator)
 
-Other commands are not factorizable and must be applied directly.
+Font selection remains a Tf command: ExtGState Font entries require a font
+object reference, whereas Tf uses a name in the local resource dictionary. Other
+commands are not factorizable and must be applied directly.
 -}
 isFactorizable :: Command -> Bool
 isFactorizable (Command GSSetLineWidth _parameters)             = True
@@ -55,7 +56,6 @@ isFactorizable (Command GSSetLineJoin _parameters)              = True
 isFactorizable (Command GSSetMiterLimit _parameters)            = True
 isFactorizable (Command GSSetLineDashPattern _parameters)       = True
 isFactorizable (Command GSSetColourRenderingIntent _parameters) = True
-isFactorizable (Command GSSetTextFont _parameters)              = True
 isFactorizable (Command GSSetFlatnessTolerance _parameters)     = True
 isFactorizable _anyOtherCommand                                 = False
 

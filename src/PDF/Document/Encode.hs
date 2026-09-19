@@ -71,18 +71,19 @@ import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
   (optimizeOptionalDictionaryEntries)
 import PDF.Document.OptimizeResources (optimizeResources)
-{- TODO: import PDF.Document.Resources (updateWithAdditionalResources) -}
+import PDF.Document.Resources (updateWithAdditionalResources)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
 import PDF.Object.State (getValue, setMaybe)
+import PDF.Processing.DuplicatedObjects
+  (convertDuplicatedReferences, duplicateCount, findDuplicatedObjects)
 import PDF.Processing.Optimize (optimize)
-import PDF.Processing.PDFWork (removeUnusedObjects, importObjects, pMapP)
+import PDF.Processing.PDFWork (importObjects, pMapP, removeUnusedObjects)
 
 import System.IO (hSetBuffering, stderr)
 
 import Util.Sequence (mapMaybe)
-import PDF.Processing.DuplicatedObjects (findDuplicatedObjects, duplicateCount, convertDuplicatedReferences)
 
 {- |
 Encodes a PDF object and keeps track of its number and length.
@@ -229,7 +230,7 @@ pdfEncode objects = do
   sayP "Optimizing PDF"
   modifyIndirectObjectsP optimize
 
-  -- TODO: updateWithAdditionalResources
+  updateWithAdditionalResources
 
   removeUnusedObjects
 

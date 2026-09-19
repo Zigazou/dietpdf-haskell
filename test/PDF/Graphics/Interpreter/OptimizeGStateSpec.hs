@@ -6,11 +6,13 @@ import Control.Monad (forM_)
 
 import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
-  ( GFXObject (GFXName, GFXNumber)
-  , GSOperator (GSLineTo, GSMoveTo, GSSetLineWidth, GSSetMiterLimit, GSSetParameters)
+  ( GFXObject (GFXArray, GFXName, GFXNumber)
+  , GSOperator (GSLineTo, GSMoveTo, GSSetLineWidth, GSSetMiterLimit, GSSetParameters, GSSetTextFont, GSSetLineDashPattern)
   )
-import Data.PDF.PDFObject (PDFObject (PDFNumber))
-import Data.PDF.PDFWork (evalPDFWorkT)
+import Data.PDF.PDFObject (PDFObject (PDFArray, PDFDictionary, PDFNumber))
+import Data.PDF.PDFWork (evalPDFWorkT, getAdditionalGStates)
+import Data.Sequence qualified as SQ
+import Data.Map.Strict qualified as Map
 import Data.PDF.Program (Program, mkProgram)
 
 import PDF.Graphics.Interpreter.OptimizeGState (optimizeGState)
@@ -117,3 +119,31 @@ spec = do
         >>= \case
           Right result -> result `shouldBe` snd expected
           Left _failed -> fail "Failed to optimize GState"
+
+    it "preserves font selection between factorizable commands" $ do
+      let font = mkCommand GSSetTextFont [GFXName "F1", GFXNumber 12]
+          program = mkProgram [mkCommand GSSetLineWidth [GFXNumber 1], font,
+                               mkCommand GSSetMiterLimit [GFXNumber 2]]
+      result <- evalPDFWorkT (optimizeGState program)
+      result `shouldBe` Right (mkProgram
+        [mkCommand GSSetParameters [GFXName "0"], font,
+         mkCommand GSSetParameters [GFXName "1"]])
+
+    it "uses the last value when a parameter is set repeatedly" $ do
+      result <- evalPDFWorkT $ do
+        _ <- optimizeGState (mkProgram
+          [mkCommand GSSetLineWidth [GFXNumber 1],
+           mkCommand GSSetLineWidth [GFXNumber 3]])
+        getAdditionalGStates
+      result `shouldBe` Right (Map.singleton "0"
+        (PDFDictionary (mkDictionary [("LW", PDFNumber 3)])))
+
+    it "stores dash arrays without an extra array nesting level" $ do
+      let patternValues = SQ.fromList [GFXNumber 3, GFXNumber 2]
+      result <- evalPDFWorkT $ do
+        _ <- optimizeGState (mkProgram
+          [mkCommand GSSetLineDashPattern [GFXArray patternValues, GFXNumber 1]])
+        getAdditionalGStates
+      result `shouldBe` Right (Map.singleton "0" (PDFDictionary (mkDictionary
+        [("D", PDFArray (SQ.fromList
+          [PDFArray (SQ.fromList [PDFNumber 3, PDFNumber 2]), PDFNumber 1]))])))

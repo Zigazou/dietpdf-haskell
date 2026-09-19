@@ -20,7 +20,7 @@ import Data.Kind (Type)
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
   ( GFXObject (GFXArray, GFXBool, GFXComment, GFXDictionary, GFXHexString, GFXName, GFXNull, GFXNumber, GFXReference, GFXString)
-  , GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetTextFont)
+  , GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit)
   )
 import Data.PDF.PDFObject
   ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFHexString, PDFName, PDFNull, PDFNumber, PDFReference, PDFString)
@@ -78,10 +78,9 @@ newState (Command GSSetMiterLimit (miterLimit :<| Empty)) =
   mkDictionary [("ML", gfxToObject miterLimit)]
 
 newState (Command GSSetLineDashPattern (array :<| phase :<| Empty)) =
-  mkDictionary [("D", PDFArray (PDFArray (gfxToObject array :<| Empty) :<| gfxToObject phase :<| Empty))]
-
-newState (Command GSSetTextFont (name :<| size :<| Empty)) =
-  mkDictionary [("Font", PDFArray (gfxToObject name :<| gfxToObject size :<| Empty))]
+  mkDictionary [
+    ("D", PDFArray (gfxToObject array :<| gfxToObject phase :<| Empty))
+  ]
 
 newState (Command GSSetFlatnessTolerance (tolerance :<| Empty)) =
   mkDictionary [("FL", gfxToObject tolerance)]
@@ -91,9 +90,9 @@ newState _anyOtherCommand = mempty
 {-|
 Builds an /ExtGState dictionary from an array of graphics commands.
 
-Each command contributes a small dictionary, and all contributions are merged
-left-to-right.
+Each command contributes a small dictionary, and all contributions are merged so
+that later commands override earlier values.
 -}
 mkExtGState :: Array Command -> ExtGState
 mkExtGState Empty              = mempty
-mkExtGState (command :<| rest) = newState command <> mkExtGState rest
+mkExtGState (command :<| rest) = mkExtGState rest <> newState command
