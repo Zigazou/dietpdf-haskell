@@ -45,6 +45,8 @@ import Data.Set qualified as Set
 import PDF.Document.Uncompress (uncompressObjects)
 import PDF.Processing.PDFWork (deepMapP)
 
+import Util.Dictionary (Dictionary)
+
 {-|
 Represents a group of objects that share the same content hash.
 
@@ -91,12 +93,12 @@ originalAndDuplicates (Duplicates _hash objects) =
 {-|
 Collection of all duplicated objects in a PDF document.
 
-Maps content hashes to groups of objects that share that hash. Only includes
-hashes that have actual duplicates (2 or more objects).
+Maps content hashes and stream dictionaries to groups of matching objects.
+Only includes groups with actual duplicates (2 or more objects).
 -}
 type DuplicatedObjects :: Type
 newtype DuplicatedObjects
-  = DuplicatedObjects (Map ObjectHash Duplicates)
+  = DuplicatedObjects (Map (ObjectHash, Dictionary PDFObject) Duplicates)
 
 instance Show DuplicatedObjects where
   show :: DuplicatedObjects -> String
@@ -123,13 +125,15 @@ Find duplicated objects in a PDF partition based on their stream content hash.
 This function analyzes all objects with streams in a PDF partition, computes
 their content hashes, and identifies groups of objects that are duplicates of
 each other. Objects are considered duplicates if they have identical stream
-content after decompression.
+content and matching dictionaries after decompression, ignoring only Length.
+In particular, an image and its soft mask must not be merged merely because
+their sample bytes match.
 
 The process involves:
 
 1. Uncompressing all stream objects to get their raw content
 2. Computing a hash for each object's content
-3. Grouping objects by their hash value
+3. Grouping objects by their hash value and stream dictionary
 4. Filtering to keep only groups with multiple objects
 
 Returns a 'DuplicatedObjects' structure containing all groups of duplicates
@@ -151,25 +155,28 @@ findDuplicatedObjects (PDFPartition objectsWithStream _ _ _) =
   where
     {-
     Update the duplicates map with a new object.
-    
-    If an object with the same hash already exists, adds the new object to that
-    hash's set. Otherwise, creates a new entry.
+
+    If an object with the same hash and dictionary already exists, adds the new
+    object to that group's set. Otherwise, creates a new entry.
     -}
     updateDuplicates ::
-      Map ObjectHash Duplicates ->
+      Map (ObjectHash, Dictionary PDFObject) Duplicates ->
       PDFObject ->
-      Map ObjectHash Duplicates
-    updateDuplicates duplicates object@(PDFIndirectObjectWithStream objectNumber _ _ _) =
+      Map (ObjectHash, Dictionary PDFObject) Duplicates
+    updateDuplicates duplicates object@(PDFIndirectObjectWithStream objectNumber _ dictionary _) =
       let streamHash = fromMaybe mempty (objectHash object)
+          -- Length describes the encoded stream, not its interpretation.
+          -- Preserve every other entry, including any undecoded filters.
+          key = (streamHash, Map.delete "Length" dictionary)
           currentObject = Duplicates streamHash (Set.singleton objectNumber)
-       in case Map.lookup streamHash duplicates of
+       in case Map.lookup key duplicates of
             Just (Duplicates _hash existingSet) ->
               let newSet = Set.insert objectNumber existingSet
                in Map.insert
-                    streamHash
+                    key
                     (Duplicates streamHash newSet)
                     duplicates
-            _anyOtherCase -> Map.insert streamHash currentObject duplicates
+            _anyOtherCase -> Map.insert key currentObject duplicates
     updateDuplicates duplicates _anyOtherObject = duplicates
 
 {-|
