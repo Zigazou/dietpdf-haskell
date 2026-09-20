@@ -57,7 +57,7 @@ import Data.PDF.GFXObject
   ( GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit)
   )
 import Data.PDF.TextState
-  ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsLeading, tsMatrix, tsRise)
+  ( TextState (tsFont, tsFontSize, tsHorizontalScaling, tsLeading, tsMatrix, tsLineMatrix, tsRise)
   , defaultTextState
   , tsCharacterSpacing
   , tsScaleX
@@ -217,27 +217,28 @@ applyGraphicsMatrix matrix state = state
   (scaleX, scaleY) = matrixScale graphicsMatrix (gsScaleX state, gsScaleY state)
 
 {-|
-Post-multiply the current text matrix.
+Translate from the current text-line matrix, updating both matrices.
 
 This updates the text state's matrix and its derived scale fields.
 -}
 applyTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
 applyTextMatrix matrix state = state
   { gsTextState = (gsTextState state)
-      { tsMatrix = textMatrix
+      { tsMatrix = Just textMatrix
+      , tsLineMatrix = textMatrix
       , tsScaleX = scaleX
       , tsScaleY = scaleY
       }
   }
  where
-  textMatrix = tsMatrix (gsTextState state) <> matrix
+  textMatrix = tsLineMatrix (gsTextState state) <> matrix
   (scaleX, scaleY) = matrixScale textMatrix (1.0, 1.0)
 
 {-|
-Replace the text matrix with the given matrix.
+Replace both text matrices with the given matrix.
 
-This differs from 'applyTextMatrix': it does not compose with the existing text
-matrix; it overwrites it.
+This differs from 'applyTextMatrix': it does not compose with the existing text-line
+matrix; it overwrites both matrices.
 
 The derived text scale (@tsScaleX@, @tsScaleY@) is computed from the
 "text rendering matrix" (text matrix combined with font size, horizontal
@@ -246,7 +247,8 @@ scaling, and rise).
 setTextMatrix :: TransformationMatrix -> GraphicsState -> GraphicsState
 setTextMatrix matrix state = state
   { gsTextState = (gsTextState state)
-      { tsMatrix = textMatrix
+      { tsMatrix = Just textMatrix
+      , tsLineMatrix = textMatrix
       , tsScaleX = scaleX
       , tsScaleY = scaleY
       }

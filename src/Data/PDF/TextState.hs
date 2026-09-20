@@ -3,7 +3,8 @@ Parameters controlling text rendering state.
 
 This module models the current text state for PDF content rendering: spacing,
 scaling, font selection and size, rendering mode, baseline rise, and the text
-matrix. It also tracks derived scale factors for convenience.
+and text-line matrices. It also tracks derived scale factors for convenience.
+The text matrix becomes unknown after showing glyphs; no font widths are inferred.
 -}
 module Data.PDF.TextState
   ( TextState (..)
@@ -38,7 +39,8 @@ data TextState = TextState
   , tsFontSize          :: !Double -- ^ Font size
   , tsRenderingMode     :: !Int -- ^ Rendering mode
   , tsRise              :: !Double -- ^ Rise
-  , tsMatrix            :: !TransformationMatrix -- ^ Text matrix
+  , tsMatrix            :: !(Maybe TransformationMatrix) -- ^ Unknown after showing glyphs
+  , tsLineMatrix        :: !TransformationMatrix -- ^ Text-line origin
   , tsScaleX            :: !Double -- ^ Scale factor in X direction
   , tsScaleY            :: !Double -- ^ Scale factor in Y direction
   } deriving stock (Show, Eq)
@@ -55,7 +57,7 @@ parameters:
 * The font size is 12.0
 * The rendering mode is 0
 * The rise is 0.0
-* The text matrix is the identity matrix
+* Both text matrices are the identity matrix
 -}
 defaultTextState :: TextState
 defaultTextState = TextState
@@ -67,7 +69,8 @@ defaultTextState = TextState
   , tsFontSize          = 12.0
   , tsRenderingMode     = 0
   , tsRise              = 0.0
-  , tsMatrix            = mempty
+  , tsMatrix            = Just mempty
+  , tsLineMatrix        = mempty
   , tsScaleX            = 1.0
   , tsScaleY            = 1.0
   }

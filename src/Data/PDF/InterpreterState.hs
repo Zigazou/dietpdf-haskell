@@ -57,6 +57,7 @@ import Data.PDF.GraphicsState
   , applyGraphicsMatrix
   , applyTextMatrix
   , defaultGraphicsState
+  , gsTextState
   , gsPathStartX
   , gsPathStartY
   , resetTextState
@@ -81,6 +82,7 @@ import Data.PDF.GraphicsState
   , usefulGraphicsPrecision
   , usefulTextPrecision
   )
+import Data.PDF.TextState (TextState (tsMatrix, tsLineMatrix, tsScaleX, tsScaleY))
 import Data.PDF.TransformationMatrix (TransformationMatrix)
 import Data.PDF.WorkData (WorkData, emptyWorkData)
 
@@ -126,9 +128,20 @@ Restores the previous graphics state from the graphics state stack.
 restoreState :: InterpreterState -> InterpreterState
 restoreState state = case iStack state of
   []                       -> state { iGraphicsState = defaultGraphicsState }
-  (prevState : prevStates) -> state { iGraphicsState = prevState
+  (prevState : prevStates) -> state { iGraphicsState = preserveTextPosition prevState
                                     , iStack         = prevStates
                                     }
+ where
+  -- Text matrices are text-object state, not part of the q/Q graphics stack.
+  current = gsTextState (iGraphicsState state)
+  preserveTextPosition saved = saved
+    { gsTextState = (gsTextState saved)
+        { tsMatrix = tsMatrix current
+        , tsLineMatrix = tsLineMatrix current
+        , tsScaleX = tsScaleX current
+        , tsScaleY = tsScaleY current
+        }
+    }
 
 {-|
 Apply a pure update to the embedded 'GraphicsState'.

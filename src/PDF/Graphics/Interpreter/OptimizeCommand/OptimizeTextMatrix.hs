@@ -1,164 +1,115 @@
-{-|
-Optimize text matrix transformation commands in PDF streams.
-
-Provides utilities for simplifying text transformation matrices by eliminating
-identity matrices, merging consecutive transformations, and converting between
-matrix forms.
--}
+{-| Conservative text positioning: only adjacent positioning commands are
+combined. Glyph advances are unknown; the text-line origin remains known. -}
 module PDF.Graphics.Interpreter.OptimizeCommand.OptimizeTextMatrix
   ( optimizeTextMatrix
   ) where
 
 import Control.Monad.State (State, gets)
-
-import Data.Functor ((<&>))
-import Data.PDF.Command (Command (Command, cOperator, cParameters))
-import Data.PDF.GFXObject
-  ( GFXObject (GFXNumber)
-  , GSOperator (GSBeginText, GSEndText, GSMoveToNextLine, GSMoveToNextLineLP, GSNextLine, GSSetTextLeading, GSSetTextMatrix, GSNLShowText)
-  )
+import Data.ByteString qualified as BS
+import Data.List (minimumBy)
+import Data.Ord (comparing)
+import Data.PDF.Command (Command (Command, cOperator, cParameters), mkCommand)
+import Data.PDF.GFXObject (GFXObject (GFXNumber), GSOperator (GSSetTextMatrix, GSMoveToNextLine, GSMoveToNextLineLP, GSNextLine, GSBeginText, GSSetTextLeading, GSNLShowText, GSNLShowTextWithSpacing, GSShowText, GSShowManyText), separateGfx)
 import Data.PDF.GraphicsState (GraphicsState (gsTextState))
-import Data.PDF.InterpreterAction
-  (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
+import Data.PDF.InterpreterAction (InterpreterAction (ReplaceCommand, ReplaceAndDeleteNextCommand, KeepCommand, DeleteCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
-  ( InterpreterState (iGraphicsState)
-  , applyTextMatrixS
-  , resetTextStateS
-  , setTextLeadingS
-  , setTextMatrixS
-  , usefulTextPrecisionS
-  )
-import Data.PDF.Program (Program)
-import Data.PDF.TextState (TextState (tsLeading, tsMatrix))
-import Data.PDF.TransformationMatrix
-  (TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmE, tmF), tmD)
+  ( InterpreterState (iGraphicsState), modifyGraphicsStateS, resetTextStateS
+  , setTextLeadingS, setTextMatrixS, setCharacterSpacingS, setWordSpacingS
+  , applyTextMatrixS, usefulTextPrecisionS )
+import Data.PDF.Program (Program, extractObjects)
+import Data.PDF.TextState (TextState (tsMatrix, tsLineMatrix, tsLeading))
+import Data.PDF.TransformationMatrix (TransformationMatrix (TransformationMatrix, tmA, tmB, tmC, tmD, tmE, tmF))
 import Data.Sequence (Seq (Empty, (:<|)))
-
+import Data.Sequence qualified as SQ
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
-{-|
-Optimize text positioning and transformation matrix commands.
-
-Implements multiple optimization strategies:
-
-* __Begin/End Text__: Resets or tracks text state
-* __MoveToNextLine__: Updates text matrix and optimizes precision
-* __NextLine__: Uses stored text leading to compute vertical movement
-* __SetTextLeading__: Records leading value; used by NextLine operations
-* __MoveToNextLineLP__: Sets leading and applies translation in one operation
-* __SetTextMatrix__: Detects and removes identity matrices; converts diagonal
-  matrices to scale+translate form; converts back to MoveToNextLine when only
-  translation differs from current state
-* __NLShowText__: Applies leading-based vertical translation
-
-Updates text state with applied transformations and reduces precision as needed.
--}
-optimizeTextMatrix
-  :: Command
-  -> Program
-  -> State InterpreterState InterpreterAction
-optimizeTextMatrix command _rest = case (operator, parameters) of
-  -- Begin text object
-  (GSBeginText, Empty) -> do
-    resetTextStateS
-    return KeepCommand
-
-  -- End text object
-  (GSEndText, Empty) -> return KeepCommand
-
-  -- Move to next line
-  (GSMoveToNextLine, GFXNumber tx :<| GFXNumber ty :<| Empty) -> do
-    precision <- usefulTextPrecisionS
-    applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
-    return $ replaceCommandWith command
-                                (optimizeParameters command precision)
-
-  -- Next line.
-  (GSNextLine, Empty) -> do
-    textLeading <- gets (tsLeading . gsTextState . iGraphicsState)
-    applyTextMatrixS (TransformationMatrix 1 0 0 1 0 (- textLeading))
-    return KeepCommand
-
-  -- Set text leading.
-  (GSSetTextLeading, GFXNumber leading :<| Empty) -> do
-    setTextLeadingS leading
-    replaceCommandWith command . optimizeParameters command <$> usefulTextPrecisionS
-
-  -- Move to next line with leading parameter.
-  (GSMoveToNextLineLP, GFXNumber tx :<| GFXNumber ty :<| Empty) -> do
-    setTextLeadingS (- ty)
-    precision <- usefulTextPrecisionS
-    applyTextMatrixS (TransformationMatrix 1 0 0 1 tx ty)
-    return $ replaceCommandWith command
-                                (optimizeParameters command precision)
-  -- Set text matrix.
-  (GSSetTextMatrix, GFXNumber a
-                :<| GFXNumber b
-                :<| GFXNumber c
-                :<| GFXNumber d
-                :<| GFXNumber e
-                :<| GFXNumber f
-                :<| Empty) -> do
-    currentTextMatrix <- gets (tsMatrix . gsTextState . iGraphicsState)
-    precision <- usefulTextPrecisionS
-    let newTextMatrix = TransformationMatrix
-          { tmA = a
-          , tmB = b
-          , tmC = c
-          , tmD = d
-          , tmE = e
-          , tmF = f
-          }
-    setTextMatrixS newTextMatrix
-    if newTextMatrix == currentTextMatrix
-      then
-        -- Ignore text transformation matrix if it is identical to the current
-        -- one.
-        return DeleteCommand
-      else case (a, b, c, d, e, f) of
-        (newScaleX, 0, 0, newScaleY, newTranslateX, newTranslateY) -> do
-          let currentScaleX     = tmA currentTextMatrix
-              currentScaleY     = tmD currentTextMatrix
-              currentTranslateX = tmE currentTextMatrix
-              currentTranslateY = tmF currentTextMatrix
-              currentSkewX      = tmB currentTextMatrix
-              currentSkewY      = tmC currentTextMatrix
-
-          if newScaleX /= currentScaleX || newScaleY /= currentScaleY || currentSkewX /= 0 || currentSkewY /= 0
-            then return $ replaceCommandWith
-                    command
-                    ( optimizeParameters
-                      (Command GSSetTextMatrix ( GFXNumber newScaleX
-                                              :<| GFXNumber 0
-                                              :<| GFXNumber 0
-                                              :<| GFXNumber newScaleY
-                                              :<| GFXNumber newTranslateX
-                                              :<| GFXNumber newTranslateY
-                                              :<| Empty)
-                      )
-                      precision
-                    )
-            else return $ replaceCommandWith
-                    command
-                    ( optimizeParameters
-                      (Command GSMoveToNextLine ( GFXNumber ((newTranslateX - currentTranslateX) / currentScaleX)
-                                              :<| GFXNumber ((newTranslateY - currentTranslateY) / currentScaleY)
-                                              :<| Empty)
-                      )
-                      precision
-                    )
-        _anyOtherTextMatrix -> do
-            optimizeParameters command
-              <$> usefulTextPrecisionS
-              <&> replaceCommandWith command
-
-  -- Show text with new line.
-  (GSNLShowText, _anyParameters) -> do
-    textLeading <- gets (tsLeading . gsTextState . iGraphicsState)
-    applyTextMatrixS (TransformationMatrix 1 0 0 1 0 (- textLeading))
-    return KeepCommand
-
-  _anyOtherCommand -> return KeepCommand
+-- Interpret positioning without requiring glyph widths.
+position :: Command -> (TransformationMatrix, Double) -> Maybe (TransformationMatrix, Double)
+position (Command op ps) (matrix, leading) = case (op, ps) of
+  (GSSetTextMatrix, GFXNumber a :<| GFXNumber b :<| GFXNumber c :<| GFXNumber d :<| GFXNumber e :<| GFXNumber f :<| Empty) ->
+    Just (TransformationMatrix a b c d e f, leading)
+  (GSMoveToNextLine, GFXNumber x :<| GFXNumber y :<| Empty) -> move x y leading
+  (GSMoveToNextLineLP, GFXNumber x :<| GFXNumber y :<| Empty) -> move x y (-y)
+  (GSNextLine, Empty) -> move 0 (-leading) leading
+  _ -> Nothing
  where
-  operator   = cOperator command
-  parameters = cParameters command
+  move x y l = Just (matrix <> TransformationMatrix 1 0 0 1 x y, l)
+
+size :: [Command] -> Int
+size = BS.length . separateGfx . extractObjects . SQ.fromList
+
+-- Candidates must reproduce both the line origin and leading exactly. Inverting
+-- the linear part supports rotations and shear; singular matrices use Tm only.
+encodings :: (TransformationMatrix, Double) -> (TransformationMatrix, Double) -> [Command]
+encodings initial@(old, _) target@(m, leading) =
+  filter (\cmd -> position cmd initial == Just target) candidates
+ where
+  command op = mkCommand op . map GFXNumber
+  absolute = command GSSetTextMatrix [tmA m, tmB m, tmC m, tmD m, tmE m, tmF m]
+  determinant = tmA old * tmD old - tmB old * tmC old
+  dx = tmE m - tmE old
+  dy = tmF m - tmF old
+  x = (tmD old * dx - tmC old * dy) / determinant
+  y = (tmA old * dy - tmB old * dx) / determinant
+  candidates = absolute : mkCommand GSNextLine [] :
+    [command op [x, y] | determinant /= 0, op <- [GSMoveToNextLine, GSMoveToNextLineLP]] ++
+    [command GSMoveToNextLineLP [0, -leading]]
+
+optimizeTextMatrix :: Command -> Program -> State InterpreterState InterpreterAction
+optimizeTextMatrix command rest = do
+  ts <- gets (gsTextState . iGraphicsState)
+  let initial = (tsLineMatrix ts, tsLeading ts)
+  case position command initial of
+    Just target -> case rest of
+      next :<| _ | Just final <- position next target -> do
+        let candidates = encodings initial final
+        case candidates of
+          _ : _ | let best = minimumBy (comparing (size . (:[]))) candidates
+                , size [best] < size [command, next] -> do
+                  applyPosition final
+                  return (ReplaceAndDeleteNextCommand best)
+          _ -> preserveLeading target next
+      _ -> keepPosition
+    Nothing -> case (cOperator command, cParameters command) of
+      (GSBeginText, Empty) -> resetTextStateS >> return KeepCommand
+      (GSSetTextLeading, GFXNumber _leading :<| Empty) -> do
+        precision <- usefulTextPrecisionS
+        let emitted = optimizeParameters command precision
+        case cParameters emitted of
+          GFXNumber leading :<| Empty -> setTextLeadingS leading
+          _ -> pure ()
+        return (ReplaceCommand emitted)
+      (GSNLShowText, _) -> nextLine >> unknown >> return KeepCommand
+      (GSNLShowTextWithSpacing, GFXNumber word :<| GFXNumber char :<| _text :<| Empty) -> do
+        setWordSpacingS word
+        setCharacterSpacingS char
+        nextLine
+        unknown
+        return KeepCommand
+      (GSShowText, _) -> unknown >> return KeepCommand
+      (GSShowManyText, _) -> unknown >> return KeepCommand
+      _ -> return KeepCommand
+ where
+  -- Track the actual emitted operands so subsequent rewrites see the same
+  -- line origin as a PDF reader, including after precision reduction.
+  keepPosition = do
+    precision <- usefulTextPrecisionS
+    ts <- gets (gsTextState . iGraphicsState)
+    let emitted = optimizeParameters command precision
+    case position emitted (tsLineMatrix ts, tsLeading ts) of
+      Just target -> applyPosition target
+      Nothing -> pure ()
+    return (ReplaceCommand emitted)
+  applyPosition (matrix, leading) = setTextMatrixS matrix >> setTextLeadingS leading
+  unknown = modifyGraphicsStateS $ \gs -> gs { gsTextState = (gsTextState gs) { tsMatrix = Nothing } }
+  nextLine = do
+    leading <- gets (tsLeading . gsTextState . iGraphicsState)
+    applyTextMatrixS (TransformationMatrix 1 0 0 1 0 (-leading))
+  preserveLeading target next
+    | cOperator next == GSSetTextMatrix =
+        if cOperator command == GSMoveToNextLineLP
+          then do
+            setTextLeadingS (snd target)
+            return $ replaceCommandWith command (mkCommand GSSetTextLeading [GFXNumber (snd target)])
+          else return DeleteCommand
+    | otherwise = keepPosition
