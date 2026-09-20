@@ -375,6 +375,7 @@ test-suite dietpdf-test
       PDF.Document.GetAllMasksSpec
       PDF.Document.ObjectStreamSpec
       PDF.Document.ResourcesSpec
+      PDF.Document.UnusedResourcesSpec
       PDF.Document.XRefSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommandSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorSpec

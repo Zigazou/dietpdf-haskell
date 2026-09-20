@@ -17,7 +17,7 @@ import Data.Context (Contextual (ctx))
 import Data.Foldable (toList)
 import Data.IntMap qualified as IM
 import Data.Logging (Logging)
-import Data.PDF.PDFDocument (PDFDocument, cFilter, deepFind)
+import Data.PDF.PDFDocument (PDFDocument, cFilter, deepFind, fromList)
 import Data.PDF.PDFObject
   ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFObjectStream, PDFReference)
   , hasStream
@@ -26,7 +26,7 @@ import Data.PDF.PDFObject
   , isReference
   , isTrailer
   )
-import Data.PDF.PDFObjects (fromPDFDocument, toPDFDocument)
+import Data.PDF.PDFObjects (fromPDFDocument)
 import Data.PDF.PDFPartition
   ( PDFPartition (PDFPartition, ppHeads, ppObjectsWithStream, ppObjectsWithoutStream, ppTrailers)
   )
@@ -65,16 +65,11 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
                                 <> deepFind isReference uTrailers
                                 )
 
-      otherReferences :: Set PDFObject
-      otherReferences =
-        (Set.fromList . toList)
-          (  deepFind isReference (toPDFDocument uObjectsWithStream)
-          <> deepFind isReference (toPDFDocument objectsWithStream)
-          <> deepFind isReference (toPDFDocument uObjectsWithoutStream)
-          <> deepFind isReference (toPDFDocument objectsWithoutStream)
-          )
+      allObjects = concatMap IM.elems
+        [uObjectsWithStream, uObjectsWithoutStream,
+         objectsWithStream, objectsWithoutStream]
 
-      references = findUsedReferences startReferences otherReferences
+      references = findUsedReferences allObjects startReferences
 
     sayP "Removing unused objects"
 
@@ -85,13 +80,21 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
       , ppTrailers             = trailers
       }
  where
-  findUsedReferences :: Set PDFObject -> Set PDFObject -> Set PDFObject
-  findUsedReferences startRefs refs =
-    let usedRefs = Set.filter (isReferenced startRefs) refs
-    in if usedRefs /= mempty
-        then findUsedReferences (Set.union startRefs usedRefs)
-                                (Set.difference refs usedRefs)
-        else startRefs
+  -- Follow outgoing edges only from reachable objects. References inside an
+  -- unreachable resource must not keep that resource's dependencies alive.
+  findUsedReferences :: [PDFObject] -> Set PDFObject -> Set PDFObject
+  findUsedReferences objects refs =
+    let reachable = filter (isReferenced refs) objects
+        outgoing = Set.fromList
+                 . toList
+                 . deepFind isReference
+                 . fromList
+                 $ reachable
+        expanded = refs <> outgoing
+    in
+      if expanded == refs
+        then refs
+        else findUsedReferences objects expanded
 
   isNotLinearized :: PDFObject -> Bool
   isNotLinearized = not . hasKey "Linearized"

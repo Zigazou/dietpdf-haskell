@@ -71,7 +71,8 @@ import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
   (optimizeOptionalDictionaryEntries)
 import PDF.Document.OptimizeResources (optimizeResources)
-import PDF.Document.Resources (updateWithAdditionalResources)
+import PDF.Document.Resources
+  (removeUnusedResources, updateWithAdditionalResources)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey)
@@ -84,6 +85,16 @@ import PDF.Processing.PDFWork (importObjects, pMapP, removeUnusedObjects)
 import System.IO (hSetBuffering, stderr)
 
 import Util.Sequence (mapMaybe)
+
+-- Removing a form can expose further unused resources. Repeat until neither
+-- resource dictionaries nor the reachable object graph changes.
+pruneUnusedResources :: PDFWork IO ()
+pruneUnusedResources = do
+  before <- gets wPDF
+  removeUnusedResources
+  removeUnusedObjects
+  after <- gets wPDF
+  when (after /= before) pruneUnusedResources
 
 {- |
 Encodes a PDF object and keeps track of its number and length.
@@ -205,7 +216,7 @@ pdfEncode objects = do
   gets (ppObjectsWithoutStream . wPDF)
     >>= mapM_ (mergePagesContents >=> putObject)
 
-  removeUnusedObjects
+  pruneUnusedResources
 
   -- Optimize numbers and resources.
   optimizeNumbers
@@ -231,8 +242,7 @@ pdfEncode objects = do
   modifyIndirectObjectsP optimize
 
   updateWithAdditionalResources
-
-  removeUnusedObjects
+  pruneUnusedResources
 
   nextObjectNumber <- (+ 1) <$> lastObjectNumber
 
