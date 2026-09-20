@@ -8,13 +8,16 @@ import Data.ByteString (ByteString)
 import Data.PDF.Command (mkCommand)
 import Data.PDF.GFXObject
   ( GFXObject (GFXName, GFXNumber, GFXString)
-  , GSOperator (GSBeginText, GSEndPath, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText)
+  , GSOperator (GSBeginText, GSEndPath, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetTextFont, GSSetTextMatrix, GSShowManyText, GSShowText)
   , mkGFXArray
   )
 import Data.PDF.Program (Program, mkProgram, parseProgram)
 import Data.PDF.WorkData (emptyWorkData)
 
 import PDF.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
+import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMergeableTextCommands
+  (optimizeMergeableTextCommands)
+import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle (optimizeRectangle)
 import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -123,3 +126,44 @@ spec = do
     it "eliminates overwritten independent state settings before painting" $
       optimize "2 w 1 J 3 w 0 0 m 10 10 l S"
         `shouldBe` parse "3 w 1 J 0 0 m 10 10 l S"
+
+  describe "remaining graphics optimizations" $ do
+    let parse input = either (error . show) parseProgram (gfxParse input)
+        optimize = optimizeProgram emptyWorkData . parse
+    forM_
+      [ ("(A)Tj <42>Tj [(C)12(D)]TJ (E)Tj", "[(ABC)12(DE)]TJ")
+      , ("()Tj []TJ [()()]TJ", "")
+      , ("[(A)12]TJ [-3(B)]TJ", "[(A)12 -3(B)]TJ")
+      , ("(A)Tj /Span BMC (B)Tj EMC (C)Tj", "(A)Tj /Span BMC (B)Tj EMC (C)Tj")
+      , ("(A)Tj 1 Tc (B)Tj", "(A)Tj 1 Tc (B)Tj")
+      , ("()'", "()'")
+      ] $ \(input, expected) ->
+        it ("merges text safely in " ++ show input) $
+          optimizeMergeableTextCommands (parse input)
+            `shouldBe` parse expected
+
+    it "pads each odd-length hex string before concatenating" $
+      optimizeMergeableTextCommands (parse "<4>Tj <1>Tj")
+        `shouldBe` mkProgram [mkCommand GSShowText [GFXString "@\DLE"]]
+
+    it "removes unused consecutive moves" $
+      optimize "1 2 m 3 4 m 8 9 l S"
+        `shouldBe` parse "3 4 m 8 9 l S"
+
+    it "removes superseded text settings across independent setters" $
+      optimize "BT 2 Tc 3 Tw 4 Tc (A)Tj ET"
+        `shouldBe` optimize "BT 4 Tc 3 Tw (A)Tj ET"
+
+    forM_
+      [ "0 0 m 0 10 l 20 10 l 20 0 l h"
+      , "20 10 m 20 0 l 0 0 l 0 10 l 20 10 l h"
+      ] $ \input ->
+        it ("preserves vertical-first rectangle traversal in " ++ show input) $
+          optimizeRectangle (parse input) `shouldBe` parse input
+
+    forM_
+      [ ("20 10 m 0 10 l 0 0 l 20 0 l h", "20 10 -20 -10 re")
+      , ("0 0 m 20 0 l 20 10 l 0 10 l 0 0 l h", "0 0 20 10 re")
+      ] $ \(input, expected) ->
+        it ("recognizes rectangle corners in " ++ show input) $
+          optimizeRectangle (parse input) `shouldBe` parse expected

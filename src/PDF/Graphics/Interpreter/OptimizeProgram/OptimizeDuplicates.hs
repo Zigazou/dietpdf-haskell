@@ -10,7 +10,7 @@ module PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
 
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
-  ( GSOperator (GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetParameters, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
+  ( GSOperator (GSSetCharacterSpacing, GSSetWordSpacing, GSSetHorizontalScaling, GSSetTextLeading, GSSetTextRenderingMode, GSSetTextRise, GSSetTextFont, GSMoveTo, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetParameters, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
   )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|)), (<|))
@@ -23,6 +23,14 @@ operator setting the same state. Returns 'True' for color, line style, and
 rendering intent operators; 'False' for others.
 -}
 uselessWhenDuplicated :: GSOperator -> Bool
+uselessWhenDuplicated GSMoveTo                     = True
+uselessWhenDuplicated GSSetCharacterSpacing        = True
+uselessWhenDuplicated GSSetWordSpacing             = True
+uselessWhenDuplicated GSSetHorizontalScaling       = True
+uselessWhenDuplicated GSSetTextLeading             = True
+uselessWhenDuplicated GSSetTextRenderingMode        = True
+uselessWhenDuplicated GSSetTextRise                 = True
+uselessWhenDuplicated GSSetTextFont                 = True
 uselessWhenDuplicated GSSetParameters              = False
 uselessWhenDuplicated GSSetStrokeColor             = True
 uselessWhenDuplicated GSSetNonStrokeColor          = True

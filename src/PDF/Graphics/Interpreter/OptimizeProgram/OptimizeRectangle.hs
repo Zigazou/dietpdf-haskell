@@ -113,12 +113,14 @@ optimizeRectangle
                           )
         <| optimizeRectangle rest
 
-    CounterClockwiseRectangle ->
-      Command GSRectangle (   GFXNumber x0        :<| GFXNumber y0
-                          :<| GFXNumber (x2 - x0) :<| GFXNumber (y2 - y0)
-                          :<| mempty
-                          )
-        <| optimizeRectangle rest
+    -- A rectangle operator starts with a horizontal edge. Reversing a
+    -- vertical-first path here would change nonzero winding and dash placement.
+    CounterClockwiseRectangle -> Command GSMoveTo p0
+                  <| Command GSLineTo p1
+                  <| Command GSLineTo p2
+                  <| Command GSLineTo p3
+                  <| Command GSCloseSubpath mempty
+                  <| optimizeRectangle rest
 
     NotARectangle -> Command GSMoveTo p0
                   <| Command GSLineTo p1
@@ -145,12 +147,15 @@ optimizeRectangle
                           )
         <| optimizeRectangle rest
 
-    CounterClockwiseRectangle ->
-      Command GSRectangle (   GFXNumber x0        :<| GFXNumber y0
-                          :<| GFXNumber (x2 - x0) :<| GFXNumber (y2 - y0)
-                          :<| mempty
-                          )
-        <| optimizeRectangle rest
+    -- A rectangle operator starts with a horizontal edge. Reversing a
+    -- vertical-first path here would change nonzero winding and dash placement.
+    CounterClockwiseRectangle -> Command GSMoveTo p0
+                  <| Command GSLineTo p1
+                  <| Command GSLineTo p2
+                  <| Command GSLineTo p3
+                  <| Command GSLineTo p4
+                  <| Command GSCloseSubpath mempty
+                  <| optimizeRectangle rest
 
     NotARectangle -> Command GSMoveTo p0
                   <| Command GSLineTo p1
