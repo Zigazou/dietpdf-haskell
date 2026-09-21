@@ -11,18 +11,22 @@ special operator that carries their image object.
 module Data.PDF.Program
   ( Program
   , mkProgram
+  , programSize
+  , programComputedSize
   , parseProgram
   , extractObjects
   )
 where
 
 import Data.Array (Array)
+import Data.ByteString qualified as BS
 import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
     ( GFXObject (GFXInlineImage, GFXOperator, GFXComment)
     , GSOperator (GSBeginInlineImage, GSUnknown)
+    , separateGfx
     )
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.Sequence ((|>))
@@ -39,6 +43,19 @@ Construct a 'Program' from a list of commands.
 -}
 mkProgram :: [Command] -> Program
 mkProgram = SQ.fromList
+
+{-|
+Compute the size of a 'Program' in terms of the number of commands it contains.
+-}
+programSize :: Program -> Int
+programSize = SQ.length
+
+{-|
+Compute the size of a 'Program' in bytes after serialization to a graphics
+content stream, including operands, operators, and required separators.
+-}
+programComputedSize :: Program -> Int
+programComputedSize = BS.length . separateGfx . extractObjects
 
 {-|
 Parse a flat sequence of graphics objects into a command program.

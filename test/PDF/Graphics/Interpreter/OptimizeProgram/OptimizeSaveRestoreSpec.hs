@@ -248,7 +248,11 @@ spec = do
         $          findRelatedSave example
         `shouldBe` Just expected
 
-  describe "optimizeSaveRestore" $
+  describe "optimizeSaveRestore" $ do
+    it "removes many independent empty pairs in one traversal" $ do
+      let program = mkProgram (concat (replicate 10000 [Save, Restore, Dummy]))
+      optimizeSaveRestore program `shouldBe` mkProgram (replicate 10000 Dummy)
+
     forM_ optimizeSaveRestoreExamples $ \(index, example, expected) -> do
       it ("should work with example " ++ show index)
         $          optimizeSaveRestore example

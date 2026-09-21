@@ -33,8 +33,12 @@ import Data.PDF.InterpreterAction
   ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand, SwitchCommand)
   )
 import Data.PDF.InterpreterState
-  (InterpreterState (iWorkData), defaultInterpreterState)
-import Data.PDF.Program (Program)
+  ( InterpreterState (iWorkData)
+  , consumeColorOpS
+  , defaultInterpreterState
+  , initRemainingColorOpsS
+  )
+import Data.PDF.Program (Program, programComputedSize)
 import Data.PDF.WorkData (WorkData)
 import Data.Sequence (Seq (Empty, (:<|)), (<|), (|>))
 
@@ -52,7 +56,7 @@ import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
   (optimizeSaveRestore)
 
-import Util.Transform (untilNoChange)
+import Util.Transform (untilNoImprovement)
 
 {-|
 Apply command-level optimizations to a program.
@@ -74,6 +78,10 @@ result respects these actions:
 
 @param program@ the accumulated optimized program so far @param rest@ the
 remaining commands to process @return@ the fully optimized program
+
+Assumes 'Data.PDF.InterpreterState.initRemainingColorOpsS' has already been run
+on the full input program, so that color commands consumed here keep the
+remaining-color-op counters in sync (see 'optimizeCommandsFromStart').
 -}
 optimizeCommands
   :: Program
@@ -82,16 +90,18 @@ optimizeCommands
 optimizeCommands program Empty = return program
 optimizeCommands program (command :<| rest) =
   optimizeCommand command rest >>= \case
-    KeepCommand -> optimizeCommands (program |> command) rest
+    KeepCommand -> consumeColorOpS command >> optimizeCommands (program |> command) rest
 
-    DeleteCommand -> optimizeCommands program rest
+    DeleteCommand -> consumeColorOpS command >> optimizeCommands program rest
 
     ReplaceCommand optimizedCommand' ->
-      optimizeCommands (program |> optimizedCommand') rest
+      consumeColorOpS command >> optimizeCommands (program |> optimizedCommand') rest
 
     ReplaceAndDeleteNextCommand optimizedCommand' -> case rest of
       Empty -> return program
-      (_commandToDelete :<| rest') ->
+      (commandToDelete :<| rest') -> do
+        consumeColorOpS command
+        consumeColorOpS commandToDelete
         optimizeCommands (program |> optimizedCommand') rest'
 
     SwitchCommand -> case rest of
@@ -100,7 +110,17 @@ optimizeCommands program (command :<| rest) =
         optimizeCommands program (nextCommand <| command <| rest')
 
 {-|
+Run 'optimizeCommands' over the whole @program@, first initializing the
+remaining-color-op counters used by 'PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand.optimizeColorCommand'.
+-}
+optimizeCommandsFromStart :: Program -> State InterpreterState Program
+optimizeCommandsFromStart program = do
+  initRemainingColorOpsS program
+  optimizeCommands mempty program
+
+{-|
 Perform one complete optimization pass over a program.
+
 
 Applies all program-wide structural optimizations followed by all command-level
 optimizations:
@@ -116,6 +136,13 @@ Program-wide passes:
 Then applies command-level optimizations via @optimizeCommands@ to each command
 in the optimized structure.
 
+Keep these structural passes inside the fixed point: command removal can expose
+empty scopes, duplicate settings, adjacent text displays and marked-content
+wrappers. Coordinate rounding and path simplification can also expose rectangle
+patterns. Idempotence of an isolated pass does not imply that it can be hoisted
+out of this pipeline. Resource renaming and scale selection belong outside this
+loop; ExtGState factorization runs after convergence.
+
 @param workData@ the PDF work context containing document information @param
 program@ the graphics program to optimize in one pass @return@ the result after
 all optimizations in a single pass
@@ -123,7 +150,7 @@ all optimizations in a single pass
 optimizeProgramOnePass :: WorkData -> Program -> Program
 optimizeProgramOnePass workData
   = ( flip evalState defaultInterpreterState { iWorkData = workData }
-    . optimizeCommands mempty
+    . optimizeCommandsFromStart
     )
   . optimizeMarkedContent
   . optimizeMergeableTextCommands
@@ -151,5 +178,11 @@ program@ the graphics program to optimize @return@ the fully optimized program
 -}
 optimizeProgram :: WorkData -> Program -> Program
 optimizeProgram workData program =
-  let optimized = untilNoChange (optimizeProgramOnePass workData) program
-  in if optimized == mempty then program else optimized
+  let optimized = untilNoImprovement 4
+                                     programComputedSize
+                                     (optimizeProgramOnePass workData)
+                                     program
+  in
+    if optimized == mempty
+      then program
+      else optimized

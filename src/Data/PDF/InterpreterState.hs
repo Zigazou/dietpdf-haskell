@@ -13,7 +13,7 @@ Most functions are small adapters that lift a pure 'GraphicsState' update into
 the 'State' monad over 'InterpreterState'.
 -}
 module Data.PDF.InterpreterState
-  ( InterpreterState (InterpreterState, iGraphicsState, iStack, iWorkData)
+  ( InterpreterState (InterpreterState, iGraphicsState, iStack, iWorkData, iRemainingStrokeColorOps, iRemainingNonStrokeColorOps)
   , defaultInterpreterState
   , saveState
   , saveStateS
@@ -44,14 +44,23 @@ module Data.PDF.InterpreterState
   , applyTextMatrixS
   , setCharacterSpacingS
   , setWordSpacingS
+  , initRemainingColorOpsS
+  , consumeColorOpS
+  , allowStrokeColorSpaceChangeS
+  , allowNonStrokeColorSpaceChangeS
   ) where
 
 import Control.Monad.RWS (modify)
 import Control.Monad.State (State, get, gets, put)
 
 import Data.ByteString (ByteString)
+import Data.Foldable (foldl')
 import Data.Kind (Type)
 import Data.PDF.Color (Color)
+import Data.PDF.Command (Command (cOperator))
+import Data.PDF.GFXObject
+  ( GSOperator (GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetStrokeColor, GSSetStrokeColorN)
+  )
 import Data.PDF.GraphicsState
   ( GraphicsState
   , applyGraphicsMatrix
@@ -82,6 +91,7 @@ import Data.PDF.GraphicsState
   , usefulGraphicsPrecision
   , usefulTextPrecision
   )
+import Data.PDF.Program (Program)
 import Data.PDF.TextState (TextState (tsMatrix, tsLineMatrix, tsScaleX, tsScaleY))
 import Data.PDF.TransformationMatrix (TransformationMatrix)
 import Data.PDF.WorkData (WorkData, emptyWorkData)
@@ -93,9 +103,15 @@ The graphics state stack is used to implement save/restore semantics.
 -}
 type InterpreterState :: Type
 data InterpreterState = InterpreterState
-  { iGraphicsState :: !GraphicsState -- ^ Current graphics state
-  , iStack         :: ![GraphicsState] -- ^ Stack of saved graphics states
-  , iWorkData      :: !WorkData -- ^ Additional interpreter working data
+  { iGraphicsState              :: !GraphicsState -- ^ Current graphics state
+  , iStack                      :: ![GraphicsState] -- ^ Stack of saved graphics states
+  , iWorkData                   :: !WorkData -- ^ Additional interpreter working data
+  , iRemainingStrokeColorOps    :: !Int
+    -- ^ Count of SC\/SCN commands not yet consumed in the program being
+    -- optimized, used to answer "is there a later stroke color command" in
+    -- O(1) instead of rescanning the remaining program
+  , iRemainingNonStrokeColorOps :: !Int
+    -- ^ Same as 'iRemainingStrokeColorOps', for sc\/scn commands
   }
 
 {-|
@@ -108,6 +124,8 @@ defaultInterpreterState = InterpreterState
   { iGraphicsState = defaultGraphicsState
   , iStack    = []
   , iWorkData = emptyWorkData
+  , iRemainingStrokeColorOps = 0
+  , iRemainingNonStrokeColorOps = 0
   }
 
 {-|
@@ -317,3 +335,70 @@ State-monad variant of 'setNonStrokeColor'.
 -}
 setNonStrokeColorS :: Color -> State InterpreterState ()
 setNonStrokeColorS = modifyGraphicsStateS . setNonStrokeColor
+
+{-|
+Whether an operator is a stroke color-value command (SC\/SCN).
+-}
+isStrokeColorOp :: GSOperator -> Bool
+isStrokeColorOp GSSetStrokeColor  = True
+isStrokeColorOp GSSetStrokeColorN = True
+isStrokeColorOp _anyOtherOperator = False
+
+{-|
+Whether an operator is a non-stroke (fill) color-value command (sc\/scn).
+-}
+isNonStrokeColorOp :: GSOperator -> Bool
+isNonStrokeColorOp GSSetNonStrokeColor  = True
+isNonStrokeColorOp GSSetNonStrokeColorN = True
+isNonStrokeColorOp _anyOtherOperator    = False
+
+{-|
+Scan @program@ once and record how many stroke and non-stroke color-value
+commands it contains.
+
+Must be called before optimizing a program, so that
+'allowStrokeColorSpaceChangeS' and 'allowNonStrokeColorSpaceChangeS' can answer
+in O(1) per command instead of rescanning the remaining program for every
+color-setting command, which would make color optimization quadratic in the
+number of commands.
+-}
+initRemainingColorOpsS :: Program -> State InterpreterState ()
+initRemainingColorOpsS program = modify $ \state -> state
+  { iRemainingStrokeColorOps    = countOps isStrokeColorOp
+  , iRemainingNonStrokeColorOps = countOps isNonStrokeColorOp
+  }
+ where
+  countOps predicate =
+    foldl' (\acc command -> if predicate (cOperator command) then acc + 1 else acc)
+           0
+           program
+
+{-|
+Record that @command@ has left the not-yet-processed part of the program
+(kept, deleted or replaced), decrementing the remaining color-op counters when
+its operator is one that 'initRemainingColorOpsS' counted.
+-}
+consumeColorOpS :: Command -> State InterpreterState ()
+consumeColorOpS command = modify $ \state -> state
+  { iRemainingStrokeColorOps    = iRemainingStrokeColorOps state
+      - (if isStrokeColorOp operator then 1 else 0)
+  , iRemainingNonStrokeColorOps = iRemainingNonStrokeColorOps state
+      - (if isNonStrokeColorOp operator then 1 else 0)
+  }
+ where operator = cOperator command
+
+{-|
+Whether a stroke color-value command other than @command@ itself remains in
+the not-yet-processed part of the program.
+-}
+allowStrokeColorSpaceChangeS :: Command -> State InterpreterState Bool
+allowStrokeColorSpaceChangeS command = gets $ \state ->
+  iRemainingStrokeColorOps state - (if isStrokeColorOp (cOperator command) then 1 else 0) <= 0
+
+{-|
+Whether a non-stroke (fill) color-value command other than @command@ itself
+remains in the not-yet-processed part of the program.
+-}
+allowNonStrokeColorSpaceChangeS :: Command -> State InterpreterState Bool
+allowNonStrokeColorSpaceChangeS command = gets $ \state ->
+  iRemainingNonStrokeColorOps state - (if isNonStrokeColorOp (cOperator command) then 1 else 0) <= 0

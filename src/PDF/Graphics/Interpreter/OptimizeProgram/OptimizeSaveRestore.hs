@@ -179,7 +179,9 @@ optimizeSaveRestoreOnePass program = case breakl onRestore program of
       case findRelatedSave beforeRestore of
         -- If there is no command between save and restore, remove both.
         Just (beforeSave, Save :<| Empty) ->
-          beforeSave <> afterRestore
+          -- Continue through the suffix so independent empty pairs do not
+          -- each require another whole-program fixed-point iteration.
+          beforeSave <> optimizeSaveRestoreOnePass afterRestore
         _anythingElse ->
           beforeRestore <> (Restore <| optimizeSaveRestoreOnePass afterRestore)
 
@@ -243,7 +245,7 @@ operators, returns it unchanged.
 optimizeSaveRestore :: Program -> Program
 optimizeSaveRestore program =
   if balancedProgram 0 program
-  then 
+  then
     let reduced = untilNoChange reduceSaveRestoreOnePass program
     in untilNoChange optimizeSaveRestoreOnePass reduced
   else program

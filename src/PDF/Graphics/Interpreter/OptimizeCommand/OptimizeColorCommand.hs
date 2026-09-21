@@ -27,6 +27,8 @@ import Data.PDF.InterpreterAction
   (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
 import Data.PDF.InterpreterState
   ( InterpreterState (iGraphicsState)
+  , allowNonStrokeColorSpaceChangeS
+  , allowStrokeColorSpaceChangeS
   , modifyGraphicsStateS
   , setNonStrokeColorS
   , setRenderingIntentS
@@ -46,10 +48,9 @@ the current stroke color in graphics state, deletes the command. Otherwise,
 updates state and replaces the command with an optimized version.
 -}
 strokeDeleteIfNoChange
-  :: Bool
-  -> Command
+  :: Command
   -> State InterpreterState InterpreterAction
-strokeDeleteIfNoChange allowSpaceChange command = do
+strokeDeleteIfNoChange command = do
     currentColor <- gets (gsStrokeColor . iGraphicsState)
     newColor <- mkColor command
     if currentColor == newColor
@@ -58,9 +59,12 @@ strokeDeleteIfNoChange allowSpaceChange command = do
       else do
         let normalized = mkStrokeCommand newColor
             compact = optimizeColor normalized
-            emitted = if compact /= normalized && allowSpaceChange
-                        then compact
-                        else normalized
+        emitted <- if compact /= normalized
+                     then do
+                       allowSpaceChange <- allowStrokeColorSpaceChangeS command
+                       return $ if allowSpaceChange then compact else normalized
+                     else
+                       return normalized
 
         emittedColor <- mkColor emitted
         setStrokeColorS emittedColor
@@ -75,10 +79,9 @@ the current non-stroke color in graphics state, deletes the command. Otherwise,
 updates state and replaces the command with an optimized version.
 -}
 nonStrokeDeleteIfNoChange
-  :: Bool
-  -> Command
+  :: Command
   -> State InterpreterState InterpreterAction
-nonStrokeDeleteIfNoChange allowSpaceChange command = do
+nonStrokeDeleteIfNoChange command = do
     currentColor <- gets (gsNonStrokeColor . iGraphicsState)
     newColor <- mkColor command
 
@@ -88,9 +91,12 @@ nonStrokeDeleteIfNoChange allowSpaceChange command = do
       else do
         let normalized = mkNonStrokeCommand newColor
             compact = optimizeColor normalized
-            emitted = if compact /= normalized && allowSpaceChange
-                        then compact
-                        else normalized
+        emitted <- if compact /= normalized
+          then do
+            allowSpaceChange <- allowNonStrokeColorSpaceChangeS command
+            return $ if allowSpaceChange then compact else normalized
+          else
+            return normalized
 
         emittedColor <- mkColor emitted
         setNonStrokeColorS emittedColor
@@ -110,7 +116,7 @@ optimizeColorCommand
   :: Command
   -> Program
   -> State InterpreterState InterpreterAction
-optimizeColorCommand command rest = case (operator, parameters) of
+optimizeColorCommand command _rest = case (operator, parameters) of
   (GSSetColourRenderingIntent, GFXName intent :<| Empty) -> do
     currentIntent <- gets (gsIntent . iGraphicsState)
     unknown <- gets ( elem GSSetColourRenderingIntent
@@ -140,37 +146,17 @@ optimizeColorCommand command rest = case (operator, parameters) of
     modifyGraphicsStateS (setNonStrokeColorSpace selectedSpace)
     return KeepCommand
 
-  (GSSetStrokeColor, _params)          -> strokeDeleteIfNoChange
-                                            allowStrokeSpaceChange
-                                            command
-  (GSSetStrokeColorN, _params)         -> strokeDeleteIfNoChange
-                                            allowStrokeSpaceChange
-                                            command
-  (GSSetStrokeGrayColorspace, _params) -> strokeDeleteIfNoChange
-                                            allowStrokeSpaceChange
-                                            command
-  (GSSetStrokeRGBColorspace, _params)  -> strokeDeleteIfNoChange
-                                            allowStrokeSpaceChange
-                                            command
-  (GSSetStrokeCMYKColorspace, _params) -> strokeDeleteIfNoChange
-                                            allowStrokeSpaceChange
-                                            command
+  (GSSetStrokeColor, _params)          -> strokeDeleteIfNoChange command
+  (GSSetStrokeColorN, _params)         -> strokeDeleteIfNoChange command
+  (GSSetStrokeGrayColorspace, _params) -> strokeDeleteIfNoChange command
+  (GSSetStrokeRGBColorspace, _params)  -> strokeDeleteIfNoChange command
+  (GSSetStrokeCMYKColorspace, _params) -> strokeDeleteIfNoChange command
 
-  (GSSetNonStrokeColor, _params)          -> nonStrokeDeleteIfNoChange
-                                              allowFillSpaceChange
-                                              command
-  (GSSetNonStrokeColorN, _params)         -> nonStrokeDeleteIfNoChange
-                                              allowFillSpaceChange
-                                              command
-  (GSSetNonStrokeGrayColorspace, _params) -> nonStrokeDeleteIfNoChange
-                                              allowFillSpaceChange
-                                              command
-  (GSSetNonStrokeRGBColorspace, _params)  -> nonStrokeDeleteIfNoChange
-                                              allowFillSpaceChange
-                                              command
-  (GSSetNonStrokeCMYKColorspace, _params) -> nonStrokeDeleteIfNoChange
-                                              allowFillSpaceChange
-                                              command
+  (GSSetNonStrokeColor, _params)          -> nonStrokeDeleteIfNoChange command
+  (GSSetNonStrokeColorN, _params)         -> nonStrokeDeleteIfNoChange command
+  (GSSetNonStrokeGrayColorspace, _params) -> nonStrokeDeleteIfNoChange command
+  (GSSetNonStrokeRGBColorspace, _params)  -> nonStrokeDeleteIfNoChange command
+  (GSSetNonStrokeCMYKColorspace, _params) -> nonStrokeDeleteIfNoChange command
 
   _anyOtherCommand -> return KeepCommand
  where
@@ -180,9 +166,4 @@ optimizeColorCommand command rest = case (operator, parameters) of
   selectedSpace = case parameters of
     GFXName name :<| Empty -> Just name
     _other                 -> Nothing
-  -- An implicit color command observes the selected space. Preserve device
-  -- spaces whenever a later command can depend on them, including across q/Q.
-  allowStrokeSpaceChange = not $ any
-    ((`elem` [GSSetStrokeColor, GSSetStrokeColorN]) . cOperator) rest
-  allowFillSpaceChange = not $ any
-    ((`elem` [GSSetNonStrokeColor, GSSetNonStrokeColorN]) . cOperator) rest
+

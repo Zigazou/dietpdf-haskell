@@ -22,7 +22,6 @@ module PDF.Graphics.Interpreter.OptimizeCommand
   ( optimizeCommand
   ) where
 
-import Control.Monad (foldM)
 import Control.Monad.State (State)
 
 import Data.PDF.Command (Command)
@@ -70,25 +69,6 @@ optimizations =
   ]
 
 {-|
-Fold combinator for optimization actions.
-
-Propagates the first non-trivial optimization action through a series of
-alternative optimizations. Once any optimization returns a meaningful action
-(other than @KeepCommand@), stops processing and returns that action. Otherwise,
-evaluates the next optimization in the pipeline.
-
-Used to combine multiple optimization functions where the first applicable one
-takes precedence.
--}
-findAction
-  :: Monad m
-  => InterpreterAction
-  -> m InterpreterAction
-  -> m InterpreterAction
-findAction KeepCommand     nextActionM   = nextActionM
-findAction effectiveAction _anythingElse = return effectiveAction
-
-{-|
 Apply all optimization passes to a single command.
 
 Runs the command through the optimization pipeline, allowing each optimization
@@ -109,4 +89,10 @@ optimizeCommand
   -> Program
   -> State InterpreterState InterpreterAction
 optimizeCommand command rest =
-  foldM findAction KeepCommand (($) <$> optimizations <*> [command] <*> [rest])
+  go optimizations
+ where
+  go [] = return KeepCommand
+  go (optimization : remaining) =
+    optimization command rest >>= \case
+      KeepCommand -> go remaining
+      action      -> return action
