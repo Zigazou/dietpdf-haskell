@@ -135,6 +135,7 @@ library
       PDF.Document.Stat
       PDF.Document.Uncompress
       PDF.Document.XRef
+      PDF.Graphics.Geometry
       PDF.Graphics.Interpreter.Human
       PDF.Graphics.Interpreter.OptimizeCommand
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
@@ -173,6 +174,7 @@ library
       PDF.Graphics.Parser.Reference
       PDF.Graphics.Parser.Stream
       PDF.Graphics.Parser.String
+      PDF.Graphics.Visibility
       PDF.Object.Container
       PDF.Object.Format
       PDF.Object.Object
