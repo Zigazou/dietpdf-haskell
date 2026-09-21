@@ -182,10 +182,13 @@ be decoded because (like `DCTDecode`).
 It usually decompresses the stream.
 -}
 unfilter :: Logging m => PDFObject -> PDFWork m PDFObject
-unfilter object = if not (hasStream object)
-  then return object
-  else do
-    unfiltered object
-      >>= \(remainingFilters, unfilteredStream) ->
-          setStream unfilteredStream object
-      >>= setFilters remainingFilters
+unfilter object =
+  if not (hasStream object)
+    then
+      return object
+    else
+      tryP (unfiltered object) >>= \case
+        Left _anyError ->
+          return object
+        Right (remainingFilters, unfilteredStream) ->
+          setStream unfilteredStream object >>= setFilters remainingFilters
