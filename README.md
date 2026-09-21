@@ -61,6 +61,20 @@ Optimizes a PDF file.
 * --no-gfx-optimize or -x: (optional) Do not try to optimize vector elements.
 * --overwrite or -o: (optional) Overwrite the output file if it exists.
 
+With graphics optimization enabled, DietPDF removes image XObject invocations
+that are provably outside the page's effective MediaBox/CropBox or rectangular
+clipping region, or completely covered by later opaque images or rectangle
+fills. The analysis follows `cm`, `q` and `Q` across merged page content streams
+and resolves inherited page resources. Existing resource cleanup then removes
+images with no remaining uses.
+
+Visibility analysis is conservative: partially visible images and uncertain
+cases are retained. Antialiased fill boundaries are not considered opaque
+covers. Form contents, inline images, optional content and text clipping are not
+analyzed for removal. Page transparency groups allow geometric exclusion only.
+Structural marked content such as `/Figure` and `/P` is supported. Complex paths
+and transparent painting cannot establish occlusion. `--no-gfx-optimize` disables this pass.
+
 ### hash
 
 Computes a hash of each stream in a PDF file.

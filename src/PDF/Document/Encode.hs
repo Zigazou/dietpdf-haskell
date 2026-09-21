@@ -65,6 +65,7 @@ import Data.UnifiedError
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
 import PDF.Document.GetAllMasks (getAllMasks)
+import PDF.Document.InvisibleImages (removeInvisiblePageImages)
 import PDF.Document.MergeVectorStream (mergeVectorStream)
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import PDF.Document.OptimizeNumbers (optimizeNumbers)
@@ -147,7 +148,9 @@ mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) =
 
   case (mType, mContents) of
     (Just (PDFName "Page"), Just vectors) -> do
-      streamNumber <- mergeVectorStream vectors >>= putNewObject
+      streamNumber <- mergeVectorStream vectors
+        >>= removeInvisiblePageImages object
+        >>= putNewObject
       let newDict = Map.insert "Contents" (PDFReference streamNumber 0) dict
       return $ PDFIndirectObject major minor (PDFDictionary newDict)
 
