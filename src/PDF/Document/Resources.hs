@@ -24,7 +24,7 @@ import Data.PDF.GFXObject
   (GFXObject (GFXArray, GFXDictionary, GFXInlineImage, GFXName))
 import Data.PDF.PDFDocument (cFilter)
 import Data.PDF.PDFObject
-  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFName, PDFReference)
+  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFName, PDFNull, PDFReference)
   )
 import Data.PDF.PDFObjects (toPDFDocument)
 import Data.PDF.PDFPartition
@@ -33,7 +33,6 @@ import Data.PDF.PDFWork
   ( PDFWork
   , getAdditionalGStates
   , getReference
-  , loadFullObject
   , modifyIndirectObjectsP
   , setAdditionalGStates
   , tryP
@@ -56,24 +55,38 @@ import Util.Dictionary (Dictionary)
 
 
 {-|
+Resolve a single level of indirection, without descending into the resolved
+object's own entries. Only the immediate reference is followed, so shared
+sub-objects (fonts, XObjects...) are never expanded.
+-}
+loadShallow :: Monad m => PDFObject -> PDFWork m PDFObject
+loadShallow reference@PDFReference{} = do
+  object <- getReference reference
+  case object of
+    PDFIndirectObject _major _minor value -> return value
+    _other                                -> return object
+loadShallow object = return object
+
+{-|
 Extract resource names of a specific type from a PDF object.
 
 Looks for a dictionary stored under the given key (e.g., "Font", "XObject",
-"ColorSpace") and returns all dictionary keys wrapped as resources. Returns an
-empty set if the key is absent or the value is not a dictionary.
+"ColorSpace") and returns all dictionary keys wrapped as resources. Only the
+dictionary's keys are needed, so its entries (fonts, XObjects...) are resolved
+one level at most, never expanded further. Returns an empty set if the key is
+absent or the value is not a dictionary.
 -}
 getResourceKeys
   :: Logging m
   => ByteString
   -> PDFObject
   -> PDFWork m (Set Resource)
-getResourceKeys key object =
-  case getValueForKey key object of
-    Just (PDFDictionary dict) ->
+getResourceKeys key object = do
+  resolved <- maybe (return PDFNull) loadShallow (getValueForKey key object)
+  case resolved of
+    PDFDictionary dict ->
       return $ createSet (toResource key <$> Map.keys dict)
-    Just (PDFIndirectObject _major _minor (PDFDictionary dict)) ->
-      return $ createSet (toResource key <$> Map.keys dict)
-    Just (PDFIndirectObjectWithStream _major _minor dict _stream) ->
+    PDFIndirectObjectWithStream _major _minor dict _stream ->
       return $ createSet (toResource key <$> Map.keys dict)
     _notFound -> return mempty
 
@@ -122,7 +135,7 @@ getResourceNames
   -> PDFWork m (Set Resource)
 getResourceNames resources object = case getValueForKey "Resources" object of
   Just value -> do
-    loadedValue <- loadFullObject value
+    loadedValue <- loadShallow value
     names <- getResourceKeysFromDictionary loadedValue
     return (resources <> names)
   _notFound -> return resources
