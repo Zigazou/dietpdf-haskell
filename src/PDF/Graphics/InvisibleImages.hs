@@ -2,6 +2,7 @@
 -- resource dictionaries are left to the document's unused-resource pass.
 module PDF.Graphics.InvisibleImages
   ( Rect (Rect), ImageInfo (ImageInfo), VisibilityMode (GeometryOnly, IncludeOcclusion)
+  , Matrix, affine, bounds, balancedMarkedContent
   , removeInvisibleImages, removeInvisibleImagesWithMode ) where
 
 import Data.ByteString (ByteString)
@@ -199,7 +200,7 @@ removeInvisibleImagesWithMode mode viewport images program
             (True, Rectangle rectangle, Just clipping) | exact && opaque ->
               -- The page boundary cannot expose pixels outside the page. Keep
               -- the original fill edges when clipping is only the viewport.
-              if clipping == viewport 
+              if clipping == viewport
                 then Just rectangle
                 else intersection rectangle clipping
             _anyOtherCase -> Nothing

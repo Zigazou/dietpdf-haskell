@@ -160,6 +160,7 @@ library
       PDF.Graphics.Interpreter.ResourcesUsed
       PDF.Graphics.InvisibleImages
       PDF.Graphics.Optimize
+      PDF.Graphics.OutsidePage
       PDF.Graphics.Parser.Comment
       PDF.Graphics.Parser.Container
       PDF.Graphics.Parser.EmptyContent
@@ -396,6 +397,7 @@ test-suite dietpdf-test
       PDF.Graphics.Interpreter.OptimizeScaleSpec
       PDF.Graphics.Interpreter.ResourcesUsedSpec
       PDF.Graphics.InvisibleImagesSpec
+      PDF.Graphics.OutsidePageSpec
       PDF.Graphics.Parser.ArraySpec
       PDF.Graphics.Parser.CommentSpec
       PDF.Graphics.Parser.DictionarySpec

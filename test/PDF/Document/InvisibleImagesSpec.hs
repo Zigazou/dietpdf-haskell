@@ -132,3 +132,52 @@ spec = describe "Invisible page images" $ do
       "/Figure<</MCID 1>>BDC q 0.028 90.992 793.615 355.464 re W* n q 793.616 0 0 142.554 -232.753 687.769 cm /Im Do Q Q EMC"
     result `shouldBe` Right
       "/Figure<</MCID 1>>BDC q .028 90.992 793.615 355.464 re W* n q 793.616 0 0 142.554 -232.753 687.769 cm Q Q EMC"
+
+  it "removes off-page paths on pages without image resources" $ do
+    let local = mkPDFDictionary [("MediaBox",box [0,0,100,100])]
+    result <- optimize local "110 110 5 5 re f 95 95 10 10 re f"
+    result `shouldBe` Right "95 95 10 10 re f"
+
+  it "uses inherited CropBox bounds for vector painting" $ do
+    result <- optimize page "0 0 5 5 re f 20 20 5 5 re f"
+    result `shouldBe` Right "20 20 5 5 re f"
+
+  it "resolves inherited indirect font metrics for off-page text" $ do
+    result <- evalPDFWorkT $ do
+      let fontObject = PDFIndirectObject 8 0 (mkPDFDictionary
+            [("Subtype",PDFName "TrueType"),("FontDescriptor",PDFReference 9 0),
+             ("FirstChar",PDFNumber 97),("Widths",box [600,600,600])])
+          descriptor = PDFIndirectObject 9 0 (mkPDFDictionary
+            [("FontBBox",box [-200,-200,1200,1000])])
+          fontResources = mkPDFDictionary
+            [("Font",mkPDFDictionary [("F",PDFReference 8 0)])]
+      importObjects $ fromList
+        [page,parent,PDFIndirectObject 3 0 fontResources,fontObject,descriptor]
+      removeInvisiblePageImages page (PDFIndirectObjectWithStream 4 0 mempty
+        "BT /F 10 Tf 1 0 0 1 200 20 Tm (abc) Tj ET") >>= getStream
+    result `shouldBe` Right "BT/F 10 Tf 1 0 0 1 200 20 Tm ET"
+
+  it "uses Form BBox and Matrix without editing shared form streams" $ do
+    result <- evalPDFWorkT $ do
+      let form = PDFIndirectObjectWithStream 8 0 (mkDictionary
+            [("Subtype",PDFName "Form"),("BBox",box [0,0,10,10]),
+             ("Matrix",box [1,0,0,1,200,200])]) "0 0 10 10 re f"
+          formResources = mkPDFDictionary
+            [("XObject",mkPDFDictionary [("Fm",PDFReference 8 0)])]
+      importObjects $ fromList [page,parent,PDFIndirectObject 3 0 formResources,form]
+      output <- removeInvisiblePageImages page (PDFIndirectObjectWithStream 4 0 mempty
+        "/Fm Do q 1 0 0 1 -180 -180 cm /Fm Do Q") >>= getStream
+      original <- getReference (PDFReference 8 0) >>= getStream
+      return (output, original)
+    result `shouldBe` Right ("q 1 0 0 1 -180 -180 cm/Fm Do Q", "0 0 10 10 re f")
+
+  it "preserves Forms whose Matrix cannot be resolved" $ do
+    result <- evalPDFWorkT $ do
+      let form = PDFIndirectObjectWithStream 8 0 (mkDictionary
+            [("Subtype",PDFName "Form"),("BBox",box [200,200,210,210]),
+             ("Matrix",PDFReference 999 0)]) "200 200 10 10 re f"
+          formResources = mkPDFDictionary
+            [("XObject",mkPDFDictionary [("Fm",PDFReference 8 0)])]
+      importObjects $ fromList [page,parent,PDFIndirectObject 3 0 formResources,form]
+      removeInvisiblePageImages page (PDFIndirectObjectWithStream 4 0 mempty "/Fm Do") >>= getStream
+    result `shouldBe` Right "/Fm Do"
