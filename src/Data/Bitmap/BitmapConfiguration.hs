@@ -1,6 +1,7 @@
 module Data.Bitmap.BitmapConfiguration
   ( BitmapConfiguration (BitmapConfiguration, bcLineWidth, bcComponents, bcBitsPerComponent)
   , bitmapRawWidth
+  , bitmapPixelBytes
   , findBitmapConfigurations
   ) where
 
@@ -35,6 +36,12 @@ bitmapRawWidth (BitmapConfiguration lineWidth components bitsPerComponent) =
 
     missingBits :: Int
     missingBits = (8 - (totalBits .&. 7)) .&. 7
+
+-- | Byte distance to the previous pixel for PNG prediction, rounded up
+-- to whole bytes. 16-bit components occupy two bytes each.
+bitmapPixelBytes :: BitmapConfiguration -> Int
+bitmapPixelBytes config =
+  (bcComponents config * fromEnum (bcBitsPerComponent config) + 7) `div` 8
 
 {-|
 Find all BitmapConfiguration that can be used for a given raw line width in

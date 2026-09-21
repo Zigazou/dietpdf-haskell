@@ -39,7 +39,13 @@ randomString len = do
 
 predictorExamples :: [((Predictor, BitmapConfiguration), (ByteString, ByteString))]
 predictorExamples =
-  [ ( (PNGNone, BitmapConfiguration 1 1 BC8Bits)
+  [ ( (PNGSub, BitmapConfiguration 2 1 BC16Bits)
+    , ("\x12\x34\x23\x45", "\x01\x12\x34\x11\x11"))
+  , ( (PNGSub, BitmapConfiguration 4 3 BC2Bits)
+    , ("\x1b\x1b\x1b", "\x01\x1b\x00\x00"))
+  , ( (PNGUp, BitmapConfiguration 2 1 BC16Bits)
+    , ("\x12\x34\x23\x45\x23\x45\x34\x56", "\x02\x12\x34\x23\x45\x02\x11\x11\x11\x11"))
+  , ( (PNGNone, BitmapConfiguration 1 1 BC8Bits)
     , ("\xAA", "\x00\xAA"))
   , ( (PNGNone, BitmapConfiguration 1 1 BC8Bits)
     , ("\xAA\xAA\xAA", "\x00\xAA\x00\xAA\x00\xAA"))

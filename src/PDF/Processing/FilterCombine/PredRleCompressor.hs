@@ -19,7 +19,7 @@ import Codec.Compression.Predict.Entropy (Entropy (EntropyDeflate))
 import Codec.Compression.RunLength qualified as RL
 
 import Data.Bitmap.BitmapConfiguration
-  (BitmapConfiguration (bcComponents, bcLineWidth))
+  (BitmapConfiguration (bcBitsPerComponent, bcComponents, bcLineWidth))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -76,6 +76,9 @@ predRleCompressor (Just bitmapConfig) stream useCompressor = do
         [ ("Predictor", mkPDFNumber PNGOptimum)
         , ("Columns"  , mkPDFNumber width)
         , ("Colors"   , mkPDFNumber components)
+        , ( "BitsPerComponent"
+          , mkPDFNumber . fromEnum $ bcBitsPerComponent bitmapConfig
+          )
         ]
       )
     ]

@@ -4,16 +4,15 @@ Predictor + Zopfli/Deflate/Brotli filter combination.
 Finds an optimal PNG predictor using both Shannon and Deflate-oriented
 heuristics, then compresses with either Zopfli, fast Deflate, or Brotli,
 returning a `FilterCombination` with predictor parameters. When width is
-unknown, uses `TIFFPredictor2` with width set to stream length and components to
-1.
+unknown, tries compatible TIFF predictor configurations for the stream length.
 -}
 module PDF.Processing.FilterCombine.PredCompressor
   ( predCompressor
   ) where
 
 import Codec.Compression.BrotliForPDF qualified as BR
-import Codec.Compression.Flate qualified as FL
 import Codec.Compression.ECT qualified as ECT
+import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict
   ( Entropy (EntropyDeflate, EntropyShannon)
   , Predictor (PNGOptimum, TIFFPredictor2)
@@ -25,6 +24,7 @@ import Data.Bitmap.BitmapConfiguration
   ( BitmapConfiguration (bcBitsPerComponent, bcComponents, bcLineWidth)
   , findBitmapConfigurations
   )
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC16Bits))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -71,12 +71,17 @@ predCompressor (Just bitmapConfig) stream useCompressor = do
                       ) entropies
                    <&> minimumBy (\a b -> BS.length a `compare` BS.length b)
 
-  -- Also try TIFF predictor.
-  tiffCompressed <- predict EntropyShannon TIFFPredictor2 bitmapConfig stream
-                     >>= compressor
+  -- Some Poppler readers truncate 16-bit TIFF predictor samples to eight bits.
+  -- Keep 16-bit data lossless with PNG prediction instead.
+  (predictor, compressed) <-
+    if bcBitsPerComponent bitmapConfig == BC16Bits
+      then return (PNGOptimum, pngCompressed)
+      else do
+        tiffCompressed <-
+          predict EntropyShannon TIFFPredictor2 bitmapConfig stream
+            >>= compressor
 
-  let (predictor, compressed) =
-        if BS.length pngCompressed < BS.length tiffCompressed
+        return $ if BS.length pngCompressed < BS.length tiffCompressed
           then (PNGOptimum, pngCompressed)
           else (TIFFPredictor2, tiffCompressed)
 
@@ -87,6 +92,9 @@ predCompressor (Just bitmapConfig) stream useCompressor = do
           [ ("Predictor", mkPDFNumber predictor)
           , ("Columns"  , mkPDFNumber width)
           , ("Colors"   , mkPDFNumber components)
+          , ( "BitsPerComponent"
+            , mkPDFNumber . fromEnum $ bcBitsPerComponent bitmapConfig
+            )
           ]
         )
     ]
@@ -95,13 +103,17 @@ predCompressor (Just bitmapConfig) stream useCompressor = do
 predCompressor Nothing stream useCompressor =  do
   let
     (compressor, filterName) = getCompressor useCompressor
-    possibleConfigs = findBitmapConfigurations (BS.length stream)
+    -- Avoid emitting 16-bit TIFF prediction even when it compresses best.
+    possibleConfigs = filter ((/= BC16Bits) . bcBitsPerComponent)
+                             (findBitmapConfigurations (BS.length stream))
 
-  (bitmapConfig, compressed) <- mapM (\bitmapConfig ->
-                        predict EntropyShannon TIFFPredictor2 bitmapConfig stream
-                        >>= compressor >>= \c -> return (bitmapConfig, c)
-                      ) possibleConfigs
-                   <&> minimumBy (\(_, a) (_, b) -> BS.length a `compare` BS.length b)
+  (bitmapConfig, compressed) <-
+    mapM (\bitmapConfig ->
+            predict EntropyShannon TIFFPredictor2 bitmapConfig stream
+            >>= compressor >>= \c -> return (bitmapConfig, c)
+         )
+         possibleConfigs
+     <&> minimumBy (\(_, a) (_, b) -> BS.length a `compare` BS.length b)
 
   return $ mkFCAppend
           [ Filter
@@ -110,7 +122,9 @@ predCompressor Nothing stream useCompressor =  do
                 [ ("Predictor", mkPDFNumber TIFFPredictor2)
                 , ("Columns"  , mkPDFNumber $ bcLineWidth bitmapConfig)
                 , ("Colors"   , mkPDFNumber $ bcComponents bitmapConfig)
-                , ("BitsPerComponent", mkPDFNumber . fromEnum $ bcBitsPerComponent bitmapConfig)
+                , ( "BitsPerComponent"
+                  , mkPDFNumber . fromEnum $ bcBitsPerComponent bitmapConfig
+                  )
                 ]
               )
           ]

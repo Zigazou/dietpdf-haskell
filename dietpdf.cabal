@@ -435,6 +435,7 @@ test-suite dietpdf-test
       PDF.Parser.IndirectObjectSpec
       PDF.Parser.ParserSpec
       PDF.Processing.DuplicatedObjectsSpec
+      PDF.Processing.FilterCombine.PredCompressorSpec
       PDF.Processing.PDFWorkSpec
       PDF.Processing.UnfilterSpec
       Util.ByteStringSpec

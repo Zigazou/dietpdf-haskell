@@ -36,7 +36,7 @@ import Codec.Compression.Predict.Scanline
   )
 
 import Data.Bitmap.BitmapConfiguration
-  (BitmapConfiguration (bcComponents), bitmapRawWidth)
+  (BitmapConfiguration, bitmapPixelBytes, bitmapRawWidth)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -129,6 +129,6 @@ fromUnpredictedStream bitmapConfig raw = return ImageStream
   { iBitmapConfig     = bitmapConfig
   , iPredictor        = Nothing
   , iLines            = Scanline Nothing
-                        .   separateComponents (bcComponents bitmapConfig)
-                        <$> splitRaw (bitmapRawWidth bitmapConfig) raw
+                      . separateComponents (bitmapPixelBytes bitmapConfig)
+                    <$> splitRaw (bitmapRawWidth bitmapConfig) raw
   }

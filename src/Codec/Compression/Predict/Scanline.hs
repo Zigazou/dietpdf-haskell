@@ -44,7 +44,7 @@ import Codec.Compression.Predict.Predictor
 import Codec.Compression.RunLength qualified as RLE
 
 import Data.Bitmap.BitmapConfiguration
-  (BitmapConfiguration (bcComponents, bcLineWidth))
+  (BitmapConfiguration, bitmapPixelBytes, bitmapRawWidth)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
@@ -76,8 +76,8 @@ It’s just a serie of zero bytes.
 emptyScanline :: BitmapConfiguration -> Scanline
 emptyScanline bitmapConfig = Scanline
   { slPredictor = Just TIFFNoPrediction
-  , slStream    = replicate (bcComponents bitmapConfig)
-                            (BS.replicate (bcLineWidth bitmapConfig) 0)
+  , slStream    = separateComponents (bitmapPixelBytes bitmapConfig)
+                   (BS.replicate (bitmapRawWidth bitmapConfig) 0)
   }
 
 scanlineEntropy :: Entropy -> Scanline -> Double
@@ -149,12 +149,12 @@ fromPredictedLine predictor bitmapConfig raw
     linePredictor <- decodeRowPredictor (BS.head predictCode)
     return $ Scanline { slPredictor = Just linePredictor
                       , slStream = separateComponents
-                                    (bcComponents bitmapConfig)
+                                    (bitmapPixelBytes bitmapConfig)
                                     bytes
                       }
   | otherwise =
     return $ Scanline { slPredictor = Just predictor
                       , slStream = separateComponents
-                                    (bcComponents bitmapConfig)
+                                    (bitmapPixelBytes bitmapConfig)
                                     raw
                       }
