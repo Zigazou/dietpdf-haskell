@@ -107,12 +107,23 @@ painting commands. Used to determine if a save/restore pair is necessary.
 anyPaintingCommandBeforeRestore :: Int -> Program -> Bool
 anyPaintingCommandBeforeRestore _anyLevel Empty = False
 anyPaintingCommandBeforeRestore level (command :<| rest)
-  | isSave command                  = anyPaintingCommandBeforeRestore (level + 1) rest
-  | level > 0 && isRestore command  = anyPaintingCommandBeforeRestore (level - 1) rest
-  | level == 0 && isRestore command = False
-  | isPathPaintingCommand command   = True
-  | isTextPaintingCommand command   = True
-  | otherwise                       = anyPaintingCommandBeforeRestore level rest
+  | isSave command
+  = anyPaintingCommandBeforeRestore (level + 1) rest
+
+  | level > 0 && isRestore command
+  = anyPaintingCommandBeforeRestore (level - 1) rest
+
+  | level == 0 && isRestore command
+  = False
+
+  | isPathPaintingCommand command
+  = True
+
+  | isTextPaintingCommand command
+  = True
+
+  | otherwise
+  = anyPaintingCommandBeforeRestore level rest
 
 {-|
 Remove ineffective graphics commands from a PDF graphics program.
@@ -142,21 +153,32 @@ optimizeIneffective = result
   -- Every command is visited once, instead of scanning its suffix again.
   step :: (Bool, [Bool], Program) -> Command -> (Bool, [Bool], Program)
   step (!painting, outer, !output) command
-    | isRestore command = (False, painting : outer, command <| output)
-    | isSave command = case outer of
+    | isRestore command
+    = (False, painting : outer, command <| output)
+
+    | isSave command
+    = case outer of
         after : remaining -> (painting || after, remaining, command <| output)
         []                -> (painting, [], command <| output)
-    | isPathPaintingCommand command || isTextPaintingCommand command =
-        (True, outer, command <| output)
-    | protectedCommand command || painting =
-        (painting, outer, command <| output)
-    | otherwise = (painting, outer, output)
+
+    | isPathPaintingCommand command || isTextPaintingCommand command
+    = (True, outer, command <| output)
+
+    | protectedCommand command || painting
+    = (painting, outer, command <| output)
+
+    | otherwise
+    = (painting, outer, output)
 
   -- Only remove pairs adjacent in the original input to this pass. Commands
   -- discarded above may expose additional pairs; the next fixed-point pass
   -- handles those just as it does other newly exposed optimization candidates.
   removeEmptyText :: Program -> Program
-  removeEmptyText Empty = Empty
+  removeEmptyText Empty =
+    Empty
+
   removeEmptyText (Command GSBeginText _ :<| Command GSEndText _ :<| rest) =
     removeEmptyText rest
-  removeEmptyText (command :<| rest) = command <| removeEmptyText rest
+  
+  removeEmptyText (command :<| rest) =
+    command <| removeEmptyText rest

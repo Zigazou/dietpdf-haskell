@@ -20,9 +20,9 @@ import Data.Kind (Constraint, Type)
 import Data.Map (assocs)
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXArray, GFXBool, GFXComment, GFXDictionary, GFXHexString, GFXInlineImage, GFXName, GFXNull, GFXNumber, GFXOperator, GFXReference, GFXString)
-    , GSOperator (GSBeginText, GSEndText, GSRestoreGS, GSSaveGS)
-    )
+  ( GFXObject (GFXArray, GFXBool, GFXComment, GFXDictionary, GFXHexString, GFXInlineImage, GFXName, GFXNull, GFXNumber, GFXOperator, GFXReference, GFXString)
+  , GSOperator (GSBeginText, GSEndText, GSRestoreGS, GSSaveGS)
+  )
 import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq)
@@ -55,7 +55,8 @@ Combines @indent@ with @show@ to produce an indented text representation of any
 type that implements @Show@. Used as a convenience for formatting simple values.
 -}
 indent' :: Show a => Int -> a -> T.Text
-indent' level value = T.append (T.replicate level indentSpaces) (T.pack (show value))
+indent' level value = T.append (T.replicate level indentSpaces)
+                               (T.pack (show value))
 
 {-|
 Convert a showable value to text, removing surrounding quotes and parentheses.
@@ -146,18 +147,41 @@ Formats different object types appropriately:
 -}
 instance Human GFXObject where
   human :: Int -> GFXObject -> T.Text
-  human level (GFXComment value)          = indent level $ T.pack ('%':' ':show value)
-  human level (GFXNumber value)           = indent level (toShortest value)
-  human level (GFXName value)             = indent level $ "/" <> tshow value
-  human level (GFXString value)           = indent level $ T.pack (show value)
-  human level (GFXHexString value)        = indent level $ "#" <> tshow value
-  human level (GFXReference major minor)  = indent level $ T.concat ["@", T.pack (show major), ".", T.pack (show minor)]
-  human level (GFXArray objects)          = human level objects
-  human level (GFXDictionary dict)        = human level dict
-  human level (GFXBool value)             = indent' level value
-  human level GFXNull                     = indent level "null"
-  human level (GFXInlineImage dict _data) = human level dict
-  human level (GFXOperator operator)      = human level operator
+  human level (GFXComment value) =
+    indent level $ T.pack ('%':' ':show value)
+
+  human level (GFXNumber value) =
+    indent level (toShortest value)
+
+  human level (GFXName value) =
+    indent level $ "/" <> tshow value
+
+  human level (GFXString value) =
+    indent level $ T.pack (show value)
+
+  human level (GFXHexString value) =
+    indent level $ "#" <> tshow value
+
+  human level (GFXReference major minor) =
+    indent level $ T.concat ["@", T.pack (show major), ".", T.pack (show minor)]
+
+  human level (GFXArray objects) =
+    human level objects
+
+  human level (GFXDictionary dict) =
+    human level dict
+
+  human level (GFXBool value) =
+    indent' level value
+
+  human level GFXNull =
+    indent level "null"
+
+  human level (GFXInlineImage dict _data) =
+    human level dict
+
+  human level (GFXOperator operator) =
+    human level operator
 
 {-|
 Human representation of a PDF graphics command.
@@ -192,20 +216,29 @@ instance Human Program where
     where
       {-
       Helper function for folding over commands and tracking indentation.
-      
+
       Adjusts indentation level based on operators that change scope:
-      
+
       * @GSSaveGS@ increases indentation (entering graphics state block)
       * @GSRestoreGS@ decreases indentation (exiting graphics state block)
       * @GSBeginText@ increases indentation (entering text object)
       * @GSEndText@ decreases indentation (exiting text object)
-      
+
       Appends each formatted command with a newline to the accumulated text.
       -}
       go :: (Int, Seq T.Text) -> Command -> (Int, Seq T.Text)
       go (level, humanCode) command = case command of
-        (Command GSSaveGS _)    -> (level + 1, humanCode SQ.:|> (human level command <> "\n"))
-        (Command GSRestoreGS _) -> (level - 1, humanCode SQ.:|> (human (level - 1) command <> "\n"))
-        (Command GSBeginText _) -> (level + 1, humanCode SQ.:|> (human level command <> "\n"))
-        (Command GSEndText _)   -> (level - 1, humanCode SQ.:|> (human (level - 1) command <> "\n"))
-        _anyOtherCommand        -> (level, humanCode SQ.:|> (human level command <> "\n"))
+        (Command GSSaveGS _) ->
+          (level + 1, humanCode SQ.:|> (human level command <> "\n"))
+
+        (Command GSRestoreGS _) ->
+          (level - 1, humanCode SQ.:|> (human (level - 1) command <> "\n"))
+
+        (Command GSBeginText _) ->
+          (level + 1, humanCode SQ.:|> (human level command <> "\n"))
+
+        (Command GSEndText _) ->
+          (level - 1, humanCode SQ.:|> (human (level - 1) command <> "\n"))
+
+        _anyOtherCommand ->
+          (level, humanCode SQ.:|> (human level command <> "\n"))

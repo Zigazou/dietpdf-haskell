@@ -12,8 +12,8 @@ module PDF.Graphics.Interpreter.OptimizeScale
 import Data.Foldable qualified as Foldable
 import Data.PDF.Command (Command (cOperator, cParameters), mkCommand)
 import Data.PDF.GFXObject
-  ( GFXObject (GFXNumber, GFXArray)
-  , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineWidth, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing, GSSetLineDashPattern)
+  ( GFXObject (GFXArray, GFXNumber)
+  , GSOperator (GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineDashPattern, GSSetLineWidth, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing)
   )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq ((:<|)), (<|), (|>))
@@ -64,7 +64,8 @@ __Affected commands (all parameters scaled):__
 
 - Path construction: MoveTo (m), LineTo (l), Rectangle (re)
 - Curves: CubicBezierCurve (c), CubicBezierCurve1To (v), CubicBezierCurve2To (y)
-- Text positioning: MoveToNextLine (Td), MoveToNextLineLP (TD), SetTextMatrix (Tm)
+- Text positioning: MoveToNextLine (Td), MoveToNextLineLP (TD), SetTextMatrix
+  (Tm)
 
 __Affected commands (specific parameters scaled):__
 

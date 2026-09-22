@@ -10,7 +10,7 @@ module PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
 
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
-  ( GSOperator (GSSetCharacterSpacing, GSSetWordSpacing, GSSetHorizontalScaling, GSSetTextLeading, GSSetTextRenderingMode, GSSetTextRise, GSSetTextFont, GSMoveTo, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetParameters, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
+  ( GSOperator (GSMoveTo, GSSetCharacterSpacing, GSSetColourRenderingIntent, GSSetFlatnessTolerance, GSSetHorizontalScaling, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetParameters, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace, GSSetTextFont, GSSetTextLeading, GSSetTextRenderingMode, GSSetTextRise, GSSetWordSpacing)
   )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq (Empty, (:<|)), (<|))
@@ -28,9 +28,9 @@ uselessWhenDuplicated GSSetCharacterSpacing        = True
 uselessWhenDuplicated GSSetWordSpacing             = True
 uselessWhenDuplicated GSSetHorizontalScaling       = True
 uselessWhenDuplicated GSSetTextLeading             = True
-uselessWhenDuplicated GSSetTextRenderingMode        = True
-uselessWhenDuplicated GSSetTextRise                 = True
-uselessWhenDuplicated GSSetTextFont                 = True
+uselessWhenDuplicated GSSetTextRenderingMode       = True
+uselessWhenDuplicated GSSetTextRise                = True
+uselessWhenDuplicated GSSetTextFont                = True
 uselessWhenDuplicated GSSetParameters              = False
 uselessWhenDuplicated GSSetStrokeColor             = True
 uselessWhenDuplicated GSSetNonStrokeColor          = True

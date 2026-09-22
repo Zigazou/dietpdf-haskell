@@ -114,9 +114,11 @@ findDoubleRestore :: Program -> Maybe (Program, Program)
 findDoubleRestore program = case breakl onRestore program of
   (beforeRestore, Restore :<| Restore :<| afterRestore) ->
     Just (beforeRestore, afterRestore)
+
   (beforeRestore, Restore :<| afterRestore) -> do
     (beforeRestore', afterRestore') <- findDoubleRestore afterRestore
     Just (beforeRestore <> singleton Restore <> beforeRestore', afterRestore')
+
   _anyOtherCase -> Nothing
 
 {-|
@@ -141,7 +143,10 @@ reduceSaveRestoreOnePass program = case findDoubleRestore program of
     case findRelatedSave beforeDoubleRestore of
       Just (beforeSave, Save :<| afterSave) ->
         beforeSave <> afterSave <> singleton Restore <> afterDoubleRestore
-      _anythingElse -> error "unbalanced save/restore"
+
+      _anythingElse ->
+        error "unbalanced save/restore"
+
   _anyOtherCase -> program
 
 {-|
@@ -170,6 +175,7 @@ optimizeSaveRestoreOnePass program = case breakl onRestore program of
              beforeSave
           <> afterSave
           <> optimizeSaveRestoreOnePass afterRestore
+
         _anythingElse ->
              beforeRestore
           <> singleton Restore
@@ -182,6 +188,7 @@ optimizeSaveRestoreOnePass program = case breakl onRestore program of
           -- Continue through the suffix so independent empty pairs do not
           -- each require another whole-program fixed-point iteration.
           beforeSave <> optimizeSaveRestoreOnePass afterRestore
+
         _anythingElse ->
           beforeRestore <> (Restore <| optimizeSaveRestoreOnePass afterRestore)
 
@@ -191,14 +198,20 @@ optimizeSaveRestoreOnePass program = case breakl onRestore program of
   nextRestoreWithoutNewState :: Program -> Bool
   nextRestoreWithoutNewState Empty = False
   nextRestoreWithoutNewState (command :<| rest) = case command of
-    Command GSRestoreGS _params -> True
+    Command GSRestoreGS _params ->
+      True
+
     Command GSBeginMarkedContentSequence _params ->
       nextRestoreWithoutNewState rest
+
     Command GSBeginMarkedContentSequencePL _params ->
       nextRestoreWithoutNewState rest
+
     Command GSEndMarkedContentSequence _params ->
       nextRestoreWithoutNewState rest
-    _anyOtherCommand -> False
+
+    _anyOtherCommand ->
+      False
 
 {-|
 Check if a program has balanced save/restore and marked content operators.
@@ -215,16 +228,23 @@ Maintains a nesting level counter:
 Returns @True@ if the program is balanced, @False@ otherwise.
 -}
 balancedProgram :: Int -> Program -> Bool
-balancedProgram level Empty = level == 0
+balancedProgram level Empty =
+  level == 0
+
 balancedProgram level (Command GSSaveGS _params :<| rest) =
   balancedProgram (level + 1) rest
+
 balancedProgram level (Command GSBeginMarkedContentSequence _params :<| rest) =
   balancedProgram (level + 1) rest
+
 balancedProgram level (Command GSRestoreGS _params :<| rest) =
   (level > 0) && balancedProgram (level - 1) rest
+
 balancedProgram level (Command GSEndMarkedContentSequence _params :<| rest) =
   (level > 0) && balancedProgram (level - 1) rest
-balancedProgram level (_anyOtherCommand :<| rest) = balancedProgram level rest
+
+balancedProgram level (_anyOtherCommand :<| rest) =
+  balancedProgram level rest
 
 {-|
 Optimize save/restore commands in a PDF graphics program.
@@ -245,7 +265,11 @@ operators, returns it unchanged.
 optimizeSaveRestore :: Program -> Program
 optimizeSaveRestore program =
   if balancedProgram 0 program
-  then
-    let reduced = untilNoChange reduceSaveRestoreOnePass program
-    in untilNoChange optimizeSaveRestoreOnePass reduced
-  else program
+    then
+      let
+        reduced :: Program
+        reduced = untilNoChange reduceSaveRestoreOnePass program
+      in
+        untilNoChange optimizeSaveRestoreOnePass reduced
+    else
+      program

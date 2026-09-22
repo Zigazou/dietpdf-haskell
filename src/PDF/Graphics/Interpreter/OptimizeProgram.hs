@@ -90,12 +90,17 @@ optimizeCommands
 optimizeCommands program Empty = return program
 optimizeCommands program (command :<| rest) =
   optimizeCommand command rest >>= \case
-    KeepCommand -> consumeColorOpS command >> optimizeCommands (program |> command) rest
+    KeepCommand -> do
+      consumeColorOpS command
+      optimizeCommands (program |> command) rest
 
-    DeleteCommand -> consumeColorOpS command >> optimizeCommands program rest
+    DeleteCommand -> do
+      consumeColorOpS command
+      optimizeCommands program rest
 
-    ReplaceCommand optimizedCommand' ->
-      consumeColorOpS command >> optimizeCommands (program |> optimizedCommand') rest
+    ReplaceCommand optimizedCommand' -> do
+      consumeColorOpS command
+      optimizeCommands (program |> optimizedCommand') rest
 
     ReplaceAndDeleteNextCommand optimizedCommand' -> case rest of
       Empty -> return program
@@ -111,7 +116,8 @@ optimizeCommands program (command :<| rest) =
 
 {-|
 Run 'optimizeCommands' over the whole @program@, first initializing the
-remaining-color-op counters used by 'PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommand.optimizeColorCommand'.
+remaining-color-op counters used by 'PDF.Graphics.Interpreter.OptimizeCommand.
+OptimizeColorCommand.optimizeColorCommand'.
 -}
 optimizeCommandsFromStart :: Program -> State InterpreterState Program
 optimizeCommandsFromStart program = do
