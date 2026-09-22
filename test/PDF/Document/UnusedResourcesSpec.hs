@@ -19,6 +19,29 @@ spec = describe "unused resource removal" $ do
   it "discards unused indirect resources and their dependency chains" $ do
     result <- optimize "/Used Do"
     result `shouldBe` Right ([4, 7], [1, 2, 6])
+  it "preserves the Linux cover's pattern color space in form resources" $ do
+    let resources = mkPDFDictionary
+          [("ColorSpace", PDFReference 2 0), ("Pattern", PDFReference 3 0)]
+        form = PDFIndirectObjectWithStream 1 0
+          (mkDictionary [("Subtype", PDFName "Form"), ("Resources", resources)])
+          "q /R9 cs /R15 scn 0 0 100 100 re f Q"
+    result <- evalPDFWorkT $ do
+      importObjects $ fromList
+        [ form
+        , PDFIndirectObject 2 0 (mkPDFDictionary
+            [("R9", mkPDFArray [PDFName "Pattern"]),
+             ("Unused", PDFName "DeviceRGB")])
+        , PDFIndirectObject 3 0 (mkPDFDictionary [("R15", PDFReference 4 0)])
+        ]
+      removeUnusedResources
+      getReference (PDFReference 1 0)
+    result `shouldBe` Right (PDFIndirectObjectWithStream 1 0
+      (mkDictionary [("Subtype", PDFName "Form"),
+        ("Resources", mkPDFDictionary
+          [("ColorSpace", mkPDFDictionary [("R9", mkPDFArray [PDFName "Pattern"])]),
+           ("Pattern", mkPDFDictionary [("R15", PDFReference 4 0)])])])
+      "q /R9 cs /R15 scn 0 0 100 100 re f Q")
+
   it "preserves resources when a content stream cannot be parsed" $ do
     result <- optimize "(unterminated"
     result `shouldBe` Right ([4, 7, 8], [1, 2, 3, 5, 6, 9])

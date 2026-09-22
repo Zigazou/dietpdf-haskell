@@ -14,6 +14,7 @@ Resources tracked include:
 * Graphics state parameters (ExtGState)
 * Images and form XObjects
 * Fonts
+* Named color spaces
 * Color patterns
 * Shadings
 * Marked content properties
@@ -24,14 +25,14 @@ module PDF.Graphics.Interpreter.ResourcesUsed
 
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
-    ( GFXObject (GFXName)
-    , GSOperator (GSBeginMarkedContentSequencePL, GSMarkedContentPointPL, GSPaintShapeColourShading, GSPaintXObject, GSSetNonStrokeColorN, GSSetParameters, GSSetStrokeColorN, GSSetTextFont)
-    )
+  ( GFXObject (GFXName)
+  , GSOperator (GSBeginMarkedContentSequencePL, GSMarkedContentPointPL, GSPaintShapeColourShading, GSPaintXObject, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetParameters, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetTextFont)
+  )
 import Data.PDF.Program (Program)
 import Data.PDF.Resource
-    ( Resource (ResExtGState, ResFont, ResPattern, ResProperties, ResShading, ResXObject)
-    )
-import Data.Sequence (Seq (Empty, (:<|)))
+  ( Resource (ResColorSpace, ResExtGState, ResFont, ResPattern, ResProperties, ResShading, ResXObject)
+  )
+import Data.Sequence (Seq (Empty, (:<|), (:|>)))
 import Data.Set (Set)
 import Data.Set qualified as Set
 
@@ -46,7 +47,8 @@ The analysis handles all operators that reference external resources:
 
 * @gs@ operator with ExtGState parameter
 * @Do@ operator with XObject (image or form) parameter
-* @SCN/scn@ operators with Pattern parameter
+* @CS/cs@ operators with ColorSpace parameter
+* @SCN/scn@ operators with a trailing Pattern parameter
 * @Tf@ operator with Font parameter
 * @sh@ operator with Shading parameter
 * @BDC@ and @DP@ operators with marked content Properties parameter
@@ -78,18 +80,40 @@ resourcesUsed = foldl (flip go) mempty
   go :: Command -> Set Resource -> Set Resource
   go (Command GSSetParameters (GFXName resourceName :<| Empty)) =
     Set.insert (ResExtGState resourceName)
+
   go (Command GSPaintXObject (GFXName resourceName :<| Empty)) =
     Set.insert (ResXObject resourceName)
-  go (Command GSSetStrokeColorN (GFXName resourceName :<| Empty)) =
+
+  go (Command GSSetStrokeColorspace (GFXName resourceName :<| Empty)) =
+    Set.insert (ResColorSpace resourceName)
+
+  go (Command GSSetNonStrokeColorspace (GFXName resourceName :<| Empty)) =
+    Set.insert (ResColorSpace resourceName)
+
+  go (Command GSSetStrokeColorN (_components :|> GFXName resourceName)) =
     Set.insert (ResPattern resourceName)
-  go (Command GSSetNonStrokeColorN (GFXName resourceName :<| Empty)) =
+
+  go (Command GSSetNonStrokeColorN (_components :|> GFXName resourceName)) =
     Set.insert (ResPattern resourceName)
+
   go (Command GSSetTextFont (GFXName resourceName :<| _tail)) =
     Set.insert (ResFont resourceName)
+
   go (Command GSPaintShapeColourShading (GFXName resourceName :<| _tail)) =
     Set.insert (ResShading resourceName)
-  go (Command GSBeginMarkedContentSequencePL (_tag :<| GFXName resourceName :<| Empty)) =
+
+  go
+    (Command
+      GSBeginMarkedContentSequencePL
+      (_tag :<| GFXName resourceName :<| Empty)
+    ) =
     Set.insert (ResProperties resourceName)
-  go (Command GSMarkedContentPointPL (_tag :<| GFXName resourceName :<| Empty)) =
+
+  go
+    (Command
+      GSMarkedContentPointPL
+      (_tag :<| GFXName resourceName :<| Empty)
+    ) =
     Set.insert (ResProperties resourceName)
+
   go _anyOtherCommand = id

@@ -6,7 +6,7 @@ import Control.Monad (forM_)
 
 import Data.ByteString (ByteString)
 import Data.PDF.Program (parseProgram)
-import Data.PDF.Resource (Resource (ResExtGState, ResFont, ResXObject))
+import Data.PDF.Resource (Resource (ResColorSpace, ResPattern, ResExtGState, ResFont, ResXObject))
 import Data.Set (Set, fromList)
 
 import PDF.Graphics.Interpreter.ResourcesUsed (resourcesUsed)
@@ -16,7 +16,14 @@ import Test.Hspec (Spec, describe, it, shouldBe)
 
 resourcesUsedExamples :: [(ByteString, Set Resource)]
 resourcesUsedExamples =
-  [ ("", mempty)
+  [ ("/R9 cs /R15 scn", fromList [ResColorSpace "R9", ResPattern "R15"])
+  , ("/R9 CS /R15 SCN", fromList [ResColorSpace "R9", ResPattern "R15"])
+  , ("/Custom cs .2 .4 .6 /Tile scn",
+      fromList [ResColorSpace "Custom", ResPattern "Tile"])
+  , ("/Custom CS .5 /Tile SCN",
+      fromList [ResColorSpace "Custom", ResPattern "Tile"])
+  , (".5 scn .7 SCN", mempty)
+  , ("", mempty)
   , ("1.000042 2.421 m", mempty)
   , ("q cm Q", mempty)
   , ( "q 0.12 0 0 0.12 0 0 cm\n\
