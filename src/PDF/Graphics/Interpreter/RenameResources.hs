@@ -23,10 +23,11 @@ module PDF.Graphics.Interpreter.RenameResources
   ( renameResources
   ) where
 
+import Data.ByteString (ByteString)
 import Data.PDF.Command (Command (Command))
 import Data.PDF.GFXObject
   ( GFXObject (GFXName)
-  , GSOperator (GSBeginMarkedContentSequencePL, GSMarkedContentPointPL, GSPaintShapeColourShading, GSPaintXObject, GSSetNonStrokeColorN, GSSetParameters, GSSetStrokeColorN, GSSetTextFont, GSSetNonStrokeColorspace, GSSetStrokeColorspace)
+  , GSOperator (GSBeginMarkedContentSequencePL, GSMarkedContentPointPL, GSPaintShapeColourShading, GSPaintXObject, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetParameters, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetTextFont)
   )
 import Data.PDF.Program (Program)
 import Data.PDF.Resource
@@ -34,7 +35,7 @@ import Data.PDF.Resource
   , resName
   )
 import Data.Sequence (Seq (Empty, (:<|), (:|>)), (<|), (|>))
-import Data.TranslationTable (TranslationTable, convert, hasTerm)
+import Data.TranslationTable (TranslationTable, convert)
 
 {-|
 Apply resource name translations to a graphics program.
@@ -71,87 +72,63 @@ renameResources table = foldl (flip go) mempty
   -}
   go :: Command -> Program -> Program
   go (Command GSSetParameters (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSSetParameters (rename resource <| mempty)
+    program |> Command GSSetParameters
+                       (rename ResExtGState resource <| mempty)
 
   go (Command GSPaintXObject (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSPaintXObject (rename resource <| mempty)
+    program |> Command GSPaintXObject
+                       (rename ResXObject resource <| mempty)
 
-  go (Command GSSetStrokeColorN (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSSetStrokeColorN (rename resource <| mempty)
+  go (Command GSSetStrokeColorN (components :|> resource@GFXName{})) program =
+    program |> Command GSSetStrokeColorN
+                       (components |> rename ResPattern resource)
 
-  go (Command GSSetNonStrokeColorN (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSSetNonStrokeColorN (rename resource <| mempty)
+  go ( Command GSSetNonStrokeColorN (components :|> resource@GFXName{})
+     ) program =
+    program |> Command GSSetNonStrokeColorN
+                       (components |> rename ResPattern resource)
 
   go (Command GSSetTextFont (resource@GFXName{} :<| rest)) program =
-    program
-      |> Command GSSetTextFont (rename resource <| rest)
+    program |> Command GSSetTextFont
+                       (rename ResFont resource <| rest)
 
-  go (Command GSPaintShapeColourShading (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSPaintShapeColourShading (rename resource <| mempty)
+  go ( Command GSPaintShapeColourShading (resource@GFXName{} :<| Empty)
+     ) program =
+    program |> Command GSPaintShapeColourShading
+                       (rename ResShading resource <| mempty)
 
-  go (Command GSBeginMarkedContentSequencePL (tags :|> resource@GFXName{})) program =
-    program
-      |> Command GSBeginMarkedContentSequencePL (tags |> rename resource)
+  go ( Command GSBeginMarkedContentSequencePL (tags :|> resource@GFXName{})
+     ) program =
+    program |> Command GSBeginMarkedContentSequencePL
+                       (tags |> rename ResProperties resource)
 
-  go (Command GSBeginMarkedContentSequencePL (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSBeginMarkedContentSequencePL (rename resource <| mempty)
+  go ( Command GSBeginMarkedContentSequencePL (resource@GFXName{} :<| Empty)
+     ) program =
+    program |> Command GSBeginMarkedContentSequencePL
+                       (rename ResProperties resource <| mempty)
 
   go (Command GSMarkedContentPointPL (tags :|> resource@GFXName{})) program  =
-    program
-      |> Command GSMarkedContentPointPL (tags |> rename resource)
+    program |> Command GSMarkedContentPointPL
+                       (tags |> rename ResProperties resource)
 
   go (Command GSMarkedContentPointPL (resource@GFXName{} :<| Empty)) program  =
-    program
-      |> Command GSMarkedContentPointPL (rename resource <| mempty)
+    program |> Command GSMarkedContentPointPL
+                       (rename ResProperties resource <| mempty)
 
   go (Command GSSetNonStrokeColorspace (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSSetNonStrokeColorspace (rename resource <| mempty)
+    program |> Command GSSetNonStrokeColorspace
+                       (rename ResColorSpace resource <| mempty)
 
   go (Command GSSetStrokeColorspace (resource@GFXName{} :<| Empty)) program =
-    program
-      |> Command GSSetStrokeColorspace (rename resource <| mempty)
+    program |> Command GSSetStrokeColorspace
+                       (rename ResColorSpace resource <| mempty)
 
   go command program = program |> command
 
-  {-
-  Translate a resource name according to the translation table.
+  -- Resource names are local to their category. The same name can identify
+  -- both a color space and an ExtGState, including in different page scopes.
+  rename :: (ByteString -> Resource) -> GFXObject -> GFXObject
+  rename category (GFXName name) =
+    GFXName (resName (convert table (category name)))
 
-  Checks if the given object is a name and, if so, queries the translation table
-  to find if a translation exists for any resource type (ExtGState, ColorSpace,
-  Font, Shading, Properties, Pattern, or XObject).
-
-  The translation is checked in a specific order, returning the first match
-  found. If no translation exists, the original name is returned unchanged.
-
-  Names that don't match any resource type or are not name objects are returned
-  as-is.
-
-  @param object@ the GFX object (typically a name) to translate @return@ the
-  translated object with the new resource name, or the original if not
-  translated
-  -}
-  rename :: GFXObject -> GFXObject
-  rename (GFXName resourceName)
-    | hasTerm table (ResExtGState resourceName)
-      = GFXName (resName . convert table $ ResExtGState resourceName)
-    | hasTerm table (ResColorSpace resourceName)
-      = GFXName (resName . convert table $ ResColorSpace resourceName)
-    | hasTerm table (ResFont resourceName)
-      = GFXName (resName . convert table $ ResFont resourceName)
-    | hasTerm table (ResShading resourceName)
-      = GFXName (resName . convert table $ ResShading resourceName)
-    | hasTerm table (ResProperties resourceName)
-      = GFXName (resName . convert table $ ResProperties resourceName)
-    | hasTerm table (ResPattern resourceName)
-      = GFXName (resName . convert table $ ResPattern resourceName)
-    | hasTerm table (ResXObject resourceName)
-      = GFXName (resName . convert table $ ResXObject resourceName)
-    | otherwise = GFXName resourceName
-  rename anyOtherObject = anyOtherObject
+  rename _ object = object
