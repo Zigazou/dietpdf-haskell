@@ -43,7 +43,8 @@ import Data.Kind (Type)
 import Data.UnifiedError (UnifiedError (InvalidPredictor))
 import Data.Word (Word8)
 
-import PDF.Object.Object (PDFObject (PDFNumber), ToPDFNumber (mkPDFNumber))
+import Data.PDF.PDFObject ( PDFObject(PDFNumber) )
+import PDF.Object.Object.ToPDFNumber ( ToPDFNumber(mkPDFNumber) )
 
 type Predictor :: Type
 data Predictor
