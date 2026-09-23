@@ -222,6 +222,7 @@ library
       PDF.Processing.ObjectInfo
       PDF.Processing.Optimize
       PDF.Processing.PDFWork
+      PDF.Processing.RepeatedFormFragments
       PDF.Processing.Unfilter
       PDF.Processing.WhatOptimizationFor
       Util.Ascii
@@ -438,6 +439,7 @@ test-suite dietpdf-test
       PDF.Processing.DuplicatedObjectsSpec
       PDF.Processing.FilterCombine.PredCompressorSpec
       PDF.Processing.PDFWorkSpec
+      PDF.Processing.RepeatedFormFragmentsSpec
       PDF.Processing.UnfilterSpec
       Util.ByteStringSpec
       Util.GraphicsSpec

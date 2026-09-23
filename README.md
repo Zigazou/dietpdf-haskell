@@ -268,6 +268,26 @@ pages and forms. Identical state runs share resources only when this reduces
 the estimated total. The model uses uncompressed bytes; final compression and
 object layout can change the file-size outcome.
 
+Repeated painting fragments can also share Form XObjects across pages or
+within a page. This document pass runs after local graphics optimization and
+resource registration. It extracts eligible leaf `q/Q` blocks containing filled
+paths with explicit device colours and opaque device-colour images. Leading
+`cm` operators stay at each call site, paths must be empty at the boundaries,
+and image resource names are remapped into a private Form resource dictionary.
+The Form's bounding box includes path control points and image bounds.
+
+Each proposal recompresses the affected streams and counts the new Form,
+resource dictionaries, calls, and an additional object/xref overhead reserve.
+Unprofitable proposals leave the document unchanged. Final object-stream and
+xref compression can still affect the exact file-size gain.
+
+The initial implementation conservatively skips tagged documents, marked
+content, pages using `gs` or transparency groups, default colour-space
+substitutions, and shared content streams. It does not extract text, strokes,
+clipping, internal matrix changes, patterns, inline images, masked images, or
+nested Forms. `--no-gfx-optimize` disables this pass. Regression tests can be
+run with `stack test --test-arguments='--match "repeated form fragments"'`.
+
 The shared interpreter state tracks color spaces, dash patterns and whether
 line parameters remain known after external `gs` commands. Save/restore carries
 that knowledge across `q/Q`. Color-space conversions are kept conservative

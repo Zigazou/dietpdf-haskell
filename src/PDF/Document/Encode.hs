@@ -82,6 +82,7 @@ import PDF.Processing.DuplicatedObjects
   (convertDuplicatedReferences, duplicateCount, findDuplicatedObjects)
 import PDF.Processing.Optimize (optimize)
 import PDF.Processing.PDFWork (importObjects, pMapP, removeUnusedObjects)
+import PDF.Processing.RepeatedFormFragments (repeatedFormFragments)
 
 import System.IO (hSetBuffering, stderr)
 
@@ -245,6 +246,7 @@ pdfEncode objects = do
   modifyIndirectObjectsP optimize
 
   updateWithAdditionalResources
+  repeatedFormFragments
   pruneUnusedResources
 
   nextObjectNumber <- (+ 1) <$> lastObjectNumber
