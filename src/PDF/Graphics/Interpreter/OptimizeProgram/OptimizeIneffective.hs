@@ -56,6 +56,7 @@ isPathPaintingCommand (Command command _params) = case command of
   GSEndPath                 -> True
   GSPaintShapeColourShading -> True
   GSPaintXObject            -> True
+  GSBeginInlineImage        -> True
   _anyOtherCommand          -> False
 
 {-|
