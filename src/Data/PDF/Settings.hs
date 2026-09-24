@@ -3,7 +3,7 @@ Optimization and external tool flags for dietpdf.
 
 This module defines small enumerations and a record used to control optional
 optimizations and integrations with external tools (GhostScript, pdf-to-cairo,
-Zopfli). Helpers are provided to convert booleans to these flags.
+ECT). Helpers are provided to convert booleans to these flags.
 -}
 module Data.PDF.Settings
   ( Settings(Settings, sOptimizeGFX, sCompressor, sUseGhostScript, sUsePDFToCairo)
@@ -21,20 +21,23 @@ module Data.PDF.Settings
 import Data.Kind (Type)
 
 {-|
-Flag indicating whether to use Zopfli compression, standard deflate, Brotli, or ECT.
+Flag indicating whether to use Zopfli compression, standard deflate, Brotli, or
+ECT.
 -}
 type UseCompressor :: Type
-data UseCompressor = UseZopfli -- ^ Use Zopfli compression
-                   | UseDeflate -- ^ Use standard deflate compression
-                   | UseBrotli -- ^ Use Brotli compression
-                   | UseECT -- ^ Use Effective Compression Tool (ECT) for compression
-                   deriving stock Eq
+data UseCompressor
+  = UseZopfli -- ^ Use Zopfli compression
+  | UseDeflate -- ^ Use standard deflate compression
+  | UseBrotli -- ^ Use Brotli compression
+  | UseECT -- ^ Use Effective Compression Tool (ECT) for compression
+  deriving stock Eq
 
 toUseCompressor :: Maybe String -> UseCompressor
+toUseCompressor (Just "zopfli")  = UseZopfli
 toUseCompressor (Just "deflate") = UseDeflate
 toUseCompressor (Just "brotli")  = UseBrotli
 toUseCompressor (Just "ect")     = UseECT
-toUseCompressor _anyOtherCase    = UseZopfli
+toUseCompressor _anyOtherCase    = UseECT
 
 {-|
 Flag indicating whether to optimize graphics content.
@@ -101,13 +104,13 @@ data Settings = Settings
 {-|
 Default settings.
 
-By default: graphics optimization enabled, Zopfli enabled, GhostScript
+By default: graphics optimization enabled, ECT enabled, GhostScript
 disabled, pdf-to-cairo disabled.
 -}
 defaultSettings :: Settings
 defaultSettings = Settings
   { sOptimizeGFX    = OptimizeGFX
-  , sCompressor     = UseZopfli
+  , sCompressor     = UseECT
   , sUseGhostScript = DoNotUseGhostScript
   , sUsePDFToCairo  = DoNotUsePDFToCairo
   }
