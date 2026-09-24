@@ -18,7 +18,8 @@ import Codec.Compression.Predict
   , Predictor (PNGOptimum, TIFFPredictor2)
   , predict
   )
-import Codec.Compression.Predict.Entropy (Entropy (EntropyLFS, EntropySum))
+import Codec.Compression.Predict.Entropy
+  (Entropy (EntropyLFS, EntropyMSAD, EntropySum))
 
 import Data.Bitmap.BitmapConfiguration
   ( BitmapConfiguration (bcBitsPerComponent, bcComponents, bcLineWidth)
@@ -61,8 +62,8 @@ predCompressor (Just bitmapConfig) stream useCompressor = do
 
   -- Select entropies based on width.
   let entropies = if width < 64
-                    then [EntropyShannon, EntropyLFS, EntropySum]
-                    else [EntropyDeflate]
+                    then [EntropyShannon, EntropyLFS, EntropySum, EntropyMSAD]
+                    else [EntropyDeflate, EntropyMSAD]
 
   -- Try all entropies and select the best compressed result.
   pngCompressed <- mapM (\entropy ->

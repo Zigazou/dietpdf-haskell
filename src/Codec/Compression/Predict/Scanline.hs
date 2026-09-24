@@ -27,8 +27,9 @@ module Codec.Compression.Predict.Scanline
 
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict.Entropy
-  ( Entropy (EntropyDeflate, EntropyLFS, EntropyRLE, EntropyShannon, EntropySum)
+  ( Entropy (EntropyDeflate, EntropyLFS, EntropyMSAD, EntropyRLE, EntropyShannon, EntropySum)
   , entropyLFS
+  , entropyMSAD
   , entropyShannon
   , entropySum
   )
@@ -81,12 +82,24 @@ emptyScanline bitmapConfig = Scanline
   }
 
 scanlineEntropy :: Entropy -> Scanline -> Double
-scanlineEntropy EntropyShannon = entropyShannon . groupComponents . slStream
+scanlineEntropy EntropyShannon =
+  entropyShannon . groupComponents . slStream
+
 scanlineEntropy EntropyDeflate =
   FL.entropyCompress . groupComponents . slStream
-scanlineEntropy EntropyRLE = RLE.entropyCompress . groupComponents . slStream
-scanlineEntropy EntropySum = entropySum . groupComponents . slStream
-scanlineEntropy EntropyLFS = entropyLFS . groupComponents . slStream
+
+scanlineEntropy EntropyRLE =
+  RLE.entropyCompress . groupComponents . slStream
+
+scanlineEntropy EntropySum =
+  entropySum . groupComponents . slStream
+
+scanlineEntropy EntropyLFS =
+  entropyLFS . groupComponents . slStream
+
+scanlineEntropy EntropyMSAD =
+  entropyMSAD . groupComponents . slStream
+
 
 {-|
 Given a `Predictor` and 2 consecutive `Scanline`, encode the last `Scanline`.

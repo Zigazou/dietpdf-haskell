@@ -5,13 +5,22 @@ module Codec.Compression.Predict.Entropy
   ( entropyShannon
   , entropySum
   , entropyLFS
-  , Entropy(EntropyDeflate, EntropyShannon, EntropyRLE, EntropySum, EntropyLFS)
+  , entropyMSAD
+  , Entropy
+      ( EntropyDeflate
+      , EntropyShannon
+      , EntropyRLE
+      , EntropySum
+      , EntropyLFS
+      , EntropyMSAD
+      )
   ) where
 
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Kind (Type)
+import Data.Word (Word8)
 
 {-|
 Supported entropy heuristics.
@@ -22,6 +31,7 @@ data Entropy = EntropyShannon -- ^ Shannon entropy
              | EntropyRLE -- ^ RLE-based entropy
              | EntropySum -- ^ Simple sum-based entropy
              | EntropyLFS -- ^ Simple LFS-based entropy
+             | EntropyMSAD -- ^ Minimum sum of absolute differences (libpng)
              deriving stock Eq
 
 {-|
@@ -51,6 +61,23 @@ Calculate a simple sum-based entropy of a `ByteString`.
 -}
 entropySum :: ByteString -> Double
 entropySum = BS.foldl' (\acc w -> acc + (fromIntegral w - 128)) 0.0
+
+{-|
+Calculate the "minimum sum of absolute differences" heuristic used by
+libpng/zlib-ng to pick a scanline filter: each byte is read as a signed delta
+(the smaller of the value and 256 minus the value) and the deltas are summed.
+
+This is a single linear pass over the row with no sorting and no actual
+compression call, making it far cheaper than 'entropyShannon' or
+'FL.entropyCompress' while correlating just as well (if not better) with the
+final Deflate size, since it directly measures how close the predicted bytes
+are to zero.
+-}
+entropyMSAD :: ByteString -> Double
+entropyMSAD = BS.foldl' (\acc w -> acc + fromIntegral (signedAbs w)) 0.0
+ where
+  signedAbs :: Word8 -> Int
+  signedAbs w = let v = fromIntegral w in min v (256 - v)
 
 {-|
 Calculate a simple LFS-based entropy of a `ByteString`.

@@ -15,7 +15,7 @@ import Codec.Compression.ECT qualified as ECT
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict
   (Entropy (EntropyRLE), Predictor (PNGOptimum), predict)
-import Codec.Compression.Predict.Entropy (Entropy (EntropyDeflate))
+import Codec.Compression.Predict.Entropy (Entropy (EntropyDeflate, EntropyMSAD))
 import Codec.Compression.RunLength qualified as RL
 
 import Data.Bitmap.BitmapConfiguration
@@ -54,7 +54,7 @@ predRleCompressor
 predRleCompressor (Just bitmapConfig) stream useCompressor = do
   let
     (compressor, filterName) = getCompressor useCompressor
-    entropies                = [EntropyDeflate, EntropyRLE]
+    entropies                = [EntropyDeflate, EntropyMSAD, EntropyRLE]
     width                    = bcLineWidth bitmapConfig
     components               = bcComponents bitmapConfig
 
