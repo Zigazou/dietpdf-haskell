@@ -9,6 +9,7 @@ module PDF.Graphics.Interpreter.OptimizeProgram.OptimizeClipPaths (
 ) where
 
 import Data.Foldable (foldl', toList)
+import Data.IntSet (IntSet)
 import Data.IntSet qualified as IS
 import Data.Kind (Type)
 import Data.Maybe (isNothing)
@@ -22,6 +23,7 @@ import Data.PDF.OperatorCategory
   , category
   )
 import Data.PDF.Program (Program)
+import Data.Sequence (Seq)
 import Data.Sequence qualified as SQ
 
 import PDF.Graphics.Visibility (balancedMarkedContent)
@@ -61,7 +63,7 @@ identity :: Matrix
 identity = (1, 0, 0, 1, 0, 0)
 
 -- | Extract finite numeric operands from a graphics-object sequence.
-numbers :: SQ.Seq GFXObject -> Maybe [Rational]
+numbers :: Seq GFXObject -> Maybe [Rational]
 numbers = traverse number . toList
  where
   -- \| Convert one finite graphics number to exact arithmetic.
@@ -146,16 +148,16 @@ isEmpty _         = False
 path lifetimes crossing a scope or marked-content point, including paths
 constructed inside a scope but painted after EMC.
 -}
-protectedCommands :: [(Int, Command)] -> IS.IntSet
+protectedCommands :: [(Int, Command)] -> IntSet
 protectedCommands commands =
   third (foldl' step (0 :: Int, 0 :: Int, IS.empty) commands)
  where
   -- Extract the protected command indices from the traversal state.
-  third :: (Int, Int, IS.IntSet) -> IS.IntSet
+  third :: (Int, Int, IntSet) -> IntSet
   third (_, _, result) = result
 
   -- Track scopes and mark commands that must not be optimized away.
-  step :: (Int, Int, IS.IntSet) -> (Int, Command) -> (Int, Int, IS.IntSet)
+  step :: (Int, Int, IntSet) -> (Int, Command) -> (Int, Int, IntSet)
   step (marked, text, protected) (index, Command op _) =
     let
       -- Update the marked-content nesting level based on the current command.
@@ -197,8 +199,8 @@ protectedCommands commands =
 -- | Command indices removed or terminated by the optimization.
 type Edits :: Type
 data Edits = Edits
-  { deleted :: IS.IntSet
-  , ended   :: IS.IntSet
+  { deleted :: IntSet
+  , ended   :: IntSet
   }
 
 -- | Mark command indices for deletion.
@@ -242,7 +244,7 @@ optimizeClipPaths program
   commands = zip [0 ..] (toList program)
 
   -- The set of command indices that are protected from deletion.
-  protected :: IS.IntSet
+  protected :: IntSet
   protected = protectedCommands commands
 
   -- Tiling patterns may contain text or marked content. Without their resource
@@ -322,7 +324,7 @@ optimizeClipPaths program
           stack
           (case pending of
             Nothing -> path
-            Just _ -> OtherPath
+            Just _  -> OtherPath
           )
           pathIndices
           (Just index)
