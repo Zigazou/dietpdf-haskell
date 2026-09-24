@@ -4,7 +4,7 @@ Optimize JPEG files using JpegTran.
 Provides JPEG optimization via the `jpegtran` command-line tool, comparing and
 selecting between progressive and baseline encoding modes.
 -}
-module External.JpegTran (jpegtranOptimize) where
+module External.JpegTran (jpegtranOptimize, jpegToGrayscale) where
 
 import Codec.Compression.Flate (fastCompress)
 
@@ -42,3 +42,12 @@ jpegtranOptimize input = do
 
   return $ if baselineLength < BS.length progressive then baseline
                                                      else progressive
+
+{-|
+Losslessly reduce a JPEG image to grayscale using `jpegtran`.
+
+This drops the chroma components from the DCT data, which is only valid when
+the image carries no useful color information.
+-}
+jpegToGrayscale :: ByteString -> FallibleT IO ByteString
+jpegToGrayscale = externalCommandBuf "jpegtran" ["-grayscale", "-copy", "none"]

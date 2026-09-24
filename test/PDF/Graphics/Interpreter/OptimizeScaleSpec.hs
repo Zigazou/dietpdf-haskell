@@ -9,9 +9,10 @@ import Data.PDF.GFXObject
   ( GFXObject (GFXName, GFXNumber)
   , GSOperator (GSLineTo, GSMoveTo, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetLineWidth)
   )
-import Data.PDF.Program (Program, mkProgram)
+import Data.PDF.Program (Program, mkProgram, parseProgram)
 
-import PDF.Graphics.Interpreter.OptimizeScale (isScaleOptimizable)
+import PDF.Graphics.Interpreter.OptimizeScale (isScaleOptimizable, optimizeScale)
+import PDF.Graphics.Parser.Stream (gfxParse)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
@@ -112,6 +113,14 @@ isScaleOptimizableExamples =
 
 spec :: Spec
 spec = do
+  describe "inline image scaling" $
+    it "preserves image size and placement at every candidate scale" $ do
+      let program = either (error . show) parseProgram $ gfxParse
+            "q 7 0 0 61 7.1 .1 cm BI /W 1 /H 1 /BPC 1 /IM true ID \x80 EI Q"
+      isScaleOptimizable program `shouldBe` False
+      forM_ [1, 10, 100, 1000] $ \scale ->
+        optimizeScale scale program `shouldBe` program
+
   describe "isScaleOptimizable"
     $ forM_ isScaleOptimizableExamples
     $ \(message, example, expected) -> do

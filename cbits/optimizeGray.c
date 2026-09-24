@@ -1,6 +1,6 @@
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
-#include <stdbool.h>
 
 /*
  * Check if RGB triplets are nearly gray, meaning the absolute differences
@@ -31,6 +31,17 @@ bool containsOnlyGrayFFI(const uint8_t *input, size_t inputLen) {
     }
   }
 
+  return true;
+}
+
+bool isNearlyGrayFFI(const uint8_t *cb_channel, const uint8_t *cr_channel,
+                     const size_t inputLen) {
+  for (size_t i = 0; i < inputLen; i++) {
+    if (cb_channel[i] < 0x70 || cb_channel[i] > 0x8F || cr_channel[i] < 0x70 ||
+        cr_channel[i] > 0x8F) {
+      return false;
+    }
+  }
   return true;
 }
 

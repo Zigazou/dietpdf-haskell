@@ -42,7 +42,7 @@ import Data.PDF.OptimizationType
   ( OptimizationType (GfxOptimization, JPGOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization)
   )
 import Data.PDF.PDFObject
-  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFObjectStream, PDFTrailer, PDFXRefStream)
+  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream, PDFTrailer, PDFXRefStream)
   , hasStream
   )
 import Data.PDF.PDFWork
@@ -50,7 +50,8 @@ import Data.PDF.PDFWork
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 
-import External.JpegTran (jpegtranOptimize)
+import External.ImageMagick (extractCbCrChannels)
+import External.JpegTran (jpegToGrayscale, jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)
 
 import Font.TrueType.FontDirectory (fromFontDirectory, optimizeFontDirectory)
@@ -58,7 +59,6 @@ import Font.TrueType.Parser.Font (ttfParse)
 
 import PDF.Graphics.Optimize (optimizeGFX)
 import PDF.Object.Container (getFilters)
-import PDF.Object.Object (PDFObject (PDFNumber))
 import PDF.Object.State (getStream, getValue, setStream, setStream1, setValue)
 import PDF.Object.String (optimizeString)
 import PDF.Processing.Filter (filterOptimize)
@@ -66,7 +66,8 @@ import PDF.Processing.PDFWork (deepMapP)
 import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
-import Util.ByteString (containsOnlyGray, convertToGray, optimizeParity)
+import Util.ByteString
+  (containsOnlyGray, convertToGray, isNearlyGray, optimizeParity)
 
 {-|
 Extract width and color component count from a PDF image stream object.
@@ -179,6 +180,47 @@ optimizeStreamParity object = do
       return object
 
 {-|
+Convert an RGB JPEG stream to grayscale if it contains only gray pixel values.
+
+Decodes the compressed JPEG to raw RGB pixels to inspect them with
+'containsOnlyGray'. When every pixel is gray, losslessly reduces the JPEG to a
+single-component grayscale image and updates the object's @ColorSpace@ to
+'DeviceGray'.
+-}
+optimizeJpegColorSpace :: PDFObject -> PDFWork IO PDFObject
+optimizeJpegColorSpace object = do
+  mColorSpace <- getValue "ColorSpace" object
+
+  if mColorSpace /= Just (PDFName "DeviceRGB")
+    then
+      return object
+    else do
+      stream <- getStream object
+      tryP (lift $ extractCbCrChannels stream) >>= \case
+        Right (rawCb, rawCr) | isNearlyGray rawCb rawCr -> do
+          sayP "Image is nearly gray"
+          tryP (lift $ jpegToGrayscale stream) >>= \case
+            Right grayStream -> do
+              sayComparisonP "Gray JPEG conversion"
+                             (BS.length stream)
+                             (BS.length grayStream)
+              setValue "ColorSpace"
+                       (PDFName "DeviceGray")
+                       object
+                >>= setStream grayStream
+
+            Left theError -> do
+              sayErrorP "cannot convert JPEG to grayscale" theError
+              return object
+
+        Left anError -> do
+          sayErrorP "cannot extract CbCr channels" anError
+          return object
+
+        _anyOtherCase ->
+          return object
+
+{-|
 Optimize TrueType font stream data using ttfAutoHint and internal optimization.
 -}
 optimizeTTF :: ByteString -> PDFWork IO ByteString
@@ -269,10 +311,11 @@ streamOptimize object = do
       getStream object >>= optimizeGFX >>= flip setStream object
 
     JPGOptimization -> do
+      grayObject      <- optimizeJpegColorSpace object
       optimizedStream <- optimizeStreamOrIgnore "JPG stream optimization"
-                                                object
+                                                grayObject
                                                 (lift . jpegtranOptimize)
-      setStream optimizedStream object
+      setStream optimizedStream grayObject
 
     RawBitmapOptimization -> optimizeStreamParity object
 

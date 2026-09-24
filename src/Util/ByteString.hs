@@ -20,6 +20,7 @@ module Util.ByteString
   , cut
   , hexDump
   , HexBS (HexBS)
+  , isNearlyGray
   ) where
 
 import Data.Binary (Word8)
@@ -42,6 +43,12 @@ FFI to check if a RGB ByteString contains only gray values.
 -}
 foreign import ccall unsafe "containsOnlyGrayFFI"
   c_contains_only_gray :: Ptr Word8 -> CSize -> IO Bool
+
+{-
+FFI to check if a CbCr ByteString contains only gray values.
+-}
+foreign import ccall unsafe "isNearlyGrayFFI"
+  c_is_nearly_gray :: Ptr Word8 -> Ptr Word8 -> CSize -> IO Bool
 
 {-
 FFI to check if a RGB ByteString contains only gray values.
@@ -129,6 +136,18 @@ containsOnlyGray :: ByteString -> Bool
 containsOnlyGray rgbRaw = unsafePerformIO $ do
   BUS.unsafeUseAsCStringLen rgbRaw $ \(input, inputLen) -> do
     c_contains_only_gray (castPtr input) (fromIntegral inputLen :: CSize)
+
+{-|
+Check if a CbCr `ByteString` contains only gray values, i.e., the chroma
+components are nearly zero.
+-}
+isNearlyGray :: ByteString -> ByteString -> Bool
+isNearlyGray cb cr = unsafePerformIO $ do
+  BUS.unsafeUseAsCStringLen cb $ \(cbPtr, cbLen) -> do
+    BUS.unsafeUseAsCStringLen cr $ \(crPtr, _crLen) -> do
+      c_is_nearly_gray (castPtr cbPtr)
+                       (castPtr crPtr)
+                       (fromIntegral cbLen :: CSize)
 
 {-|
 Converts a Grayscale RGB `ByteString` to a Grayscale `ByteString`.

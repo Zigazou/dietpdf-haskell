@@ -95,6 +95,11 @@ spec = do
   describe "graphics state regressions" $ do
     let parse input = either (error . show) parseProgram (gfxParse input)
         optimize = optimizeProgram emptyWorkData . parse
+    it "preserves a Type 3 glyph bitmap transform inside its clipping path" $ do
+      let input :: ByteString
+          input = "21 0 7 0 14 61 d1 q 7 0 m 7 61 l 14 61 l 14 0 l h W n 7 0 0 61 7.1 .1 cm BI /W 1 /H 1 /BPC 1 /IM true ID \x80 EI Q"
+      optimize input `shouldBe` parse input
+
     forM_
       [ "/DeviceRGB CS 1 0 0 SC 0 0 m 10 10 l S"
       , "/DeviceRGB cs 1 0 0 sc 0 0 10 10 re f"

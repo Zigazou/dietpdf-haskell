@@ -95,6 +95,7 @@ library
       Data.UnifiedError
       External.ExternalCommand
       External.GhostScriptOptimize
+      External.ImageMagick
       External.JpegToJpeg2k
       External.JpegTran
       External.PDFToCairoOptimize

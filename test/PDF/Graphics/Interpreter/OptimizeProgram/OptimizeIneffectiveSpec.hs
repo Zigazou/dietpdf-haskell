@@ -9,7 +9,8 @@ import Data.PDF.GFXObject
   ( GFXObject (GFXName, GFXNumber)
   , GSOperator (GSBeginText, GSEndText, GSBeginMarkedContentSequencePL, GSEndPath, GSFillPathNZWR, GSLineTo, GSMoveTo, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetLineWidth)
   )
-import Data.PDF.Program (Program, mkProgram)
+import Data.PDF.Program (Program, mkProgram, parseProgram)
+import PDF.Graphics.Parser.Stream (gfxParse)
 
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
   (anyPaintingCommandBeforeRestore, optimizeIneffective)
@@ -106,6 +107,12 @@ anyPaintingCommandBeforeRestoreExamples =
 spec :: Spec
 spec = do
   describe "optimizeIneffective" $ do
+    it "preserves transforms and colors used by nested inline images" $ do
+      let program = either (error . show) parseProgram $ gfxParse
+            "q .5 g 7 0 0 61 7.1 .1 cm q BI /W 1 /H 1 /BPC 1 /IM true ID \x80 EI Q Q"
+      optimizeIneffective program `shouldBe` program
+      anyPaintingCommandBeforeRestore 0 program `shouldBe` True
+
     it "matches suffix lookahead, including nested and unbalanced scopes" $
       property $ forAll (listOf (elements
         [GSSaveGS, GSRestoreGS, GSLineTo, GSFillPathNZWR,
