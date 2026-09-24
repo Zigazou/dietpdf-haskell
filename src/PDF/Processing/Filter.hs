@@ -15,6 +15,7 @@ import Data.Bitmap.BitmapConfiguration
   ( BitmapConfiguration (BitmapConfiguration, bcBitsPerComponent, bcComponents, bcLineWidth)
   )
 import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC8Bits))
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
 import Data.Foldable (minimumBy)
@@ -43,7 +44,8 @@ import PDF.Object.State (getStream, getValue, getValueDefault, setStream)
 import PDF.Processing.ApplyFilter.Generic (applyEveryFilterGeneric)
 import PDF.Processing.ApplyFilter.ICC (applyEveryFilterICC)
 import PDF.Processing.ApplyFilter.JPG (applyEveryFilterJPG)
-import PDF.Processing.ApplyFilter.OnlyCompressor (applyEveryFilterOnlyCompressor)
+import PDF.Processing.ApplyFilter.OnlyCompressor
+  (applyEveryFilterOnlyCompressor)
 import PDF.Processing.ApplyFilter.Text (applyEveryFilterText)
 import PDF.Processing.ApplyFilter.XRef (applyEveryFilterXRef)
 
@@ -71,20 +73,25 @@ getBitmapConfiguration object = do
     >>= \case Just (PDFNumber value) -> return $ toEnum . round $ value
               _anyOtherValue -> return BC8Bits
 
-  let components :: Int
-      components = case colorSpace of
-        Just (PDFName "DeviceRGB" ) -> 3
-        Just (PDFName "DeviceCMYK") -> 4
-        _anyOtherValue              -> 1
+  let
+    components :: Int
+    components = case colorSpace of
+      Just (PDFName "DeviceRGB" ) -> 3
+      Just (PDFName "DeviceCMYK") -> 4
+      _anyOtherValue              -> 1
 
   case width of
     Just (PDFNumber width') ->
-      let bitmapConfig = BitmapConfiguration
-            { bcLineWidth        = round width'
-            , bcComponents       = components
-            , bcBitsPerComponent = bitsPerComponent
-            }
-      in return (Just bitmapConfig)
+      let
+        bitmapConfig :: BitmapConfiguration
+        bitmapConfig = BitmapConfiguration
+          { bcLineWidth        = round width'
+          , bcComponents       = components
+          , bcBitsPerComponent = bitsPerComponent
+          }
+      in
+        return (Just bitmapConfig)
+
     _anyOtherValue -> return Nothing
 
 {-|
@@ -106,20 +113,35 @@ filterOptimize
   -> PDFObject
   -> PDFWork IO PDFObject
 filterOptimize optimization object
-  | not (hasStream object) = return object
-  | streamLength object == Just 0 = return object
-  | otherwise = withContext (ctx ("filterOptimize" :: String)) $ do
-    stream          <- getStream object
-    filters         <- getFilters object
-    bitmapConfig    <- getBitmapConfiguration object
-    masks           <- getMasks
+  | not (hasStream object)
+  = return object
+
+  | streamLength object == Just 0
+  = return object
+
+  | otherwise
+  = withContext (ctx ("filterOptimize" :: String)) $ do
+    stream       <- getStream object
+    filters      <- getFilters object
+    bitmapConfig <- getBitmapConfiguration object
+    masks        <- getMasks
 
     let
+      -- Determine if the object is a mask.
       objectIsAMask :: Bool
       objectIsAMask = case getObjectNumber object of
                         Just major    -> Set.member major masks
                         _anyOtherCase -> False
+
+      -- Original filter combination for comparison.
+      original :: FilterCombination
       original = FilterCombination filters stream True
+
+      -- Function to apply every filter based on the optimization type.
+      applyEveryFilter
+        :: Maybe BitmapConfiguration
+        -> ByteString
+        -> PDFWork IO [FilterCombination]
       applyEveryFilter =
         case optimization of
           GfxOptimization          -> applyEveryFilterText
@@ -134,7 +156,9 @@ filterOptimize optimization object
     -- Apply every filter to the stream and return the best result.
     candidates <- applyEveryFilter bitmapConfig stream <&> mkArray
 
+    -- Select the best candidate based on the total load.
     let
+      bestCandidate :: FilterCombination
       bestCandidate = minimumBy resultCompare candidates
 
     -- Do nothing if the best result is worse than the original stream.
@@ -147,6 +171,7 @@ filterOptimize optimization object
           else setStream (fcBytes bestCandidate) object
             >>= setFilters (fcList bestCandidate >< fcList original)
  where
+  -- Compare two filter combinations based on their total load.
   resultCompare :: FilterCombination -> FilterCombination -> Ordering
   resultCompare load1 load2 = compare (resultLoad load1) (resultLoad load2)
 
@@ -156,6 +181,7 @@ filterOptimize optimization object
       fcLength filterCombination
     + foldr ((+) . filterLoad) 0 (fcList filterCombination)
 
+  -- The overhead introduced by a single filter.
   filterLoad :: Filter -> Int
   filterLoad (Filter f p) = BS.length (fromPDFObject f)
                           + BS.length (fromPDFObject p)

@@ -195,8 +195,12 @@ buildReferenceMap (DuplicatedObjects mp) = Map.foldl' insertReferences mempty mp
     -- Insert reference mappings for all duplicates in a group.
     insertReferences :: Map Int Int -> Duplicates -> Map Int Int
     insertReferences acc duplicates =
-      let (original, duplicatesList) = originalAndDuplicates duplicates
-       in foldl' (flip (`Map.insert` original)) acc duplicatesList
+      let
+        original :: Int
+        duplicatesList :: [Int]
+        (original, duplicatesList) = originalAndDuplicates duplicates
+      in
+        foldl' (flip (`Map.insert` original)) acc duplicatesList
 
 {-|
 Converts all references to duplicated objects to point to a single original
