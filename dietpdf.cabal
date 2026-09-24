@@ -150,6 +150,7 @@ library
       PDF.Graphics.Interpreter.OptimizeGState
       PDF.Graphics.Interpreter.OptimizeParameters
       PDF.Graphics.Interpreter.OptimizeProgram
+      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeClipPaths
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContent
@@ -393,6 +394,7 @@ test-suite dietpdf-test
       PDF.Graphics.Interpreter.OptimizeCommandSpec
       PDF.Graphics.Interpreter.OptimizeGStateSpec
       PDF.Graphics.Interpreter.OptimizeParametersSpec
+      PDF.Graphics.Interpreter.OptimizeProgram.OptimizeClipPathsSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffectiveSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMarkedContentSpec
       PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestoreSpec

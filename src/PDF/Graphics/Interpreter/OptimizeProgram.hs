@@ -43,6 +43,8 @@ import Data.PDF.WorkData (WorkData)
 import Data.Sequence (Seq (Empty, (:<|)), (<|), (|>))
 
 import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
+import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeClipPaths
+  (optimizeClipPaths)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
   (optimizeDuplicates)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeIneffective
@@ -134,6 +136,7 @@ optimizations:
 Program-wide passes:
 - Remove useless save/restore pairs
 - Convert line paths to rectangle operators
+- Remove provably redundant rectangular clips
 - Remove empty/ineffective operations
 - Remove duplicated consecutive operators
 - Remove redundant marked content sequences
@@ -162,6 +165,7 @@ optimizeProgramOnePass workData
   . optimizeMergeableTextCommands
   . optimizeDuplicates
   . optimizeIneffective
+  . optimizeClipPaths
   . optimizeRectangle
   . optimizeSaveRestore
 
