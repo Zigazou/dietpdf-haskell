@@ -132,6 +132,7 @@ library
       PDF.Document.Parser
       PDF.Document.PDFObjects
       PDF.Document.PDFPartition
+      PDF.Document.ResourceContext
       PDF.Document.Resources
       PDF.Document.Stat
       PDF.Document.Uncompress
@@ -384,6 +385,7 @@ test-suite dietpdf-test
       PDF.Document.GetAllMasksSpec
       PDF.Document.InvisibleImagesSpec
       PDF.Document.ObjectStreamSpec
+      PDF.Document.ResourceContextSpec
       PDF.Document.ResourcesSpec
       PDF.Document.UnusedResourcesSpec
       PDF.Document.XRefSpec

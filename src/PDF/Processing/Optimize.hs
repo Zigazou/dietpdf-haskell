@@ -68,6 +68,7 @@ import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 import Util.ByteString
   (containsOnlyGray, convertToGray, isNearlyGray, optimizeParity)
+import Util.Dictionary (Dictionary)
 
 {-|
 Extract width and color component count from a PDF image stream object.
@@ -298,8 +299,8 @@ applicable or fails).
 __Side effects:__ External processes may be invoked (jpegtran, ttfAutoHint), and
 size comparisons are logged.
 -}
-streamOptimize :: PDFObject -> PDFWork IO PDFObject
-streamOptimize object = do
+streamOptimize :: Maybe (Dictionary PDFObject) -> PDFObject -> PDFWork IO PDFObject
+streamOptimize resources object = do
   whatOptimizationFor object >>= \case
     XMLOptimization -> do
       optimizedStream <- optimizeStreamOrIgnore "XML stream optimization"
@@ -308,7 +309,7 @@ streamOptimize object = do
       setStream optimizedStream object
 
     GfxOptimization -> do
-      getStream object >>= optimizeGFX >>= flip setStream object
+      getStream object >>= optimizeGFX resources >>= flip setStream object
 
     JPGOptimization -> do
       grayObject      <- optimizeJpegColorSpace object
@@ -332,15 +333,15 @@ Completely refilter a stream by finding the best filter combination.
 
 It also optimized nested strings and XML streams.
 -}
-refilter :: PDFObject -> PDFWork IO PDFObject
-refilter object = do
+refilter :: Maybe (Dictionary PDFObject) -> PDFObject -> PDFWork IO PDFObject
+refilter resources object = do
   stringOptimized <- deepMapP optimizeString object
 
   if hasStream object
     then do
       unfiltered <- unfilter stringOptimized
       optimization <- whatOptimizationFor unfiltered
-      streamOptimize unfiltered >>= filterOptimize optimization
+      streamOptimize resources unfiltered >>= filterOptimize optimization
     else return stringOptimized
 
 {-|
@@ -413,7 +414,10 @@ optimizable object@PDFObjectStream{} = do
 optimizable _anyOtherObject = return False
 
 {-|
-Optimize a PDF object.
+Optimize a PDF object with its resolved graphics resources, when unambiguous.
+
+Nothing disables future resource-dependent passes, but leaves context-free
+optimizations available.
 
 `PDFObject` may be optimized by:
 
@@ -429,14 +433,13 @@ Optimization of spaces is done at the `PDFObject` level, not by this function.
 If the PDF object is not elligible to optimization or if optimization is
 ineffective, it is returned as is.
 -}
-optimize :: PDFObject -> PDFWork IO PDFObject
-optimize object = withContext (ctx ("optimize" :: String) <> ctx object) $ do
+optimize :: Maybe (Dictionary PDFObject) -> PDFObject -> PDFWork IO PDFObject
+optimize resources object = withContext (ctx ("optimize" :: String) <> ctx object) $ do
   objectCanBeOptimized <- optimizable object
 
   if objectCanBeOptimized
     then
-      -- refilter object
-      tryP (refilter object) >>= \case
+      tryP (refilter resources object) >>= \case
         Right optimizedObject -> return optimizedObject
         Left  theError        -> do
           sayErrorP "cannot optimize" theError

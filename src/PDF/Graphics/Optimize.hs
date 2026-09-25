@@ -19,6 +19,7 @@ import Data.List (minimumBy)
 import Data.Logging (Logging)
 import Data.Ord (comparing)
 import Data.PDF.GFXObject (separateGfx)
+import Data.PDF.PDFObject (PDFObject)
 import Data.PDF.PDFWork
   (PDFWork, getTranslationTable, sayComparisonP, sayP, withContext)
 import Data.PDF.Program (extractObjects, parseProgram)
@@ -32,6 +33,8 @@ import PDF.Graphics.Interpreter.OptimizeProgram (optimizeProgram)
 import PDF.Graphics.Interpreter.OptimizeScale (optimizeScale)
 import PDF.Graphics.Interpreter.RenameResources (renameResources)
 import PDF.Graphics.Parser.Stream (gfxParse)
+
+import Util.Dictionary (Dictionary)
 
 {-|
 Optimize a PDF graphics stream to reduce file size.
@@ -53,6 +56,8 @@ This function performs the following optimization steps:
 
 __Parameters:__
 
+- Resolved resources, or Nothing for unknown or ambiguous ownership. Reserved
+  for resource-aware passes; current passes do not consume this context.
 - The raw PDF graphics stream as a bytestring
 
 __Returns:__
@@ -60,8 +65,8 @@ __Returns:__
 - The optimized graphics stream (possibly smaller), or the original stream if
   optimization could not be applied
 -}
-optimizeGFX :: Logging m => ByteString -> PDFWork m ByteString
-optimizeGFX stream = do
+optimizeGFX :: Logging m => Maybe (Dictionary PDFObject) -> ByteString -> PDFWork m ByteString
+optimizeGFX _resources stream = do
   gets (sOptimizeGFX . wSettings) >>= \case
     DoNotOptimizeGFX -> return stream
     OptimizeGFX -> withContext (ctx ("optimizeGFX" :: String)) $

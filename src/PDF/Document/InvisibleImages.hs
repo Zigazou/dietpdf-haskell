@@ -8,20 +8,20 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.IntMap.Strict (IntMap)
-import Data.IntMap.Strict qualified as IM
-import Data.IntSet qualified as IS
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe, isNothing, mapMaybe)
 import Data.PDF.GFXObject (separateGfx)
 import Data.PDF.PDFObject
-  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFReference)
+  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObjectWithStream, PDFName, PDFNumber)
   )
 import Data.PDF.PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream)
 import Data.PDF.PDFWork (PDFWork)
 import Data.PDF.Program (Program, extractObjects, parseProgram)
 import Data.PDF.Settings (OptimizeGFX (DoNotOptimizeGFX), sOptimizeGFX)
 import Data.PDF.WorkData (wPDF, wSettings)
+
+import PDF.Document.ResourceContext (inherited, resolve, value)
 
 import PDF.Graphics.Geometry
   (Matrix, Rect (Rect), identity, intersection, matrixOf, transform)
@@ -54,44 +54,6 @@ removeInvisiblePageImages page content = do
     _ -> fromMaybe content $ do
       box <- pageViewport objects page
       optimizeContent (optimizePainting objects page box) content
-
-{- | Follow references without expanding dictionaries or changing stream
-objects. Both object number and generation must match; cycles are rejected.
--}
-resolve :: IntMap PDFObject -> PDFObject -> Maybe PDFObject
-resolve objects = go IS.empty
- where
-  go seen (PDFReference number generation)
-    | IS.member number seen = Nothing
-    | otherwise = do
-        object <- IM.lookup number objects
-        case object of
-          PDFIndirectObject n g inner
-            | n == number && g == generation -> go (IS.insert number seen) inner
-          PDFIndirectObjectWithStream n g _ _
-            | n == number && g == generation -> Just object
-          _ -> Nothing
-  go seen (PDFIndirectObject _ _ inner) = go seen inner
-  go _ object = Just object
-
-{- | Resolve a dictionary value for the given key in a PDF object graph.
--}
-value :: IntMap PDFObject -> ByteString -> PDFObject -> Maybe PDFObject
-value objects key object = getValueForKey key object >>= resolve objects
-
-{- | Look up an inherited dictionary key, following the parent chain when
-needed.
--}
-inherited :: IntMap PDFObject -> ByteString -> PDFObject -> Maybe PDFObject
-inherited objects key = go IS.empty
- where
-  go seen object = case getValueForKey key object of
-    Just entry -> resolve objects entry
-    Nothing -> case getValueForKey "Parent" object of
-      Just reference@(PDFReference number _)
-        | not (IS.member number seen) ->
-            resolve objects reference >>= go (IS.insert number seen)
-      _ -> Nothing
 
 {- | Convert a PDF numeric object to a finite rational value.
 -}

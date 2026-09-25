@@ -73,6 +73,7 @@ import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
   (optimizeOptionalDictionaryEntries)
 import PDF.Document.OptimizeResources (optimizeResources)
+import PDF.Document.ResourceContext (buildStreamResources)
 import PDF.Document.Resources
   (removeUnusedResources, updateWithAdditionalResources)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
@@ -305,7 +306,13 @@ pdfEncode objects = do
   modifyIndirectObjectsP zeroFillMaskedImages
 
   sayP "Optimizing PDF"
-  modifyIndirectObjectsP optimize
+  -- Snapshot resource ownership after resource renaming and before parallel work.
+  streamResources <- gets (buildStreamResources . (\pdf ->
+    ppObjectsWithoutStream pdf <> ppObjectsWithStream pdf) . wPDF)
+  modifyIndirectObjectsP $ \object ->
+    let resources = getObjectNumber object >>= \number ->
+          IM.findWithDefault Nothing number streamResources
+    in optimize resources object
 
   updateWithAdditionalResources
   repeatedFormFragments
@@ -338,7 +345,7 @@ pdfEncode objects = do
 
   -- Encode all objects.
   sayP "Encoding PDF"
-  encodedObjStm  <- optimize objectStream >>= encodeObject
+  encodedObjStm  <- optimize Nothing objectStream >>= encodeObject
   encodedStreams <- gets (ppObjectsWithStream . wPDF) >>= pMapP encodeObject
 
   let
@@ -367,7 +374,7 @@ pdfEncode objects = do
                                (BS.length pdfHead)
                                encodedAll
 
-    optimize xrefst >>= updateXRefStm pdfTrailer
+    optimize Nothing xrefst >>= updateXRefStm pdfTrailer
 
   let
     encodedXRef :: ByteString
