@@ -136,6 +136,7 @@ library
       PDF.Document.Stat
       PDF.Document.Uncompress
       PDF.Document.XRef
+      PDF.Document.ZeroFillMaskedImages
       PDF.Graphics.Geometry
       PDF.Graphics.Interpreter.Human
       PDF.Graphics.Interpreter.OptimizeCommand
@@ -386,6 +387,7 @@ test-suite dietpdf-test
       PDF.Document.ResourcesSpec
       PDF.Document.UnusedResourcesSpec
       PDF.Document.XRefSpec
+      PDF.Document.ZeroFillMaskedImagesSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommandSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGenericSpec

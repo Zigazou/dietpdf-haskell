@@ -24,13 +24,14 @@ import Control.Monad.State (gets)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
+import Data.IntMap (IntMap)
 import Data.IntMap qualified as IM
 import Data.Logging (Logging)
 import Data.Map.Strict qualified as Map
 import Data.PDF.EncodedObject (EncodedObject (EncodedObject), eoBinaryData)
 import Data.PDF.PDFDocument (PDFDocument, fromList)
 import Data.PDF.PDFObject
-  ( PDFObject (PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion)
+  ( PDFObject (PDFArray, PDFDictionary, PDFEndOfFile, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFTrailer, PDFVersion)
   , getObjectNumber
   )
 import Data.PDF.PDFObjects (toPDFDocument)
@@ -75,8 +76,9 @@ import PDF.Document.OptimizeResources (optimizeResources)
 import PDF.Document.Resources
   (removeUnusedResources, updateWithAdditionalResources)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
+import PDF.Document.ZeroFillMaskedImages (zeroFillMaskedImages)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
-import PDF.Object.Object.Properties (getValueForKey, hasKey)
+import PDF.Object.Object.Properties (getValueForKey, hasKey, isCatalog)
 import PDF.Object.State (getValue, setMaybe)
 import PDF.Processing.DuplicatedObjects
   (convertDuplicatedReferences, duplicateCount, findDuplicatedObjects)
@@ -86,6 +88,7 @@ import PDF.Processing.RepeatedFormFragments (repeatedFormFragments)
 
 import System.IO (hSetBuffering, stderr)
 
+import Util.Dictionary (mkDictionary)
 import Util.Sequence (mapMaybe)
 
 -- Removing a form can expose further unused resources. Repeat until neither
@@ -108,20 +111,27 @@ encodeObject :: Logging m => PDFObject -> PDFWork m EncodedObject
 encodeObject object@(PDFIndirectObject number _ _) = return $
     EncodedObject number (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
+
 encodeObject object@(PDFIndirectObjectWithStream number _ _ _) = return $
     EncodedObject number (BS.length bytes) bytes SQ.Empty
   where bytes = fromPDFObject object
+
 encodeObject object@(PDFObjectStream number _ _ _) = do
-  let bytes = fromPDFObject object
+  let
+    bytes :: ByteString
+    bytes = fromPDFObject object
+
   embeddedObjects <- explodeList [object]
+
   return $ EncodedObject
             number
             (BS.length bytes)
             bytes
             (mapMaybe getObjectNumber (SQ.fromList embeddedObjects))
 
-encodeObject object = return $ EncodedObject 0 (BS.length bytes) bytes SQ.Empty
-  where bytes = fromPDFObject object
+encodeObject object =
+  return $ EncodedObject 0 (BS.length bytes) bytes SQ.Empty
+ where bytes = fromPDFObject object
 
 {-|
 Updates an XRef stream object by copying certain fields ("Root", "Info", "ID")
@@ -140,19 +150,62 @@ updateXRefStm trailer xRefStm = do
     >>= setMaybe "ID" mID
 
 {-|
+Checks whether a PDF object declares the @BrotliDecode@ filter, either as a
+lone filter name or within a filter array.
+-}
+usesBrotliFilter :: PDFObject -> Bool
+usesBrotliFilter object = case getValueForKey "Filter" object of
+  Just (PDFName "BrotliDecode") -> True
+  Just (PDFArray filters)       -> PDFName "BrotliDecode" `elem` filters
+  _anyOtherValue                -> False
+
+{-|
+Declares the PDF Association's Brotli extension (Brotli RFC 7932, published as
+an extension to PDF 2.0: BaseVersion 2.0, ExtensionLevel 1, ExtensionRevision
+2026) on the document catalog, so that conforming readers can recognize
+@/BrotliDecode@ streams even when the file header is later downgraded.
+-}
+declareBrotliExtension :: PDFObject -> PDFObject
+declareBrotliExtension (PDFIndirectObject major minor (PDFDictionary dict)) =
+  PDFIndirectObject major
+                    minor
+                    (PDFDictionary (Map.insert "Extensions" extensions dict))
+ where
+  extensions :: PDFObject
+  extensions = PDFDictionary $ mkDictionary
+    [ ( "PDFA"
+      , PDFDictionary $ mkDictionary
+          [ ("BaseVersion", PDFName "2.0")
+          , ("ExtensionLevel", PDFNumber 1)
+          , ("ExtensionRevision", PDFNumber 2026)
+          ]
+      )
+    ]
+
+declareBrotliExtension object = object
+
+{-|
 Merge the contents streams of all pages into a single stream.
 -}
 mergePagesContents :: Logging m => PDFObject -> PDFWork m PDFObject
 mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) = do
-  let mType     = getValueForKey "Type"     object
-      mContents = getValueForKey "Contents" object
+  let
+    mType :: Maybe PDFObject
+    mType = getValueForKey "Type" object
+
+    mContents :: Maybe PDFObject
+    mContents = getValueForKey "Contents" object
 
   case (mType, mContents) of
     (Just (PDFName "Page"), Just vectors) -> do
       streamNumber <- mergeVectorStream vectors
         >>= removeInvisiblePageImages object
         >>= putNewObject
-      let newDict = Map.insert "Contents" (PDFReference streamNumber 0) dict
+
+      let
+        newDict :: Map.Map ByteString PDFObject
+        newDict = Map.insert "Contents" (PDFReference streamNumber 0) dict
+
       return $ PDFIndirectObject major minor (PDFDictionary newDict)
 
     _anyOtherObject -> return object
@@ -202,7 +255,11 @@ pdfEncode objects = do
 
   -- Remove duplicate objects and assigns references accordingly.
   duplicated <- gets wPDF >>= findDuplicatedObjects
-  let dupCount = duplicateCount duplicated
+
+  let
+    dupCount :: Int
+    dupCount = duplicateCount duplicated
+
   if dupCount == 0
     then
       sayP "No duplicated objects found"
@@ -242,12 +299,27 @@ pdfEncode objects = do
                   , " resource names"
                   ]
 
+  -- Zero-fill image pixels hidden by a soft mask before the generic filter
+  -- search below re-optimizes the resulting stream.
+  sayP "Zero-filling masked images"
+  modifyIndirectObjectsP zeroFillMaskedImages
+
   sayP "Optimizing PDF"
   modifyIndirectObjectsP optimize
 
   updateWithAdditionalResources
   repeatedFormFragments
   pruneUnusedResources
+
+  -- Brotli (BrotliDecode) is a PDF 2.0 extension: bump the header version and
+  -- declare it in the catalog's Extensions dictionary when used.
+  usesBrotli <- gets (any usesBrotliFilter . ppObjectsWithStream . wPDF)
+  when usesBrotli $ do
+    sayP "BrotliDecode filter found: forcing PDF version to 2.0"
+    modifyIndirectObjects (\object -> if isCatalog object
+                                        then declareBrotliExtension object
+                                        else object
+                           )
 
   nextObjectNumber <- (+ 1) <$> lastObjectNumber
 
@@ -270,16 +342,27 @@ pdfEncode objects = do
   encodedStreams <- gets (ppObjectsWithStream . wPDF) >>= pMapP encodeObject
 
   let
+    encodedAll :: IntMap EncodedObject
     encodedAll = IM.insert nextObjectNumber encodedObjStm encodedStreams
+
+    body :: ByteString
     body = BS.concat $ eoBinaryData . snd <$> IM.toAscList encodedAll
 
-  let pdfHead = fromPDFObject (PDFVersion "1.7")
-      pdfEnd  = fromPDFObject PDFEndOfFile
+  let
+    pdfVersion :: PDFObject
+    pdfVersion = PDFVersion (if usesBrotli then "2.0" else "1.7")
+
+    pdfHead :: ByteString
+    pdfHead = fromPDFObject pdfVersion
+
+    pdfEnd  :: ByteString
+    pdfEnd  = fromPDFObject PDFEndOfFile
 
   -- Generate the XRef table.
   sayP "Optimizing XRef stream table"
   xref <- do
     let
+      xrefst :: PDFObject
       xrefst = xrefStreamTable (nextObjectNumber + 1)
                                (BS.length pdfHead)
                                encodedAll
@@ -287,8 +370,13 @@ pdfEncode objects = do
     optimize xrefst >>= updateXRefStm pdfTrailer
 
   let
+    encodedXRef :: ByteString
     encodedXRef = fromPDFObject xref
+
+    xRefStmOffset :: Int
     xRefStmOffset = BS.length pdfHead + BS.length body
+
+    startxref :: ByteString
     startxref = fromPDFObject (PDFStartXRef xRefStmOffset)
 
   sayP "PDF has been optimized!"
