@@ -111,11 +111,15 @@ byte representation, the byte data, and any embedded objects.
 encodeObject :: Logging m => PDFObject -> PDFWork m EncodedObject
 encodeObject object@(PDFIndirectObject number _ _) = return $
     EncodedObject number (BS.length bytes) bytes SQ.Empty
-  where bytes = fromPDFObject object
+  where
+    bytes :: ByteString
+    bytes = fromPDFObject object
 
 encodeObject object@(PDFIndirectObjectWithStream number _ _ _) = return $
     EncodedObject number (BS.length bytes) bytes SQ.Empty
-  where bytes = fromPDFObject object
+  where
+    bytes :: ByteString
+    bytes = fromPDFObject object
 
 encodeObject object@(PDFObjectStream number _ _ _) = do
   let
@@ -132,7 +136,9 @@ encodeObject object@(PDFObjectStream number _ _ _) = do
 
 encodeObject object =
   return $ EncodedObject 0 (BS.length bytes) bytes SQ.Empty
- where bytes = fromPDFObject object
+ where
+  bytes :: ByteString
+  bytes = fromPDFObject object
 
 {-|
 Updates an XRef stream object by copying certain fields ("Root", "Info", "ID")

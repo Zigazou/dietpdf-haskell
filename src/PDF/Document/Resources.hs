@@ -24,7 +24,7 @@ import Data.PDF.GFXObject
   (GFXObject (GFXArray, GFXDictionary, GFXInlineImage, GFXName))
 import Data.PDF.PDFDocument (cFilter)
 import Data.PDF.PDFObject
-  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFName, PDFNull, PDFReference)
+  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNull, PDFReference)
   )
 import Data.PDF.PDFObjects (toPDFDocument)
 import Data.PDF.PDFPartition
@@ -45,8 +45,7 @@ import Data.Set qualified as Set
 
 import PDF.Graphics.Parser.Stream (gfxParse)
 import PDF.Object.Container (getFilters)
-import PDF.Object.Object (PDFObject (PDFIndirectObjectWithStream), hasKey)
-import PDF.Object.Object.Properties (getValueForKey)
+import PDF.Object.Object.Properties (getValueForKey, hasKey)
 import PDF.Object.Object.RemoveResources (removeResources)
 import PDF.Object.State (getStream)
 import PDF.Processing.Unfilter (unfilter)
@@ -62,9 +61,11 @@ sub-objects (fonts, XObjects...) are never expanded.
 loadShallow :: Monad m => PDFObject -> PDFWork m PDFObject
 loadShallow reference@PDFReference{} = do
   object <- getReference reference
+
   case object of
     PDFIndirectObject _major _minor value -> return value
     _other                                -> return object
+
 loadShallow object = return object
 
 {-|
@@ -86,8 +87,10 @@ getResourceKeys key object = do
   case resolved of
     PDFDictionary dict ->
       return $ createSet (toResource key <$> Map.keys dict)
+
     PDFIndirectObjectWithStream _major _minor dict _stream ->
       return $ createSet (toResource key <$> Map.keys dict)
+
     _notFound -> return mempty
 
 {-|
@@ -133,12 +136,14 @@ getResourceNames
   => Set Resource
   -> PDFObject
   -> PDFWork m (Set Resource)
-getResourceNames resources object = case getValueForKey "Resources" object of
-  Just value -> do
-    loadedValue <- loadShallow value
-    names <- getResourceKeysFromDictionary loadedValue
-    return (resources <> names)
-  _notFound -> return resources
+getResourceNames resources object =
+  case getValueForKey "Resources" object of
+    Just value -> do
+      loadedValue <- loadShallow value
+      names <- getResourceKeysFromDictionary loadedValue
+      return (resources <> names)
+
+    _notFound -> return resources
 
 {-|
 Find all resource names in the entire PDF document.
@@ -207,14 +212,17 @@ updateWithAdditionalResources = do
           PDFDictionary resourceDictionary -> do
             existing <- maybe (return (PDFDictionary mempty)) loadObject
                           (Map.lookup "ExtGState" resourceDictionary)
-            let states = case existing of
-                  PDFDictionary values -> values
-                  _other               -> mempty
+            let
+              states :: Dictionary PDFObject
+              states = case existing of
+                PDFDictionary values -> values
+                _other               -> mempty
 
-                updated = Map.insert
-                            "ExtGState"
-                            (PDFDictionary (additional <> states))
-                            resourceDictionary
+              updated :: Dictionary PDFObject
+              updated = Map.insert
+                          "ExtGState"
+                          (PDFDictionary (additional <> states))
+                          resourceDictionary
 
             return (Map.insert "Resources" (PDFDictionary updated) dictionary)
 
@@ -255,23 +263,42 @@ removeUnusedResources = do
   if any needsAppearanceResources objects || elem Nothing parsed
     then return ()
     else do
-      let usedNames = objectNames <> Set.unions (catMaybes parsed)
-          used = createSet
-            [toResource category name
-            | category <- ["Font", "XObject", "ExtGState", "ColorSpace",
-                           "Pattern", "Shading", "Properties"]
-            , name <- Set.toList usedNames]
+      let
+        usedNames :: Set ByteString
+        usedNames = objectNames <> Set.unions (catMaybes parsed)
+
+        used :: Set Resource
+        used = createSet
+          [toResource category name
+          | category <- [ "Font"
+                        , "XObject"
+                        , "ExtGState"
+                        , "ColorSpace"
+                        , "Pattern"
+                        , "Shading"
+                        , "Properties"
+                        ]
+          , name <- Set.toList usedNames
+          ]
+
       modifyIndirectObjectsP (prune used)
  where
   needsAppearanceResources :: PDFObject -> Bool
-  needsAppearanceResources (PDFIndirectObject _ _ value) = needsAppearanceResources value
+  needsAppearanceResources (PDFIndirectObject _ _ value) =
+    needsAppearanceResources value
+
   needsAppearanceResources (PDFIndirectObjectWithStream _ _ dictionary _) =
     needsAppearanceResources (PDFDictionary dictionary)
+
   needsAppearanceResources object@(PDFDictionary dictionary) =
-    hasKey "AcroForm" object || hasKey "DA" object
+    hasKey "AcroForm" object
+    || hasKey "DA" object
     || getValueForKey "Subtype" object == Just (PDFName "Type3")
     || any needsAppearanceResources dictionary
-  needsAppearanceResources (PDFArray values) = any needsAppearanceResources values
+
+  needsAppearanceResources (PDFArray values) =
+    any needsAppearanceResources values
+
   needsAppearanceResources _ = False
 
   names :: PDFObject -> Set ByteString
@@ -279,17 +306,24 @@ removeUnusedResources = do
   names (PDFArray values) = foldMap names values
   names (PDFDictionary dictionary) = foldMap names dictionary
   names (PDFIndirectObject _ _ value) = names value
-  names (PDFIndirectObjectWithStream _ _ dictionary _) = foldMap names dictionary
+  names (PDFIndirectObjectWithStream _ _ dictionary _) =
+    foldMap names dictionary
   names _ = mempty
 
   expandReferences :: IM.IntMap PDFObject -> Set Int -> Set Int
   expandReferences objects references =
-    let children number = case IM.lookup number objects of
+    let
+      children :: Int -> Set Int
+      children number = case IM.lookup number objects of
           Just (PDFIndirectObject _ _ value) -> referencesIn value
           _                                  -> mempty
-        expanded = references <> foldMap children references
-    in if expanded == references then references
-       else expandReferences objects expanded
+
+      expanded :: Set Int
+      expanded = references <> foldMap children references
+    in
+      if expanded == references
+        then references
+        else expandReferences objects expanded
 
   referencesIn :: PDFObject -> Set Int
   referencesIn (PDFReference number _)    = Set.singleton number
@@ -318,15 +352,25 @@ removeUnusedResources = do
     result <- tryP $ do
       decoded <- unfilter object
       (,) <$> getFilters decoded <*> getStream decoded
-    let mandatory = Set.member number required
-                 || getValueForKey "Subtype" object == Just (PDFName "Form")
-                 || isJust (getValueForKey "PatternType" object)
-        failed = if mandatory then Nothing else Just mempty
+
+    let
+      mandatory :: Bool
+      mandatory =
+        Set.member number required
+        || getValueForKey "Subtype" object == Just (PDFName "Form")
+        || isJust (getValueForKey "PatternType" object)
+
+      failed :: Maybe (Set ByteString)
+      failed = if mandatory
+                then Nothing
+                else Just mempty
+
     return $ case result of
       Right (filters, stream) | null filters -> case gfxParse stream of
         Right graphics -> Just (foldMap gfxNames graphics)
         Left _         -> failed
       _ -> failed
+
   streamNames _ _ = return (Just mempty)
 
   resolve :: Monad m => PDFObject -> PDFWork m PDFObject
@@ -362,10 +406,17 @@ removeUnusedResources = do
           PDFDictionary categories -> do
             direct <- traverse resolve categories
             -- Device color-space substitutions have implicit uses.
-            let defaults = createSet (map (toResource "ColorSpace")
-                             ["DefaultGray", "DefaultRGB", "DefaultCMYK"])
-                owner = PDFDictionary (Map.insert "Resources"
+            let
+              defaults :: Set Resource
+              defaults =
+                createSet (map (toResource "ColorSpace")
+                               ["DefaultGray", "DefaultRGB", "DefaultCMYK"]
+                          )
+
+              owner :: PDFObject
+              owner = PDFDictionary (Map.insert "Resources"
                           (PDFDictionary direct) nested)
+
             return (removeResources (used <> defaults) mempty owner)
 
           _ -> return (PDFDictionary nested)

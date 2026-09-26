@@ -22,8 +22,8 @@ import Data.Kind (Type)
 import Data.List (find)
 import Data.PDF.PDFDocument (PDFDocument, fromList, toList)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream)
-    )
+  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFXRefStream)
+  )
 
 {- |
 A collection of PDF objects indexed by object number.
@@ -57,7 +57,7 @@ fromPDFDocument = IM.fromList . fmap createCouple . toList
     createCouple object@(PDFIndirectObjectWithStream number _ _ _) =
       (number, object)
     createCouple object@(PDFXRefStream number _ _ _) = (number, object)
-    createCouple object = (0, object)
+    createCouple object                              = (0, object)
 
 {- |
 Find the last object (by descending object number) satisfying a predicate.

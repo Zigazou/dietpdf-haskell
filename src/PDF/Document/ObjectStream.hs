@@ -27,13 +27,7 @@ import Control.Monad.State (lift)
 import Control.Monad.Trans.Except (throwE)
 
 import Data.Binary.Parser
-    ( Get
-    , isDigit
-    , many'
-    , parseOnly
-    , skipWhile
-    , takeWhile1
-    )
+  (Get, isDigit, many', parseOnly, skipWhile, takeWhile1)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
@@ -46,16 +40,15 @@ import Data.PDF.PDFDocument (PDFDocument, cFilter)
 import Data.PDF.PDFDocument qualified as D
 import Data.PDF.PDFWork (PDFWork, throwError)
 import Data.UnifiedError
-    ( UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError)
-    )
+  (UnifiedError (NoObjectToEncode, ObjectStreamNotFound, ParseError))
 
 import PDF.Document.PDFObjects (PDFObjects)
 import PDF.Object.Object
-    ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream)
-    , fromPDFObject
-    , isWhiteSpace
-    , mkPDFNumber
-    )
+  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream)
+  , fromPDFObject
+  , isWhiteSpace
+  , mkPDFNumber
+  )
 import PDF.Object.Parser.Container (arrayP, dictionaryP)
 import PDF.Object.Parser.HexString (hexStringP)
 import PDF.Object.Parser.Keyword (keywordP)
@@ -173,7 +166,9 @@ Decodes the entire object stream index into a list of 'NumberOffset' pairs,
 returning parse errors if the index format is invalid.
 -}
 parseObjectNumberOffsets
-  :: Logging m => ByteString -> FallibleT m [NumberOffset]
+  :: Logging m
+  => ByteString
+  -> FallibleT m [NumberOffset]
 parseObjectNumberOffsets indices =
   case parseOnly (many' objectNumberOffsetP) indices of
     Left  err    -> throwE (ParseError ("", 0, err))
@@ -215,9 +210,11 @@ explodeList (objstm@PDFObjectStream{} : xs) = do
   extracted <- getObjectStream objstm >>= lift . extractList
   remains   <- explodeList xs
   return (extracted ++ remains)
+
 explodeList (object : xs) = do
   remains <- explodeList xs
   return (object : remains)
+
 explodeList [] = return []
 
 {-|
@@ -235,12 +232,18 @@ getObjectStream object = do
   case (objectN, objectOffset) of
     (Just (PDFNumber n), Just (PDFNumber offset)) -> do
       unfilteredStream <- unfilter object >>= getStream
-      let (indices, objects) = BS.splitAt (floor offset) unfilteredStream
+
+      let
+        indices :: ByteString
+        objects :: ByteString
+        (indices, objects) = BS.splitAt (floor offset) unfilteredStream
+
       return $ ObjectStream { osCount   = floor n
                             , osOffset  = floor offset
                             , osIndices = indices
                             , osObjects = objects
                             }
+
     _anyOtherValue -> throwError ObjectStreamNotFound
 
 {-|
@@ -266,12 +269,16 @@ explodeObjects objects = mapM explodeObject objects <&> foldr union mempty
   explodeObject :: Logging m => PDFObject -> PDFWork m PDFObjects
   explodeObject objstm@PDFObjectStream{} =
     getObjectStream objstm >>= extractObjects
+
   explodeObject object@(PDFIndirectObject number _ _) =
     return $ singleton number object
+
   explodeObject object@(PDFIndirectObjectWithGraphics number _ _ _) =
     return $ singleton number object
+
   explodeObject object@(PDFIndirectObjectWithStream number _ _ _) =
     return $ singleton number object
+
   explodeObject object = return $ singleton 0 object
 
 {-|
@@ -307,6 +314,7 @@ appendObject objStm (PDFIndirectObject num _ object) = ObjectStream
     , " "
     ]
   newObjects = BS.concat [osObjects objStm, fromPDFObject object, " "]
+
 appendObject objStm _ = objStm
 
 {-|
@@ -348,11 +356,15 @@ makeObjectStreamFromObjects objects num
   | osCount objStm == 0 = throwError NoObjectToEncode
   | otherwise           = return $ PDFObjectStream num 0 dict stream
  where
+  objStm :: ObjectStream
   objStm = insertObjects (cFilter isObjectStreamable objects)
+
   dict :: Dictionary PDFObject
   dict = mkDictionary
     [ ("Type" , PDFName "ObjStm")
     , ("N"    , mkPDFNumber (osCount objStm))
     , ("First", mkPDFNumber (osOffset objStm))
     ]
+
+  stream :: ByteString
   stream = dropLastByte . BS.concat $ [osIndices objStm, osObjects objStm]

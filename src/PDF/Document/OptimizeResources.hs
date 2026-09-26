@@ -18,10 +18,11 @@ import Data.PDF.PDFPartition
   (PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream))
 import Data.PDF.PDFWork
   (PDFWork, modifyIndirectObjects, sayP, setTranslationTable)
-import Data.PDF.Resource (toNameBase)
+import Data.PDF.Resource (Resource, toNameBase)
 import Data.PDF.Settings
   (OptimizeGFX (DoNotOptimizeGFX, OptimizeGFX), Settings (sOptimizeGFX))
 import Data.PDF.WorkData (WorkData (wPDF, wSettings))
+import Data.Set (Set)
 import Data.TranslationTable (getTranslationTable)
 
 import PDF.Document.Resources (getAllResourceNames)
@@ -44,9 +45,11 @@ optimizeResources = do
 
   -- Do not create a translation table if GFX won't be optimized.
   optGFX <- gets (sOptimizeGFX . wSettings)
-  let nameTranslations = case optGFX of
-        OptimizeGFX      -> getTranslationTable toNameBase resourceNames
-        DoNotOptimizeGFX -> Map.empty
+  let
+    nameTranslations :: Map.Map Resource Resource
+    nameTranslations = case optGFX of
+      OptimizeGFX      -> getTranslationTable toNameBase resourceNames
+      DoNotOptimizeGFX -> Map.empty
 
   setTranslationTable nameTranslations
 
@@ -63,7 +66,9 @@ optimizeResources = do
                                 . wPDF
                                 ) >>= containsResources
 
-  let containingResources = wosContainingResources <> wsContainingResources
+  let
+    containingResources :: Set Int
+    containingResources = wosContainingResources <> wsContainingResources
 
   -- Rename resources in all objects.
   modifyIndirectObjects (renameResources nameTranslations containingResources)

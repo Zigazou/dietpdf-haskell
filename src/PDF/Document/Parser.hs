@@ -73,8 +73,13 @@ pdfParse
   -> FallibleT m PDFDocument
 pdfParse source = do
   sayF (Context "pdfParse") "Parsing PDF file"
+
   case parseDetail pdfRawP source of
     Left  err                      -> throwE (ParseError err)
     Right (""    , _     , result) -> return result
     Right (remain, offset, result) -> throwE
-      (ParseError (remain, offset, "Stopped to read at offset " ++ show offset ++ show result))
+      (ParseError ( remain
+                  , offset
+                  , "Stopped to read at offset " ++ show offset ++ show result
+                  )
+      )

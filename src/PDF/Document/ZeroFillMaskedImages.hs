@@ -133,14 +133,23 @@ plainBitmap components object = do
       , [Filter (PDFName "FlateDecode") parms]
       ) -> do
         compressed <- getStream object
-        let bitmapConfig =
-              BitmapConfiguration (round width) components BC8Bits
-            predictor = predictorOf parms
-            expected  = round width * round height * components
+
+        let
+          bitmapConfig :: BitmapConfiguration
+          bitmapConfig = BitmapConfiguration (round width) components BC8Bits
+
+          predictor :: Predictor
+          predictor = predictorOf parms
+
+          expected :: Int
+          expected = round width * round height * components
+
         case decodeRawBitmap bitmapConfig predictor compressed of
           Right raw | BS.length raw == expected ->
             return $ Just (PlainBitmap (round width) (round height) raw)
+
           _anyOtherCase -> return Nothing
+
     _anyOtherCase -> return Nothing
 
 {-|
@@ -168,10 +177,15 @@ zeroFillPixels components image mask =
   writeComponent dst pixel component
     | component >= components = return ()
     | otherwise = do
-        let offset = pixel * components + component
-            value
-              | BS.index mask pixel == 0 = 0
-              | otherwise                = BS.index image offset
+        let
+          offset :: Int
+          offset = pixel * components + component
+
+          value :: Word8
+          value
+            | BS.index mask pixel == 0 = 0
+            | otherwise                = BS.index image offset
+
         pokeByteOff dst offset value
         writeComponent dst pixel (component + 1)
 
@@ -190,7 +204,12 @@ zeroFillMaskedImages object@PDFIndirectObjectWithStream{} = do
   mSMask      <- getValue "SMask" object
   filters     <- getFilters object
 
-  case (mSubtype, mImageMask, mMaskEntry, mSMask, mColorSpace >>= componentsOf) of
+  case ( mSubtype
+       , mImageMask
+       , mMaskEntry
+       , mSMask
+       , mColorSpace >>= componentsOf
+       ) of
     ( Just (PDFName "Image")
       , Nothing
       , Nothing
@@ -198,7 +217,7 @@ zeroFillMaskedImages object@PDFIndirectObjectWithStream{} = do
       , Just components
      ) -> do
         maskObject <- getReference smaskRef
-  
+
         -- CMYK JPEGs need an Adobe-inversion step ImageMagick handles
         -- inconsistently, so only RGB/gray JPEGs take the DCTDecode path.
         case toList filters of
@@ -206,6 +225,7 @@ zeroFillMaskedImages object@PDFIndirectObjectWithStream{} = do
             withMaskJPEG object maskObject
 
           _anyOtherCase -> withMask components object maskObject
+
     _anyOtherCase -> return object
 
 zeroFillMaskedImages object = return object
@@ -229,12 +249,15 @@ withMask components object maskObject = do
     (Just (PDFName "Image"), Nothing, Nothing) -> do
       mImage <- plainBitmap components object
       mMask  <- plainBitmap 1 maskObject
+
       case (mImage, mMask) of
         (Just image, Just mask)
           | pbWidth image == pbWidth mask && pbHeight image == pbHeight mask
           , BS.elem 0 (pbRaw mask)
           -> applyZeroFill components object image mask
+
         _anyOtherCase -> return object
+
     _anyOtherCase -> return object
 
 {-|
@@ -250,14 +273,20 @@ applyZeroFill
   -> PDFWork m PDFObject
 applyZeroFill components object image mask = do
   original <- getStream object
-  let filled = zeroFillPixels components (pbRaw image) (pbRaw mask)
+
+  let
+    filled :: ByteString
+    filled = zeroFillPixels components (pbRaw image) (pbRaw mask)
+
   case Flate.compress filled of
     Right recompressed | BS.length recompressed < BS.length original -> do
       sayComparisonP "Zero-fill masked image"
                      (BS.length original)
                      (BS.length recompressed)
+
       setStream recompressed object
         >>= setFilters (mkFilterList [Filter (PDFName "FlateDecode") PDFNull])
+
     _anyOtherCase -> return object
 
 {-|
@@ -281,12 +310,15 @@ withMaskJPEG object maskObject = do
       , Just (PDFNumber height)
       ) -> do
         mMask <- plainBitmap 1 maskObject
+
         case mMask of
           Just mask
             | pbWidth mask == round width && pbHeight mask == round height
             , BS.elem 0 (pbRaw mask)
             -> applyZeroFillJPEG (round width) (round height) object mask
+
           _anyOtherCase -> return object
+
     _anyOtherCase -> return object
 
 {-|
@@ -306,6 +338,7 @@ applyZeroFillJPEG width height object mask = do
       sayComparisonP "Zero-fill masked JPEG image"
                      (BS.length original)
                      (BS.length recompressed)
+
       setStream recompressed object
 
     Right _tooLargeOrEqual -> return object

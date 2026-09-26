@@ -14,15 +14,14 @@ import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
 import Data.PDF.ObjectCategory
-    ( ObjectCategory (Bitmap, File, Font, Other, Vector, XML)
-    )
+  (ObjectCategory (Bitmap, File, Font, Other, Vector, XML))
 import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.PDFObject (PDFObject)
 import Data.PDF.PDFPartition (PDFPartition (ppObjectsWithStream))
 import Data.PDF.PDFWork (PDFWork)
 import Data.PDF.Statistics
-    ( Statistics (bitmapCount, bitmapTotal, fileCount, fileTotal, fontCount, fontTotal, otherTotal, vectorCount, vectorTotal, xmlCount, xmlTotal)
-    )
+  ( Statistics (bitmapCount, bitmapTotal, fileCount, fileTotal, fontCount, fontTotal, otherTotal, vectorCount, vectorTotal, xmlCount, xmlTotal)
+  )
 
 import PDF.Document.PDFPartition (partitionDocument)
 import PDF.Object.State (getStream)
@@ -85,5 +84,8 @@ stat
   -> Statistics
   -> PDFWork IO Statistics
 stat objects statistics = do
-  let partition = partitionDocument objects
+  let
+    partition :: PDFPartition
+    partition = partitionDocument objects
+
   foldM updateStatistics statistics (ppObjectsWithStream partition)

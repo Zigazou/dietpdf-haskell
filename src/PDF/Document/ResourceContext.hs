@@ -15,9 +15,13 @@ import Data.IntSet qualified as IS
 import Data.Kind (Type)
 import Data.Map.Strict qualified as Map
 import Data.PDF.PDFObject
-  (PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFReference))
+  ( PDFObject (PDFArray, PDFDictionary, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFReference)
+  )
+
 import PDF.Object.Object.Properties (getValueForKey)
+
 import Util.Dictionary (Dictionary)
+import Data.IntSet (IntSet)
 
 -- | Nothing means unresolved or conflicting owners. Absence means no known owner.
 type StreamResources :: Type
@@ -75,7 +79,7 @@ buildStreamResources objects = fst $ foldl' visitPage (IM.empty, IM.empty) objec
  where
   dictionary entry = case entry of
     Just (PDFDictionary entries) -> Just entries
-    _ -> Nothing
+    _                            -> Nothing
 
   visitPage state page
     | getValueForKey "Type" page == Just (PDFName "Page") =
@@ -85,39 +89,73 @@ buildStreamResources objects = fst $ foldl' visitPage (IM.empty, IM.empty) objec
         in forms resources withContents
     | otherwise = state
 
-  record :: Int -> Maybe (Dictionary PDFObject) -> StreamResources -> StreamResources
-  record number resources = IM.insertWith agree number resources
-  agree :: Maybe (Dictionary PDFObject) -> Maybe (Dictionary PDFObject)
-        -> Maybe (Dictionary PDFObject)
+  record
+    :: Int
+    -> Maybe (Dictionary PDFObject)
+    -> StreamResources
+    -> StreamResources
+  record = IM.insertWith agree
+
+  agree
+    :: Maybe (Dictionary PDFObject)
+    -> Maybe (Dictionary PDFObject)
+    -> Maybe (Dictionary PDFObject)
   agree a b | a == b = a
             | otherwise = Nothing
 
+  contents
+    :: IntSet
+    -> Maybe (Dictionary PDFObject)
+    -> (StreamResources, IntMap [Maybe (Dictionary PDFObject)])
+    -> PDFObject
+    -> (StreamResources, IntMap [Maybe (Dictionary PDFObject)])
   contents seen resources state@(result, visited) entry = case entry of
     PDFReference number _
       | IS.member number seen -> state
-      | otherwise -> maybe state (contents (IS.insert number seen) resources state)
-                                 (resolve objects entry)
+      | otherwise -> maybe state
+                           (contents (IS.insert number seen) resources state)
+                           (resolve objects entry)
+
     PDFArray entries -> foldl' (contents seen resources) state entries
+
     PDFIndirectObjectWithStream number _ _ _ ->
       (record number resources result, visited)
+
     _ -> state
 
+  forms
+    :: Maybe (Dictionary PDFObject)
+    -> (StreamResources, IntMap [Maybe (Dictionary PDFObject)])
+    -> (StreamResources, IntMap [Maybe (Dictionary PDFObject)])
   forms Nothing state = state
   forms (Just resources) state =
     case Map.lookup "XObject" resources >>= resolve objects of
-      Just (PDFDictionary entries) -> foldl' (form (Just resources)) state entries
+      Just (PDFDictionary entries) -> foldl' (form (Just resources))
+                                             state
+                                             entries
+
       _ -> state
 
+  form
+    :: Maybe (Dictionary PDFObject)
+    -> (StreamResources, IntMap [Maybe (Dictionary PDFObject)])
+    -> PDFObject
+    -> (StreamResources, IntMap [Maybe (Dictionary PDFObject)])
   form caller state@(result, visited) entry = case resolve objects entry of
     Just object@(PDFIndirectObjectWithStream number _ _ _)
       | getValueForKey "Subtype" object == Just (PDFName "Form") ->
-          let resources = case getValueForKey "Resources" object of
-                Nothing -> caller
-                Just own -> dictionary (resolve objects own)
-              previous = IM.findWithDefault [] number visited
-          in if resources `elem` previous
-               then state
-               else forms resources
-                      (record number resources result,
-                       IM.insert number (resources : previous) visited)
+          let
+            resources :: Maybe (Dictionary PDFObject)
+            resources = case getValueForKey "Resources" object of
+              Nothing  -> caller
+              Just own -> dictionary (resolve objects own)
+
+            previous :: [Maybe (Dictionary PDFObject)]
+            previous = IM.findWithDefault [] number visited
+          in
+            if resources `elem` previous
+              then state
+              else forms resources
+                    (record number resources result,
+                      IM.insert number (resources : previous) visited)
     _ -> state

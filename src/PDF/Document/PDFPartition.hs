@@ -65,32 +65,44 @@ removeUnused (PDFPartition objectsWithStream objectsWithoutStream heads trailers
                                 <> deepFind isReference uTrailers
                                 )
 
+      allObjects :: [PDFObject]
       allObjects = concatMap IM.elems
-        [uObjectsWithStream, uObjectsWithoutStream,
-         objectsWithStream, objectsWithoutStream]
+        [ uObjectsWithStream
+        , uObjectsWithoutStream
+        , objectsWithStream
+        , objectsWithoutStream
+        ]
 
       references = findUsedReferences allObjects startReferences
 
     sayP "Removing unused objects"
 
     return $ PDFPartition
-      { ppObjectsWithStream    = IM.filter (used references) objectsWithStream
-      , ppObjectsWithoutStream = IM.filter (used references) objectsWithoutStream
-      , ppHeads                = heads
-      , ppTrailers             = trailers
+      { ppObjectsWithStream =
+          IM.filter (used references) objectsWithStream
+      , ppObjectsWithoutStream =
+          IM.filter (used references) objectsWithoutStream
+      , ppHeads = heads
+      , ppTrailers = trailers
       }
  where
   -- Follow outgoing edges only from reachable objects. References inside an
   -- unreachable resource must not keep that resource's dependencies alive.
   findUsedReferences :: [PDFObject] -> Set PDFObject -> Set PDFObject
   findUsedReferences objects refs =
-    let reachable = filter (isReferenced refs) objects
-        outgoing = Set.fromList
-                 . toList
-                 . deepFind isReference
-                 . fromList
-                 $ reachable
-        expanded = refs <> outgoing
+    let
+      reachable :: [PDFObject]
+      reachable = filter (isReferenced refs) objects
+
+      outgoing :: Set PDFObject
+      outgoing = Set.fromList
+               . toList
+               . deepFind isReference
+               . fromList
+               $ reachable
+
+      expanded :: Set PDFObject
+      expanded = refs <> outgoing
     in
       if expanded == refs
         then refs

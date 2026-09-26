@@ -14,8 +14,8 @@ import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
 import Data.Logging (Logging)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFArray, PDFIndirectObject, PDFIndirectObjectWithStream, PDFNumber, PDFReference)
-    )
+  ( PDFObject (PDFArray, PDFIndirectObject, PDFIndirectObjectWithStream, PDFNumber, PDFReference)
+  )
 import Data.PDF.PDFWork (PDFWork, getReference)
 
 import PDF.Processing.Unfilter (unfilter)

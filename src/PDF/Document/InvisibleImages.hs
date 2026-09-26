@@ -22,7 +22,6 @@ import Data.PDF.Settings (OptimizeGFX (DoNotOptimizeGFX), sOptimizeGFX)
 import Data.PDF.WorkData (wPDF, wSettings)
 
 import PDF.Document.ResourceContext (inherited, resolve, value)
-
 import PDF.Graphics.Geometry
   (Matrix, Rect (Rect), identity, intersection, matrixOf, transform)
 import PDF.Graphics.InvisibleImages
@@ -48,9 +47,14 @@ removeInvisiblePageImages
 removeInvisiblePageImages page content = do
   settings <- gets wSettings
   pdf <- gets wPDF
-  let objects = ppObjectsWithoutStream pdf <> ppObjectsWithStream pdf
+
+  let
+    objects :: IntMap PDFObject
+    objects = ppObjectsWithoutStream pdf <> ppObjectsWithStream pdf
+
   return $ case sOptimizeGFX settings of
     DoNotOptimizeGFX -> content
+
     _ -> fromMaybe content $ do
       box <- pageViewport objects page
       optimizeContent (optimizePainting objects page box) content
@@ -69,6 +73,7 @@ rectangle (PDFArray values) = do
   [a, b, c, d] <- traverse numeric (toList values)
   guard (a < c && b < d)
   return (Rect a b c d)
+
 rectangle _ = Nothing
 
 {- | Compute the effective page viewport as the intersection of the media box
@@ -169,6 +174,7 @@ The default matrix is the identity if no explicit Matrix entry exists.
 objectMatrix :: IntMap PDFObject -> PDFObject -> Maybe Matrix
 objectMatrix objects object = case getValueForKey "Matrix" object of
   Nothing -> Just identity
+
   Just entry -> do
     PDFArray entries <- resolve objects entry
     traverse (resolve objects >=> numeric) (toList entries) >>= matrixOf
@@ -179,12 +185,15 @@ objectBounds :: IntMap PDFObject -> PDFObject -> Maybe Rect
 objectBounds objects entry = do
   object <- resolve objects entry
   subtype <- value objects "Subtype" object
+
   case subtype of
     PDFName "Image" -> Just (Rect 0 0 1 1)
+
     PDFName "Form" -> do
       box <- value objects "BBox" object >>= rectangle
       matrix <- objectMatrix objects object
       return (transform matrix box)
+
     _ -> Nothing
 
 {- | Apply the page-scoped painting optimizations in sequence.
