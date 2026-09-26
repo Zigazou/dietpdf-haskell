@@ -13,7 +13,7 @@ import Data.Foldable qualified as Foldable
 import Data.PDF.Command (Command (cOperator, cParameters), mkCommand)
 import Data.PDF.GFXObject
   ( GFXObject (GFXArray, GFXNumber)
-  , GSOperator (GSBeginInlineImage, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineDashPattern, GSSetLineWidth, GSSetTextFont, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing)
+  , GSOperator (GSBeginInlineImage, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineDashPattern, GSSetLineWidth, GSSetTextFont, GSSetTextRise, GSNLShowTextWithSpacing, GSSetParameters, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing)
   )
 import Data.PDF.Program (Program)
 import Data.Sequence (Seq ((:<|)), (<|), (|>))
@@ -21,8 +21,8 @@ import Data.Sequence (Seq ((:<|)), (<|), (|>))
 {-|
 Check if a program can be safely scaled.
 
-Returns 'False' if the program paints XObjects, shading or inline images,
-as these should not be scaled. Returns 'True' otherwise.
+Returns 'False' if the program paints XObjects, shading or inline images, as
+these should not be scaled. Returns 'True' otherwise.
 
 Painting operators that prevent scaling:
 
@@ -30,16 +30,19 @@ Painting operators that prevent scaling:
 - 'GSPaintShapeColourShading' (@sh@): Paints a shading pattern
 - 'GSBeginInlineImage' (@BI ... ID ... EI@): Paints an inline image
 
-These operators paint in their own coordinate systems. In particular, inline
-images occupy a unit square: scaling coordinate operands does not compensate
-their size for the prepended inverse scale.
+ExtGState may set a font size or line width outside the stream operands and also
+prevents scaling.
+
+These painting operators paint in their own coordinate systems. In particular,
+inline images occupy a unit square: scaling coordinate operands does not
+compensate their size for the prepended inverse scale.
 
 __Parameters:__
 
 - @program@: The PDF graphics program to check
 
-__Returns:__ 'True' if the program can be scaled, 'False' if it contains
-one of these painting operators.
+__Returns:__ 'True' if the program can be scaled, 'False' if it contains one of
+these painting operators.
 -}
 isScaleOptimizable :: Program -> Bool
 isScaleOptimizable = not . Foldable.any hasPaintObjectOperator
@@ -49,6 +52,7 @@ isScaleOptimizable = not . Foldable.any hasPaintObjectOperator
       GSPaintXObject            -> True
       GSPaintShapeColourShading -> True
       GSBeginInlineImage        -> True
+      GSSetParameters           -> True
       _anyOtherOperator         -> False
 
 {-|
@@ -128,10 +132,12 @@ optimizeScale scale program
       GSSetTextMatrix    -> scaleCTMParams cmd
 
       -- Text commands - scale all parameters
-      GSSetTextFont         -> scaleAllParams cmd
-      GSSetWordSpacing      -> scaleAllParams cmd
-      GSSetCharacterSpacing -> scaleAllParams cmd
-      GSSetTextLeading      -> scaleAllParams cmd
+      GSSetTextFont           -> scaleAllParams cmd
+      GSSetWordSpacing        -> scaleAllParams cmd
+      GSSetCharacterSpacing   -> scaleAllParams cmd
+      GSSetTextLeading        -> scaleAllParams cmd
+      GSSetTextRise           -> scaleAllParams cmd
+      GSNLShowTextWithSpacing -> scaleAllParams cmd
 
       -- Line style - scale all parameters
       GSSetLineWidth       -> scaleAllParams cmd

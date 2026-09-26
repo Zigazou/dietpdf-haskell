@@ -17,6 +17,7 @@ import Data.PDF.GFXObject
   ( GFXObject (GFXArray, GFXHexString, GFXName, GFXNumber, GFXString)
   , GSOperator (GSBeginText, GSEndText, GSRestoreGS, GSSaveGS, GSSetCharacterSpacing, GSSetHorizontalScaling, GSSetTextFont, GSSetTextRise, GSSetWordSpacing, GSShowManyText, GSShowText)
   )
+import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.GraphicsState (gsTextState)
 import Data.PDF.InterpreterAction
   (InterpreterAction (DeleteCommand, KeepCommand), replaceCommandWith)
@@ -112,7 +113,10 @@ optimizeTextCommand command _rest = case (operator, parameters) of
         return DeleteCommand
       else do
         setFontS fontName fontSize
-        replaceCommandWith command . optimizeParameters command <$> usefulTextPrecisionS
+
+        replaceCommandWith command
+          . optimizeParameters command
+          <$> usefulTextPrecisionS
 
   -- Remove ShowManyText when there is no text.
   (GSShowManyText, GFXArray Empty :<| Empty) -> return DeleteCommand
@@ -138,21 +142,36 @@ optimizeTextCommand command _rest = case (operator, parameters) of
 
   -- Set text rise
   (GSSetTextRise, GFXNumber rise :<| Empty) ->
-    deleteIfNoChange command rise tsRise setTextRiseS
+    deleteIfNoChange command
+                     rise
+                     tsRise
+                     setTextRiseS
 
   -- Set character spacing
   (GSSetCharacterSpacing, GFXNumber newCharacterSpacing :<| Empty) ->
-    deleteIfNoChange command newCharacterSpacing tsCharacterSpacing setCharacterSpacingS
+    deleteIfNoChange command
+                     newCharacterSpacing
+                     tsCharacterSpacing
+                     setCharacterSpacingS
 
   -- Set word spacing
   (GSSetWordSpacing, GFXNumber newWordSpacing :<| Empty) ->
-    deleteIfNoChange command newWordSpacing tsWordSpacing setWordSpacingS
+    deleteIfNoChange command
+                     newWordSpacing
+                     tsWordSpacing
+                     setWordSpacingS
 
   -- Set text horizontal scaling
   (GSSetHorizontalScaling, GFXNumber scaling :<| Empty) ->
-    deleteIfNoChange command scaling tsHorizontalScaling setHorizontalScalingS
+    deleteIfNoChange command
+                     scaling
+                     ((100 *) . tsHorizontalScaling)
+                     setHorizontalScalingS
 
   _anyOtherCommand -> return KeepCommand
  where
-  operator   = cOperator command
+  operator :: GSOperator
+  operator = cOperator command
+
+  parameters :: GFXObjects
   parameters = cParameters command

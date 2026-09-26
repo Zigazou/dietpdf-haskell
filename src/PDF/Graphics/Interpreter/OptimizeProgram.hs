@@ -24,11 +24,14 @@ The optimization pipeline includes:
 
 Optimizations are applied iteratively until convergence (no further changes).
 -}
-module PDF.Graphics.Interpreter.OptimizeProgram ( optimizeProgram )
+module PDF.Graphics.Interpreter.OptimizeProgram ( optimizeProgram, optimizeProgramWithTextResources )
 where
 
 import Control.Monad.State (State, evalState)
 
+import Data.Kind (Type)
+import Data.PDF.Command (Command (cOperator))
+import Data.PDF.GFXObject (GSOperator (GSSetParameters, GSSaveGS, GSRestoreGS))
 import Data.PDF.InterpreterAction
   ( InterpreterAction (DeleteCommand, KeepCommand, ReplaceAndDeleteNextCommand, ReplaceCommand, SwitchCommand)
   )
@@ -42,7 +45,7 @@ import Data.PDF.Program (Program, programComputedSize)
 import Data.PDF.WorkData (WorkData)
 import Data.Sequence (Seq (Empty, (:<|)), (<|), (|>))
 
-import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand)
+import PDF.Graphics.Interpreter.OptimizeCommand (optimizeCommand, optimizeCommandPreservingText)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeClipPaths
   (optimizeClipPaths)
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeDuplicates
@@ -58,7 +61,17 @@ import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeRectangle
 import PDF.Graphics.Interpreter.OptimizeProgram.OptimizeSaveRestore
   (optimizeSaveRestore)
 
+import PDF.Graphics.TextMetrics (TextResources)
+import PDF.Graphics.Interpreter.OptimizeProgram.CanonicalizeTextMatrices
+  (canonicalizeTextMatrices)
+
 import Util.Transform (untilNoImprovement)
+
+type CommandOptimizer :: Type
+type CommandOptimizer
+  = Command
+  -> Program
+  -> State InterpreterState InterpreterAction
 
 {-|
 Apply command-level optimizations to a program.
@@ -86,45 +99,49 @@ on the full input program, so that color commands consumed here keep the
 remaining-color-op counters in sync (see 'optimizeCommandsFromStart').
 -}
 optimizeCommands
-  :: Program
+  :: CommandOptimizer
+  -> Program
   -> Program
   -> State InterpreterState Program
-optimizeCommands program Empty = return program
-optimizeCommands program (command :<| rest) =
-  optimizeCommand command rest >>= \case
+optimizeCommands _optimizer program Empty = return program
+optimizeCommands optimizer program (command :<| rest) =
+  optimizer command rest >>= \case
     KeepCommand -> do
       consumeColorOpS command
-      optimizeCommands (program |> command) rest
+      optimizeCommands optimizer (program |> command) rest
 
     DeleteCommand -> do
       consumeColorOpS command
-      optimizeCommands program rest
+      optimizeCommands optimizer program rest
 
     ReplaceCommand optimizedCommand' -> do
       consumeColorOpS command
-      optimizeCommands (program |> optimizedCommand') rest
+      optimizeCommands optimizer (program |> optimizedCommand') rest
 
     ReplaceAndDeleteNextCommand optimizedCommand' -> case rest of
       Empty -> return program
       (commandToDelete :<| rest') -> do
         consumeColorOpS command
         consumeColorOpS commandToDelete
-        optimizeCommands (program |> optimizedCommand') rest'
+        optimizeCommands optimizer (program |> optimizedCommand') rest'
 
     SwitchCommand -> case rest of
       Empty -> return program
       (nextCommand :<| rest') ->
-        optimizeCommands program (nextCommand <| command <| rest')
+        optimizeCommands optimizer program (nextCommand <| command <| rest')
 
 {-|
 Run 'optimizeCommands' over the whole @program@, first initializing the
 remaining-color-op counters used by 'PDF.Graphics.Interpreter.OptimizeCommand.
 OptimizeColorCommand.optimizeColorCommand'.
 -}
-optimizeCommandsFromStart :: Program -> State InterpreterState Program
-optimizeCommandsFromStart program = do
+optimizeCommandsFromStart
+  :: CommandOptimizer
+  -> Program
+  -> State InterpreterState Program
+optimizeCommandsFromStart optimizer program = do
   initRemainingColorOpsS program
-  optimizeCommands mempty program
+  optimizeCommands optimizer mempty program
 
 {-|
 Perform one complete optimization pass over a program.
@@ -156,10 +173,10 @@ loop; ExtGState factorization runs after convergence.
 program@ the graphics program to optimize in one pass @return@ the result after
 all optimizations in a single pass
 -}
-optimizeProgramOnePass :: WorkData -> Program -> Program
-optimizeProgramOnePass workData
+optimizeProgramOnePass :: CommandOptimizer -> WorkData -> Program -> Program
+optimizeProgramOnePass optimizer workData
   = ( flip evalState defaultInterpreterState { iWorkData = workData }
-    . optimizeCommandsFromStart
+    . optimizeCommandsFromStart optimizer
     )
   . optimizeMarkedContent
   . optimizeMergeableTextCommands
@@ -187,12 +204,52 @@ unchanged to preserve the document's semantics.
 program@ the graphics program to optimize @return@ the fully optimized program
 -}
 optimizeProgram :: WorkData -> Program -> Program
-optimizeProgram workData program =
-  let optimized = untilNoImprovement 4
-                                     programComputedSize
-                                     (optimizeProgramOnePass workData)
-                                     program
+optimizeProgram = optimizeProgramUsing optimizeCommand
+
+optimizeProgramUsing :: CommandOptimizer -> WorkData -> Program -> Program
+optimizeProgramUsing optimizer workData program =
+  let
+    optimized :: Program
+    optimized = untilNoImprovement
+                  4
+                  programComputedSize
+                  (optimizeProgramOnePass optimizer workData)
+                  program
   in
     if optimized == mempty
       then program
       else optimized
+
+-- | Resource-aware positioning runs after the approximate precision passes. The
+-- context is decoded once by the caller and reused across scale trials. With
+-- inherited parameters or graphics-state boundaries, bypass the legacy text
+-- defaults entirely. The exact pass handles those boundaries conservatively.
+optimizeProgramWithTextResources
+  :: TextResources
+  -> Bool
+  -> WorkData
+  -> Program
+  -> Program
+optimizeProgramWithTextResources resources inherited workData program =
+  let
+    preserveText :: Bool
+    preserveText = inherited || any
+        ((`elem` [GSSetParameters, GSSaveGS, GSRestoreGS]) . cOperator) program
+
+    optimizer :: CommandOptimizer
+    optimizer = if preserveText
+                  then optimizeCommandPreservingText
+                  else optimizeCommand
+
+    textOptimized :: Program
+    textOptimized =
+      untilNoImprovement
+        1
+        programComputedSize
+        ( optimizeMergeableTextCommands
+        . canonicalizeTextMatrices resources inherited
+        )
+        (optimizeProgramUsing optimizer workData program)
+
+  in
+    optimizeProgramUsing optimizer workData textOptimized

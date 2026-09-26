@@ -57,8 +57,9 @@ import External.TtfAutoHint (ttfAutoHintOptimize)
 import Font.TrueType.FontDirectory (fromFontDirectory, optimizeFontDirectory)
 import Font.TrueType.Parser.Font (ttfParse)
 
-import PDF.Graphics.Optimize (optimizeGFX)
+import PDF.Graphics.Optimize (optimizeGFXWithTextState)
 import PDF.Object.Container (getFilters)
+import PDF.Object.Object.Properties (getValueForKey)
 import PDF.Object.State (getStream, getValue, setStream, setStream1, setValue)
 import PDF.Object.String (optimizeString)
 import PDF.Processing.Filter (filterOptimize)
@@ -69,6 +70,7 @@ import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 import Util.ByteString
   (containsOnlyGray, convertToGray, isNearlyGray, optimizeParity)
 import Util.Dictionary (Dictionary)
+import Data.Maybe (isNothing)
 
 {-|
 Extract width and color component count from a PDF image stream object.
@@ -299,7 +301,10 @@ applicable or fails).
 __Side effects:__ External processes may be invoked (jpegtran, ttfAutoHint), and
 size comparisons are logged.
 -}
-streamOptimize :: Maybe (Dictionary PDFObject) -> PDFObject -> PDFWork IO PDFObject
+streamOptimize
+  :: Maybe (Dictionary PDFObject)
+  -> PDFObject
+  -> PDFWork IO PDFObject
 streamOptimize resources object = do
   whatOptimizationFor object >>= \case
     XMLOptimization -> do
@@ -309,7 +314,16 @@ streamOptimize resources object = do
       setStream optimizedStream object
 
     GfxOptimization -> do
-      getStream object >>= optimizeGFX resources >>= flip setStream object
+      -- Only a mapped page content stream has the page's initial defaults.
+      -- Forms inherit text parameters even when they own their Resources.
+      let
+        inherited :: Bool
+        inherited = isNothing resources
+                 || getValueForKey "Subtype" object == Just (PDFName "Form")
+
+      getStream object
+        >>= optimizeGFXWithTextState inherited resources
+        >>= flip setStream object
 
     JPGOptimization -> do
       grayObject      <- optimizeJpegColorSpace object
@@ -434,16 +448,17 @@ If the PDF object is not elligible to optimization or if optimization is
 ineffective, it is returned as is.
 -}
 optimize :: Maybe (Dictionary PDFObject) -> PDFObject -> PDFWork IO PDFObject
-optimize resources object = withContext (ctx ("optimize" :: String) <> ctx object) $ do
-  objectCanBeOptimized <- optimizable object
+optimize resources object =
+  withContext (ctx ("optimize" :: String) <> ctx object) $ do
+    objectCanBeOptimized <- optimizable object
 
-  if objectCanBeOptimized
-    then
-      tryP (refilter resources object) >>= \case
-        Right optimizedObject -> return optimizedObject
-        Left  theError        -> do
-          sayErrorP "cannot optimize" theError
-          return object
-    else do
-      sayP "ignored"
-      return object
+    if objectCanBeOptimized
+      then
+        tryP (refilter resources object) >>= \case
+          Right optimizedObject -> return optimizedObject
+          Left  theError        -> do
+            sayErrorP "cannot optimize" theError
+            return object
+      else do
+        sayP "ignored"
+        return object

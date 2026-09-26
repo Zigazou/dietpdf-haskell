@@ -20,11 +20,14 @@ The optimization pipeline includes:
 -}
 module PDF.Graphics.Interpreter.OptimizeCommand
   ( optimizeCommand
+  , optimizeCommandPreservingText
   ) where
 
 import Control.Monad.State (State)
 
-import Data.PDF.Command (Command)
+import Data.PDF.Command (Command (cOperator))
+import Data.PDF.OperatorCategory
+  (OperatorCategory (TextPositioningOperator, TextShowingOperator, TextStateOperator), category)
 import Data.PDF.InterpreterAction (InterpreterAction (KeepCommand))
 import Data.PDF.InterpreterState (InterpreterState)
 import Data.PDF.Program (Program)
@@ -88,9 +91,44 @@ optimizeCommand
   :: Command
   -> Program
   -> State InterpreterState InterpreterAction
-optimizeCommand command rest =
-  go optimizations
+optimizeCommand = runOptimizations optimizations
+
+-- | Inherited or externally supplied text parameters are not represented by
+-- the approximate interpreter's defaults. Leave text for the exact final pass;
+-- retain the existing graphics-only optimizations and q/Q state handling.
+optimizeCommandPreservingText
+  :: Command
+  -> Program
+  -> State InterpreterState InterpreterAction
+optimizeCommandPreservingText command rest
+  | category (cOperator command) `elem`
+      [ TextPositioningOperator
+      , TextShowingOperator
+      , TextStateOperator
+      ]
+  = pure KeepCommand
+
+  | otherwise
+  = runOptimizations
+      [ optimizeOrder
+      , optimizeStateCommand
+      , optimizeGraphicsMatrix
+      , optimizeDrawCommand
+      , optimizeColorCommand
+      , optimizeGeneric
+      ] command rest
+
+runOptimizations
+  :: [Command -> Program -> State InterpreterState InterpreterAction]
+  -> Command
+  -> Program
+  -> State InterpreterState InterpreterAction
+runOptimizations passes command rest =
+  go passes
  where
+  go
+    :: [Command -> Program -> State InterpreterState InterpreterAction]
+    -> State InterpreterState InterpreterAction
   go [] = return KeepCommand
   go (optimization : remaining) =
     optimization command rest >>= \case

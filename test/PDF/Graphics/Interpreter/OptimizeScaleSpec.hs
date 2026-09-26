@@ -113,6 +113,15 @@ isScaleOptimizableExamples =
 
 spec :: Spec
 spec = do
+  describe "text state scaling" $ do
+    it "does not rescale state supplied by an ExtGState dictionary" $ do
+      let program = either (error . show) parseProgram $ gfxParse "BT /GS gs (A) Tj ET"
+      isScaleOptimizable program `shouldBe` False
+      optimizeScale 100 program `shouldBe` program
+    it "rescales quote spacing and text rise along with font size" $ do
+      let parse input = either (error . show) parseProgram (gfxParse input)
+      optimizeScale 10 (parse "BT /F 10 Tf 2 Ts 3 4 (A) \" ET")
+        `shouldBe` parse "q .1 0 0 .1 0 0 cm BT /F 100 Tf 20 Ts 30 40 (A) \" ET Q"
   describe "inline image scaling" $
     it "preserves image size and placement at every candidate scale" $ do
       let program = either (error . show) parseProgram $ gfxParse
