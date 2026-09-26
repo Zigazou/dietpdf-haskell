@@ -32,7 +32,7 @@ import Data.Sequence qualified as SQ
 import PDF.Graphics.Interpreter.OptimizeGState (gStateCost, planGState)
 import PDF.Graphics.Interpreter.OptimizeProgram
   (optimizeProgramWithTextResources)
-import PDF.Graphics.Interpreter.OptimizeScale (optimizeScale)
+import PDF.Graphics.Interpreter.OptimizeScale (buildScaleResources, optimizeScale)
 import PDF.Graphics.Interpreter.RenameResources (renameResources)
 import PDF.Graphics.Parser.Stream (gfxParse)
 import PDF.Graphics.TextMetrics (buildTextResources, TextResources)
@@ -110,6 +110,11 @@ optimizeGFXWithTextState inherited resources stream = do
                     (ppObjectsWithoutStream pdf <> ppObjectsWithStream pdf)
                     resources
 
+                scaleResources :: Dictionary Bool
+                scaleResources = buildScaleResources
+                  (ppObjectsWithoutStream pdf <> ppObjectsWithStream pdf)
+                  resources
+
                 optimizeAtScale :: Double -> (Int, (Program, WorkData))
                 optimizeAtScale scale =
                   let
@@ -118,7 +123,7 @@ optimizeGFXWithTextState inherited resources stream = do
                                   textResources
                                   inherited
                                   workData
-                                  (optimizeScale scale program)
+                                  (optimizeScale scaleResources scale program)
 
                     factorized :: Program
                     candidateWork :: WorkData

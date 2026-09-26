@@ -6,23 +6,60 @@ coordinate parameters and prepending a transformation matrix command.
 -}
 module PDF.Graphics.Interpreter.OptimizeScale
   ( optimizeScale
+  , buildScaleResources
   , isScaleOptimizable
   ) where
 
+import Data.ByteString (ByteString)
 import Data.Foldable qualified as Foldable
+import Data.IntMap.Strict (IntMap)
+import Data.Map.Strict qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.PDF.Command (Command (cOperator, cParameters), mkCommand)
 import Data.PDF.GFXObject
-  ( GFXObject (GFXArray, GFXNumber)
+  ( GFXObject (GFXArray, GFXName, GFXNumber)
   , GSOperator (GSBeginInlineImage, GSCubicBezierCurve, GSCubicBezierCurve1To, GSCubicBezierCurve2To, GSLineTo, GSMoveTo, GSMoveToNextLine, GSMoveToNextLineLP, GSPaintShapeColourShading, GSPaintXObject, GSRectangle, GSRestoreGS, GSSaveGS, GSSetCTM, GSSetCharacterSpacing, GSSetLineDashPattern, GSSetLineWidth, GSSetTextFont, GSSetTextRise, GSNLShowTextWithSpacing, GSSetParameters, GSSetTextLeading, GSSetTextMatrix, GSSetWordSpacing)
   )
+import Data.PDF.PDFObject (PDFObject (PDFDictionary, PDFName))
 import Data.PDF.Program (Program)
-import Data.Sequence (Seq ((:<|)), (<|), (|>))
+import Data.Sequence (Seq (Empty, (:<|)), (<|), (|>))
+
+import PDF.Document.ResourceContext (resolve)
+import Util.Dictionary (Dictionary)
+
+-- | Classify the effective ExtGState resources once before scale trials.
+-- Resource names are scoped to their owning page or Form, not the document.
+-- Unknown dictionaries and entries remain unsafe. Length-valued parameters
+-- (Font, LW and D) cannot be compensated by rewriting stream operands;
+-- soft masks also capture
+-- the current coordinate system.
+buildScaleResources
+  :: IntMap PDFObject
+  -> Maybe (Dictionary PDFObject)
+  -> Dictionary Bool
+buildScaleResources objects resources = fromMaybe mempty $ do
+  dictionary <- resources
+  PDFDictionary states <- Map.lookup "ExtGState" dictionary >>= resolve objects
+  pure (Map.map safeState states)
+ where
+  safeState :: PDFObject -> Bool
+  safeState entry = case resolve objects entry of
+    Just (PDFDictionary dictionary) -> all safeEntry (Map.toList dictionary)
+    _ -> False
+
+  safeEntry :: (ByteString, PDFObject) -> Bool
+  safeEntry ("SMask", entry) = resolve objects entry == Just (PDFName "None")
+  safeEntry (key, _) = key `elem`
+    [ "Type", "LC", "LJ", "ML", "RI", "OP", "op", "OPM"
+    , "BG", "BG2", "UCR", "UCR2", "TR", "TR2", "HT", "FL", "SM"
+    , "SA", "BM", "CA", "ca", "AIS", "TK"
+    ]
 
 {-|
 Check if a program can be safely scaled.
 
 Returns 'False' if the program paints XObjects, shading or inline images, as
-these should not be scaled. Returns 'True' otherwise.
+these should not be scaled, or uses an unsafe or unknown ExtGState.
 
 Painting operators that prevent scaling:
 
@@ -30,8 +67,7 @@ Painting operators that prevent scaling:
 - 'GSPaintShapeColourShading' (@sh@): Paints a shading pattern
 - 'GSBeginInlineImage' (@BI ... ID ... EI@): Paints an inline image
 
-ExtGState may set a font size or line width outside the stream operands and also
-prevents scaling.
+ExtGState resources are accepted only when their classification is safe.
 
 These painting operators paint in their own coordinate systems. In particular,
 inline images occupy a unit square: scaling coordinate operands does not
@@ -39,20 +75,22 @@ compensate their size for the prepended inverse scale.
 
 __Parameters:__
 
+- @states@: ExtGState compatibility by resource name
 - @program@: The PDF graphics program to check
 
-__Returns:__ 'True' if the program can be scaled, 'False' if it contains one of
-these painting operators.
+__Returns:__ 'True' if the program can be scaled with the supplied resources.
 -}
-isScaleOptimizable :: Program -> Bool
-isScaleOptimizable = not . Foldable.any hasPaintObjectOperator
+isScaleOptimizable :: Dictionary Bool -> Program -> Bool
+isScaleOptimizable states = not . Foldable.any preventsScaling
   where
-    hasPaintObjectOperator :: Command -> Bool
-    hasPaintObjectOperator cmd = case cOperator cmd of
+    preventsScaling :: Command -> Bool
+    preventsScaling cmd = case cOperator cmd of
       GSPaintXObject            -> True
       GSPaintShapeColourShading -> True
       GSBeginInlineImage        -> True
-      GSSetParameters           -> True
+      GSSetParameters           -> case cParameters cmd of
+        GFXName name :<| Empty -> not (Map.findWithDefault False name states)
+        _ -> True
       _anyOtherOperator         -> False
 
 {-|
@@ -81,6 +119,7 @@ __Affected commands (specific parameters scaled):__
 
 __Parameters:__
 
+- @states@: ExtGState compatibility by resource name
 - @scale@: The scaling factor to apply to coordinates
 - @program@: The PDF graphics program to scale
 
@@ -90,11 +129,11 @@ coordinate parameters scaled.
 __Note:__ The transformation matrix uses the reciprocal of the scale (1/scale)
 to compensate for the scaled coordinates, maintaining the same visual output.
 -}
-optimizeScale :: Double -> Program -> Program
-optimizeScale scale program
+optimizeScale :: Dictionary Bool -> Double -> Program -> Program
+optimizeScale states scale program
   | scale == 1.0 = program
   | scale == 0.0 = program
-  | not (isScaleOptimizable program) = program
+  | not (isScaleOptimizable states program) = program
   | otherwise= (   mkCommand GSSaveGS []
                 <| scaleMatrixCommand
                 <| fmap scaleCommand program
