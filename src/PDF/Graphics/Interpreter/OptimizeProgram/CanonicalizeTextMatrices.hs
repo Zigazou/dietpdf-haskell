@@ -134,101 +134,103 @@ showTextString object state = case convertHexString object of
 -- | Interpret the commands actually emitted by the preceding passes. No state
 -- is inferred from rounded-away operands or from a Unicode character mapping.
 interpret :: TextResources -> TextPosition -> Command -> TextPosition
-interpret resources state command@(Command op operands) = case (op, toList operands) of
-  (GSBeginText, []) ->
-    state { textMatrix = Just identity
-          , lineMatrix = Just identity
-          , insideText = True
-          }
+interpret resources state command@(Command op operands) =
+  case (op, toList operands) of
+    (GSBeginText, []) ->
+      state { textMatrix = Just identity
+            , lineMatrix = Just identity
+            , insideText = True
+            }
 
-  (GSEndText, []) -> state { insideText = False }
+    (GSEndText, []) -> state { insideText = False }
 
-  (GSSaveGS, []) -> state { stack = params : stack state }
+    (GSSaveGS, []) -> state { stack = params : stack state }
 
-  (GSRestoreGS, []) ->
-    let
-      restored :: TextPosition
-      restored = case stack state of
-          saved : rest -> state { parameters = saved, stack = rest }
-          []           -> state { parameters = unknownParameters }
+    (GSRestoreGS, []) ->
+      let
+        restored :: TextPosition
+        restored = case stack state of
+            saved : rest -> state { parameters = saved, stack = rest }
+            []           -> state { parameters = unknownParameters }
 
-    -- PDF revisions/readers differ on q/Q within BT/ET. Do not prove text
-    -- rewrites across that boundary under either matrix-restoration rule.
-    in
-      if insideText state
-        then unknownPosition restored
-        else restored
+      -- PDF revisions/readers differ on q/Q within BT/ET. Do not prove text
+      -- rewrites across that boundary under either matrix-restoration rule.
+      in
+        if insideText state
+          then unknownPosition restored
+          else restored
 
-  (GSSetTextFont, [GFXName name, size]) -> set $ params
-    { font = (,) <$> Map.lookup name (textFonts resources) <*> number size }
+    (GSSetTextFont, [GFXName name, size]) -> set $ params
+      { font = (,) <$> Map.lookup name (textFonts resources) <*> number size }
 
-  (GSSetParameters, [GFXName name]) ->
-    set $ params { font = case Map.lookup name (textExtFonts resources) of
-      Just UnchangedFont               -> font params
-      Just (SelectedFont metrics size) -> Just (metrics, size)
-      _                                -> Nothing }
+    (GSSetParameters, [GFXName name]) ->
+      set $ params { font = case Map.lookup name (textExtFonts resources) of
+        Just UnchangedFont               -> font params
+        Just (SelectedFont metrics size) -> Just (metrics, size)
+        _                                -> Nothing }
 
-  (GSSetCharacterSpacing, [n]) ->
-    set $ params { characterSpacing = number n }
+    (GSSetCharacterSpacing, [n]) ->
+      set $ params { characterSpacing = number n }
 
-  (GSSetWordSpacing, [n]) ->
-    set $ params { wordSpacing = number n }
+    (GSSetWordSpacing, [n]) ->
+      set $ params { wordSpacing = number n }
 
-  (GSSetHorizontalScaling, [n]) ->
-    set $ params { horizontalScale = (/ 100) <$> number n }
+    (GSSetHorizontalScaling, [n]) ->
+      set $ params { horizontalScale = (/ 100) <$> number n }
 
-  (GSSetTextLeading, [n]) -> set $ params { leading = number n }
+    (GSSetTextLeading, [n]) -> set $ params { leading = number n }
 
-  (GSSetTextMatrix, _) | insideText state ->
-    let
-      matrix :: Maybe Matrix
-      matrix = numbers command >>= matrixOf
-    in
-      state { textMatrix = matrix, lineMatrix = matrix }
+    (GSSetTextMatrix, _) | insideText state ->
+      let
+        matrix :: Maybe Matrix
+        matrix = numbers command >>= matrixOf
+      in
+        state { textMatrix = matrix, lineMatrix = matrix }
 
-  (GSMoveToNextLine, _) | insideText state -> case numbers command of
-    Just [x, y] -> move x y state
-    _           -> unknownPosition state
+    (GSMoveToNextLine, _) | insideText state -> case numbers command of
+      Just [x, y] -> move x y state
+      _           -> unknownPosition state
 
-  (GSMoveToNextLineLP, _) | insideText state -> case numbers command of
-    Just [x, y] -> move x y (set $ params { leading = Just (-y) })
-    _           -> unknownPosition (set $ params { leading = Nothing })
+    (GSMoveToNextLineLP, _) | insideText state -> case numbers command of
+      Just [x, y] -> move x y (set $ params { leading = Just (-y) })
+      _           -> unknownPosition (set $ params { leading = Nothing })
 
-  (GSNextLine, []) | insideText state -> nextLine state
+    (GSNextLine, []) | insideText state -> nextLine state
 
-  (GSShowText, [text]) -> showTextString text state
+    (GSShowText, [text]) -> showTextString text state
 
-  (GSShowManyText, [GFXArray items]) -> showItems (toList items) state
+    (GSShowManyText, [GFXArray items]) -> showItems (toList items) state
 
-  (GSNLShowText, [text]) -> showTextString text (nextLine state)
+    (GSNLShowText, [text]) -> showTextString text (nextLine state)
 
-  (GSNLShowTextWithSpacing, [word, char, text]) ->
-    showTextString text (nextLine (set $ params
-      { wordSpacing = number word, characterSpacing = number char }))
+    (GSNLShowTextWithSpacing, [word, char, text]) ->
+      showTextString text (nextLine (set $ params
+        { wordSpacing = number word, characterSpacing = number char }))
 
-  -- Unknown and malformed text/state operators are barriers. A Form invocation
-  -- may contain text objects, so its text matrices cannot be assumed unchanged.
-  (GSUnknown _, _) -> invalidate
+    -- Unknown and malformed text/state operators are barriers. A Form
+    -- invocation may contain text objects, so its text matrices cannot be
+    -- assumed unchanged.
+    (GSUnknown _, _) -> invalidate
 
-  (GSPaintXObject, _) -> unknownPosition state
+    (GSPaintXObject, _) -> unknownPosition state
 
-  _ | op `elem` [ GSSetTextFont
-                , GSSetParameters
-                , GSSetCharacterSpacing
-                , GSSetWordSpacing
-                , GSSetHorizontalScaling
-                , GSSetTextLeading
-                , GSShowText
-                , GSShowManyText
-                , GSNLShowText
-                , GSNLShowTextWithSpacing
-                , GSBeginText
-                , GSEndText
-                , GSSaveGS
-                , GSRestoreGS
-                , GSNextLine
-                ] -> invalidate
-    | otherwise -> state
+    _ | op `elem` [ GSSetTextFont
+                  , GSSetParameters
+                  , GSSetCharacterSpacing
+                  , GSSetWordSpacing
+                  , GSSetHorizontalScaling
+                  , GSSetTextLeading
+                  , GSShowText
+                  , GSShowManyText
+                  , GSNLShowText
+                  , GSNLShowTextWithSpacing
+                  , GSBeginText
+                  , GSEndText
+                  , GSSaveGS
+                  , GSRestoreGS
+                  , GSNextLine
+                  ] -> invalidate
+      | otherwise -> state
  where
   params :: Parameters
   params = parameters state

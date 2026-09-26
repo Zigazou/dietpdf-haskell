@@ -21,6 +21,7 @@ module PDF.Graphics.Interpreter.OptimizeGState
 where
 
 import Control.Monad.State (get, put)
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.List (foldl')
@@ -100,53 +101,112 @@ programCost = BS.length . separateGfx . extractObjects
 planGState :: WorkData -> Program -> (Program, WorkData)
 planGState initial program = foldl' choose (program, initial) dictionaries
  where
+  runs :: Program -> [Program]
   runs Empty = []
   runs commands@(command :<| rest)
-    | isFactorizable command =
-        let (run, remaining) = spanl isFactorizable commands
-        in run : runs remaining
-    | otherwise = runs rest
+    | isFactorizable command
+    = let
+        run :: Program
+        remaining :: Program
+        (run, remaining) = spanl isFactorizable commands
+      in
+        run : runs remaining
 
+    | otherwise
+    = runs rest
+
+  dictionaries :: [(PDFObject, [Int])]
   dictionaries = Map.toList $ Map.fromListWith (++)
-    [(PDFDictionary (mkExtGState run), [programCost run]) | run <- runs program]
+    [ (PDFDictionary (mkExtGState run), [programCost run])
+    | run <- runs program
+    ]
 
+  choose :: (Program, WorkData) -> (PDFObject, [Int]) -> (Program, WorkData)
   choose (current, work) (dictionary, runCosts) =
-    let existing = [existingName | (existingName, value) <- Map.toList (wAdditionalGStates work),
-                           value == dictionary]
-        resource = case existing of
-          existingName : _ -> ResExtGState existingName
-          [] -> toNameBase (ResExtGState "") (Map.size (wNameTranslations work))
-        name = resName resource
-        candidateWork = work
-          { wAdditionalGStates = Map.insert name dictionary (wAdditionalGStates work)
-          , wNameTranslations = Map.insert resource resource (wNameTranslations work)
-          }
-        replacement = SQ.singleton (mkCommand GSSetParameters [GFXName name])
-        rewrite Empty = Empty
-        rewrite commands@(command :<| rest)
-          | isFactorizable command =
-              let (run, remaining) = spanl isFactorizable commands
-                  rewritten = if PDFDictionary (mkExtGState run) == dictionary
-                                    && programCost replacement < programCost run
-                                then replacement else run
-              in rewritten <> rewrite remaining
-          | otherwise = SQ.singleton command <> rewrite rest
-        candidate = rewrite current
-        -- Cheap upper bound avoids rescanning the stream for every unique,
-        -- short run. Full serialization still decides borderline candidates.
-        savings = sum [max 0 (cost - programCost replacement) | cost <- runCosts]
-        entryCost = if null existing
-          then BS.length (fromPDFObject (PDFDictionary (Map.singleton name dictionary))) - 4
-          else 0
-    in if savings > resourceCopies work * entryCost
-          && gStateCost candidateWork candidate < gStateCost work current
-         then (candidate, candidateWork)
-         else (current, work)
+    let
+      existing :: [ByteString]
+      existing = [ existingName
+                 | (existingName, value) <- Map.toList (wAdditionalGStates work)
+                 , value == dictionary
+                 ]
+
+      resource :: Resource
+      resource = case existing of
+        existingName : _ -> ResExtGState existingName
+        [] -> toNameBase (ResExtGState "") (Map.size (wNameTranslations work))
+
+      name :: ByteString
+      name = resName resource
+
+      candidateWork :: WorkData
+      candidateWork = work
+        { wAdditionalGStates = Map.insert name
+                                          dictionary
+                                          (wAdditionalGStates work)
+        , wNameTranslations = Map.insert resource
+                                         resource
+                                         (wNameTranslations work)
+        }
+
+      replacement :: Program
+      replacement = SQ.singleton (mkCommand GSSetParameters [GFXName name])
+
+      rewrite :: Program -> Program
+      rewrite Empty = Empty
+      rewrite commands@(command :<| rest)
+        | isFactorizable command
+        =let
+            run :: Program
+            remaining :: Program
+            (run, remaining) = spanl isFactorizable commands
+
+            rewritten :: Program
+            rewritten =
+              if PDFDictionary (mkExtGState run) == dictionary
+                  && programCost replacement < programCost run
+                then replacement
+                else run
+          in
+            rewritten <> rewrite remaining
+
+        | otherwise
+        = SQ.singleton command <> rewrite rest
+
+      candidate :: Program
+      candidate = rewrite current
+
+      -- Cheap upper bound avoids rescanning the stream for every unique, short
+      -- run. Full serialization still decides borderline candidates.
+      savings :: Int
+      savings = sum [ max 0 (cost - programCost replacement)
+                    | cost <- runCosts
+                    ]
+
+      entryCost :: Int
+      entryCost =
+        if null existing
+          then
+            BS.length (fromPDFObject (PDFDictionary (Map.singleton name
+                                                                   dictionary
+                                                    )
+                                     )
+                      ) - 4
+          else
+            0
+    in
+      if savings > resourceCopies work * entryCost
+         && gStateCost candidateWork candidate < gStateCost work current
+        then (candidate, candidateWork)
+        else (current, work)
 
 -- | Commit only profitable resource replacements, preserving all barriers.
 optimizeGState :: Logging m => Program -> PDFWork m Program
 optimizeGState program = do
   work <- get
-  let (optimized, updated) = planGState work program
+  let
+    optimized :: Program
+    updated :: WorkData
+    (optimized, updated) = planGState work program
+
   put updated
   return optimized

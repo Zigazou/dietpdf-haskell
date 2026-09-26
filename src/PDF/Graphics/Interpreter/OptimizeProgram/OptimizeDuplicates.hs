@@ -99,18 +99,24 @@ Returns a new program with all redundant consecutive commands removed.
 -}
 optimizeDuplicates :: Program -> Program
 optimizeDuplicates Empty = mempty
+
 optimizeDuplicates (command1@(Command operator1 parameters1)
                 :<| command2@(Command operator2 parameters2)
                 :<| rest)
   | operator1 == operator2 && uselessWhenDuplicated operator1
     && (operator1 `notElem` [GSSetStrokeColorspace, GSSetNonStrokeColorspace]
         || parameters1 == parameters2)
-    = optimizeDuplicates (command2 <| rest)
+  = optimizeDuplicates (command2 <| rest)
+
   | isStrokeColorOperator operator1 && isStrokeColorOperator operator2
     && operator2 `notElem` [GSSetStrokeColor, GSSetStrokeColorN]
-    = optimizeDuplicates (command2 <| rest)
+  = optimizeDuplicates (command2 <| rest)
+
   | isNonStrokeColorOperator operator1 && isNonStrokeColorOperator operator2
     && operator2 `notElem` [GSSetNonStrokeColor, GSSetNonStrokeColorN]
-    = optimizeDuplicates (command2 <| rest)
-  | otherwise = command1 <| optimizeDuplicates (command2 <| rest)
+  = optimizeDuplicates (command2 <| rest)
+
+  | otherwise
+  = command1 <| optimizeDuplicates (command2 <| rest)
+
 optimizeDuplicates (command :<| rest) = command <| optimizeDuplicates rest

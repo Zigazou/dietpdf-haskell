@@ -25,6 +25,7 @@ import Data.PDF.TransformationMatrix
 import Data.Sequence (Seq (Empty, (:<|)))
 
 import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
+import Data.PDF.GFXObjects (GFXObjects)
 
 
 {-|
@@ -64,7 +65,10 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
          :<| GFXNumber e
          :<| GFXNumber f
          :<| Empty) -> do
-    let precision = usefulMatrixPrecisionFor a
+    let
+      precision :: Int
+      precision = usefulMatrixPrecisionFor a
+
     case rest of
       (Command GSSetCTM ( GFXNumber a'
                       :<| GFXNumber b'
@@ -75,19 +79,31 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
                       :<| Empty)
                       :<| _tail) -> do
         -- Merge two consecutive SetCTM operators
-        let matrix1 = TransformationMatrix a b c d e f
-            matrix2 = TransformationMatrix a' b' c' d' e' f'
-            matrix  = matrix1 <> matrix2
+        let
+          matrix1 :: TransformationMatrix
+          matrix1 = TransformationMatrix a b c d e f
+
+          matrix2 :: TransformationMatrix
+          matrix2 = TransformationMatrix a' b' c' d' e' f'
+
+          matrix :: TransformationMatrix
+          matrix  = matrix1 <> matrix2
+
         applyGraphicsMatrixS matrix
-        let command' = Command GSSetCTM (   GFXNumber (tmA matrix)
-                                        :<| GFXNumber (tmB matrix)
-                                        :<| GFXNumber (tmC matrix)
-                                        :<| GFXNumber (tmD matrix)
-                                        :<| GFXNumber (tmE matrix)
-                                        :<| GFXNumber (tmF matrix)
-                                        :<| Empty
-                                        )
+
+        let
+          command' :: Command
+          command' = Command GSSetCTM (   GFXNumber (tmA matrix)
+                                      :<| GFXNumber (tmB matrix)
+                                      :<| GFXNumber (tmC matrix)
+                                      :<| GFXNumber (tmD matrix)
+                                      :<| GFXNumber (tmE matrix)
+                                      :<| GFXNumber (tmF matrix)
+                                      :<| Empty
+                                      )
+
         return $ ReplaceAndDeleteNextCommand (optimizeParameters command' precision)
+
       _anythingElse -> do
         applyGraphicsMatrixS (TransformationMatrix a b c d e f)
         return $ replaceCommandWith command
@@ -95,5 +111,8 @@ optimizeGraphicsMatrix command rest = case (operator, parameters) of
 
   _anyOtherCommand -> return KeepCommand
  where
-  operator   = cOperator command
+  operator :: GSOperator
+  operator = cOperator command
+
+  parameters :: GFXObjects
   parameters = cParameters command

@@ -19,6 +19,7 @@ import Data.PDF.GFXObject
   ( GFXObject (GFXArray, GFXNumber)
   , GSOperator (GSRestoreGS, GSSaveGS, GSSetFlatnessTolerance, GSSetLineCap, GSSetLineDashPattern, GSSetLineJoin, GSSetLineWidth, GSSetMiterLimit, GSSetParameters)
   )
+import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.GraphicsState
   ( GraphicsState (gsDashArray, gsDashPhase, gsFlatness, gsLineCap, gsLineJoin, gsLineWidth, gsMiterLimit, gsUnknownParameters)
   , invalidateParameters
@@ -138,7 +139,10 @@ optimizeStateCommand command _rest = case (operator, parameters) of
 
   _anyOtherCommand -> return KeepCommand
  where
+  operator :: GSOperator
   operator   = cOperator command
+
+  parameters :: GFXObjects
   parameters = cParameters command
 
 -- | Record newly known values in the shared graphics state.

@@ -3,6 +3,7 @@ module PDF.Graphics.Interpreter.OptimizeProgram.OptimizeMergeableTextCommands
   ( optimizeMergeableTextCommands
   ) where
 
+import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.PDF.Command (Command (Command))
@@ -30,7 +31,11 @@ textItems _other = Nothing
 compact :: Seq GFXObject -> Seq GFXObject
 compact values@(GFXString{} :<| _) =
   let
+    strings :: Seq GFXObject
+    rest :: Seq GFXObject
     (strings, rest) = SQ.spanl isString values
+
+    combined :: ByteString
     combined = BS.concat [bytes | GFXString bytes <- toList strings]
   in
     if BS.null combined

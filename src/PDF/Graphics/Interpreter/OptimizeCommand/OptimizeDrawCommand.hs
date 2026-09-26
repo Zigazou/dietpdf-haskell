@@ -37,6 +37,7 @@ import PDF.Graphics.Interpreter.OptimizeParameters (optimizeParameters)
 
 import Util.Graphics (areAligned)
 import Util.Number (round')
+import Data.PDF.GFXObjects (GFXObjects)
 
 
 {-|
@@ -74,47 +75,65 @@ optimizeDrawCommand command rest = case (operator, parameters) of
                    :<| GFXNumber x3 :<| GFXNumber y3
                    :<| Empty) -> do
     precision <- usefulGraphicsPrecisionS
-    let x1' = round' precision x1
-        y1' = round' precision y1
-        x2' = round' precision x2
-        y2' = round' precision y2
-        x3' = round' precision x3
-        y3' = round' precision y3
+    let
+      x1' :: Double
+      x1' = round' precision x1
+
+      y1' :: Double
+      y1' = round' precision y1
+
+      x2' :: Double
+      x2' = round' precision x2
+
+      y2' :: Double
+      y2' = round' precision y2
+
+      x3' :: Double
+      x3' = round' precision x3
+
+      y3' :: Double
+      y3' = round' precision y3
 
     currentX <- gets (gsCurrentPointX . iGraphicsState)
     currentY <- gets (gsCurrentPointY . iGraphicsState)
     if | (x1', y1') == (currentX, currentY) -> do
           setCurrentPointS x3' y3'
-          let optimizedCommand =
-                Command GSCubicBezierCurve1To
-                  (   GFXNumber x2' :<| GFXNumber y2'
-                  :<| GFXNumber x3' :<| GFXNumber y3'
-                  :<| Empty
-                  )
+          let
+            optimizedCommand :: Command
+            optimizedCommand =
+              Command GSCubicBezierCurve1To
+                (   GFXNumber x2' :<| GFXNumber y2'
+                :<| GFXNumber x3' :<| GFXNumber y3'
+                :<| Empty
+                )
 
           return $ replaceCommandWith command optimizedCommand
 
        | (x2', y2') == (currentX, currentY) -> do
           setCurrentPointS x3' y3'
-          let optimizedCommand =
-                Command GSCubicBezierCurve2To
-                  (   GFXNumber x1' :<| GFXNumber y1'
-                  :<| GFXNumber x3' :<| GFXNumber y3'
-                  :<| Empty
-                  )
+          let
+            optimizedCommand :: Command
+            optimizedCommand =
+              Command GSCubicBezierCurve2To
+                (   GFXNumber x1' :<| GFXNumber y1'
+                :<| GFXNumber x3' :<| GFXNumber y3'
+                :<| Empty
+                )
 
           return $ replaceCommandWith command optimizedCommand
 
        | otherwise -> do
           setCurrentPointS x3' y3'
 
-          let optimizedCommand =
-                Command GSCubicBezierCurve
-                  (   GFXNumber x1' :<| GFXNumber y1'
-                  :<| GFXNumber x2' :<| GFXNumber y2'
-                  :<| GFXNumber x3' :<| GFXNumber y3'
-                  :<| Empty
-                  )
+          let
+            optimizedCommand :: Command
+            optimizedCommand =
+              Command GSCubicBezierCurve
+                (   GFXNumber x1' :<| GFXNumber y1'
+                :<| GFXNumber x2' :<| GFXNumber y2'
+                :<| GFXNumber x3' :<| GFXNumber y3'
+                :<| Empty
+                )
 
           return $ replaceCommandWith command optimizedCommand
 
@@ -122,18 +141,30 @@ optimizeDrawCommand command rest = case (operator, parameters) of
                       :<| GFXNumber x3 :<| GFXNumber y3
                       :<| Empty) -> do
     precision <- usefulGraphicsPrecisionS
-    let x1' = round' precision x1
-        y1' = round' precision y1
-        x3' = round' precision x3
-        y3' = round' precision y3
+
+    let
+      x1' :: Double
+      x1' = round' precision x1
+
+      y1' :: Double
+      y1' = round' precision y1
+
+      x3' :: Double
+      x3' = round' precision x3
+
+      y3' :: Double
+      y3' = round' precision y3
+
     setCurrentPointS x3' y3'
 
-    let optimizedCommand =
-          Command GSCubicBezierCurve1To
-            (   GFXNumber x1' :<| GFXNumber y1'
-            :<| GFXNumber x3' :<| GFXNumber y3'
-            :<| Empty
-            )
+    let
+      optimizedCommand :: Command
+      optimizedCommand =
+        Command GSCubicBezierCurve1To
+          (   GFXNumber x1' :<| GFXNumber y1'
+          :<| GFXNumber x3' :<| GFXNumber y3'
+          :<| Empty
+          )
 
     return $ replaceCommandWith command optimizedCommand
 
@@ -141,18 +172,30 @@ optimizeDrawCommand command rest = case (operator, parameters) of
                       :<| GFXNumber x3 :<| GFXNumber y3
                       :<| Empty) -> do
     precision <- usefulGraphicsPrecisionS
-    let x2' = round' precision x2
-        y2' = round' precision y2
-        x3' = round' precision x3
-        y3' = round' precision y3
+
+    let
+      x2' :: Double
+      x2' = round' precision x2
+
+      y2' :: Double
+      y2' = round' precision y2
+
+      x3' :: Double
+      x3' = round' precision x3
+
+      y3' :: Double
+      y3' = round' precision y3
+
     setCurrentPointS x3' y3'
 
-    let optimizedCommand =
-          Command GSCubicBezierCurve2To
-            (   GFXNumber x2' :<| GFXNumber y2'
-            :<| GFXNumber x3' :<| GFXNumber y3'
-            :<| Empty
-            )
+    let
+      optimizedCommand :: Command
+      optimizedCommand =
+        Command GSCubicBezierCurve2To
+          (   GFXNumber x2' :<| GFXNumber y2'
+          :<| GFXNumber x3' :<| GFXNumber y3'
+          :<| Empty
+          )
 
     return $ replaceCommandWith command optimizedCommand
 
@@ -165,17 +208,23 @@ optimizeDrawCommand command rest = case (operator, parameters) of
 
     -- Calculate next coordinates.
     let
+      lineIsNotNeeded :: Bool
+      newX :: Double
+      newY :: Double
       (lineIsNotNeeded, newX, newY) = case rest of
         (Command GSEndPath _params :<| _tail) ->
           ( areAligned (currentX, currentY) (x, y) (startX, startY) 0, x, y )
+
         (Command GSCloseSubpath _params :<| _tail) ->
           ( areAligned (currentX, currentY) (x, y) (startX, startY) 0, x, y )
+
         (Command GSLineTo (GFXNumber nextX :<| GFXNumber nextY :<| Empty)
                       :<| _tail) ->
           ( areAligned (currentX, currentY) (x, y) (nextX, nextY) 0
           , nextX
           , nextY
           )
+
         _otherCommand -> (False, x, y)
 
     setCurrentPointS newX newY
@@ -196,10 +245,12 @@ optimizeDrawCommand command rest = case (operator, parameters) of
             if (x, y) == start
               then replaceCommandWith command (Command GSCloseSubpath mempty)
               else replaceCommandWith command optimized
+
           (Command GSCloseSubpath _params :<| _tail) ->
             if (x, y) == start
               then DeleteCommand
               else replaceCommandWith command optimized
+
           _otherCommand -> replaceCommandWith command optimized
 
   -- EndPath operator
@@ -243,5 +294,8 @@ optimizeDrawCommand command rest = case (operator, parameters) of
 
   _anyOtherCommand -> return KeepCommand
  where
-  operator   = cOperator command
+  operator :: GSOperator
+  operator = cOperator command
+
+  parameters :: GFXObjects
   parameters = cParameters command

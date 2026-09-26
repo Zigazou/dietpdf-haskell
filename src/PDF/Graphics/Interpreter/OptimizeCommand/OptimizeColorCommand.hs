@@ -17,6 +17,7 @@ import Data.PDF.GFXObject
   ( GFXObject (GFXName)
   , GSOperator (GSSetColourRenderingIntent, GSSetNonStrokeCMYKColorspace, GSSetNonStrokeColor, GSSetNonStrokeColorN, GSSetNonStrokeColorspace, GSSetNonStrokeGrayColorspace, GSSetNonStrokeRGBColorspace, GSSetStrokeCMYKColorspace, GSSetStrokeColor, GSSetStrokeColorN, GSSetStrokeColorspace, GSSetStrokeGrayColorspace, GSSetStrokeRGBColorspace)
   )
+import Data.PDF.GFXObjects (GFXObjects)
 import Data.PDF.GraphicsState
   ( GraphicsState (gsIntent, gsStrokeColor, gsUnknownParameters)
   , gsNonStrokeColor
@@ -57,8 +58,13 @@ strokeDeleteIfNoChange command = do
       then
         return DeleteCommand
       else do
-        let normalized = mkStrokeCommand newColor
-            compact = optimizeColor normalized
+        let
+          normalized :: Command
+          normalized = mkStrokeCommand newColor
+
+          compact :: Command
+          compact = optimizeColor normalized
+
         emitted <- if compact /= normalized
                      then do
                        allowSpaceChange <- allowStrokeColorSpaceChangeS command
@@ -89,8 +95,13 @@ nonStrokeDeleteIfNoChange command = do
       then
         return DeleteCommand
       else do
-        let normalized = mkNonStrokeCommand newColor
-            compact = optimizeColor normalized
+        let
+          normalized :: Command
+          normalized = mkNonStrokeCommand newColor
+
+          compact :: Command
+          compact = optimizeColor normalized
+
         emitted <- if compact /= normalized
           then do
             allowSpaceChange <- allowNonStrokeColorSpaceChangeS command
@@ -160,10 +171,12 @@ optimizeColorCommand command _rest = case (operator, parameters) of
 
   _anyOtherCommand -> return KeepCommand
  where
-  operator   = cOperator command
+  operator :: GSOperator
+  operator = cOperator command
+
+  parameters :: GFXObjects
   parameters = cParameters command
 
   selectedSpace = case parameters of
     GFXName name :<| Empty -> Just name
     _other                 -> Nothing
-

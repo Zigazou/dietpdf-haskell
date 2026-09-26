@@ -41,22 +41,16 @@ type Rect = (Rational, Rational, Rational, Rational)
 -- | The currently known extent of the effective clipping region.
 type Bounds :: Type
 data Bounds
-  = -- | No finite bounds are known.
-    Unknown
-  | -- | The clipping region is empty.
-    EmptyClip
-  | -- | The clipping region is bounded by a rectangle.
-    Bounded Rect
+  = Unknown      -- ^ No finite bounds are known.
+  | EmptyClip    -- ^ The clipping region is empty.
+  | Bounded Rect -- ^ The clipping region is bounded by a rectangle.
 
 -- | The path currently being constructed.
 type Path :: Type
 data Path
-  = -- | No path is currently being constructed.
-    NoPath
-  | -- | A rectangle and the command index that created it.
-    Rectangle Int Rect
-  | -- | A path whose exact geometry is not tracked.
-    OtherPath
+  = NoPath             -- ^ No path is currently being constructed.
+  | Rectangle Int Rect -- ^ A rectangle and the command index that created it.
+  | OtherPath          -- ^ A path whose exact geometry is not tracked.
 
 -- | The identity affine transformation.
 identity :: Matrix
@@ -66,7 +60,8 @@ identity = (1, 0, 0, 1, 0, 0)
 numbers :: Seq GFXObject -> Maybe [Rational]
 numbers = traverse number . toList
  where
-  -- \| Convert one finite graphics number to exact arithmetic.
+  -- Convert one finite graphics number to exact arithmetic.
+  number :: GFXObject -> Maybe Rational
   number (GFXNumber n) | not (isNaN n || isInfinite n) = Just (toRational n)
   number _ = Nothing
 
@@ -176,9 +171,9 @@ protectedCommands commands =
       -- Update the text nesting level based on the current command.
       text' :: Int
       text'
-          | op == GSBeginText = text + 1
-          | op == GSEndText   = max 0 (text - 1)
-          | otherwise         = text
+        | op == GSBeginText = text + 1
+        | op == GSEndText   = max 0 (text - 1)
+        | otherwise         = text
 
       -- Determine whether the current command should be protected based on the
       -- marked-content and text nesting levels, as well as the command type.

@@ -50,9 +50,29 @@ buildScaleResources objects resources = fromMaybe mempty $ do
   safeEntry :: (ByteString, PDFObject) -> Bool
   safeEntry ("SMask", entry) = resolve objects entry == Just (PDFName "None")
   safeEntry (key, _) = key `elem`
-    [ "Type", "LC", "LJ", "ML", "RI", "OP", "op", "OPM"
-    , "BG", "BG2", "UCR", "UCR2", "TR", "TR2", "HT", "FL", "SM"
-    , "SA", "BM", "CA", "ca", "AIS", "TK"
+    [ "Type"
+    , "LC"
+    , "LJ"
+    , "ML"
+    , "RI"
+    , "OP"
+    , "op"
+    , "OPM"
+    , "BG"
+    , "BG2"
+    , "UCR"
+    , "UCR2"
+    , "TR"
+    , "TR2"
+    , "HT"
+    , "FL"
+    , "SM"
+    , "SA"
+    , "BM"
+    , "CA"
+    , "ca"
+    , "AIS"
+    , "TK"
     ]
 
 {-|
@@ -134,11 +154,12 @@ optimizeScale states scale program
   | scale == 1.0 = program
   | scale == 0.0 = program
   | not (isScaleOptimizable states program) = program
-  | otherwise= (   mkCommand GSSaveGS []
-                <| scaleMatrixCommand
-                <| fmap scaleCommand program
-               ) |> mkCommand GSRestoreGS []
+  | otherwise = (   mkCommand GSSaveGS []
+                 <| scaleMatrixCommand
+                 <| fmap scaleCommand program
+                ) |> mkCommand GSRestoreGS []
   where
+    invScale :: Double
     invScale = 1.0 / scale
 
     -- Prepend the scaling transformation matrix: 1/scale 0 0 1/scale 0 0 cm
@@ -183,10 +204,10 @@ optimizeScale states scale program
       GSSetLineDashPattern -> scaleAllParams cmd
 
       -- CTM transformation - scale translation parameters (positions 4 and 5)
-      GSSetCTM           -> scaleCTMParams cmd
+      GSSetCTM -> scaleCTMParams cmd
 
       -- All other commands unchanged
-      _anyOtherCommand   -> cmd
+      _anyOtherCommand -> cmd
 
     -- Scale all numeric parameters
     scaleAllParams :: Command -> Command
@@ -204,7 +225,12 @@ optimizeScale states scale program
       -- CTM format: a b c d e f
       -- Scale only e (index 4) and f (index 5) - the translation components
       a :<| b :<| c :<| d :<| e :<| f :<| rest ->
-        cmd { cParameters =
-                a <| b <| c <| d <| scaleParam e <| scaleParam f <| rest
+        cmd { cParameters = a
+                         <| b
+                         <| c
+                         <| d
+                         <| scaleParam e
+                         <| scaleParam f
+                         <| rest
             }
       _anyOtherMatrix -> cmd

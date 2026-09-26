@@ -53,13 +53,15 @@ optimizeMarkedContent
   :<| bmc2@(Command GSBeginMarkedContentSequencePL _params2)
   :<| afterBMC
   ) = if bmc1 == bmc2
-       then case breakl isEndMarkedContentSequence afterBMC of
-              ( beforeEMC,    emc@(Command GSEndMarkedContentSequence _params3)
-                          :<| Command GSEndMarkedContentSequence _params4
-                          :<| afterEMC) ->
-                (bmc1 <| beforeEMC) <> (emc <| optimizeMarkedContent afterEMC)
-              _anyOtherCase -> bmc1 <| bmc2 <| optimizeMarkedContent afterBMC
-       else
-        bmc1 <| bmc2 <| optimizeMarkedContent afterBMC
+        then
+          case breakl isEndMarkedContentSequence afterBMC of
+            ( beforeEMC,    emc@(Command GSEndMarkedContentSequence _params3)
+                        :<| Command GSEndMarkedContentSequence _params4
+                        :<| afterEMC) ->
+              (bmc1 <| beforeEMC) <> (emc <| optimizeMarkedContent afterEMC)
+  
+            _anyOtherCase -> bmc1 <| bmc2 <| optimizeMarkedContent afterBMC
+        else
+          bmc1 <| bmc2 <| optimizeMarkedContent afterBMC
 
 optimizeMarkedContent (command :<| rest) = command <| optimizeMarkedContent rest

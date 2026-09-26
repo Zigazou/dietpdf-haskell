@@ -48,12 +48,15 @@ object with all hex strings converted to regular strings
 -}
 convertHexString :: GFXObject -> GFXObject
 convertHexString (GFXHexString hex) = GFXString (hexStringToString hex)
+
 convertHexString (GFXArray objects) = GFXArray (convertHexString <$> objects)
+
 convertHexString (GFXDictionary dictionary) =
   mkGFXDictionary (fmap convertHexValue (Map.toList dictionary))
  where
   convertHexValue :: (ByteString, GFXObject) -> (ByteString, GFXObject)
   convertHexValue (key, value) = (key, convertHexString value)
+
 convertHexString otherObject = otherObject
 
 {-|

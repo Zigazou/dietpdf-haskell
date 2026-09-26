@@ -175,6 +175,7 @@ mkStrokeCommand (ColorRGB red green blue) =
           :<| GFXNumber blue
           :<| Empty
           )
+
 mkStrokeCommand (ColorCMYK cyan magenta yellow black) =
   Command GSSetStrokeCMYKColorspace
           (   GFXNumber cyan
@@ -183,11 +184,14 @@ mkStrokeCommand (ColorCMYK cyan magenta yellow black) =
           :<| GFXNumber black
           :<| Empty
           )
+
 mkStrokeCommand (ColorGray gray) =
   Command GSSetStrokeGrayColorspace (GFXNumber gray :<| Empty)
 
 mkStrokeCommand (ColorGeneric parameters (Just name)) =
-  Command GSSetStrokeColorN (fromList (GFXNumber <$> parameters) :|> GFXName name)
+  Command GSSetStrokeColorN (fromList (GFXNumber <$> parameters)
+                            :|> GFXName name
+                            )
 
 mkStrokeCommand (ColorGeneric parameters Nothing) =
   Command GSSetStrokeColor (fromList (GFXNumber <$> parameters))
@@ -211,6 +215,7 @@ mkNonStrokeCommand (ColorRGB red green blue) =
           :<| GFXNumber blue
           :<| Empty
           )
+
 mkNonStrokeCommand (ColorCMYK cyan magenta yellow black) =
   Command GSSetNonStrokeCMYKColorspace
           (   GFXNumber cyan
@@ -219,6 +224,7 @@ mkNonStrokeCommand (ColorCMYK cyan magenta yellow black) =
           :<| GFXNumber black
           :<| Empty
           )
+
 mkNonStrokeCommand (ColorGray gray) =
   Command GSSetNonStrokeGrayColorspace (GFXNumber gray :<| Empty)
 
