@@ -45,6 +45,7 @@ library
       Data.Array
       Data.Bitmap.BitmapConfiguration
       Data.Bitmap.BitsPerComponent
+      Data.Bitmap.MaskAnalysis
       Data.BitsArray
       Data.ColorSpace
       Data.Context
@@ -121,6 +122,7 @@ library
       Font.TrueType.TableEntry
       Font.TrueType.TableIdentifier
       Formatting.ByteStringFormatter
+      PDF.Document.AnalyzeBitmapMasks
       PDF.Document.Encode
       PDF.Document.GetAllMasks
       PDF.Document.InvisibleImages
@@ -382,6 +384,7 @@ test-suite dietpdf-test
       Font.TrueType.Parser.GlyfSpec
       Font.TrueType.Parser.HeadSpec
       Font.TrueType.Parser.LocaSpec
+      PDF.Document.AnalyzeBitmapMasksSpec
       PDF.Document.DocumentSpec
       PDF.Document.EncodeSpec
       PDF.Document.GetAllMasksSpec
