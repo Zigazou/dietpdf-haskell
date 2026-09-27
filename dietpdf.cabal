@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Codec.Compression.BrotliForPDF
+      Codec.Compression.CCITTG4
       Codec.Compression.ECT
       Codec.Compression.Flate
       Codec.Compression.LZW
@@ -366,6 +367,7 @@ test-suite dietpdf-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      Codec.Compression.CCITTG4Spec
       Codec.Compression.FlateSpec
       Codec.Compression.LZWSpec
       Codec.Compression.PredictSpec
