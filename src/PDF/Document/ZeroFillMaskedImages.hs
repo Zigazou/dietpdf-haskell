@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {- |
 Zero-fill pixels hidden by a soft mask.
 
@@ -40,6 +41,7 @@ import Codec.Compression.Flate qualified as Flate
 import Codec.Compression.Predict (Predictor (TIFFNoPrediction), unpredict)
 import Codec.Compression.Predict.Predictor (decodePredictor)
 
+import Control.Monad (when)
 import Control.Monad.Trans.Class (lift)
 
 import Data.Bitmap.BitmapConfiguration
@@ -48,6 +50,7 @@ import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC8Bits))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Internal qualified as BSI
+import Data.ByteString.Unsafe qualified as BSU
 import Data.Either (fromRight)
 import Data.Fallible (Fallible)
 import Data.Foldable (toList)
@@ -63,7 +66,8 @@ import Data.Word (Word8)
 
 import External.ImageMagick (zeroFillJPEG)
 
-import Foreign.Ptr (Ptr)
+import Foreign.Marshal.Utils (copyBytes)
+import Foreign.Ptr (Ptr, castPtr)
 import Foreign.Storable (pokeByteOff)
 
 import PDF.Object.Container (getFilters, setFilters)
@@ -131,22 +135,32 @@ plainBitmap components object = do
       , Just (PDFNumber 8)
       , Nothing
       , [Filter (PDFName "FlateDecode") parms]
-      ) -> do
+      ) | width > 0, height > 0
+        , let pixelWidth = round width :: Integer
+              pixelHeight = round height :: Integer
+              byteCount = pixelWidth * pixelHeight * toInteger components
+        , pixelWidth > 0, pixelHeight > 0, components > 0
+        , byteCount <= toInteger (maxBound :: Int) -> do
         compressed <- getStream object
 
         let
           bitmapConfig :: BitmapConfiguration
-          bitmapConfig = BitmapConfiguration (round width) components BC8Bits
+          bitmapConfig = BitmapConfiguration (fromInteger pixelWidth)
+                                             components
+                                             BC8Bits
 
           predictor :: Predictor
           predictor = predictorOf parms
 
           expected :: Int
-          expected = round width * round height * components
+          expected = fromInteger byteCount
 
         case decodeRawBitmap bitmapConfig predictor compressed of
           Right raw | BS.length raw == expected ->
-            return $ Just (PlainBitmap (round width) (round height) raw)
+            return $ Just (PlainBitmap (fromInteger pixelWidth)
+                                       (fromInteger pixelHeight)
+                                       raw
+                          )
 
           _anyOtherCase -> return Nothing
 
@@ -161,33 +175,29 @@ Both bytestrings must describe the same pixel grid: @image@ has
 -}
 zeroFillPixels :: Int -> ByteString -> ByteString -> ByteString
 zeroFillPixels components image mask =
-  BSI.unsafeCreate (BS.length image) (`writePixel` 0)
+  BSI.unsafeCreate (BS.length image) $ \dst ->
+    BSU.unsafeUseAsCString image $ \src -> do
+      copyBytes dst (castPtr src) (BS.length image)
+      writePixel dst 0 0
  where
   pixelCount :: Int
   pixelCount = BS.length mask
 
-  writePixel :: Ptr Word8 -> Int -> IO ()
-  writePixel dst pixel
+  -- The caller has checked that both buffers describe the same pixel grid.
+  writePixel :: Ptr Word8 -> Int -> Int -> IO ()
+  writePixel dst !pixel !offset
     | pixel >= pixelCount = return ()
     | otherwise = do
-        writeComponent dst pixel 0
-        writePixel dst (pixel + 1)
+        when (BSU.unsafeIndex mask pixel == 0)
+          $ clearComponents dst offset (offset + components)
+        writePixel dst (pixel + 1) (offset + components)
 
-  writeComponent :: Ptr Word8 -> Int -> Int -> IO ()
-  writeComponent dst pixel component
-    | component >= components = return ()
+  clearComponents :: Ptr Word8 -> Int -> Int -> IO ()
+  clearComponents dst !offset !end
+    | offset >= end = return ()
     | otherwise = do
-        let
-          offset :: Int
-          offset = pixel * components + component
-
-          value :: Word8
-          value
-            | BS.index mask pixel == 0 = 0
-            | otherwise                = BS.index image offset
-
-        pokeByteOff dst offset value
-        writeComponent dst pixel (component + 1)
+        pokeByteOff dst offset (0 :: Word8)
+        clearComponents dst (offset + 1) end
 
 {-|
 Attempt the zero-fill transformation on an Image XObject with a plain
@@ -247,16 +257,30 @@ withMask components object maskObject = do
 
   case (mMaskSubtype, mMaskSMask, mMaskMask) of
     (Just (PDFName "Image"), Nothing, Nothing) -> do
-      mImage <- plainBitmap components object
-      mMask  <- plainBitmap 1 maskObject
+      mWidth <- getValue "Width" object
+      mHeight <- getValue "Height" object
+      maskWidth <- getValue "Width" maskObject
+      maskHeight <- getValue "Height" maskObject
 
-      case (mImage, mMask) of
-        (Just image, Just mask)
-          | pbWidth image == pbWidth mask && pbHeight image == pbHeight mask
-          , BS.elem 0 (pbRaw mask)
-          -> applyZeroFill components object image mask
+      if mWidth /= maskWidth || mHeight /= maskHeight
+        then
+          return object
+        else do
+          mMask <- plainBitmap 1 maskObject
 
-        _anyOtherCase -> return object
+          case mMask of
+            Just mask | BS.elem 0 (pbRaw mask) -> do
+              mImage <- plainBitmap components object
+
+              case mImage of
+                Just image
+                  | pbWidth image == pbWidth mask
+                  , pbHeight image == pbHeight mask
+                  -> applyZeroFill components object image mask
+
+                _anyOtherCase -> return object
+
+            _anyOtherCase -> return object
 
     _anyOtherCase -> return object
 

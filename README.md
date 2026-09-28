@@ -51,15 +51,35 @@ content is sent to the standard output.
 
 Optimizes a PDF file.
 
-**Usage:** `dietpdf optimize <input_pdf_file> [<output_pdf_file>] [-g|--gs-optimize] [-p|--p2c-optimize] [-c <compressor>|--compressor=<compressor>] [-x|--no-gfx-optimize] [-o|--overwrite]`
+**Usage:** `dietpdf optimize <input_pdf_file> [<output_pdf_file>] [-g|--gs-optimize] [-p|--p2c-optimize] [-c <compressor>|--compressor=<compressor>] [-x|--no-gfx-optimize] [--no-lossy-masks] [-o|--overwrite]`
 * *input_pdf_file*: The path to the PDF file to process.
 * *output_pdf_file*: (optional) path to the optimized PDF file to create.
 * --gs-optimize or -g: (optional) Use GhostScript before optimizing.
 * --p2c-optimize or -p: (optional) Use PDF2Cairo before optimizing.
 * --compressor=<compressor> or -c <compressor>: (optional) Use a specific
   compressor (deflate, zopfli, brotli, ect).
+* --no-lossy-masks: (optional) Disable alpha quantization and mask downsampling; use only lossless mask optimizations.
 * --no-gfx-optimize or -x: (optional) Do not try to optimize vector elements.
 * --overwrite or -o: (optional) Overwrite the output file if it exists.
+
+Bitmap masks use a dedicated encoding search: binary masks
+are packed to one bit, and Flate (plain or PNG Sub/Up/Paeth/adaptive prediction)
+is compared with CCITT Group 4. The original object remains a candidate, and
+only a smaller complete PDF object, including filter parameters, replaces it.
+Binary soft masks remain DeviceGray `/SMask` images; stencil painting polarity
+and reversed `/Decode` arrays are preserved. Unsupported masks bypass generic
+image recompression. Mask streams use standard Flate even with `--compressor=brotli`.
+
+By default, additional candidates snap alpha values 0–3 to 0 and
+252–255 to 255, or quantize to 64, 32 or 16 levels in eight-bit storage. Each
+candidate must differ by at most 3/255 from every original alpha sample, so a
+rare intermediate pixel alone never justifies binarization. Smooth masks may
+also be reduced by factors of two or four when dimensions divide evenly and
+neighboring reduced samples satisfy the same error bound. Masks with sharp
+edges, exact transparent/opaque pixels, or `/Matte` preblending are excluded
+from downsampling; `/Matte` masks also remain lossless. The bound is an alpha
+error bound, not a source-image-contrast or perceptual quality metric.
+Use `--no-lossy-masks` to disable these lossy candidates and preserve alpha exactly.
 
 With graphics optimization enabled, DietPDF removes image XObject invocations
 that are provably outside the page's effective MediaBox/CropBox or rectangular

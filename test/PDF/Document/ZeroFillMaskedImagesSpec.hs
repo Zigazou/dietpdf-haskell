@@ -2,6 +2,8 @@ module PDF.Document.ZeroFillMaskedImagesSpec (spec) where
 
 import Codec.Compression.Flate qualified as Flate
 
+import Control.Monad (forM_)
+
 import Data.Bits (shiftL, shiftR, xor)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -131,3 +133,16 @@ spec = describe "Zero-fill masked images" $ do
         mask  = mkMask 11 64 (BS.replicate 4096 255)
     result <- run image [mask]
     result `shouldBe` Right (rawImage, Just (PDFName "FlateDecode"), Nothing)
+
+  forM_ [("DeviceRGB", 3), ("DeviceCMYK", 4)] $ \(colorSpace, components) ->
+    it ("preserves partially transparent components in " ++ show colorSpace) $ do
+      let raw = BS.pack (fromIntegral <$> take (4096 * components)
+                          (drop 1 (iterate xorshift 2463534242)))
+          alpha = BS.pack (take 4096 (cycle [0, 0, 1, 255]))
+          expected = BS.pack
+            [if BS.index alpha (offset `div` components) == 0 then 0 else byte
+            | (offset, byte) <- zip [0..] (BS.unpack raw)]
+          image = mkImage (PDFName colorSpace) (Just (PDFReference 11 0)) raw
+          mask = mkMask 11 64 alpha
+      result <- run image [mask]
+      result `shouldBe` Right (expected, Just (PDFName "FlateDecode"), Nothing)

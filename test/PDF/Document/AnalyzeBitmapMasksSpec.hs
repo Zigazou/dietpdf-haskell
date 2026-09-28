@@ -1,6 +1,8 @@
 module PDF.Document.AnalyzeBitmapMasksSpec (spec) where
 
+import Codec.Compression.CCITTG4 (encodeG4)
 import Codec.Compression.Flate qualified as Flate
+import Control.Monad (forM_)
 import Data.Bitmap.MaskAnalysis (MaskClass (BinaryMask, NearlyBinaryMask, SmoothMask, DetailedMask), MaskThresholds (nearlyBinaryFraction), MaskAnalysis (maskClass, distinctValues, intermediateFraction, intermediateBounds, largeDifferenceFraction, opaqueFraction, pixelCount), PixelBounds (PixelBounds), analyzeMask, defaultMaskThresholds)
 import Data.ByteString qualified as BS
 import Data.Map.Strict qualified as Map
@@ -75,6 +77,21 @@ spec = describe "Bitmap mask analysis" $ do
         group = PDFIndirectObject 3 0 (PDFDictionary (Map.singleton "S" (PDFName "Alpha")))
     result <- evalPDFWorkT $ importObjects (fromList [owner, image 2 [("ColorSpace",PDFName "DeviceGray")] "", group]) >> analyzeBitmapMasks defaultMaskThresholds
     result `shouldBe` Right []
+  it "decodes supported Group-4 streams with either BlackIs1 polarity" $ do
+    let encoded = either (error . show) id (encodeG4 3 1 (BS.pack [0xa0]))
+    forM_ [False,True] $ \blackIs1 -> do
+      let params = PDFDictionary (Map.fromList
+            [("K",PDFNumber (-1)),("Columns",PDFNumber 3),("Rows",PDFNumber 1),
+             ("EndOfBlock",PDFBool False),("BlackIs1",PDFBool blackIs1)])
+          mask = image 2 [("ColorSpace",PDFName "DeviceGray"),
+            ("BitsPerComponent",PDFNumber 1),("Filter",PDFName "CCITTFaxDecode"),
+            ("DecodeParms",params)] encoded
+          owner = image 1 [("SMask",PDFReference 2 0)] ""
+          alpha = BS.pack (if blackIs1 then [255,0,255] else [0,255,0])
+      result <- evalPDFWorkT $ importObjects (fromList [owner,mask]) >> analyzeBitmapMasks defaultMaskThresholds
+      case result of
+        Right [info] -> bitmapMaskAnalysis info `shouldBe` analyzeMask defaultMaskThresholds 3 1 alpha
+        _ -> expectationFailure (show result)
   it "retains unsupported masks without classifying compressed bytes" $ do
     let mask = image 2 [("ImageMask", PDFBool True), ("Filter", PDFName "CCITTFaxDecode")] "x"
     result <- evalPDFWorkT $ importObjects (fromList [mask]) >> analyzeBitmapMasks defaultMaskThresholds

@@ -6,7 +6,7 @@ optimizations and integrations with external tools (GhostScript, pdf-to-cairo,
 ECT). Helpers are provided to convert booleans to these flags.
 -}
 module Data.PDF.Settings
-  ( Settings(Settings, sOptimizeGFX, sCompressor, sUseGhostScript, sUsePDFToCairo)
+  ( Settings(Settings, sOptimizeGFX, sCompressor, sUseGhostScript, sUsePDFToCairo, sLossyMasks)
   , OptimizeGFX(OptimizeGFX, DoNotOptimizeGFX)
   , UseCompressor(UseZopfli, UseDeflate, UseBrotli, UseECT)
   , UseGhostScript(UseGhostScript, DoNotUseGhostScript)
@@ -95,7 +95,8 @@ Settings controlling optimizations and external tool usage.
 -}
 type Settings :: Type
 data Settings = Settings
-  { sOptimizeGFX    :: !OptimizeGFX    -- ^ Graphics optimization flag
+  { sLossyMasks     :: !Bool           -- ^ Alpha loss and mask downsampling
+  , sOptimizeGFX    :: !OptimizeGFX    -- ^ Graphics optimization flag
   , sCompressor     :: !UseCompressor  -- ^ Compressor flag
   , sUseGhostScript :: !UseGhostScript -- ^ GhostScript usage flag
   , sUsePDFToCairo  :: !UsePDFToCairo  -- ^ pdf-to-cairo usage flag
@@ -104,12 +105,13 @@ data Settings = Settings
 {-|
 Default settings.
 
-By default: graphics optimization enabled, ECT enabled, GhostScript
-disabled, pdf-to-cairo disabled.
+By default: graphics optimization and lossy mask optimization enabled,
+ECT enabled, GhostScript disabled, pdf-to-cairo disabled.
 -}
 defaultSettings :: Settings
 defaultSettings = Settings
-  { sOptimizeGFX    = OptimizeGFX
+  { sLossyMasks     = True
+  , sOptimizeGFX    = OptimizeGFX
   , sCompressor     = UseECT
   , sUseGhostScript = DoNotUseGhostScript
   , sUsePDFToCairo  = DoNotUsePDFToCairo

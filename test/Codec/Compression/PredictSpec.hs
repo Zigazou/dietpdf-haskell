@@ -4,11 +4,13 @@ module Codec.Compression.PredictSpec
 
 import Codec.Compression.Predict
   ( Entropy (EntropyShannon)
-  , Predictor (PNGAverage, PNGNone, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
+  , Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
   , predict
   , unpredict
   )
 import Codec.Compression.Predict.Entropy (entropyShannon)
+import Codec.Compression.Predict.ImageStream
+  (fromPredictedStream, packStream, unpredictImageStream)
 
 import Control.Monad (forM_, replicateM)
 
@@ -174,3 +176,30 @@ spec = do
             unpredicted = predicted >>= unpredict TIFFPredictor2 bitmapConfig
 
           HexBS <$> unpredicted `shouldBe` HexBS <$> Right originalBytes
+
+  it "decodes mixed PNG filters like the scanline decoder across bit depths"
+    $ forAll randomBitmapConfig
+    $ \bitmapConfig ->
+        forAll (randomString (6 * bitmapRawWidth bitmapConfig)) $ \raw -> do
+          let width = bitmapRawWidth bitmapConfig
+              rows = [BS.cons tag (BS.take width (BS.drop (fromIntegral tag * width) raw))
+                     | tag <- [0..5]]
+              encoded = BS.concat rows
+              reference = packStream . unpredictImageStream PNGOptimum
+                        <$> fromPredictedStream PNGOptimum bitmapConfig encoded
+          unpredict PNGOptimum bitmapConfig encoded `shouldBe` reference
+
+  forM_ [PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth, PNGOptimum] $ \predictor ->
+    it ("round trips multiple PNG rows with " ++ show predictor)
+      $ forAll randomBitmapConfig
+      $ \bitmapConfig ->
+          forAll (randomString (3 * bitmapRawWidth bitmapConfig)) $ \raw ->
+            (predict EntropyShannon predictor bitmapConfig raw
+              >>= unpredict predictor bitmapConfig) `shouldBe` Right raw
+
+  it "preserves errors and partial-row behavior of the PNG decoder" $ do
+    let config = BitmapConfiguration 2 3 BC8Bits
+    forM_ [BS.pack [9, 1, 2, 3, 4, 5, 6], BS.pack [1, 2, 3], BS.empty] $ \encoded -> do
+      let reference = packStream . unpredictImageStream PNGOptimum
+                    <$> fromPredictedStream PNGOptimum config encoded
+      unpredict PNGOptimum config encoded `shouldBe` reference

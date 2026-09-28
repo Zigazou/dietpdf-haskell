@@ -57,6 +57,7 @@ import Data.PDF.PDFWork
   , withoutStreamCount
   )
 import Data.PDF.WorkData (WorkData (wPDF))
+import Data.Set qualified as Set
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
 import Data.UnifiedError
@@ -65,6 +66,7 @@ import Data.UnifiedError
 
 import GHC.IO.Handle (BufferMode (LineBuffering))
 
+import PDF.Document.OptimizeBitmapMasks (optimizeBitmapMasks)
 import PDF.Document.GetAllMasks (getAllMasks)
 import PDF.Document.InvisibleImages (removeInvisiblePageImages)
 import PDF.Document.MergeVectorStream (mergeVectorStream)
@@ -89,7 +91,7 @@ import PDF.Processing.RepeatedFormFragments (repeatedFormFragments)
 
 import System.IO (hSetBuffering, stderr)
 
-import Util.Dictionary (mkDictionary)
+import Util.Dictionary (mkDictionary, Dictionary)
 import Util.Sequence (mapMaybe)
 
 -- Removing a form can expose further unused resources. Repeat until neither
@@ -284,10 +286,14 @@ pdfEncode objects = do
   gets (ppObjectsWithoutStream . wPDF)
     >>= mapM_ (mergePagesContents >=> putObject)
 
+  sayP "Pruning unused resources"
   pruneUnusedResources
 
   -- Optimize numbers and resources.
+  sayP "Optimizing numbers"
   optimizeNumbers
+
+  sayP "Optimizing resources"
   optimizeResources
 
   -- Find all masks (masks supports more "destruction" than standard images).
@@ -311,14 +317,23 @@ pdfEncode objects = do
   sayP "Zero-filling masked images"
   modifyIndirectObjectsP zeroFillMaskedImages
 
+  sayP "Optimizing bitmap masks"
+  bitmapMasks <- optimizeBitmapMasks
+
   sayP "Optimizing PDF"
-  -- Snapshot resource ownership after resource renaming and before parallel work.
+  -- Snapshot resource ownership after resource renaming and before parallel
+  -- work.
   streamResources <- gets (buildStreamResources . (\pdf ->
     ppObjectsWithoutStream pdf <> ppObjectsWithStream pdf) . wPDF)
   modifyIndirectObjectsP $ \object ->
-    let resources = getObjectNumber object >>= \number ->
+    let
+      resources :: Maybe (Dictionary PDFObject)
+      resources = getObjectNumber object >>= \number ->
           IM.findWithDefault Nothing number streamResources
-    in optimize resources object
+    in
+      if maybe False (`Set.member` bitmapMasks) (getObjectNumber object)
+        then return object
+        else optimize resources object
 
   updateWithAdditionalResources
   repeatedFormFragments

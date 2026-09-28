@@ -47,6 +47,7 @@ library
       Data.Bitmap.BitmapConfiguration
       Data.Bitmap.BitsPerComponent
       Data.Bitmap.MaskAnalysis
+      Data.Bitmap.OptimizeMask
       Data.BitsArray
       Data.ColorSpace
       Data.Context
@@ -129,6 +130,7 @@ library
       PDF.Document.InvisibleImages
       PDF.Document.MergeVectorStream
       PDF.Document.ObjectStream
+      PDF.Document.OptimizeBitmapMasks
       PDF.Document.OptimizeNumbers
       PDF.Document.OptimizeOptionalDictionaryEntries
       PDF.Document.OptimizeResources
@@ -375,6 +377,7 @@ test-suite dietpdf-test
       Codec.Compression.XMLSpec
       Codec.Filter.Ascii85Spec
       Data.Bitmap.BitmapConfigurationSpec
+      Data.Bitmap.OptimizeMaskSpec
       Data.BitsArraySpec
       Data.FoldableWithRestSpec
       Data.LoggingSpec
@@ -392,6 +395,7 @@ test-suite dietpdf-test
       PDF.Document.GetAllMasksSpec
       PDF.Document.InvisibleImagesSpec
       PDF.Document.ObjectStreamSpec
+      PDF.Document.OptimizeBitmapMasksSpec
       PDF.Document.ResourceContextSpec
       PDF.Document.ResourcesSpec
       PDF.Document.UnusedResourcesSpec

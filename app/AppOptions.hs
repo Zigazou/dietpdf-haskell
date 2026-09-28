@@ -112,7 +112,7 @@ Application options.
 -}
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseCompressor !OptimizeGFX !FileOverwrite
+  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseCompressor !OptimizeGFX !Bool !FileOverwrite
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -167,6 +167,7 @@ commandOptimize = command
     <*> (toUsePDFToCairo <$> switch (long "p2c-optimize" <> short 'p' <> help "Use PDFToCairo before optimizing"))
     <*> (toUseCompressor <$> optional (strOption (long "compressor" <> short 'c' <> help "Compressor to use (zopfli, deflate, brotli, ect)")))
     <*> (toOptimizeGFX . not <$> switch (long "no-gfx-optimize" <> short 'x' <> help "Do not optimize graphics stream"))
+    <*> (not <$> switch (long "no-lossy-masks" <> help "Disable alpha quantization and mask downsampling"))
     <*> (toOverwriteFile <$> switch (long "overwrite" <> short 'o' <> help "Overwrite existing output file"))
     )
     (progDesc "Optimize a PDF file")
