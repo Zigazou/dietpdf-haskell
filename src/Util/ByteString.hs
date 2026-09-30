@@ -122,7 +122,8 @@ Group a `List` of `ByteString` (color components) into a `ByteString`.
 "ABCDEFGHIJKLMNO"
 -}
 groupComponents :: [ByteString] -> ByteString
-groupComponents = BS.concat . BS.transpose
+groupComponents [raw] = raw
+groupComponents streams = BS.concat (BS.transpose streams)
 
 {-|
 Check if a RGB `ByteString` contains only gray values, i.e., components have

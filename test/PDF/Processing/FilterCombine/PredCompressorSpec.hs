@@ -1,8 +1,15 @@
 module PDF.Processing.FilterCombine.PredCompressorSpec (spec) where
 
+import Codec.Compression.Flate qualified as FL
+import Codec.Compression.RunLength qualified as RL
+import Codec.Compression.Predict (Predictor (PNGOptimum), predict)
+import Codec.Compression.Predict.Entropy (Entropy (EntropyDeflate, EntropyMSAD, EntropyRLE))
+import Data.List (minimumBy)
+import Data.Ord (comparing)
+
 import Control.Monad (forM_)
 import Data.Bitmap.BitmapConfiguration (BitmapConfiguration (BitmapConfiguration))
-import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC16Bits, BC2Bits, BC4Bits, BC8Bits))
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC1Bit, BC16Bits, BC2Bits, BC4Bits, BC8Bits))
 import Data.ByteString qualified as BS
 import Data.Foldable (toList)
 import Data.PDF.Filter (Filter (fDecodeParms))
@@ -23,6 +30,17 @@ right = either (fail . show) pure
 
 spec :: Spec
 spec = describe "predCompressor" $ do
+  forM_ [BC1Bit, BC8Bits, BC16Bits] $ \bits ->
+    it ("matches the original RLE search byte for byte for " ++ show bits) $ do
+      let config = BitmapConfiguration 9 1 bits
+          original = BS.pack (take 216 (cycle [0, 255, 17, 34, 51, 0, 0, 0]))
+      candidates <- right $ mapM (\entropy ->
+        predict entropy PNGOptimum config original
+          >>= FL.noCompress >>= RL.compress >>= FL.fastCompress)
+        [EntropyDeflate, EntropyMSAD, EntropyRLE]
+      encoded <- right $ predRleCompressor (Just config) original UseDeflate
+      fcBytes encoded `shouldBe` minimumBy (comparing BS.length) candidates
+
   -- A smooth 16-bit tint table strongly favors TIFF prediction, but Poppler's
   -- TIFF decoder truncates reconstructed 16-bit samples to eight bits.
   let samples = BS.pack $ concat

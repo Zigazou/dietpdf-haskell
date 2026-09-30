@@ -8,13 +8,15 @@ finally compresses with either Zopfli or fast Deflate, producing a
 -}
 module PDF.Processing.FilterCombine.PredRleCompressor
   ( predRleCompressor
+  , predRleCompressorFromPredicted
+  , predRleEntropies
   ) where
 
 import Codec.Compression.BrotliForPDF qualified as BR
 import Codec.Compression.ECT qualified as ECT
 import Codec.Compression.Flate qualified as FL
 import Codec.Compression.Predict
-  (Entropy (EntropyRLE), Predictor (PNGOptimum), predict)
+  (Entropy (EntropyRLE), Predictor (PNGOptimum), predictPNGVariants)
 import Codec.Compression.Predict.Entropy (Entropy (EntropyDeflate, EntropyMSAD))
 import Codec.Compression.RunLength qualified as RL
 
@@ -52,19 +54,47 @@ predRleCompressor
   -> UseCompressor
   -> Fallible FilterCombination
 predRleCompressor (Just bitmapConfig) stream useCompressor = do
-  let
-    (compressor, filterName) = getCompressor useCompressor
-    entropies                = [EntropyDeflate, EntropyMSAD, EntropyRLE]
-    width                    = bcLineWidth bitmapConfig
-    components               = bcComponents bitmapConfig
+  predicted <- predictPNGVariants [ (entropy, PNGOptimum)
+                                  | entropy <- predRleEntropies
+                                  ]
+                                  bitmapConfig
+                                  stream
 
-  -- Try all entropies and select the best compressed result.
-  compressed <- mapM (\entropy ->
-                        predict entropy PNGOptimum bitmapConfig stream
-                        >>= FL.noCompress
-                        >>= RL.compress
-                        >>= compressor
-                      ) entropies
+  predRleCompressorFromPredicted bitmapConfig predicted useCompressor
+
+predRleCompressor _noBitmapConfig _stream _useCompressor = Left
+  $ InvalidFilterParm "no width given to predRleCompressor"
+
+-- | Keep strategy order stable when compressed sizes tie.
+predRleEntropies :: [Entropy]
+predRleEntropies = [EntropyDeflate, EntropyMSAD, EntropyRLE]
+
+-- | Compress precomputed PNG streams, allowing callers to share prediction work.
+predRleCompressorFromPredicted
+  :: BitmapConfiguration
+  -> [ByteString]
+  -> UseCompressor
+  -> Fallible FilterCombination
+predRleCompressorFromPredicted _ [] _ = Left
+  $ InvalidFilterParm "no predicted streams given to predRleCompressor"
+
+predRleCompressorFromPredicted bitmapConfig predicted useCompressor = do
+  let
+    compressor :: ByteString -> Fallible ByteString
+    filterName :: PDFObject
+    (compressor, filterName) = getCompressor useCompressor
+
+    width :: Int
+    width = bcLineWidth bitmapConfig
+
+    components :: Int
+    components = bcComponents bitmapConfig
+
+  compressed <- mapM (\stream -> FL.noCompress stream
+                             >>= RL.compress
+                             >>= compressor
+                     )
+                     predicted
                 <&> minimumBy (\a b -> BS.length a `compare` BS.length b)
 
   return $ mkFCAppend
@@ -83,6 +113,3 @@ predRleCompressor (Just bitmapConfig) stream useCompressor = do
       )
     ]
     compressed
-
-predRleCompressor _noBitmapConfig _stream _useCompressor = Left
-  $ InvalidFilterParm "no width given to predRleCompressor"

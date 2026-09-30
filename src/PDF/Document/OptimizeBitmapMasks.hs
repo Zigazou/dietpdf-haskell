@@ -8,7 +8,7 @@ import Codec.Compression.Flate qualified as Flate
 import Codec.Compression.Predict
   ( Entropy (EntropyShannon)
   , Predictor (PNGOptimum, PNGPaeth, PNGSub, PNGUp)
-  , predict
+  , predictPNGVariants
   )
 
 import Control.Monad (forM, forM_, when)
@@ -25,6 +25,8 @@ import Data.List (minimumBy)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (isNothing)
 import Data.Ord (comparing)
+import Data.PDF.FilterCombination (FilterCombination (fcBytes, fcList))
+import Data.PDF.FilterList (filtersFilter, filtersParms)
 import Data.PDF.PDFObject
   ( PDFObject (PDFArray, PDFBool, PDFIndirectObjectWithStream, PDFName, PDFNumber)
   , mkPDFDictionary
@@ -50,6 +52,9 @@ import PDF.Document.AnalyzeBitmapMasks
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey)
 import PDF.Object.Object.ToPDFNumber (mkPDFNumber)
+import PDF.Processing.FilterCombine.PredRleCompressor
+  (predRleCompressorFromPredicted, predRleEntropies)
+import PDF.Processing.FilterCombine.RleCompressor (rleCompressor)
 
 -- | Return every detected mask number, including unsupported masks, so the
 -- generic image pipeline cannot subsequently apply JPEG or other lossy codecs.
@@ -151,6 +156,21 @@ optimizeBitmapMasks = do
                 plain :: [PDFObject]
                 plain = [flate [] bytes | Right bytes <- [compress raw]]
 
+                -- Share row predictions across Flate and all RLE strategies.
+                pngPredictors :: [Predictor]
+                pngPredictors = [PNGSub, PNGUp, PNGPaeth, PNGOptimum]
+
+                sharedPredictions
+                  :: Either UnifiedError ([ByteString], [ByteString])
+                sharedPredictions =
+                  splitAt (length pngPredictors)
+                    <$> predictPNGVariants
+                        (  [(EntropyShannon, p) | p <- pngPredictors]
+                        ++ [(entropy, PNGOptimum) | entropy <- predRleEntropies]
+                        )
+                        config
+                        raw
+
                 -- Candidate streams with each supported PNG predictor.
                 predicted :: [PDFObject]
                 predicted =
@@ -158,9 +178,45 @@ optimizeBitmapMasks = do
                       [("Predictor", mkPDFNumber predictor),
                         ("Columns", mkPDFNumber w), ("Colors", PDFNumber 1),
                         ("BitsPerComponent", mkPDFNumber bits)])] bytes
-                  | predictor <- [PNGSub, PNGUp, PNGPaeth, PNGOptimum]
-                  , Right bytes <- [predict EntropyShannon predictor config raw
-                                    >>= compress]
+                  | Right (streams, _) <- [sharedPredictions]
+                  , (predictor, stream) <- zip pngPredictors streams
+                  , Right bytes <- [compress stream]
+                  ]
+
+                -- Reuse the generic lossless chains, including the stored
+                -- Flate stage that carries predictor parameters before RLE.
+                combined :: [PDFObject]
+                combined =
+                  [ build
+                      w
+                      h
+                      bits
+                      [ (key, value)
+                      | (key, Just value) <-
+                         [ ("Filter", filtersFilter (fcList result))
+                         , ("DecodeParms", filtersParms (fcList result))
+                         ]
+                      ]
+                      (fcBytes result)
+                  | let
+                      selected :: UseCompressor
+                      selected = case compression of
+                        UseBrotli -> UseDeflate
+                        other     -> other
+                  , encode <-
+                      [ rleCompressor (Just config) raw
+                      , \compressor -> do
+                          (_, streams) <- sharedPredictions
+                          predRleCompressorFromPredicted config
+                                                         streams
+                                                         compressor
+                      ]
+                  , Right result <- [ case encode selected of
+                                        Right encoded
+                                          -> Right encoded
+                                        Left _unavailableCompressor
+                                          -> encode UseDeflate
+                                    ]
                   ]
 
                 -- Group-4 candidates, available only for binary samples.
@@ -180,7 +236,7 @@ optimizeBitmapMasks = do
                 flate parms = build w h bits
                   (("Filter", PDFName "FlateDecode") : parms)
 
-              return (plain ++ predicted ++ fax)
+              return (plain ++ predicted ++ combined ++ fax)
 
             let
               -- Smallest serialized object among the original and candidates.

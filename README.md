@@ -64,7 +64,9 @@ Optimizes a PDF file.
 
 Bitmap masks use a dedicated encoding search: binary masks
 are packed to one bit, and Flate (plain or PNG Sub/Up/Paeth/adaptive prediction)
-is compared with CCITT Group 4. The original object remains a candidate, and
+is compared with RLE + Flate, predictor + RLE + Flate, and CCITT Group 4.
+The Flate stages use the selected Deflate, ECT, or Zopfli compressor.
+The original object remains a candidate, and
 only a smaller complete PDF object, including filter parameters, replaces it.
 Binary soft masks remain DeviceGray `/SMask` images; stencil painting polarity
 and reversed `/Decode` arrays are preserved. Unsupported masks bypass generic

@@ -6,9 +6,14 @@ import Codec.Compression.Predict
   ( Entropy (EntropyShannon)
   , Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
   , predict
+  , predictPNGVariants
   , unpredict
   )
-import Codec.Compression.Predict.Entropy (entropyShannon)
+import Codec.Compression.Predict.Entropy
+  (Entropy (EntropyDeflate, EntropyMSAD, EntropyRLE, EntropyLFS, EntropySum), entropyShannon)
+import Codec.Compression.Predict.Scanline
+  (Scanline (Scanline, slStream), applyPredictorToScanline)
+import Codec.Compression.Predict.Predictor (Samples (Samples), getPredictorFunction)
 import Codec.Compression.Predict.ImageStream
   (fromPredictedStream, packStream, unpredictImageStream)
 
@@ -17,7 +22,7 @@ import Control.Monad (forM_, replicateM)
 import Data.Bitmap.BitmapConfiguration
   (BitmapConfiguration (BitmapConfiguration), bitmapRawWidth)
 import Data.Bitmap.BitsPerComponent
-  (BitsPerComponent (BC16Bits, BC2Bits, BC4Bits, BC8Bits))
+  (BitsPerComponent (BC1Bit, BC16Bits, BC2Bits, BC4Bits, BC8Bits))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Functor ((<&>))
@@ -26,13 +31,13 @@ import Data.Word (Word8)
 import Test.Hspec (Spec, describe, it, shouldBe)
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, arbitrary, elements, forAll)
 
-import Util.ByteString (HexBS (HexBS))
+import Util.ByteString (HexBS (HexBS), separateComponents)
 
 randomBitmapConfig :: Gen BitmapConfiguration
 randomBitmapConfig = do
   lineWidth  <- elements [1..32]
   components <- elements [1, 2, 3, 4]
-  bpc        <- elements [BC2Bits, BC4Bits, BC8Bits, BC16Bits]
+  bpc        <- elements [BC1Bit, BC2Bits, BC4Bits, BC8Bits, BC16Bits]
   return $ BitmapConfiguration lineWidth components bpc
 
 randomString :: Int -> Gen ByteString
@@ -134,6 +139,42 @@ predictorExamples =
 
 spec :: Spec
 spec = do
+  describe "shared PNG predictions" $ do
+    it "matches separate predictions byte for byte for all entropy strategies" $
+      forAll randomBitmapConfig $ \config ->
+        forAll (randomString (bitmapRawWidth config * 3)) $ \raw ->
+          let requests = [(entropy, predictor)
+                         | entropy <- [EntropyShannon, EntropyDeflate, EntropyMSAD,
+                                       EntropyRLE, EntropyLFS, EntropySum]
+                         , predictor <- pngPredictors ++ [PNGOptimum]]
+          in predictPNGVariants requests config raw `shouldBe`
+               mapM (\(entropy, predictor) -> predict entropy predictor config raw) requests
+    it "preserves tie choices and handles empty streams and request lists" $ do
+      let config = BitmapConfiguration 9 1 BC1Bit
+          requests = [(EntropyShannon, PNGOptimum), (EntropyMSAD, PNGOptimum)]
+      predictPNGVariants requests config (BS.replicate 6 0) `shouldBe`
+        mapM (\(e, p) -> predict e p config (BS.replicate 6 0)) requests
+      predictPNGVariants requests config BS.empty `shouldBe` Right [BS.empty, BS.empty]
+      predictPNGVariants [] config "abc" `shouldBe` Right []
+
+  describe "buffer PNG prediction" $
+    it "matches the list implementation, including unequal component lengths" $
+      forAll (randomString 37) $ \prior ->
+        forAll (randomString 31) $ \current ->
+          forM_ [1, 2, 3, 4, 8] $ \components ->
+            forM_ pngPredictors $ \predictor -> do
+              let above = separateComponents components prior
+                  samples = separateComponents components current
+                  reference a b = BS.pack $ go 0 0 (BS.zip a b)
+                   where
+                    go _ _ [] = []
+                    go upperLeft left ((upper, sample) : rest) =
+                      getPredictorFunction predictor (Samples upperLeft upper left sample)
+                        : go upper sample rest
+              slStream (applyPredictorToScanline EntropyShannon predictor
+                (Scanline Nothing above, Scanline Nothing samples))
+                `shouldBe` zipWith reference above samples
+
   describe "predict"
     $ forM_ predictorExamples
     $ \((predictor, bitmapConfig), (example, expected)) ->
@@ -203,3 +244,6 @@ spec = do
       let reference = packStream . unpredictImageStream PNGOptimum
                     <$> fromPredictedStream PNGOptimum config encoded
       unpredict PNGOptimum config encoded `shouldBe` reference
+
+pngPredictors :: [Predictor]
+pngPredictors = [PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth]

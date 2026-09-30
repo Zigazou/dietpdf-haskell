@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 module Codec.Compression.Predict
   ( predict
+  , predictPNGVariants
   , unpredict
   , Entropy (EntropyDeflate, EntropyRLE, EntropyShannon)
   , Predictor (PNGOptimum, PNGAverage, PNGNone, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
@@ -14,11 +15,13 @@ import Codec.Compression.Predict.ImageStream
   , fromUnpredictedStream
   , packStream
   , predictImageStream
+  , predictPNGImageStreams
   , unpredictImageStream
   )
 import Codec.Compression.Predict.Predictor
   ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp, TIFFNoPrediction, TIFFPredictor2)
   , decodeRowPredictor
+  , isPNGGroup
   )
 import Codec.Compression.Predict.TIFF (tiffPredictRow, tiffUnpredictRow)
 
@@ -29,7 +32,8 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Internal qualified as BSI
 import Data.ByteString.Unsafe qualified as BSU
 import Data.Fallible (Fallible)
-import Data.UnifiedError (UnifiedError (InvalidNumberOfBytes))
+import Data.UnifiedError
+  (UnifiedError (InvalidFilterParm, InvalidNumberOfBytes))
 import Data.Word (Word8)
 
 import Foreign.Ptr (Ptr)
@@ -55,6 +59,23 @@ predict entropy predictor bitmapConfig stream
   | otherwise = do
     imgStm <- fromUnpredictedStream bitmapConfig stream
     return $ packStream (predictImageStream entropy predictor imgStm)
+
+-- | Share PNG row predictions across fixed predictors and entropy strategies.
+-- Requests must use PNG predictors.
+predictPNGVariants
+  :: [(Entropy, Predictor)]
+  -> BitmapConfiguration
+  -> ByteString
+  -> Fallible [ByteString]
+predictPNGVariants requests config stream
+  | bcLineWidth config < 1
+  = Left $ InvalidNumberOfBytes 0 0
+
+  | not (all (isPNGGroup . snd) requests)
+  = Left $ InvalidFilterParm "predictPNGVariants requires PNG predictors"
+
+  | otherwise
+  = predictPNGImageStreams requests <$> fromUnpredictedStream config stream
 
 {-|
 Invert the application of a `Predictor` to a `ByteString`, considering its

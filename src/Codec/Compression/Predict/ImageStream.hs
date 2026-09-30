@@ -22,17 +22,22 @@ module Codec.Compression.Predict.ImageStream
   , fromUnpredictedStream
   , unpredictImageStream
   , predictImageStream
+  , predictPNGImageStreams
   ) where
 
-import Codec.Compression.Predict.Entropy (Entropy)
+import Codec.Compression.Predict.Entropy (Entropy (EntropyShannon))
 import Codec.Compression.Predict.Predictor
-  (Predictor, encodeRowPredictor, isPNGGroup)
+  ( Predictor (PNGAverage, PNGNone, PNGOptimum, PNGPaeth, PNGSub, PNGUp)
+  , encodeRowPredictor
+  , isPNGGroup
+  )
 import Codec.Compression.Predict.Scanline
   ( Scanline (Scanline)
   , applyPredictorToScanline
   , applyUnpredictorToScanline
   , emptyScanline
   , fromPredictedLine
+  , selectPredictedScanline
   )
 
 import Data.Bitmap.BitmapConfiguration
@@ -41,6 +46,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (Fallible)
 import Data.Kind (Type)
+import Data.List (transpose)
 
 import Util.ByteString (groupComponents, separateComponents, splitRaw)
 
@@ -68,6 +74,44 @@ predictImageStream entropy predictor imgStm = imgStm
  where
   previousCurrent :: a -> [a] -> [(a, a)]
   previousCurrent previous currents = zip (previous : currents) currents
+
+-- | Evaluate all requested PNG strategies against the same five candidates
+-- per row. Force row selections together so unselected buffers can be released.
+predictPNGImageStreams :: [(Entropy, Predictor)] -> ImageStream -> [ByteString]
+predictPNGImageStreams requests imgStm
+  | null requests = []
+  | null (iLines imgStm) = replicate (length requests) BS.empty
+  | otherwise = map BS.concat $ transpose $ map selectRow pairs
+ where
+  pairs :: [(Scanline, Scanline)]
+  pairs = zip (emptyScanline (iBitmapConfig imgStm) : iLines imgStm)
+              (iLines imgStm)
+
+  predictors :: [Predictor]
+  predictors = [PNGNone, PNGSub, PNGUp, PNGAverage, PNGPaeth]
+
+  selectRow :: (Scanline, Scanline) -> [ByteString]
+  selectRow pair =
+    let
+      candidates :: [Scanline]
+      candidates = [applyPredictorToScanline EntropyShannon p pair
+                   | p <- predictors
+                   ]
+
+      choose :: (Entropy, Predictor) -> Scanline
+      choose (criterion, PNGOptimum) = selectPredictedScanline criterion
+                                                               candidates
+      choose (criterion, predictor) =
+          case lookup predictor (zip predictors candidates) of
+            Just candidate -> candidate
+            Nothing        -> applyPredictorToScanline criterion predictor pair
+
+      packed :: [ByteString]
+      packed = [ packScanline (choose request)
+               | request <- requests
+               ]
+    in
+      foldr seq packed packed
 
 {-|
 Decode an entire image stream using a specified `Predictor`
@@ -109,14 +153,14 @@ Convert an `ImageStream` to a `ByteString`.
 -}
 packStream :: ImageStream -> ByteString
 packStream = BS.concat . fmap packScanline . iLines
- where
-  packScanline :: Scanline -> ByteString
-  packScanline (Scanline Nothing stream) = groupComponents stream
-  packScanline (Scanline (Just predictor) stream)
-    | BS.length rawLine == 0 = ""
-    | isPNGGroup predictor = BS.cons (encodeRowPredictor predictor) rawLine
-    | otherwise = rawLine
-    where rawLine = groupComponents stream
+
+packScanline :: Scanline -> ByteString
+packScanline (Scanline Nothing stream) = groupComponents stream
+packScanline (Scanline (Just predictor) stream)
+  | BS.length rawLine == 0 = ""
+  | isPNGGroup predictor = BS.cons (encodeRowPredictor predictor) rawLine
+  | otherwise = rawLine
+  where rawLine = groupComponents stream
 
 {-|
 Convert an unpredicted `Bytestring` to an `ImageStream` given its line width.
