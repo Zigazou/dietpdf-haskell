@@ -1,13 +1,42 @@
 module Data.Bitmap.OptimizeMaskSpec (spec) where
 
 import Data.Bitmap.MaskAnalysis (analyzeMask, defaultMaskThresholds)
-import Data.Bitmap.OptimizeMask (maskCandidates, packMask)
+import Data.Bitmap.OptimizeMask (maskCandidates, packMask, ditherGray4)
 import Data.ByteString qualified as BS
 import Data.Word (Word8)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldSatisfy)
 
 spec :: Spec
 spec = describe "Alpha candidates" $ do
+  it "offers packed four-bit samples only in lossy mode" $ do
+    let raw = BS.pack [0,17..255]
+    case analyzeMask defaultMaskThresholds 16 1 raw of
+      Left reason -> error reason
+      Right analysis -> do
+        maskCandidates True analysis 16 1 raw `shouldSatisfy`
+          elem (True,16,1,4,BS.pack [0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef])
+        maskCandidates False analysis 16 1 raw `shouldBe` [(False,16,1,8,raw)]
+  it "excludes the original candidate in lossy mode" $ do
+    let raw = BS.pack [0..255]
+    case analyzeMask defaultMaskThresholds 256 1 raw of
+      Left reason -> error reason
+      Right analysis -> do
+        let variants = maskCandidates True analysis 256 1 raw
+        variants `shouldSatisfy` (not . null)
+        variants `shouldSatisfy` all (\(lossy,_,_,_,_) -> lossy)
+        variants `shouldSatisfy` (notElem (False,256,1,8,raw))
+  it "packs a 16-level palette into high and low nibbles" $
+    ditherGray4 16 1 (BS.pack [0,17..255]) `shouldBe`
+      Just (BS.pack [0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef])
+  it "diffuses error to the right and the following row" $
+    ditherGray4 2 2 (BS.replicate 4 128) `shouldBe` Just (BS.pack [0x87,0x78])
+  it "packs odd-width gray rows with zero padding" $
+    ditherGray4 3 2 (BS.pack [0,17,255,255,17,0]) `shouldBe`
+      Just (BS.pack [0x01,0xf0,0xf1,0x00])
+  it "rejects invalid gray dimensions and lengths" $
+    map (\(w,h,raw) -> ditherGray4 w h raw)
+      [(0,1,BS.empty),(2,2,BS.singleton 0),(-1,1,BS.empty)]
+      `shouldBe` replicate 3 Nothing
   it "packs odd-width rows independently with zero padding" $
     packMask 3 2 (BS.pack [255,0,255,0,255,0]) `shouldBe` BS.pack [0xa0,0x40]
   it "leaves all samples unchanged in lossless mode" $ do
@@ -42,4 +71,4 @@ spec = describe "Alpha candidates" $ do
 candidates :: Bool -> Int -> Int -> BS.ByteString -> [(Int, Int, BS.ByteString)]
 candidates lossy width height raw = case analyzeMask defaultMaskThresholds width height raw of
   Left reason -> error reason
-  Right analysis -> maskCandidates lossy analysis width height raw
+  Right analysis -> [(w,h,samples) | (_,w,h,8,samples) <- maskCandidates lossy analysis width height raw]

@@ -1,7 +1,6 @@
--- | Conservative alpha candidates. All lossy candidates stay within three
--- alpha units of the input; histogram classification alone never permits
--- deleting a small but high-contrast feature.
-module Data.Bitmap.OptimizeMask (maskCandidates, packMask) where
+-- | Alpha candidates, including lossy Floyd-Steinberg 4-bit grayscale.
+-- Other lossy candidates stay within three alpha units of the input.
+module Data.Bitmap.OptimizeMask (maskCandidates, packMask, ditherGray4) where
 
 import Data.Bitmap.MaskAnalysis
   (MaskAnalysis (largeDifferenceFraction, maskClass), MaskClass (SmoothMask))
@@ -13,10 +12,18 @@ import Data.List (nub)
 import Data.Word (Word8)
 
 import Foreign (castPtr)
+import Foreign.C.Types (CSize (CSize))
 import Foreign.Ptr (Ptr, plusPtr)
 import Foreign.Storable (peek, poke)
 
--- | Original first, then snap/quantization and optional 2x/4x reduction.
+import System.IO.Unsafe (unsafePerformIO)
+
+foreign import ccall unsafe "ditherGray4FFI"
+  c_dither_gray4 :: Ptr Word8 -> CSize -> CSize -> Ptr Word8 -> IO CSize
+
+-- | Candidates carry lossiness, dimensions, bit depth and stored samples.
+-- Lossless mode offers the original; lossy mode offers only quantization,
+-- reduction and packed 4-bit dithering.
 -- Call only with validated dimensions and one alpha byte per pixel.
 maskCandidates
   :: Bool
@@ -24,18 +31,21 @@ maskCandidates
   -> Int
   -> Int
   -> ByteString
-  -> [(Bool, Int, Int, ByteString)]
+  -> [(Bool, Int, Int, Int, ByteString)]
 maskCandidates False _analysis width height alpha =
-  [(False, width, height, alpha)]
+  [(False, width, height, 8, alpha)]
 
 maskCandidates True analysis width height alpha =
   nub
-    ( [ (True, width, height, candidate)
-      | candidate <- quantized
-      , candidate /= alpha
-      , close alpha candidate
-      ]
+    (  [ (True, width, height, 8, candidate)
+       | candidate <- quantized
+       , candidate /= alpha
+       , close alpha candidate
+       ]
     ++ reduced
+    ++ [ (True, width, height, 4, packed)
+       | Just packed <- [ditherGray4 width height alpha]
+       ]
     )
  where
   -- Snap near-transparent and near-opaque samples to exact endpoints.
@@ -62,7 +72,7 @@ maskCandidates True analysis width height alpha =
   quantized = BS.map snap alpha : [BS.map (quantize n) alpha | n <- [64,32,16]]
 
   -- Downsample only smooth masks with no exact endpoints or large changes.
-  reduced :: [(Bool, Int, Int, ByteString)]
+  reduced :: [(Bool, Int, Int, Int, ByteString)]
   reduced
     | maskClass analysis /= SmoothMask || largeDifferenceFraction analysis /= 0
       -- Preserve exact transparent/opaque pixels and avoid exposing color
@@ -71,7 +81,7 @@ maskCandidates True analysis width height alpha =
     = []
 
     | otherwise
-    = [ (True, w, h, small)
+    = [ (True, w, h, 8, small)
       | factor <- [2, 4]
       , width `mod` factor == 0, height `mod` factor == 0
       , let w = width `div` factor
@@ -180,3 +190,30 @@ packMask width height alpha
                                 else acc
 
           loop (bit + 1) acc'
+
+-- | Validate the input and convert to row-aligned, high-nibble-first samples.
+-- Allocation failure produces no candidate.
+ditherGray4 :: Int -> Int -> ByteString -> Maybe ByteString
+ditherGray4 width height alpha
+  |  width <= 0
+  || height <= 0
+  || width > maxBound `quot` height
+  || BS.length alpha /= width * height
+  = Nothing
+
+  | otherwise
+  = unsafePerformIO $
+      BS.useAsCString alpha $ \src -> do
+        packed <- BSI.createAndTrim
+                    ((width `quot` 2 + width `rem` 2) * height)
+                    ( fmap fromIntegral
+                    . c_dither_gray4 (castPtr src)
+                                     (fromIntegral width)
+                                     (fromIntegral height)
+                    )
+
+        if BS.null packed
+          then return Nothing
+          else return (Just packed)
+
+{-# NOINLINE ditherGray4 #-}

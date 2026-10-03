@@ -1,7 +1,7 @@
 -- | Detect bitmap mask roles and analyze supported streams without modifying
 -- the document. Color-key arrays and graphics-state soft-mask groups are not
 -- bitmap masks. Unsupported data remains detectable with an explicit reason.
--- Currently supports 1-bit stencils and 1/8-bit DeviceGray soft masks, with
+-- Currently supports 1-bit stencils and 1/4/8-bit DeviceGray soft masks, with
 -- default or reversed Decode, using lossless stream decoders and the strict
 -- CCITT Group-4 subset emitted by this project. Call
 -- after importObjects; results are returned to the caller, not cached in the
@@ -16,7 +16,7 @@ import Control.Monad.State (StateT)
 import Control.Monad.Trans.State (gets)
 
 import Data.Bitmap.MaskAnalysis (MaskAnalysis, MaskThresholds, analyzeMask)
-import Data.Bits (testBit)
+import Data.Bits (testBit, shiftR, (.&.))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Fallible (FallibleT)
@@ -192,18 +192,41 @@ readBitmapMask roles object = case geometry roles object of
         | otherwise ->
             let
               stride :: Int
-              stride = fromInteger ((toInteger width + 7) `div` 8)
+              stride =
+                fromInteger ((toInteger width * toInteger bits + 7) `div` 8)
 
               alpha :: ByteString
-              alpha = if bits == 8 then raw else BS.pack
-                [ if testBit (BS.index raw (y * stride + x `div` 8))
-                              (7 - x `mod` 8) then 255 else 0
-                | y <- [0 .. height - 1], x <- [0 .. width - 1]
-                ]
+              alpha
+                | bits == 8
+                = raw
+
+                | bits == 4
+                = BS.pack
+                    [ (
+                        ( BS.index raw (y * stride + x `div` 2)
+                          `shiftR` (if even x then 4 else 0)
+                        )
+                        .&. 15
+                      ) * 17
+                    | y <- [0 .. height - 1]
+                    , x <- [0 .. width - 1]
+                    ]
+
+                | otherwise
+                = BS.pack
+                    [ if testBit (BS.index raw (y * stride + x `div` 8))
+                                 (7 - x `mod` 8)
+                        then 255
+                        else 0
+                    | y <- [0 .. height - 1]
+                    , x <- [0 .. width - 1]
+                    ]
             in
-              Right (width
+              Right ( width
                     , height
-                    , if invert then BS.map (255 -) alpha else alpha
+                    , if invert
+                        then BS.map (255 -) alpha
+                        else alpha
                     )
 
 -- Only exact default/reversed Decode ranges are supported. Stencil samples
@@ -220,6 +243,7 @@ geometry roles object = do
   bits <- case getValueForKey "BitsPerComponent" object of
     Nothing | stencil                -> Right 1
     Just (PDFNumber 1)               -> Right 1
+    Just (PDFNumber 4) | not stencil -> Right 4
     Just (PDFNumber 8) | not stencil -> Right 8
     _                                -> Left "Unsupported mask bit depth"
 

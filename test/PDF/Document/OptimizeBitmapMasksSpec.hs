@@ -100,6 +100,22 @@ spec = describe "Bitmap mask optimization" $ do
         getValueForKey "BitsPerComponent" best `shouldBe` Just (PDFNumber 1)
         changed `shouldBe` Right (65,64,BS.map (\v -> if v < 128 then 0 else 255) raw)
       _ -> expectationFailure (show (lossless,lossy))
+  it "stores a 16-level soft mask at four bits and round-trips odd rows" $ do
+    let width, height :: Int
+        width = 65
+        height = 64
+        noise = drop 1 (iterate (\n -> (1103515245 * n + 12345) `mod` 2147483648) (42 :: Integer))
+        raw = BS.pack (take (width * height)
+          [fromInteger ((n `div` 65536) `mod` 16) * 17 | n <- noise])
+        original = image 2 width height [("ColorSpace",PDFName "DeviceGray"),
+          ("BitsPerComponent",PDFNumber 8)] raw
+    result <- optimize True SoftMask original
+    case result of
+      Right (Just best, decoded) -> do
+        getValueForKey "BitsPerComponent" best `shouldBe` Just (PDFNumber 4)
+        decoded `shouldBe` Right (width,height,raw)
+        BS.length (fromPDFObject best) `shouldSatisfy` (< BS.length (fromPDFObject original))
+      _ -> expectationFailure (show result)
   it "keeps tiny masks when dictionary overhead outweighs compression" $ do
     let original = image 2 1 1 [("ColorSpace",PDFName "DeviceGray"),("BitsPerComponent",PDFNumber 8)] "x"
     result <- optimize False SoftMask original

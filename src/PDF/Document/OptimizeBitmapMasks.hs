@@ -13,7 +13,7 @@ import Control.Monad.State (gets)
 
 import Data.Bitmap.BitmapConfiguration
   (BitmapConfiguration (BitmapConfiguration))
-import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC1Bit, BC8Bits))
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC1Bit, BC4Bits, BC8Bits))
 import Data.Bitmap.MaskAnalysis (defaultMaskThresholds)
 import Data.Bitmap.OptimizeMask (maskCandidates, packMask)
 import Data.ByteString (ByteString)
@@ -104,7 +104,7 @@ optimizeBitmapMasks = do
                 (\key -> isNothing (getValueForKey key original))
                 ["Matte", "Mask", "SMask", "Alternates"]
 
-              variants :: [(Bool, Int, Int, ByteString)]
+              variants :: [(Bool, Int, Int, Int, ByteString)]
               variants = maskCandidates allowLossy analysis width height alpha
 
               -- Compare candidates by their complete serialized object size.
@@ -152,25 +152,30 @@ optimizeBitmapMasks = do
                   bytes
 
             candidates <- forM (zip [1 :: Int ..] variants) $
-              \(variant, (isLossy, w, h, samples)) -> do
+              \(variant, (isLossy, w, h, sampleBits, samples)) -> do
                 let
                   -- Whether every sample can be stored as a one-bit mask.
                   binary :: Bool
-                  binary = BS.all (\v -> v == 0 || v == 255) samples
+                  binary = sampleBits == 8
+                        && BS.all (\v -> v == 0 || v == 255) samples
 
                   bits :: Int
-                  bits = if binary then 1 else 8 :: Int
+                  bits = if binary then 1 else sampleBits
 
-                  -- Packed row-aligned samples for binary masks, or raw alpha.
+                  -- Pack binary masks; other candidates already have their
+                  -- layout.
                   raw :: ByteString
                   raw = if binary then packMask w h samples else samples
 
                   -- Pixel layout passed to PNG predictor implementations.
+                  bitsPerComponent :: BitsPerComponent
+                  bitsPerComponent = case bits of
+                                      1 -> BC1Bit
+                                      4 -> BC4Bits
+                                      _ -> BC8Bits
+
                   config :: BitmapConfiguration
-                  config = BitmapConfiguration
-                            w
-                            1
-                            (if binary then BC1Bit else BC8Bits)
+                  config = BitmapConfiguration w 1 bitsPerComponent
 
                   -- Candidate streams with ordinary Flate compression.
                   plain :: [(PDFWork IO (), PDFObject)]

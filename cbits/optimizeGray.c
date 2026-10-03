@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 /*
@@ -73,4 +74,69 @@ size_t optimizeGrayFFI(const uint8_t *input, size_t inputLen, uint8_t *output) {
   }
 
   return outputLen;
+}
+
+/* Convert 8-bit gray to packed 4-bit gray using Floyd-Steinberg diffusion. Rows
+ * are byte-aligned, with the first pixel in the high nibble and zero padding
+ * for odd widths. Buffers must not overlap. Return zero on invalid dimensions
+ * or allocation failure; output requires ceil(width / 2) * height.
+ */
+size_t ditherGray4FFI(const uint8_t *input, size_t width, size_t height,
+                      uint8_t *output) {
+  if (!input || !output || !width || !height || width > SIZE_MAX / height ||
+      width > SIZE_MAX / (2 * sizeof(float)) - 2) {
+    return 0;
+  }
+
+  size_t stride = width / 2 + width % 2;
+  float *errors = calloc(2 * (width + 2), sizeof(float));
+
+  if (!errors) {
+    return 0;
+  }
+
+  float *current = errors;
+  float *next = errors + width + 2;
+  float error;
+  float value;
+  unsigned level;
+
+  for (size_t y = 0; y < height; ++y) {
+    const uint8_t *inputRow = input + y * width;
+    uint8_t *outputRow = output + y * stride;
+
+    for (size_t x = 0; x < width; ++x) {
+      value = inputRow[x] + current[x + 1];
+
+      if (value < 0) {
+        value = 0;
+      } else if (value > 255) {
+        value = 255;
+      }
+
+      level = (unsigned)(value / 17.0f + 0.5f);
+      if (x & 1) {
+        outputRow[x / 2] |= (uint8_t)level;
+      } else {
+        outputRow[x / 2] = (uint8_t)(level << 4);
+      }
+
+      error = value - level * 17.0f;
+      current[x + 2] += error * (7.0f / 16.0f);
+
+      next[x] += error * (3.0f / 16.0f);
+      next[x + 1] += error * (5.0f / 16.0f);
+      next[x + 2] += error * (1.0f / 16.0f);
+    }
+
+    float *swap = current;
+
+    current = next;
+    next = swap;
+    memset(next, 0, (width + 2) * sizeof(float));
+  }
+
+  free(errors);
+
+  return stride * height;
 }

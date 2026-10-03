@@ -11,7 +11,7 @@ import Data.PDF.PDFObject (PDFObject (PDFArray, PDFBool, PDFDictionary, PDFIndir
 import Data.PDF.PDFWork (evalPDFWorkT, getObject)
 import Data.Sequence qualified as Seq
 import Data.Set qualified as Set
-import PDF.Document.AnalyzeBitmapMasks (BitmapMaskRole (SoftMask, ExplicitMask, StencilMask), BitmapMaskInfo (bitmapMaskRoles, bitmapMaskAnalysis), analyzeBitmapMasks)
+import PDF.Document.AnalyzeBitmapMasks (BitmapMaskRole (SoftMask, ExplicitMask, StencilMask), BitmapMaskInfo (bitmapMaskRoles, bitmapMaskAnalysis), analyzeBitmapMasks, readBitmapMask)
 import PDF.Processing.PDFWork (importObjects)
 import Test.Hspec (Spec, describe, it, shouldBe, expectationFailure)
 
@@ -60,6 +60,13 @@ spec = describe "Bitmap mask analysis" $ do
         stored `shouldBe` Just mask
         bitmapMaskAnalysis info `shouldBe` analyzeMask defaultMaskThresholds 3 1 (BS.pack [0,128,255])
       _ -> expectationFailure (show result)
+  it "decodes four-bit soft masks with odd-row padding and reversed Decode" $ do
+    let mask = image 2 [("ColorSpace",PDFName "DeviceGray"),
+          ("BitsPerComponent",PDFNumber 4),("Height",PDFNumber 2),
+          ("Decode",PDFArray (Seq.fromList [PDFNumber 1,PDFNumber 0]))]
+          (BS.pack [0x01,0xff,0xf1,0x0f])
+    result <- evalPDFWorkT (readBitmapMask (Set.singleton SoftMask) mask)
+    result `shouldBe` Right (Right (3,2,BS.pack [255,238,0,0,238,255]))
   it "rejects invalid thresholds" $
     analyzeMask (defaultMaskThresholds { nearlyBinaryFraction = 0 / 0 }) 1 1 "a" `shouldBe` Left "Invalid mask thresholds"
   it "ignores padding bits and applies stencil polarity and reversed Decode" $ do
