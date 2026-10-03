@@ -24,12 +24,19 @@ maskCandidates
   -> Int
   -> Int
   -> ByteString
-  -> [(Int, Int, ByteString)]
-maskCandidates lossy analysis width height alpha =
-  (width, height, alpha) : if not lossy then [] else
-    nub ([(width, height, candidate) | candidate <- quantized,
-          candidate /= alpha, close alpha candidate]
-      ++ reduced)
+  -> [(Bool, Int, Int, ByteString)]
+maskCandidates False _analysis width height alpha =
+  [(False, width, height, alpha)]
+
+maskCandidates True analysis width height alpha =
+  nub
+    ( [ (True, width, height, candidate)
+      | candidate <- quantized
+      , candidate /= alpha
+      , close alpha candidate
+      ]
+    ++ reduced
+    )
  where
   -- Snap near-transparent and near-opaque samples to exact endpoints.
   snap :: Word8 -> Word8
@@ -39,16 +46,23 @@ maskCandidates lossy analysis width height alpha =
 
   -- Map an alpha byte to the nearest value on an evenly spaced palette.
   quantize :: Int -> Word8 -> Word8
-  quantize levels value = fromIntegral
-    ((((fromIntegral (snap value) :: Int) * (levels - 1) + 127) `div` 255
-       * 255 + (levels - 1) `div` 2) `div` (levels - 1))
+  quantize levels value = fromIntegral paletteValue
+   where
+    steps :: Int
+    steps = levels - 1
+
+    paletteIndex :: Int
+    paletteIndex = (fromIntegral (snap value) * steps + 127) `quot` 255
+
+    paletteValue :: Int
+    paletteValue = (paletteIndex * 255 + steps `quot` 2) `quot` steps
 
   -- Snapped and palette-quantized versions of the source alpha plane.
   quantized :: [ByteString]
   quantized = BS.map snap alpha : [BS.map (quantize n) alpha | n <- [64,32,16]]
 
   -- Downsample only smooth masks with no exact endpoints or large changes.
-  reduced :: [(Int, Int, ByteString)]
+  reduced :: [(Bool, Int, Int, ByteString)]
   reduced
     | maskClass analysis /= SmoothMask || largeDifferenceFraction analysis /= 0
       -- Preserve exact transparent/opaque pixels and avoid exposing color
@@ -57,7 +71,7 @@ maskCandidates lossy analysis width height alpha =
     = []
 
     | otherwise
-    = [ (w, h, small)
+    = [ (True, w, h, small)
       | factor <- [2, 4]
       , width `mod` factor == 0, height `mod` factor == 0
       , let w = width `div` factor
@@ -65,22 +79,35 @@ maskCandidates lossy analysis width height alpha =
       , w > 0
       , h > 0
       , let small = BS.pack
-              [ fromIntegral ((sum
-                  [ fromIntegral (BS.index alpha ((y * factor + dy) * width
-                                                  + x * factor + dx)) :: Int
-                  | dy <- [0 .. factor - 1], dx <- [0 .. factor - 1]
-                  ] + factor * factor `div` 2) `div` (factor * factor))
-              | y <- [0 .. h - 1], x <- [0 .. w - 1]
+              [ fromIntegral
+                ( ( sum
+                      [ fromIntegral (BS.index alpha ((y * factor + dy) * width
+                                                      + x * factor + dx)) :: Int
+                      | dy <- [0 .. factor - 1]
+                      , dx <- [0 .. factor - 1]
+                      ]
+                  + factor
+                  * factor `div` 2
+                  )
+                  `div` (factor * factor)
+                )
+              | y <- [0 .. h - 1]
+              , x <- [0 .. w - 1]
               ]
       -- Bound both nearest-neighbor and bilinear reconstruction: every
       -- neighboring reduced sample must be close to the original sample.
       , and [ abs (fromIntegral (BS.index alpha (y * width + x))
                    - (fromIntegral (BS.index small (sy * w + sx)) :: Int)) <= 3
-            | y <- [0 .. height - 1], x <- [0 .. width - 1]
+            | y <- [0 .. height - 1]
+            , x <- [0 .. width - 1]
             , let x0 = (2 * x + 1 - factor) `div` (2 * factor)
             , let y0 = (2 * y + 1 - factor) `div` (2 * factor)
-            , sx <- nub [max 0 (min (w - 1) x0), max 0 (min (w - 1) (x0 + 1))]
-            , sy <- nub [max 0 (min (h - 1) y0), max 0 (min (h - 1) (y0 + 1))]
+            , sx <- nub [ max 0 (min (w - 1) x0)
+                        , max 0 (min (w - 1) (x0 + 1))
+                        ]
+            , sy <- nub [ max 0 (min (h - 1) y0)
+                        , max 0 (min (h - 1) (y0 + 1))
+                        ]
             ]
       ]
 
