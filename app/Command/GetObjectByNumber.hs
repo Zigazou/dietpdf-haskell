@@ -11,6 +11,7 @@ module Command.GetObjectByNumber
   ) where
 
 import Control.Monad.Trans.Class (MonadTrans (lift))
+import Control.Monad.Trans.State.Lazy (StateT, evalStateT, gets, modify)
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -21,9 +22,10 @@ import Data.Logging (Logging)
 import Data.Map qualified as Map
 import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.PDFObject
-    ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
-    )
+  ( PDFObject (PDFArray, PDFBool, PDFComment, PDFDictionary, PDFEndOfFile, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithGraphics, PDFIndirectObjectWithStream, PDFKeyword, PDFName, PDFNull, PDFNumber, PDFObjectStream, PDFReference, PDFStartXRef, PDFString, PDFTrailer, PDFVersion, PDFXRef, PDFXRefStream)
+  )
 import Data.PDF.PDFWork (PDFWork, evalPDFWork, getObject)
+import Data.PDF.WorkData (WorkData)
 import Data.Set (Set)
 import Data.Set qualified as Set
 
@@ -86,131 +88,134 @@ type Processed :: Type
 type Processed = Set Int
 
 {-|
+Rendering monad: the set of visited objects is shared globally across all
+branches, so each indirect object is printed at most once.
+-}
+type Pretty :: (Type -> Type) -> Type -> Type
+type Pretty m a = StateT Processed (StateT WorkData (FallibleT m)) a
+
+{-|
+Run the action only if object number is not yet visited, marking it visited.
+-}
+once :: Monad m => Int -> Pretty m ByteString -> Pretty m ByteString
+once major action = do
+  seen <- gets (Set.member major)
+  if seen
+    then return ""
+    else modify (Set.insert major) >> action
+
+{-|
 Render a 'PDFObject' to a pretty 'ByteString' with indentation and recursion
 control.
 
 Takes the set of processed object numbers, the current 'Level', and the object
 to render. Uses 'PDFWork' to fetch referenced objects as needed.
 -}
-pretty :: Monad m => Processed -> Level -> PDFObject -> PDFWork m ByteString
-pretty _processed level (PDFComment comment) =
+pretty :: Monad m => Level -> PDFObject -> Pretty m ByteString
+pretty level (PDFComment comment) =
   return $ level %> "%" <> comment <> "\n"
 
-pretty _processed level (PDFVersion version) =
+pretty level (PDFVersion version) =
   return $ level %> "PDF-" <> version <> "\n"
 
-pretty _processed level PDFEndOfFile =
+pretty level PDFEndOfFile =
   return $ level %> "%%EOF\n"
 
-pretty _processed level (PDFNumber number) =
+pretty level (PDFNumber number) =
   return $ level %> fromNumber number <> "\n"
 
-pretty _processed level keyword@(PDFKeyword _keyword) =
+pretty level keyword@(PDFKeyword _keyword) =
   return $ level %> fromPDFObject keyword <> "\n"
 
-pretty _processed level name@(PDFName _name) =
+pretty level name@(PDFName _name) =
   return $ level %> fromPDFObject name <> "\n"
 
-pretty _processed level pdfString@(PDFString _pdfString) =
+pretty level pdfString@(PDFString _pdfString) =
   return $ level %> fromPDFObject pdfString <> "\n"
 
-pretty _processed level hexString@(PDFHexString _hexString) =
+pretty level hexString@(PDFHexString _hexString) =
   return $ level %> fromPDFObject hexString <> ">\n"
 
-pretty processed level reference@(PDFReference major _minor)
-  | Set.member major processed = return $
-      level %> fromPDFObject reference <> "\n"
-  | otherwise = getObject major >>= \case
-      Just referenced -> pretty processed (inc' level) referenced
+pretty level reference@(PDFReference major _minor) = do
+  seen <- gets (Set.member major)
+  if seen
+    then return $ level %> fromPDFObject reference <> "\n"
+    else lift (getObject major) >>= \case
+      Just referenced -> pretty (inc' level) referenced
       Nothing         -> return ""
 
-pretty processed level (PDFArray array) = do
-  children <- mapM (pretty processed (disp (inc level))) (toList array)
+pretty level (PDFArray array) = do
+  children <- mapM (pretty (disp (inc level))) (toList array)
   return $ level %> "[\n" <> BS.concat children <> disp level %> "]\n"
 
-pretty processed level (PDFDictionary dict) = do
+pretty level (PDFDictionary dict) = do
   children <- mapM
     ( \(key, value) -> do
-        pKey <- pretty processed (inc level) (PDFName key)
+        pKey <- pretty (inc level) (PDFName key)
         pValue <- if key == "Parent"
                     then return $ hide level %> fromPDFObject value <> "\n"
-                    else pretty processed (hide (inc level)) value
+                    else pretty (hide (inc level)) value
         return $ BS.dropEnd 1 pKey <> " " <> pValue
     )
     (Map.toAscList dict)
   return $ level %> "<<\n" <> BS.concat children <> disp level %> ">>\n"
 
-pretty processed level (PDFIndirectObject major minor object)
-  | Set.member major processed = return ""
-  | otherwise = do
-      let processed' = Set.insert major processed
-      child <- pretty processed' (inc level) object
+pretty level (PDFIndirectObject major minor object) = once major $ do
+      child <- pretty (inc level) object
       return $
         level %> fromInt major <> " " <> fromInt minor <> " obj\n"
               <> child
               <> disp level %> "endobj\n"
 
-pretty processed level (PDFIndirectObjectWithStream major minor dict _stream)
-  | Set.member major processed = return ""
-  | otherwise = do
-      let processed' = Set.insert major processed
-      child <- pretty processed' (inc level) (PDFDictionary dict)
+pretty level (PDFIndirectObjectWithStream major minor dict _stream) = once major $ do
+      child <- pretty (inc level) (PDFDictionary dict)
       return $
         level %> fromInt major <> " " <> fromInt minor <> " obj\n"
               <> child
               <> disp level %> "stream ... endstream\n"
               <> disp level %> "endobj\n"
 
-pretty processed level (PDFIndirectObjectWithGraphics major minor dict _gfx)
-  | Set.member major processed = return ""
-  | otherwise = do
-      let processed' = Set.insert major processed
-      child <- pretty processed' (inc level) (PDFDictionary dict)
+pretty level (PDFIndirectObjectWithGraphics major minor dict _gfx) = once major $ do
+      child <- pretty (inc level) (PDFDictionary dict)
       return $
         level %> fromInt major <> " " <> fromInt minor <> " obj\n"
               <> child
               <> disp level %> "stream ... endstream\n"
               <> disp level %> "endobj\n"
 
-pretty processed level (PDFObjectStream major minor dict _stream)
-  | Set.member major processed = return ""
-  | otherwise = do
-      let processed' = Set.insert major processed
-      child <- pretty processed' (inc level) (PDFDictionary dict)
+pretty level (PDFObjectStream major minor dict _stream) = once major $ do
+      child <- pretty (inc level) (PDFDictionary dict)
       return $
         level %> fromInt major <> " " <> fromInt minor <> " obj\n"
               <> child
               <> level %> "stream ... endstream\n"
               <> level %> "endobj\n"
 
-pretty processed level (PDFXRefStream major minor dict _stream)
-  | Set.member major processed = return ""
-  | otherwise = do
-      let processed' = Set.insert major processed
-      child <- pretty processed' (inc level) (PDFDictionary dict)
+pretty level (PDFXRefStream major minor dict _stream) = once major $ do
+      child <- pretty (inc level) (PDFDictionary dict)
       return $
         level %> fromInt major <> " " <> fromInt minor <> " obj\n"
               <> child
               <> level %> "stream ... endstream\n"
               <> level %> "endobj\n"
 
-pretty _processed level (PDFBool True) =
+pretty level (PDFBool True) =
   return $ level %> "true\n"
 
-pretty _processed level (PDFBool False) =
+pretty level (PDFBool False) =
   return $ level %> "false\n"
 
-pretty _processed level PDFNull =
+pretty level PDFNull =
   return $ level %> "null\n"
 
-pretty _processed level (PDFXRef _subsections) =
+pretty level (PDFXRef _subsections) =
   return $ level %> "xref\n" <> "...\n"
 
-pretty processed level (PDFTrailer trailer) = do
-  pTrailer <- pretty processed (inc level) trailer
+pretty level (PDFTrailer trailer) = do
+  pTrailer <- pretty (inc level) trailer
   return $ level %> "trailer\n" <> pTrailer
 
-pretty _processed level (PDFStartXRef start) =
+pretty level (PDFStartXRef start) =
   return $ level %> "startxref\n" <> fromInt start <> "\n"
 
 {-|
@@ -224,7 +229,7 @@ printObject :: Logging m => Int -> PDFDocument -> PDFWork m ByteString
 printObject objectNumber objects = do
   importObjects objects
   getObject objectNumber >>= \case
-    Just object -> pretty Set.empty (Level 0 True) object
+    Just object -> evalStateT (pretty (Level 0 True) object) Set.empty
     Nothing -> return "Object not found"
 
 {-|
