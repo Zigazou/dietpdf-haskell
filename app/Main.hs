@@ -32,7 +32,7 @@ import Control.Exception (tryJust)
 import Control.Monad (guard, when)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Except (runExceptT, throwE)
+import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -46,12 +46,7 @@ import Data.PDF.Settings
   , UsePDFToCairo (DoNotUsePDFToCairo, UsePDFToCairo)
   )
 import Data.UnifiedError
-  ( UnifiedError
-      ( CannotOverwriteFile
-      , ExternalCommandNotFound
-      , ParseError
-      , UnableToOpenFile
-      )
+  ( UnifiedError (CannotOverwriteFile, ExternalCommandNotFound, ParseError, UnableToOpenFile)
   )
 import Data.Version (showVersion)
 
