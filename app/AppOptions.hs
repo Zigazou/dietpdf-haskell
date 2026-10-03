@@ -112,7 +112,7 @@ Application options.
 -}
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseCompressor !OptimizeGFX !Bool !FileOverwrite
+  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseCompressor !OptimizeGFX !Bool !Bool !FileOverwrite
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -161,14 +161,68 @@ commandOptimize = command
   "optimize"
   (info
     (   OptimizeOptions
-    <$> argument str (metavar "<input_pdf_file>" <> help "PDF file to process")
-    <*> optional (argument str (metavar "<output_pdf_file>" <> help "PDF file to create"))
-    <*> (toUseGhostScript <$> switch (long "gs-optimize" <> short 'g' <> help "Use GhostScript before optimizing"))
-    <*> (toUsePDFToCairo <$> switch (long "p2c-optimize" <> short 'p' <> help "Use PDFToCairo before optimizing"))
-    <*> (toUseCompressor <$> optional (strOption (long "compressor" <> short 'c' <> help "Compressor to use (zopfli, deflate, brotli, ect)")))
-    <*> (toOptimizeGFX . not <$> switch (long "no-gfx-optimize" <> short 'x' <> help "Do not optimize graphics stream"))
-    <*> (not <$> switch (long "no-lossy-masks" <> help "Disable alpha quantization and mask downsampling"))
-    <*> (toOverwriteFile <$> switch (long "overwrite" <> short 'o' <> help "Overwrite existing output file"))
+    <$> argument
+          str
+          (  metavar "<input_pdf_file>"
+          <> help "PDF file to process"
+          )
+    <*> optional
+          (argument
+            str
+            (  metavar "<output_pdf_file>"
+            <> help "PDF file to create"
+            )
+          )
+    <*> (   toUseGhostScript
+        <$> switch
+              (  long "gs-optimize"
+              <> short 'g'
+              <> help "Use GhostScript before optimizing"
+              )
+        )
+    <*> (   toUsePDFToCairo
+        <$> switch
+              (  long "p2c-optimize"
+              <> short 'p'
+              <> help "Use PDFToCairo before optimizing"
+              )
+        )
+    <*> (   toUseCompressor
+        <$> optional
+              (strOption
+                (  long "compressor"
+                <> short 'c'
+                <> help "Compressor to use (zopfli, deflate, brotli, ect)"
+                )
+              )
+        )
+    <*> (   toOptimizeGFX . not
+        <$> switch
+              (  long "no-gfx-optimize"
+              <> short 'x'
+              <> help "Do not optimize graphics stream"
+              )
+        )
+    <*> (   not
+        <$> switch
+              (  long "no-lossy-masks"
+              <> short 'l'
+              <> help "Disable alpha quantization and mask downsampling"
+              )
+        )
+    <*> switch
+          (  long "dejpeg"
+          <> short 'd'
+          <> help "Preprocess JPEG images with dejpeg before JPEG 2000 \
+                  \conversion (this tends to smooth images)"
+          )
+    <*> (   toOverwriteFile
+        <$> switch
+              (  long "overwrite"
+              <> short 'o'
+              <> help "Overwrite existing output file"
+              )
+        )
     )
     (progDesc "Optimize a PDF file")
   )
@@ -180,7 +234,13 @@ commandHash :: Mod CommandFields AppOptions
 commandHash = command
   "hash"
   (info
-    (HashOptions <$> argument str (metavar "<input_pdf_file>" <> help "PDF file to process"))
+    (   HashOptions
+    <$> argument
+          str
+          (  metavar "<input_pdf_file>"
+          <> help "PDF file to process"
+          )
+    )
     (progDesc "Hash of each stream in a PDF file")
   )
 
@@ -192,8 +252,18 @@ commandEncode = command
   "encode"
   (info
     (   EncodeOptions
-    <$> argument auto (metavar "<codec>" <> help codecsHelp)
-    <*> optional (argument str (metavar "[input_pdf_file]" <> help "File to encode"))
+    <$> argument
+          auto
+          (  metavar "<codec>"
+          <> help codecsHelp
+          )
+    <*> optional
+          (argument
+            str
+            (  metavar "[input_pdf_file]"
+            <> help "File to encode"
+            )
+          )
     )
     (progDesc "Encode a file as it would be in a stream")
   )
@@ -206,8 +276,18 @@ commandDecode = command
   "decode"
   (info
     (   DecodeOptions
-    <$> argument auto (metavar "<codec>" <> help codecsHelp)
-    <*> optional (argument str (metavar "[output_pdf_file]" <> help "File to decode"))
+    <$> argument
+          auto
+          (  metavar "<codec>"
+          <> help codecsHelp
+          )
+    <*> optional
+          (argument
+            str
+            (  metavar "[output_pdf_file]"
+            <> help "File to decode"
+            )
+          )
     )
     (progDesc "Decode a file as it would be in a stream")
   )
@@ -220,10 +300,28 @@ commandPredict = command
   "predict"
   (info
     (   PredictOptions
-    <$> argument auto (metavar "<predictor>" <> help predictorsHelp)
-    <*> argument auto (metavar "<columns>" <> help "Width in pixels")
-    <*> argument auto (metavar "<components>" <> help "Number of components")
-    <*> optional (argument str (metavar "<input_pdf_file>" <> help "File to predict"))
+    <$> argument
+          auto
+          (  metavar "<predictor>"
+          <> help predictorsHelp
+          )
+    <*> argument
+          auto
+          (  metavar "<columns>"
+          <> help "Width in pixels"
+          )
+    <*> argument
+          auto
+          (  metavar "<components>"
+          <> help "Number of components"
+          )
+    <*> optional
+          (argument
+            str
+            (  metavar "<input_pdf_file>"
+            <> help "File to predict"
+            )
+          )
     )
     (progDesc "Predict a file as it would be in a stream")
   )
@@ -236,10 +334,28 @@ commandUnpredict = command
   "unpredict"
   (info
     (   UnpredictOptions
-    <$> argument auto (metavar "<predictor>" <> help predictorsHelp)
-    <*> argument auto (metavar "<columns>" <> help "Width in pixels")
-    <*> argument auto (metavar "<components>" <> help "Number of components")
-    <*> optional (argument str (metavar "<input_pdf_file>" <> help "File to unpredict"))
+    <$> argument
+          auto
+          (  metavar "<predictor>"
+          <> help predictorsHelp
+          )
+    <*> argument
+          auto
+          (  metavar "<columns>"
+          <> help "Width in pixels"
+          )
+    <*> argument
+          auto
+          (  metavar "<components>"
+          <> help "Number of components"
+          )
+    <*> optional
+          (argument
+            str
+            (  metavar "<input_pdf_file>"
+            <> help "File to unpredict"
+            )
+          )
     )
     (progDesc "Unpredict a file as it would be in a stream")
   )
@@ -252,7 +368,13 @@ commandHuman = command
   "human"
   (info
     (   HumanOptions
-    <$> optional (argument str (metavar "<input_gfx_file>" <> help "Graphics code to make human"))
+    <$> optional
+          (argument
+            str
+            (  metavar "<input_gfx_file>"
+            <> help "Graphics code to make human"
+            )
+          )
     )
     (progDesc "Print graphics code in a readable human form")
   )
@@ -264,7 +386,15 @@ commandStat :: Mod CommandFields AppOptions
 commandStat = command
   "stat"
   (info
-    (StatOptions <$> some (argument str (metavar "<input_pdf_files>" <> help "PDF files to analyze")))
+    (   StatOptions
+    <$> some
+          (argument
+            str
+            (  metavar "<input_pdf_files>"
+            <> help "PDF files to analyze"
+            )
+          )
+    )
     (progDesc "Print statistics about a PDF file")
   )
 
@@ -276,8 +406,16 @@ commandGet = command
   "get"
   (info
     (   GetOptions
-    <$> argument auto (metavar "<object_number>" <> help "Object number")
-    <*> argument str  (metavar "<input_pdf_file>" <> help "PDF file to query")
+    <$> argument
+          auto
+          (  metavar "<object_number>"
+          <> help "Object number"
+          )
+    <*> argument
+          str
+          (  metavar "<input_pdf_file>"
+          <> help "PDF file to query"
+          )
     )
     (progDesc "Get object from a PDF file")
   )

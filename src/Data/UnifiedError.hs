@@ -5,7 +5,7 @@ Having one type for all errors means the Either monad can be used to avoid
 long if then else if then else.
 -}
 module Data.UnifiedError
-  ( UnifiedError(CannotOverwriteFile, ParseError, UnableToOpenFile, EncodeNoIndirectObject, EncodeNoVersion, EncodeNoTrailer, EncodeNoRootEntry, RLEDecodeError, RLEEncodeError, FlateDecodeError, LZWStopCodeNotFound, NotEnoughBytes, InternalError, InvalidPredictor, InvalidNumberOfBytes, InvalidFilterParm, InvalidAscii85Stream, NoStream, NoDictionary, InvalidObjectToEmbed, NoObjectToEncode, UnknownScalerType, ObjectStreamNotFound, ObjectNotFound, XRefStreamNoW, ExternalCommandError, PDFTKError, UnsupportedFeature, EncodeEncrypted)
+  ( UnifiedError(CannotOverwriteFile, ParseError, UnableToOpenFile, EncodeNoIndirectObject, EncodeNoVersion, EncodeNoTrailer, EncodeNoRootEntry, RLEDecodeError, RLEEncodeError, FlateDecodeError, LZWStopCodeNotFound, NotEnoughBytes, InternalError, InvalidPredictor, InvalidNumberOfBytes, InvalidFilterParm, InvalidAscii85Stream, NoStream, NoDictionary, InvalidObjectToEmbed, NoObjectToEncode, UnknownScalerType, ObjectStreamNotFound, ObjectNotFound, XRefStreamNoW, ExternalCommandError, ExternalCommandNotFound, PDFTKError, UnsupportedFeature, EncodeEncrypted)
   )
 where
 
@@ -73,6 +73,8 @@ data UnifiedError
   | XRefStreamNoW !String
   -- | External command error (command, return code)
   | ExternalCommandError !String !Int
+  -- | Required external command was not found
+  | ExternalCommandNotFound !String
   -- | PDFTK error message
   | PDFTKError !String
   -- | Feature not supported
@@ -80,35 +82,36 @@ data UnifiedError
   deriving stock (Eq)
 
 errorType :: UnifiedError -> ErrorType
-errorType (ParseError _)             = ParsingError
-errorType UnableToOpenFile           = ReadingError
-errorType CannotOverwriteFile        = WritingError
-errorType ObjectNotFound             = ReadingError
-errorType (ExternalCommandError _ _) = ReadingError
-errorType (PDFTKError _)             = ReadingError
-errorType EncodeNoIndirectObject     = EncodingError
-errorType EncodeNoVersion            = EncodingError
-errorType EncodeEncrypted            = EncodingError
-errorType EncodeNoTrailer            = EncodingError
-errorType EncodeNoRootEntry          = EncodingError
-errorType (RLEEncodeError   _)       = EncodingError
-errorType (RLEDecodeError   _)       = ParsingError
-errorType (FlateDecodeError _)       = ParsingError
-errorType LZWStopCodeNotFound        = ParsingError
-errorType (NotEnoughBytes _ _)       = ParsingError
-errorType InternalError              = ParsingError
-errorType (InvalidAscii85Stream _  ) = ParsingError
-errorType (InvalidPredictor     _  ) = ParsingError
-errorType (InvalidNumberOfBytes _ _) = ParsingError
-errorType (InvalidFilterParm    _)   = EncodingError
-errorType (NoStream             _)   = StructureError
-errorType (NoDictionary         _)   = StructureError
-errorType (InvalidObjectToEmbed _)   = StructureError
-errorType (XRefStreamNoW _)          = StructureError
-errorType NoObjectToEncode           = EncodingError
-errorType (UnknownScalerType _)      = ParsingError
-errorType ObjectStreamNotFound       = ParsingError
-errorType (UnsupportedFeature _)     = UnsupportedError
+errorType (ParseError _)              = ParsingError
+errorType UnableToOpenFile            = ReadingError
+errorType CannotOverwriteFile         = WritingError
+errorType ObjectNotFound              = ReadingError
+errorType (ExternalCommandError _ _)  = ReadingError
+errorType (ExternalCommandNotFound _) = ReadingError
+errorType (PDFTKError _)              = ReadingError
+errorType EncodeNoIndirectObject      = EncodingError
+errorType EncodeNoVersion             = EncodingError
+errorType EncodeEncrypted             = EncodingError
+errorType EncodeNoTrailer             = EncodingError
+errorType EncodeNoRootEntry           = EncodingError
+errorType (RLEEncodeError   _)        = EncodingError
+errorType (RLEDecodeError   _)        = ParsingError
+errorType (FlateDecodeError _)        = ParsingError
+errorType LZWStopCodeNotFound         = ParsingError
+errorType (NotEnoughBytes _ _)        = ParsingError
+errorType InternalError               = ParsingError
+errorType (InvalidAscii85Stream _  )  = ParsingError
+errorType (InvalidPredictor     _  )  = ParsingError
+errorType (InvalidNumberOfBytes _ _)  = ParsingError
+errorType (InvalidFilterParm    _)    = EncodingError
+errorType (NoStream             _)    = StructureError
+errorType (NoDictionary         _)    = StructureError
+errorType (InvalidObjectToEmbed _)    = StructureError
+errorType (XRefStreamNoW _)           = StructureError
+errorType NoObjectToEncode            = EncodingError
+errorType (UnknownScalerType _)       = ParsingError
+errorType ObjectStreamNotFound        = ParsingError
+errorType (UnsupportedFeature _)      = UnsupportedError
 
 show' :: UnifiedError -> String -> String
 show' err msg = concat ["[", show (errorType err), "] ", msg]
@@ -166,6 +169,8 @@ instance Show UnifiedError where
     show' err ("XRef stream with invalid or no W field: " ++ msg)
   show err@(ExternalCommandError msg rc) =
     show' err ("External command error for " ++ msg ++ " (" ++ show rc ++ ")")
+  show err@(ExternalCommandNotFound command) =
+    show' err ("Required external command not found: " ++ command)
   show err@(PDFTKError msg) = show' err ("PDFTK error: " ++ msg)
   show err@(UnsupportedFeature msg) =
     show' err ("Unsupported feature: " ++ msg)

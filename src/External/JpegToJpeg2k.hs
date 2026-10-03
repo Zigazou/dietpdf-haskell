@@ -5,13 +5,14 @@ Provides lossy JPEG-to-JPEG2000 conversion via the Grok (`grk_compress`)
 command-line tool. Special handling is applied for CMYK color space using
 ImageMagick to preserve color information.
 -}
-module External.JpegToJpeg2k (jpegToJpeg2k) where
+module External.JpegToJpeg2k (jpegToJpeg2k, jpegToJpeg2kWithDejpeg) where
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Search (indices)
 import Data.Fallible (FallibleT)
 
+import External.Dejpeg (dejpeg)
 import External.ExternalCommand (externalCommandBuf'')
 
 {-|
@@ -46,17 +47,38 @@ in the process. It is also necessary to negate the image. Then, it uses Grok to
 convert the TIFF image to a JPEG 2000 image.
 -}
 jpegToJpeg2k :: Int -> ByteString -> FallibleT IO ByteString
-jpegToJpeg2k quality jpegImage =
+jpegToJpeg2k = jpegToJpeg2kWithDejpeg False
+
+{-|
+Optionally preprocess the JPEG with dejpeg before JPEG 2000 encoding.
+PNG output is converted back to CMYK for four-component PDF images.
+-}
+jpegToJpeg2kWithDejpeg :: Bool -> Int -> ByteString -> FallibleT IO ByteString
+jpegToJpeg2kWithDejpeg useDejpeg quality jpegImage = do
+  image <- if useDejpeg
+    then dejpeg jpegImage
+    else pure jpegImage
+
+  let
+    inputFormat :: String
+    inputFormat = if useDejpeg then "png" else "jpg"
+
   case getJpegComponents jpegImage of
     4 -> do
       -- Use ImageMagick to convert the JPEG image to a TIFF image because it
       -- can keep CMYK colorspace in the process. It is also necessary to
       -- negate the image.
       tiffImage <- externalCommandBuf'' "convert"
-                                        ["-" , "-negate", "-"]
-                                        "jpg"
+                                        (  ["-"]
+                                        ++ (if useDejpeg
+                                              then ["-colorspace", "CMYK"]
+                                              else []
+                                           )
+                                        ++ ["-negate", "-"]
+                                        )
+                                        inputFormat
                                         "tiff"
-                                        jpegImage
+                                        image
 
       externalCommandBuf'' "grk_compress"
                           [ "--in-file", "-"
@@ -67,7 +89,7 @@ jpegToJpeg2k quality jpegImage =
                           "jp2"
                           tiffImage
     _anyOtherCase -> do
-      -- For other types of JPEG (RGB, Grayscale), Grok is able to read them.
+      -- Grok can read JPEG and PNG directly for RGB and grayscale images.
       -- It also avoids using ImageMagick which can change the colorspace due
       -- to a bug in color space handling before ImageMagick v6.9.13.
       externalCommandBuf'' "grk_compress"
@@ -75,6 +97,6 @@ jpegToJpeg2k quality jpegImage =
                           , "--quality", show quality
                           , "--out-file", "-"
                           ]
-                          "jpg"
+                          inputFormat
                           "jp2"
-                          jpegImage
+                          image

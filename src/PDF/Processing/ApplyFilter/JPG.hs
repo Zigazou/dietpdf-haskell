@@ -30,10 +30,10 @@ import Data.PDF.FilterCombination
   (FilterCombination, fcBytes, mkFCAppend, mkFCReplace)
 import Data.PDF.PDFObject (PDFObject (PDFName, PDFNull))
 import Data.PDF.PDFWork (PDFWork)
-import Data.PDF.Settings (sCompressor)
+import Data.PDF.Settings (sCompressor, sUseDejpeg)
 import Data.PDF.WorkData (wSettings)
 
-import External.JpegToJpeg2k (jpegToJpeg2k)
+import External.JpegToJpeg2k (jpegToJpeg2kWithDejpeg)
 
 import PDF.Processing.ApplyFilter.Helpers (filterInfo, filterInfoCompressor)
 import PDF.Processing.FilterCombine.Compressor (compressor)
@@ -58,12 +58,18 @@ applyEveryFilterJPG _objectIsAMask (Just _imageProperty) stream = do
   rCompressor <- lift (except $ compressor Nothing stream useCompressor)
   filterInfoCompressor useCompressor "" stream (fcBytes rCompressor)
 
-  -- Try Jpeg2000 for images with less than 4 components.
-  let jpeg2kQuality :: Int
-      jpeg2kQuality = 60
+  useDejpeg <- gets (sUseDejpeg . wSettings)
 
-  rJpeg2k <- lift (jpegToJpeg2k jpeg2kQuality stream)
+  -- Use a lower quality after dejpeg preprocessing.
+  let
+    jpeg2kQuality :: Int
+    jpeg2kQuality = if useDejpeg
+                        then 45
+                        else 60
+
+  rJpeg2k <- lift (jpegToJpeg2kWithDejpeg useDejpeg jpeg2kQuality stream)
          <&> mkFCReplace [Filter (PDFName "JPXDecode") PDFNull]
+
   filterInfo "JPEG2000" stream (fcBytes rJpeg2k)
 
   return [rNothing, rCompressor, rJpeg2k]

@@ -96,6 +96,7 @@ library
       Data.PDF.XRefSubsection
       Data.TranslationTable
       Data.UnifiedError
+      External.Dejpeg
       External.ExternalCommand
       External.GhostScriptOptimize
       External.ImageMagick
@@ -355,6 +356,7 @@ executable dietpdf
     , bytestring
     , containers
     , dietpdf
+    , directory
     , filepath
     , formatting
     , mtl

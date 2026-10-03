@@ -41,12 +41,18 @@ import Data.Fallible (FallibleT, tryF)
 import Data.Logging (sayComparisonF)
 import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.Settings
-  ( Settings (Settings, sCompressor, sOptimizeGFX, sUseGhostScript, sUsePDFToCairo, sLossyMasks)
+  ( Settings (Settings, sCompressor, sLossyMasks, sOptimizeGFX, sUseDejpeg, sUseGhostScript, sUsePDFToCairo)
   , UseGhostScript (DoNotUseGhostScript, UseGhostScript)
   , UsePDFToCairo (DoNotUsePDFToCairo, UsePDFToCairo)
   )
 import Data.UnifiedError
-  (UnifiedError (CannotOverwriteFile, ParseError, UnableToOpenFile))
+  ( UnifiedError
+      ( CannotOverwriteFile
+      , ExternalCommandNotFound
+      , ParseError
+      , UnableToOpenFile
+      )
+  )
 import Data.Version (showVersion)
 
 import External.GhostScriptOptimize (ghostScriptOptimize)
@@ -59,6 +65,7 @@ import PDF.Document.Parser (pdfParse)
 
 import Paths_dietpdf qualified
 
+import System.Directory (findExecutable)
 import System.FilePath (takeFileName)
 import System.IO (hClose)
 import System.IO.Error (isDoesNotExistError)
@@ -131,8 +138,17 @@ runApp (InfoOptions inputPDF) = readPDF inputPDF >>= showInfo
 runApp (ExtractOptions objectNumber inputPDF) =
   readPDF inputPDF >>= extract objectNumber
 
-runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useCompressor optimizeGFX lossyMasks overwriteFile) = do
-  let settings = Settings { sLossyMasks     = lossyMasks
+runApp (OptimizeOptions inputPDF
+                        mOutputPDF
+                        useGS
+                        usePTC
+                        useCompressor
+                        optimizeGFX
+                        lossyMasks
+                        useDejpeg
+                        overwriteFile) = do
+  let settings = Settings { sUseDejpeg      = useDejpeg
+                          , sLossyMasks     = lossyMasks
                           , sOptimizeGFX    = optimizeGFX
                           , sCompressor     = useCompressor
                           , sUseGhostScript = useGS
@@ -140,60 +156,65 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useCompressor optimizeG
                           }
   case (useGS, usePTC) of
     (UseGhostScript, DoNotUsePDFToCairo) ->
-      withTempFile "." (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
-        -- Close the handles so external programs can use the files.
-        lift $ hClose ghostscriptHandle
-
-        -- Optimize PDF with GhostScript.
-        ghostScriptOptimize inputPDF ghostscriptPDF
-
-        -- Compare the sizes of the original and GhostScript PDFs.
-        originalSize    <- lift $ getFileSize inputPDF
-        ghostScriptSize <- lift $ getFileSize ghostscriptPDF
-
-        sayComparisonF (ctx ("ghostscript" :: String))
-                      "GhostScripted PDF" originalSize ghostScriptSize
-
-        go ghostscriptPDF settings overwriteFile
-
-    (DoNotUseGhostScript, UsePDFToCairo) ->
-      withTempFile "." (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
-        -- Close the handles so external programs can use the files.
-        lift $ hClose pdfToCairoHandle
-
-        -- Optimize PDF with PDFToCairo.
-        pdfToCairoOptimize inputPDF pdfToCairoPDF
-
-        -- Compare the sizes of the original and PDFToCairo PDFs.
-        originalSize   <- lift $ getFileSize inputPDF
-        pdfToCairoSize <- lift $ getFileSize pdfToCairoPDF
-
-        sayComparisonF (ctx ("pdftocairo" :: String))
-                      "PDFToCairo'd PDF" originalSize pdfToCairoSize
-
-        go pdfToCairoPDF settings overwriteFile
-
-    (UseGhostScript, UsePDFToCairo) ->
-      withTempFile "." (inputPDF <> ".ghostscript") $ \ghostscriptPDF ghostscriptHandle -> do
-        withTempFile "." (inputPDF <> ".pdftocairo") $ \pdfToCairoPDF pdfToCairoHandle -> do
+      withTempFile "." (inputPDF <> ".ghostscript") $
+        \ghostscriptPDF ghostscriptHandle -> do
           -- Close the handles so external programs can use the files.
           lift $ hClose ghostscriptHandle
+
+          -- Optimize PDF with GhostScript.
+          ghostScriptOptimize inputPDF ghostscriptPDF
+
+          -- Compare the sizes of the original and GhostScript PDFs.
+          originalSize    <- lift $ getFileSize inputPDF
+          ghostScriptSize <- lift $ getFileSize ghostscriptPDF
+
+          sayComparisonF (ctx ("ghostscript" :: String))
+                        "GhostScripted PDF" originalSize ghostScriptSize
+
+          go ghostscriptPDF settings overwriteFile
+
+    (DoNotUseGhostScript, UsePDFToCairo) ->
+      withTempFile "." (inputPDF <> ".pdftocairo") $
+        \pdfToCairoPDF pdfToCairoHandle -> do
+          -- Close the handles so external programs can use the files.
           lift $ hClose pdfToCairoHandle
 
-          -- Optimize PDF with GhostScript and PDFToCairo.
-          ghostScriptOptimize inputPDF ghostscriptPDF
-          pdfToCairoOptimize ghostscriptPDF pdfToCairoPDF
+          -- Optimize PDF with PDFToCairo.
+          pdfToCairoOptimize inputPDF pdfToCairoPDF
 
           -- Compare the sizes of the original and PDFToCairo PDFs.
           originalSize   <- lift $ getFileSize inputPDF
           pdfToCairoSize <- lift $ getFileSize pdfToCairoPDF
 
-          sayComparisonF (ctx ("ghostscript+pdftocairo" :: String))
-                        "optimized PDF" originalSize pdfToCairoSize
+          sayComparisonF (ctx ("pdftocairo" :: String))
+                        "PDFToCairo'd PDF" originalSize pdfToCairoSize
 
           go pdfToCairoPDF settings overwriteFile
 
-    (DoNotUseGhostScript, DoNotUsePDFToCairo) -> go inputPDF settings overwriteFile
+    (UseGhostScript, UsePDFToCairo) ->
+      withTempFile "." (inputPDF <> ".ghostscript") $
+        \ghostscriptPDF ghostscriptHandle -> do
+          withTempFile "." (inputPDF <> ".pdftocairo") $
+            \pdfToCairoPDF pdfToCairoHandle -> do
+              -- Close the handles so external programs can use the files.
+              lift $ hClose ghostscriptHandle
+              lift $ hClose pdfToCairoHandle
+
+              -- Optimize PDF with GhostScript and PDFToCairo.
+              ghostScriptOptimize inputPDF ghostscriptPDF
+              pdfToCairoOptimize ghostscriptPDF pdfToCairoPDF
+
+              -- Compare the sizes of the original and PDFToCairo PDFs.
+              originalSize   <- lift $ getFileSize inputPDF
+              pdfToCairoSize <- lift $ getFileSize pdfToCairoPDF
+
+              sayComparisonF (ctx ("ghostscript+pdftocairo" :: String))
+                            "optimized PDF" originalSize pdfToCairoSize
+
+              go pdfToCairoPDF settings overwriteFile
+
+    (DoNotUseGhostScript, DoNotUsePDFToCairo) ->
+      go inputPDF settings overwriteFile
  where
   {-
   Helper to perform final optimization and writing.
@@ -206,14 +227,20 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useCompressor optimizeG
   go :: FilePath -> Settings -> FileOverwrite -> FallibleT IO ()
   go pdfToOptimize settings overwriteFile' = do
     -- Get output PDF path.
-    let outputPDF = case mOutputPDF of
-          Just path -> path
-          Nothing ->
-            case reverse inputPDF of
-                c1:c2:c3:'.':rest | (c1 == 'f' || c1 == 'F') && (c2 == 'd' || c2 == 'D') && (c3 == 'p' || c3 == 'P') ->
-                  reverse rest <> ".dietpdf.pdf"
-                _anyOtherCase ->
-                  inputPDF <> ".dietpdf.pdf"
+    let
+      outputPDF :: FilePath
+      outputPDF = case mOutputPDF of
+        Just path -> path
+        Nothing ->
+          case reverse inputPDF of
+              c1 : c2 : c3 : '.' : rest
+                | (c1 == 'f' || c1 == 'F')
+                && (c2 == 'd' || c2 == 'D')
+                && (c3 == 'p' || c3 == 'P') ->
+                reverse rest <> ".dietpdf.pdf"
+
+              _anyOtherCase ->
+                inputPDF <> ".dietpdf.pdf"
 
     outputFileExists <- liftIO (doesFileExist outputPDF)
 
@@ -224,8 +251,10 @@ runApp (OptimizeOptions inputPDF mOutputPDF useGS usePTC useCompressor optimizeG
     tryF (readPDF pdfToOptimize) >>= \case
       Right document -> optimize outputPDF document settings
       Left  anError@(ParseError (_, offset, _)) -> do
-        lift $ BS.readFile inputPDF >>= \bytes -> putStrLn (hexDump (fromIntegral offset) bytes)
+        lift $ BS.readFile inputPDF
+                >>= \bytes -> putStrLn (hexDump (fromIntegral offset) bytes)
         throwE anError
+
       Left anError -> throwE anError
 
 runApp (HashOptions inputPDF) = readPDF inputPDF >>= objectHashes
@@ -267,6 +296,16 @@ options = info
 Main entry point of the application.
 -}
 main :: IO ()
-main = runExceptT (runApp =<< lift (execParser options)) >>= \case
+main = runExceptT run >>= \case
   Right _anyValue -> return ()
   Left anError    -> print anError
+ where
+  run :: ExceptT UnifiedError IO ()
+  run = do
+    appOptions' <- lift (execParser options)
+    case appOptions' of
+      OptimizeOptions _ _ _ _ _ _ _ True _ ->
+        liftIO (findExecutable "dejpeg") >>= \case
+          Just _dejpegPath -> runApp appOptions'
+          Nothing -> throwE (ExternalCommandNotFound "dejpeg")
+      _anyOptions -> runApp appOptions'
