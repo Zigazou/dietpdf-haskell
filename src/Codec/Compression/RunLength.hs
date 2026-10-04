@@ -76,18 +76,24 @@ Decode a RLE bytestring.
 decompress :: ByteString -> Fallible ByteString
 decompress stream =
   unsafePerformIO $ do
-    let outputSize = evaluateUncompressedSize stream
+    let
+      outputSize :: CSize
+      outputSize = evaluateUncompressedSize stream
+
     if outputSize < 0
-      then pure $ Left (RLEDecodeError "RLE decompression failed")
+      then
+        pure $ Left (RLEDecodeError "RLE decompression failed")
       else do
         output <- BSI.mallocByteString (fromIntegral outputSize)
         BUS.unsafeUseAsCStringLen stream $ \(inputPtr, inputLen) -> do
           withForeignPtr output $ \outputPtr -> do
             _ <- c_run_length_decompress
-              (castPtr inputPtr)
-              (fromIntegral inputLen :: CSize)
-              outputPtr
+                  (castPtr inputPtr)
+                  (fromIntegral inputLen :: CSize)
+                  outputPtr
+
             pure ()
+
         pure $ Right (BSI.PS output 0 (fromIntegral outputSize))
 
 {-|
@@ -96,8 +102,13 @@ Encode a bytestring into an RLE bytestring.
 compress :: ByteString -> Fallible ByteString
 compress stream =
   unsafePerformIO $ do
-    let inputLen = BS.length stream
-        maxOutputLen = inputLen * 3 `div` 2 + 2
+    let
+      inputLen :: Int
+      inputLen = BS.length stream
+
+      maxOutputLen :: Int
+      maxOutputLen = inputLen * 3 `div` 2 + 2
+
     output <- BSI.mallocByteString maxOutputLen
     outputLen <- BUS.unsafeUseAsCStringLen stream $ \(inputPtr, _) -> do
       withForeignPtr output $ \outputPtr -> do
@@ -105,9 +116,13 @@ compress stream =
           (castPtr inputPtr)
           (fromIntegral inputLen :: CSize)
           outputPtr
+
     if outputLen == fromIntegral maxOutputLen
-      then pure $ Left (RLEEncodeError "RLE compression output size exceeded allocated buffer")
-      else pure $ Right (BSI.PS output 0 (fromIntegral outputLen))
+      then
+        pure $ Left (RLEEncodeError "RLE compression output size exceeded \
+                                    \allocated buffer")
+      else
+        pure $ Right (BSI.PS output 0 (fromIntegral outputLen))
 
 {-|
 Gives a number showing the "entropy" of a `ByteString`.

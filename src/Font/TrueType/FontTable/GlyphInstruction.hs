@@ -237,197 +237,376 @@ packWord16bes = BS.pack . concatMap word16ToBytes
 
 fromGlyphInstruction :: GlyphInstruction -> ByteString
 fromGlyphInstruction (GIPushNBytes bytes) =
-  let count = fromIntegral (length bytes) :: Word8
-  in BS.cons 0x40 $ BS.cons count $ BS.pack bytes
+  let
+    count :: Word8
+    count = fromIntegral (length bytes)
+  in
+    BS.cons 0x40 $ BS.cons count $ BS.pack bytes
+
 fromGlyphInstruction (GIPushNWords word16s) =
-  let count = fromIntegral (length word16s) :: Word8
-      wordBytes = packWord16bes word16s
-  in  BS.cons 0x41 $ BS.cons count wordBytes
+  let
+    count :: Word8
+    count = fromIntegral (length word16s)
+
+    wordBytes :: ByteString
+    wordBytes = packWord16bes word16s
+  in
+    BS.cons 0x41 $ BS.cons count wordBytes
+
 fromGlyphInstruction (GIPushBytes bytes) =
-  let count = fromIntegral (length bytes) :: Word8
-  in BS.cons (0xB0 + count - 1) $ BS.pack bytes
+  let
+    count :: Word8
+    count = fromIntegral (length bytes)
+  in
+    BS.cons (0xB0 + count - 1) $ BS.pack bytes
+
 fromGlyphInstruction (GIPushWords word16s) =
-  let count = fromIntegral (length word16s) :: Word8
-      wordBytes = packWord16bes word16s
-  in  BS.cons (0xB8 + count - 1) wordBytes
+  let
+    count :: Word8
+    count = fromIntegral (length word16s)
+
+    wordBytes :: ByteString
+    wordBytes = packWord16bes word16s
+  in
+    BS.cons (0xB8 + count - 1) wordBytes
+
 fromGlyphInstruction GIAdjustAngle = "\x7f"
+
 fromGlyphInstruction GIAbsoluteValue = "\x64"
+
 fromGlyphInstruction GIAdd = "\x60"
+
 fromGlyphInstruction GIAlignPoints = "\x27"
+
 fromGlyphInstruction GIAlignToReferencePoint = "\x3c"
+
 fromGlyphInstruction GIAnd = "\x5a"
+
 fromGlyphInstruction GICall = "\x2b"
+
 fromGlyphInstruction GICeiling = "\x67"
+
 fromGlyphInstruction GICopyIndex = "\x25"
+
 fromGlyphInstruction GIClearStack = "\x22"
+
 fromGlyphInstruction GIDebugCall = "\x4f"
+
 fromGlyphInstruction GIDeltaExceptionC1 = "\x73"
+
 fromGlyphInstruction GIDeltaExceptionC2 = "\x74"
+
 fromGlyphInstruction GIDeltaExceptionC3 = "\x75"
+
 fromGlyphInstruction GIDeltaExceptionP1 = "\x5d"
+
 fromGlyphInstruction GIDeltaExceptionP2 = "\x71"
+
 fromGlyphInstruction GIDeltaExceptionP3 = "\x72"
+
 fromGlyphInstruction GIStackDepth = "\x24"
+
 fromGlyphInstruction GIDivide = "\x62"
+
 fromGlyphInstruction GIDuplicateTopStackElement = "\x20"
+
 fromGlyphInstruction GIEndIf = "\x59"
+
 fromGlyphInstruction GIElse = "\x1b"
+
 fromGlyphInstruction GIEndFunctionDefinition = "\x2d"
+
 fromGlyphInstruction GIEqual = "\x54"
+
 fromGlyphInstruction GIEven = "\x57"
+
 fromGlyphInstruction GIFunctionDefinition = "\x2c"
+
 fromGlyphInstruction GISetFlipBooleanOff = "\x4e"
+
 fromGlyphInstruction GISetFlipBooleanOn = "\x4d"
+
 fromGlyphInstruction GIFlipPoint = "\x80"
+
 fromGlyphInstruction GIFlipRangeOff = "\x82"
+
 fromGlyphInstruction GIFlipRangeOn = "\x81"
+
 fromGlyphInstruction GIFloor = "\x66"
-fromGlyphInstruction (GIGetCoordinateProjected UseCurrentPositionOfPointP) = "\x46"
-fromGlyphInstruction (GIGetCoordinateProjected UsePositionOfPointPInOriginalOutline) = "\x47"
+
+fromGlyphInstruction (GIGetCoordinateProjected UseCurrentPositionOfPointP) =
+  "\x46"
+
+fromGlyphInstruction (GIGetCoordinateProjected
+                        UsePositionOfPointPInOriginalOutline) = "\x47"
+
 fromGlyphInstruction GIGetInformation = "\x88"
+
 fromGlyphInstruction GIFreedomVector = "\x0d"
+
 fromGlyphInstruction GIProjectionVector = "\x0c"
+
 fromGlyphInstruction GIGreaterThan = "\x52"
+
 fromGlyphInstruction GIGreaterThanOrEqual = "\x53"
+
 fromGlyphInstruction GIInstructionDefinition = "\x89"
+
 fromGlyphInstruction GIIfTest = "\x58"
+
 fromGlyphInstruction GIInstructionExecutionControl = "\x8e"
+
 fromGlyphInstruction GIInterpolatePoint = "\x39"
+
 fromGlyphInstruction GIMovePointToIntersection = "\x0f"
-fromGlyphInstruction (GIInterpolateUntouchedPoints InterpolateInYDirection) = "\x30"
-fromGlyphInstruction (GIInterpolateUntouchedPoints InterpolateInXDirection) = "\x31"
+
+fromGlyphInstruction (GIInterpolateUntouchedPoints InterpolateInYDirection) =
+  "\x30"
+
+fromGlyphInstruction (GIInterpolateUntouchedPoints InterpolateInXDirection) =
+  "\x31"
+
 fromGlyphInstruction GIJumpRelative = "\x1c"
+
 fromGlyphInstruction GIJumpRelativeOnFalse = "\x79"
+
 fromGlyphInstruction GIJumpRelativeOnTrue = "\x78"
+
 fromGlyphInstruction GILoopAndCallFunction = "\x2a"
+
 fromGlyphInstruction GILessThan = "\x50"
+
 fromGlyphInstruction GILessThanOrEqual = "\x51"
+
 fromGlyphInstruction GIMaximum = "\x8b"
+
 fromGlyphInstruction (GIMeasureDistance MeasureInGridFittedOutline) = "\x49"
+
 fromGlyphInstruction (GIMeasureDistance MeasureInOriginalOutline) = "\x4a"
+
 fromGlyphInstruction (GIMoveDirectAbsolutePoint DoNotRoundValue) = "\x2e"
+
 fromGlyphInstruction (GIMoveDirectAbsolutePoint RoundValue) = "\x2f"
+
 fromGlyphInstruction (GIMoveDirectRelativePoint rp0 mdc rounding distance) =
-  let rp0Byte = case rp0 of
-        DoNotResetRP0 -> 0x00 :: Word8
-        ResetRP0      -> 0x20 :: Word8
+  let
+    rp0Byte :: Word8
+    rp0Byte = case rp0 of
+      DoNotResetRP0 -> 0x00
+      ResetRP0      -> 0x20
 
-      mdcByte = case mdc of
-        DoNotKeepDistanceGreaterThanOrEqual -> 0x00 :: Word8
-        KeepDistanceGreaterThanOrEqual      -> 0x10 :: Word8
+    mdcByte :: Word8
+    mdcByte = case mdc of
+      DoNotKeepDistanceGreaterThanOrEqual -> 0x00
+      KeepDistanceGreaterThanOrEqual      -> 0x10
 
-      roundingByte = case rounding of
-        DoNotRoundValue -> 0x00 :: Word8
-        RoundValue      -> 0x04 :: Word8
+    roundingByte :: Word8
+    roundingByte = case rounding of
+      DoNotRoundValue -> 0x00
+      RoundValue      -> 0x04
 
-      distanceByte = case distance of
-        DistanceTypeA -> 0x00 :: Word8
-        DistanceTypeB -> 0x01 :: Word8
-        DistanceTypeC -> 0x02 :: Word8
-        DistanceTypeD -> 0x03 :: Word8
+    distanceByte :: Word8
+    distanceByte = case distance of
+      DistanceTypeA -> 0x00
+      DistanceTypeB -> 0x01
+      DistanceTypeC -> 0x02
+      DistanceTypeD -> 0x03
 
-      opcode = 0xc0 .|. rp0Byte .|. mdcByte .|. roundingByte .|. distanceByte
-  in BS.singleton opcode
+    opcode :: Word8
+    opcode = 0xc0 .|. rp0Byte .|. mdcByte .|. roundingByte .|. distanceByte
+  in
+    BS.singleton opcode
+
 fromGlyphInstruction (GIMoveIndirectAbsolutePoint DoNotRoundValue) = "\x3e"
+
 fromGlyphInstruction (GIMoveIndirectAbsolutePoint RoundValue) = "\x3f"
+
 fromGlyphInstruction GIMinimum = "\x8c"
+
 fromGlyphInstruction GIMoveIndexedElement = "\x26"
+
 fromGlyphInstruction (GIMoveIndirectRelativePoint rp0 mdc rounding distance) =
-  let rp0Byte = case rp0 of
-        DoNotSetRP0ToP -> 0x00 :: Word8
-        SetRP0ToP      -> 0x20 :: Word8
+  let
+      rp0Byte :: Word8
+      rp0Byte = case rp0 of
+        DoNotSetRP0ToP -> 0x00
+        SetRP0ToP      -> 0x20
 
+      mdcByte :: Word8
       mdcByte = case mdc of
-        DoNotKeepDistanceGreaterThanOrEqual -> 0x00 :: Word8
-        KeepDistanceGreaterThanOrEqual      -> 0x10 :: Word8
+        DoNotKeepDistanceGreaterThanOrEqual -> 0x00
+        KeepDistanceGreaterThanOrEqual      -> 0x10
 
+      roundingByte :: Word8
       roundingByte = case rounding of
-        DoNotRoundValue -> 0x00 :: Word8
-        RoundValue      -> 0x04 :: Word8
+        DoNotRoundValue -> 0x00
+        RoundValue      -> 0x04
 
+      distanceByte :: Word8
       distanceByte = case distance of
-        DistanceTypeA -> 0x00 :: Word8
-        DistanceTypeB -> 0x01 :: Word8
-        DistanceTypeC -> 0x02 :: Word8
-        DistanceTypeD -> 0x03 :: Word8
+        DistanceTypeA -> 0x00
+        DistanceTypeB -> 0x01
+        DistanceTypeC -> 0x02
+        DistanceTypeD -> 0x03
 
+      opcode :: Word8
       opcode = 0xe0 .|. rp0Byte .|. mdcByte .|. roundingByte .|. distanceByte
-  in BS.singleton opcode
+  in
+    BS.singleton opcode
+
 fromGlyphInstruction GIMeasurePixelsPerEM = "\x4b"
+
 fromGlyphInstruction GIMeasurePointSize = "\x4c"
+
 fromGlyphInstruction (GIMoveStackIndirectRelativePoint DoNotSetRP0ToP) = "\x3a"
+
 fromGlyphInstruction (GIMoveStackIndirectRelativePoint SetRP0ToP) = "\x3b"
+
 fromGlyphInstruction GIMultiply = "\x63"
+
 fromGlyphInstruction GINegate = "\x65"
+
 fromGlyphInstruction GINotEqual = "\x55"
+
 fromGlyphInstruction GINot = "\x5c"
+
 fromGlyphInstruction (GINoRoundingOfValue DistanceTypeA) = "\x6c"
+
 fromGlyphInstruction (GINoRoundingOfValue DistanceTypeB) = "\x6d"
+
 fromGlyphInstruction (GINoRoundingOfValue DistanceTypeC) = "\x6e"
+
 fromGlyphInstruction (GINoRoundingOfValue DistanceTypeD) = "\x6f"
+
 fromGlyphInstruction GIOdd = "\x56"
+
 fromGlyphInstruction GIOr = "\x5b"
+
 fromGlyphInstruction GIPop = "\x21"
+
 fromGlyphInstruction GIReadControlValueTableEntry = "\x45"
+
 fromGlyphInstruction GIRoundDownToGrid = "\x7d"
+
 fromGlyphInstruction GIRoundOff = "\x7a"
+
 fromGlyphInstruction GIRollTopThreeStackElements = "\x8a"
+
 fromGlyphInstruction (GIRound DistanceTypeA) = "\x8a"
+
 fromGlyphInstruction (GIRound DistanceTypeB) = "\x8b"
+
 fromGlyphInstruction (GIRound DistanceTypeC) = "\x8c"
+
 fromGlyphInstruction (GIRound DistanceTypeD) = "\x8d"
+
 fromGlyphInstruction GIReadStore = "\x43"
+
 fromGlyphInstruction GIRoundToDoubleGrid = "\x3d"
+
 fromGlyphInstruction GIRoundToGrid = "\x18"
+
 fromGlyphInstruction GIRoundToHalfGrid = "\x19"
+
 fromGlyphInstruction GIRoundUpToGrid = "\x7c"
+
 fromGlyphInstruction GISSuperRound45Degrees = "\x77"
+
 fromGlyphInstruction GISetAngleWeight = "\x7e"
+
 fromGlyphInstruction GIScanConversionControl =  "\x85"
+
 fromGlyphInstruction GIScanType = "\x8d"
+
 fromGlyphInstruction GISetCoordinateFromStack = "\x48"
+
 fromGlyphInstruction GISetControlValueTableCutIn = "\x1d"
+
 fromGlyphInstruction GISetDeltaBase = "\x5e"
+
 fromGlyphInstruction (GISetDualProjectionVectorToLine ParallelToLine) = "\x86"
-fromGlyphInstruction (GISetDualProjectionVectorToLine PerpendicularToLine) = "\x87"
+
+fromGlyphInstruction (GISetDualProjectionVectorToLine PerpendicularToLine) =
+  "\x87"
+
 fromGlyphInstruction GISetDeltaShift = "\x5f"
+
 fromGlyphInstruction GISetFreedomVectorFromStack = "\x0b"
+
 fromGlyphInstruction (GISetFreedomVectorToCoordinateAxis AxisY) = "\x04"
+
 fromGlyphInstruction (GISetFreedomVectorToCoordinateAxis AxisX) = "\x05"
+
 fromGlyphInstruction (GISetFreedomVectorToLine ParallelToLine) = "\x08"
+
 fromGlyphInstruction (GISetFreedomVectorToLine PerpendicularToLine) = "\x09"
+
 fromGlyphInstruction GISetFreedomVectorToProjectionVector = "\x0e"
+
 fromGlyphInstruction (GIShiftContourReferencePoint ReferencePoint1) = "\x34"
+
 fromGlyphInstruction (GIShiftContourReferencePoint ReferencePoint2) = "\x35"
+
 fromGlyphInstruction (GIShiftPointReferencePoint ReferencePoint1) = "\x32"
+
 fromGlyphInstruction (GIShiftPointReferencePoint ReferencePoint2) = "\x33"
+
 fromGlyphInstruction GIShiftPointPixelAmount = "\x38"
+
 fromGlyphInstruction (GIShiftZoneReferencePoint ReferencePoint1) = "\x36"
+
 fromGlyphInstruction (GIShiftZoneReferencePoint ReferencePoint2) = "\x37"
+
 fromGlyphInstruction GISetLoopVariable = "\x17"
+
 fromGlyphInstruction GISetMinimumDistance = "\x1a"
+
 fromGlyphInstruction GISetProjectionVectorFromStack = "\x0a"
+
 fromGlyphInstruction (GISetProjectionVectorCoordinateAxis AxisY) = "\x02"
+
 fromGlyphInstruction (GISetProjectionVectorCoordinateAxis AxisX) = "\x03"
+
 fromGlyphInstruction (GISetProjectionVectorToLine ParallelToLine) = "\x06"
+
 fromGlyphInstruction (GISetProjectionVectorToLine PerpendicularToLine) = "\x07"
+
 fromGlyphInstruction GISuperRound = "\x76"
+
 fromGlyphInstruction GISetReferencePoint0 = "\x10"
+
 fromGlyphInstruction GISetReferencePoint1 = "\x11"
+
 fromGlyphInstruction GISetReferencePoint2 = "\x12"
+
 fromGlyphInstruction GISetSingleWidth = "\x1f"
+
 fromGlyphInstruction GISetSingleWidthCutIn = "\x1e"
+
 fromGlyphInstruction GISubtract = "\x61"
-fromGlyphInstruction (GISetFreedomAndProjectionVectorsToCoordinateAxis AxisY) = "\x00"
-fromGlyphInstruction (GISetFreedomAndProjectionVectorsToCoordinateAxis AxisX) = "\x01"
+
+fromGlyphInstruction (GISetFreedomAndProjectionVectorsToCoordinateAxis AxisY) =
+  "\x00"
+
+fromGlyphInstruction (GISetFreedomAndProjectionVectorsToCoordinateAxis AxisX) =
+  "\x01"
+
 fromGlyphInstruction GISwap = "\x23"
+
 fromGlyphInstruction GISetZonePointer0 = "\x13"
+
 fromGlyphInstruction GISetZonePointer1 = "\x14"
+
 fromGlyphInstruction GISetZonePointer2 = "\x15"
+
 fromGlyphInstruction GISetZonePointerS = "\x16"
+
 fromGlyphInstruction GIUntouchPoint = "\x29"
+
 fromGlyphInstruction GIWriteControlValueTableFUnits = "\x70"
+
 fromGlyphInstruction GIWriteControlValueTablePixelsUnits = "\x44"
+
 fromGlyphInstruction GIWriteStore = "\x42"
 
 fromGlyphInstructions :: [GlyphInstruction] -> ByteString

@@ -128,18 +128,28 @@ The value is interpreted as an unsigned integer.
 -}
 appendBits :: Integral a => Int -> a -> BitsArray -> BitsArray
 appendBits bitsWidth bits bitsArray =
-  let leftShift  = (  8 - (bitsWidth .&. 7)
-                    + 8 - (baLength bitsArray .&. 7)
-                   ) .&. 7
-      bits'      = fromIntegral bits `shiftL` leftShift :: Word64
-      byteCount  = bitsSpan (bitsWidth + leftShift)
-      bytes      = word64ToWord8List byteCount bits'
-      byteOffset = baLength bitsArray `shiftR` 3
+  let
+    leftShift :: Int
+    leftShift  = (  8 - (bitsWidth .&. 7)
+                 + 8 - (baLength bitsArray .&. 7)
+                 ) .&. 7
 
-  in bitsArray { baLength = baLength bitsArray + bitsWidth
-               , baBytes = VS.modify (appendBits' byteOffset bytes)
-                                     (baBytes bitsArray)
-               }
+    bits' :: Word64
+    bits' = fromIntegral bits `shiftL` leftShift
+
+    byteCount :: Int
+    byteCount  = bitsSpan (bitsWidth + leftShift)
+
+    bytes :: [Word8]
+    bytes = word64ToWord8List byteCount bits'
+
+    byteOffset :: Int
+    byteOffset = baLength bitsArray `shiftR` 3
+  in
+    bitsArray { baLength = baLength bitsArray + bitsWidth
+              , baBytes = VS.modify (appendBits' byteOffset bytes)
+                                    (baBytes bitsArray)
+              }
  where
   appendBits' :: Int -> [Word8] -> MVS.MVector s Word8 -> ST s ()
   appendBits' start bytes array = do

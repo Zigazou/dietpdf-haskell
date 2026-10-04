@@ -140,3 +140,44 @@ size_t ditherGray4FFI(const uint8_t *input, size_t width, size_t height,
 
   return stride * height;
 }
+
+/* Count distinct samples in an 8-bit grayscale buffer. */
+size_t countGrayLevelsFFI(const uint8_t *input, size_t inputLen) {
+  bool seen[256] = {false};
+  size_t count = 0;
+
+  for (size_t i = 0; i < inputLen; ++i) {
+    if (!seen[input[i]]) {
+      seen[input[i]] = true;
+      ++count;
+    }
+  }
+
+  return count;
+}
+
+/* Pack mapped grayscale samples MSB first, with zero-padded byte-aligned rows.
+ * Input contains width * height bytes; lookup contains 256 sample mappings.
+ * Output requires ceil(width / (8 / bits)) * height bytes. */
+size_t packGrayFFI(const uint8_t *input, size_t width, size_t height,
+                   unsigned bits, const uint8_t *lookup, uint8_t *output) {
+  if (!input || !lookup || !output || !width || !height ||
+      (bits != 1 && bits != 2 && bits != 4 && bits != 8) ||
+      width > SIZE_MAX / height) {
+    return 0;
+  }
+
+  size_t perByte = 8 / bits;
+  size_t stride = width / perByte + (width % perByte != 0);
+
+  memset(output, 0, stride * height);
+
+  for (size_t y = 0; y < height; ++y) {
+    for (size_t x = 0; x < width; ++x) {
+      output[y * stride + x / perByte] |= lookup[input[y * width + x]]
+                                          << (8 - bits * (x % perByte + 1));
+    }
+  }
+
+  return stride * height;
+}

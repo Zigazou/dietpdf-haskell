@@ -5,10 +5,19 @@ module Codec.Compression.CCITTG4Spec
 import Codec.Compression.CCITTG4 (decodeG4, encodeG4)
 import Control.Monad (forM_)
 import Data.Bits (setBit)
+import Data.Bitmap.BitmapConfiguration (BitmapConfiguration (BitmapConfiguration))
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC1Bit, BC2Bits))
+import Data.Foldable (toList)
+import Data.PDF.Filter (Filter (fFilter, fDecodeParms))
+import Data.PDF.FilterCombination (fcBytes, fcList)
+import Data.PDF.PDFObject (PDFObject (PDFBool, PDFDictionary, PDFName, PDFNumber))
+import Data.PDF.PDFWork (evalPDFWorkT)
+import Data.Map.Strict qualified as Map
+import PDF.Processing.ApplyFilter.Generic (applyEveryFilterGeneric)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.List (foldl')
-import Test.Hspec (Spec, describe, it, shouldBe)
+import Test.Hspec (Spec, describe, it, shouldBe, expectationFailure)
 import Test.QuickCheck
   ( Gen, arbitrary, chooseInt, elements, forAll, frequency, vectorOf
   , withMaxSuccess, (===)
@@ -108,3 +117,39 @@ spec = describe "CCITTG4" $ do
         decodeG4 width height encoded `shouldBe` Right bitmap
       it "encodes to the T.6 vector" $
         encodeG4 width height bitmap `shouldBe` Right encoded
+
+
+  describe "generic CCITT G4 candidate" $ do
+    it "uses the padded row stride and preserves sample polarity" $ do
+      let bitmap = BS.pack [0x80,0x00,0x7f,0x80]
+      result <- evalPDFWorkT
+        (applyEveryFilterGeneric False (Just (BitmapConfiguration 9 1 BC1Bit)) bitmap)
+      case result of
+        Left err -> expectationFailure (show err)
+        Right candidates -> case
+          [ (candidate, fDecodeParms filter')
+          | candidate <- candidates
+          , filter' <- toList (fcList candidate)
+          , fFilter filter' == PDFName "CCITTFaxDecode"
+          ] of
+            [(candidate, PDFDictionary params)] -> do
+              decodeG4 9 2 (fcBytes candidate) `shouldBe` Right bitmap
+              Map.lookup "K" params `shouldBe` Just (PDFNumber (-1))
+              Map.lookup "Columns" params `shouldBe` Just (PDFNumber 9)
+              Map.lookup "Rows" params `shouldBe` Just (PDFNumber 2)
+              Map.lookup "BlackIs1" params `shouldBe` Just (PDFBool True)
+              Map.lookup "EndOfBlock" params `shouldBe` Just (PDFBool False)
+            other -> expectationFailure (show other)
+
+    it "does not offer fax encoding for two-bit samples" $ do
+      result <- evalPDFWorkT
+        (applyEveryFilterGeneric False (Just (BitmapConfiguration 4 1 BC2Bits))
+                                 (BS.pack [0x1b]))
+      case result of
+        Left err -> expectationFailure (show err)
+        Right candidates ->
+          [ fFilter filter'
+          | candidate <- candidates
+          , filter' <- toList (fcList candidate)
+          , fFilter filter' == PDFName "CCITTFaxDecode"
+          ] `shouldBe` []

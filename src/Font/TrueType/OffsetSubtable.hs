@@ -107,11 +107,20 @@ Example:
 > -- bytes is a 12-byte ByteString
 -}
 fromOffsetSubtable :: OffsetSubtable -> ByteString
-fromOffsetSubtable (OffsetSubtable scaler numTables searchRange entrySelector rangeShift) =
-  let scalerBytes = fromScalerType scaler
-      metadataBytes = BSL.toStrict $ runPut $ do
-        putWord16be numTables
-        putWord16be searchRange
-        putWord16be entrySelector
-        putWord16be rangeShift
-  in  scalerBytes <> metadataBytes
+fromOffsetSubtable (OffsetSubtable scaler
+                                   numTables
+                                   searchRange
+                                   entrySelector
+                                   rangeShift) =
+  let
+    scalerBytes :: ByteString
+    scalerBytes = fromScalerType scaler
+
+    metadataBytes :: ByteString
+    metadataBytes = BSL.toStrict $ runPut $ do
+      putWord16be numTables
+      putWord16be searchRange
+      putWord16be entrySelector
+      putWord16be rangeShift
+  in
+    scalerBytes <> metadataBytes

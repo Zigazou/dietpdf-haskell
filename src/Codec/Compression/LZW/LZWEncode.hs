@@ -12,18 +12,19 @@ module Codec.Compression.LZW.LZWEncode
   ) where
 
 import Codec.Compression.LZW.LZWDictionary
-    ( Dictionary
-    , MonadDictionary (getDictionary, putDictionary)
-    , addWord
-    , clearTableMarker
-    , dictionaryLengthM
-    , endOfDataMarker
-    , getIndexM
-    , newDictionary
-    )
+  ( Dictionary
+  , MonadDictionary (getDictionary, putDictionary)
+  , addWord
+  , clearTableMarker
+  , dictionaryLengthM
+  , endOfDataMarker
+  , getIndexM
+  , newDictionary
+  )
 
 import Control.Monad.State.Lazy (State, get, put, runState)
 
+import Data.Binary (Word8)
 import Data.BitsArray (BitsArray, appendBits, newBitsArray, toByteString)
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -104,7 +105,11 @@ Append a code to the output bitstream using the current code width.
 outputCode :: Integral a => a -> State EncodeStep ()
 outputCode value = do
   step <- get
-  let output = appendBits (esBitsPerCode step) value (esOutput step)
+
+  let
+    output :: BitsArray
+    output = appendBits (esBitsPerCode step) value (esOutput step)
+
   put $ step { esOutput = output }
 
 {-|
@@ -129,9 +134,15 @@ processEncode "" = do
 
 processEncode stream = do
   step <- get
-  let currentWord = esCurrentWord step
-      nextByte = BS.head stream
-      nextWord = BS.snoc currentWord nextByte
+  let
+    currentWord :: ByteString
+    currentWord = esCurrentWord step
+
+    nextByte :: Word8
+    nextByte = BS.head stream
+
+    nextWord :: ByteString
+    nextWord = BS.snoc currentWord nextByte
 
   getIndexM nextWord >>= \case
     -- The word is already in the dictionary, keep going.
@@ -178,7 +189,12 @@ compress
   :: ByteString -- ^ A strict bytestring
   -> Fallible ByteString -- ^ The compressed bytestring or an error
 compress stream = do
-  let (output, _anyError) = runState (processEncode stream)
-                                     (initialEncodeStep (BS.length stream * 2 + 16))
+  let
+    output :: BitsArray
+    _anyError :: EncodeStep
+    (output, _anyError) =
+      runState (processEncode stream)
+               (initialEncodeStep (BS.length stream * 2 + 16))
+
   Right . toByteString $ output
 

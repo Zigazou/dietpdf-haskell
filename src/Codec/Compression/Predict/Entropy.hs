@@ -54,7 +54,12 @@ entropyShannon =
   ponderate value = -(value * logBase 2 value)
 
   frequency :: [Double] -> [Double]
-  frequency values = let valuesSum = sum' values in map (/ valuesSum) values
+  frequency values =
+    let
+      valuesSum :: Double
+      valuesSum = sum' values
+    in
+      map (/ valuesSum) values
 
 {-|
 Calculate a simple sum-based entropy of a `ByteString`.
@@ -70,14 +75,19 @@ libpng/zlib-ng to pick a scanline filter: each byte is read as a signed delta
 This is a single linear pass over the row with no sorting and no actual
 compression call, making it far cheaper than 'entropyShannon' or
 'FL.entropyCompress' while correlating just as well (if not better) with the
-final Deflate size, since it directly measures how close the predicted bytes
-are to zero.
+final Deflate size, since it directly measures how close the predicted bytes are
+to zero.
 -}
 entropyMSAD :: ByteString -> Double
 entropyMSAD = BS.foldl' (\acc w -> acc + fromIntegral (signedAbs w)) 0.0
  where
   signedAbs :: Word8 -> Int
-  signedAbs w = let v = fromIntegral w in min v (256 - v)
+  signedAbs w =
+    let
+      v :: Int
+      v = fromIntegral w
+    in
+      min v (256 - v)
 
 {-|
 Calculate a simple LFS-based entropy of a `ByteString`.
@@ -101,11 +111,24 @@ entropyLFS =
   -}
   ilog2i :: Integer -> Integer
   ilog2i n
-    | n <= 1 = 0
-    | otherwise =
-        let k = ilog2 n
-            pow2 = (2 :: Integer) ^ (fromIntegral k :: Int)
-            mantissaQ16 = (n * 65536) `div` pow2 -- in [65536, 131071]
-            slopeQ16 = 94548 :: Integer -- round(65536 / ln(2))
-            fracQ16 = ((mantissaQ16 - 65536) * slopeQ16) `div` 65536
-         in k * 65536 + fracQ16
+    | n <= 1
+    = 0
+
+    | otherwise
+    = let
+        k :: Integer
+        k = ilog2 n
+
+        pow2 :: Integer
+        pow2 = (2 :: Integer) ^ (fromIntegral k :: Int)
+
+        mantissaQ16 :: Integer
+        mantissaQ16 = (n * 65536) `div` pow2 -- in [65536, 131071]
+
+        slopeQ16 :: Integer
+        slopeQ16 = 94548 :: Integer -- round(65536 / ln(2))
+
+        fracQ16 :: Integer
+        fracQ16 = ((mantissaQ16 - 65536) * slopeQ16) `div` 65536
+      in
+        k * 65536 + fracQ16

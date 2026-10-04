@@ -62,9 +62,14 @@ correct offset to retrieve only the deflate-compressed data.
 -}
 extractGzipDeflate :: ByteString -> ByteString
 extractGzipDeflate gz =
-  let off = gzipPayloadOffset gz
-      end = BS.length gz - 8
-  in BS.take (end - off) (BS.drop off gz)
+  let
+    offset :: Int
+    offset = gzipPayloadOffset gz
+
+    end :: Int
+    end = BS.length gz - 8
+  in
+    BS.take (end - offset) (BS.drop offset gz)
 
 {-|
 Calculates the offset in a GZip-compressed bytestring where the deflate payload
@@ -75,24 +80,45 @@ the correct starting point of the deflate-compressed data.
 -}
 gzipPayloadOffset :: ByteString -> Int
 gzipPayloadOffset gz =
-  let flg = BS.index gz 3
-      base = 10 :: Int
-      afterExtra i =
-        if testBit flg 2
-          then
-            let xlen = fromIntegral (BS.index gz i)
-                    + 256 * fromIntegral (BS.index gz (i + 1))
-            in i + 2 + xlen
-          else i
-      skipZero i =
-        case BS.elemIndex 0 (BS.drop i gz) of
-          Just n  -> i + n + 1
-          Nothing -> i
-      i1 = afterExtra base
-      i2 = if testBit flg 3 then skipZero i1 else i1
-      i3 = if testBit flg 4 then skipZero i2 else i2
-      i4 = if testBit flg 1 then i3 + 2 else i3
-  in i4
+  let
+    flg :: Word8
+    flg = BS.index gz 3
+
+    base :: Int
+    base = 10
+
+    afterExtra :: Int -> Int
+    afterExtra i =
+      if testBit flg 2
+        then
+          let
+            xlen :: Int
+            xlen = fromIntegral (BS.index gz i)
+                 + 256 * fromIntegral (BS.index gz (i + 1))
+          in
+            i + 2 + xlen
+        else
+          i
+
+    skipZero :: Int -> Int
+    skipZero i =
+      case BS.elemIndex 0 (BS.drop i gz) of
+        Just n  -> i + n + 1
+        Nothing -> i
+
+    i1 :: Int
+    i1 = afterExtra base
+
+    i2 :: Int
+    i2 = if testBit flg 3 then skipZero i1 else i1
+
+    i3 :: Int
+    i3 = if testBit flg 4 then skipZero i2 else i2
+
+    i4 :: Int
+    i4 = if testBit flg 1 then i3 + 2 else i3
+  in
+    i4
 
 {-|
 Wraps a raw deflate stream with a zlib header and Adler-32 checksum.
@@ -136,9 +162,14 @@ adler32 =
 
   step :: (Word32, Word32) -> Word8 -> (Word32, Word32)
   step (a, b) x =
-    let a' = (a + fromIntegral x) `mod` modulo
-        b' = (b + a') `mod` modulo
-    in (a', b')
+    let
+      a' :: Word32
+      a' = (a + fromIntegral x) `mod` modulo
+
+      b' :: Word32
+      b' = (b + a') `mod` modulo
+    in
+      (a', b')
 
   combine :: Word32 -> Word32 -> Word32
   combine a b = shiftL b 16 .|. a

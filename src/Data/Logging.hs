@@ -61,25 +61,33 @@ If the text is already wider than the given width, it is returned unchanged.
 -}
 padText :: T.Text -> Int -> T.Text
 padText text width =
-  let textLen = T.length text
-  in  if textLen >= width
-        then text
-        else text <> T.replicate (width - textLen) " "
+  let
+    textLen :: Int
+    textLen = T.length text
+  in
+    if textLen >= width
+      then text
+      else text <> T.replicate (width - textLen) " "
 
 {-|
 Pad a `Context` to a given width for aligned logging.
 -}
 padContext :: Context -> Int -> T.Text
 padContext (Context intro) width = padText intro width
+
 padContext (ContextProgress current total) width =
-  let progressText = T.concat
-        [ "["
-        , T.pack (show current)
-        , "/"
-        , T.pack (show total)
-        , "]"
-        ]
-  in padText progressText width
+  let
+    progressText :: T.Text
+    progressText = T.concat
+      [ "["
+      , T.pack (show current)
+      , "/"
+      , T.pack (show total)
+      , "]"
+      ]
+  in
+    padText progressText width
+
 padContext NoContext width = padText "" width
 
 {-|
@@ -154,14 +162,22 @@ sayComparisonF intro label sizeBefore sizeAfter = sayF
     [ padText label 42
     , padText (T.pack (show sizeBefore)) 12
     , padText (T.pack (show sizeAfter)) 12
-    , padText ((if ratio > 0 then "+" else "") <> T.pack (show (round' 2 ratio)) <> "%") 8
+    , padText (  (if ratio > 0 then "+" else "")
+              <> T.pack (show (round' 2 ratio)) <> "%"
+              ) 8
     ])
  where
   ratio :: Double
-  ratio = let ratio' = 100
-                     * (fromIntegral sizeAfter - fromIntegral sizeBefore)
-                     / fromIntegral sizeBefore
-          in  if sizeBefore == 0 then 0 else ratio'
+  ratio =
+    let
+      ratio' :: Double
+      ratio' = 100
+             * (fromIntegral sizeAfter - fromIntegral sizeBefore)
+             / fromIntegral sizeBefore
+    in
+      if sizeBefore == 0
+        then 0
+        else ratio'
 
 {- |
 Emit an error line with a label and a 'UnifiedError'.

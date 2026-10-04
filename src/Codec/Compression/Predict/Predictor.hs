@@ -178,9 +178,11 @@ byte. Works with any integral type to support different bit depths.
 -}
 average :: Integral a => a -> a -> a
 average a b =
-  let a', b' :: Integer
-      (a', b') = (fromIntegral a, fromIntegral b)
-  in  (fromIntegral . fst) (divMod (a' + b') 2)
+  let
+    a', b' :: Integer
+    (a', b') = (fromIntegral a, fromIntegral b)
+  in
+    (fromIntegral . fst) (divMod (a' + b') 2)
 
 {-|
 The Paeth algorithm needs this estimating function.
@@ -188,17 +190,23 @@ Works with any integral type to support different bit depths.
 -}
 paethBest :: Integral a => a -> a -> a -> a
 paethBest left above upperLeft =
-  let estimate :: Integer
-      estimate =
-        fromIntegral left + fromIntegral above - fromIntegral upperLeft
+  let
+    estimate :: Integer
+    estimate =
+      fromIntegral left + fromIntegral above - fromIntegral upperLeft
 
-      distanceLeft, distanceAbove, distanceUpperLeft :: Integer
-      distanceLeft      = abs (estimate - fromIntegral left)
-      distanceAbove     = abs (estimate - fromIntegral above)
-      distanceUpperLeft = abs (estimate - fromIntegral upperLeft)
-  in  if distanceLeft <= distanceAbove && distanceLeft <= distanceUpperLeft
-        then left
-        else if distanceAbove <= distanceUpperLeft then above else upperLeft
+    distanceLeft, distanceAbove, distanceUpperLeft :: Integer
+    distanceLeft      = abs (estimate - fromIntegral left)
+    distanceAbove     = abs (estimate - fromIntegral above)
+    distanceUpperLeft = abs (estimate - fromIntegral upperLeft)
+  in
+    if distanceLeft <= distanceAbove && distanceLeft <= distanceUpperLeft
+      then
+        left
+      else
+        if distanceAbove <= distanceUpperLeft
+          then above
+          else upperLeft
 
 {-|
 Returns the predictor function for a specified `Predictor`.

@@ -112,12 +112,16 @@ Append a new word to the dictionary, assigning it the next available code.
 -}
 addWord :: ByteString -> Dictionary -> Dictionary
 addWord value dictionary =
-  let dictionaryWords = dList dictionary
-      newIndex = SQ.length dictionaryWords
-  in dictionary {
-    dList = dictionaryWords SQ.|> value,
-    dMap = Map.insert value newIndex (dMap dictionary)
-  }
+  let
+    dictionaryWords :: Seq ByteString
+    dictionaryWords = dList dictionary
+
+    newIndex :: Int
+    newIndex = SQ.length dictionaryWords
+  in
+    dictionary { dList = dictionaryWords SQ.|> value
+               , dMap = Map.insert value newIndex (dMap dictionary)
+               }
 
 {-|
 Lookup a word (byte string) by its code index.

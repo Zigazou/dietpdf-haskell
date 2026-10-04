@@ -119,15 +119,21 @@ Returns a list of flags, one per point.
 parseFlagsP :: Int -> Get [Word8]
 parseFlagsP numPoints = label "flags" $ go numPoints []
   where
+    go :: Int -> [Word8] -> Get [Word8]
     go 0 acc = return (reverse acc)
     go n acc = do
       flag <- getWord8
       if testBit flag 3  -- repeat flag
         then do
           repeatCount <- getWord8
-          let count = fromIntegral repeatCount + 1
+
+          let
+            count :: Int
+            count = fromIntegral repeatCount + 1
+
           go (n - count) (replicate count flag ++ acc)
-        else go (n - 1) (flag : acc)
+        else
+          go (n - 1) (flag : acc)
 
 {-|
 Parse x-coordinates based on flags.
@@ -155,15 +161,20 @@ parseXCoordinatesP flags = label "xCoordinates" $ go flags 0 []
       x <- if testBit flag 1  -- xShortVector
         then do
           byte <- getWord8
-          let val = if testBit flag 4  -- xIsSameOrPositive
-                then fromIntegral byte
-                else negate (fromIntegral byte)
+          let
+            val :: Int16
+            val = if testBit flag 4  -- xIsSameOrPositive
+                    then fromIntegral byte
+                    else negate (fromIntegral byte)
           return (prev + val)
-        else if testBit flag 4  -- xIsSameOrPositive (same as previous)
-          then return prev
-          else do
-            delta <- getInt16be
-            return (prev + delta)
+        else
+          if testBit flag 4  -- xIsSameOrPositive (same as previous)
+            then
+              return prev
+            else do
+              delta <- getInt16be
+              return (prev + delta)
+      
       go fs x (x : acc)
 
 {-|

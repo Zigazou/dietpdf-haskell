@@ -68,14 +68,16 @@ showStat documents = do
   forM_ documents $ \(filename, documentSize, document) -> do
     statistics <- evalPDFWork (stat document (initStatistics documentSize))
 
-    let subtotals = sum ([ bitmapTotal
-                         , vectorTotal
-                         , fontTotal
-                         , fileTotal
-                         , xmlTotal
-                         , otherTotal
-                         ] <*> [statistics]
-                        )
+    let
+      subtotals :: Int
+      subtotals = sum ([ bitmapTotal
+                       , vectorTotal
+                       , fontTotal
+                       , fileTotal
+                       , xmlTotal
+                       , otherTotal
+                       ] <*> [statistics]
+                      )
 
     disp
       [ filename

@@ -97,31 +97,41 @@ This is a wrapper around ImageMagick's `convert`, run through temporary files
 since `convert` needs to read two distinct input images (the JPEG and the
 mask) to composite them.
 -}
-zeroFillJPEG :: Int -> Int -> ByteString -> ByteString -> FallibleT IO ByteString
+zeroFillJPEG
+  :: Int
+  -> Int
+  -> ByteString
+  -> ByteString
+  -> FallibleT IO ByteString
 zeroFillJPEG width height image mask = do
   quality <- jpegQuality image
-  let maskPGM = toGrayscalePGM width height (binarizeMask mask)
+  let
+    maskPGM :: ByteString
+    maskPGM = toGrayscalePGM width height (binarizeMask mask)
 
-  withSystemTempFile "dietpdf-zerofill-in.jpg" $ \imagePath imageHandle -> do
-    withSystemTempFile "dietpdf-zerofill-mask.pgm" $ \maskPath maskHandle -> do
-      withSystemTempFile "dietpdf-zerofill-out.jpg" $ \outputPath outputHandle -> do
-        lift $ hClose imageHandle
-        lift $ hClose maskHandle
-        lift $ hClose outputHandle
-        lift $ BS.writeFile imagePath image
-        lift $ BS.writeFile maskPath maskPGM
+  withSystemTempFile "dietpdf-zerofill-in.jpg" $
+    \imagePath imageHandle -> do
+      withSystemTempFile "dietpdf-zerofill-mask.pgm" $
+        \maskPath maskHandle -> do
+          withSystemTempFile "dietpdf-zerofill-out.jpg" $
+            \outputPath outputHandle -> do
+              lift $ hClose imageHandle
+              lift $ hClose maskHandle
+              lift $ hClose outputHandle
+              lift $ BS.writeFile imagePath image
+              lift $ BS.writeFile maskPath maskPGM
 
-        (exitCode, _stdout, _stderr) <- lift $ readProcessWithExitCode
-          "convert"
-          [ imagePath
-          , maskPath
-          , "-compose", "Multiply"
-          , "-composite"
-          , "-quality", show quality
-          , outputPath
-          ]
-          ""
+              (exitCode, _stdout, _stderr) <- lift $ readProcessWithExitCode
+                "convert"
+                [ imagePath
+                , maskPath
+                , "-compose", "Multiply"
+                , "-composite"
+                , "-quality", show quality
+                , outputPath
+                ]
+                ""
 
-        case exitCode of
-          ExitSuccess    -> lift $ BS.readFile outputPath
-          ExitFailure rc -> throwE (ExternalCommandError "convert" rc)
+              case exitCode of
+                ExitSuccess    -> lift $ BS.readFile outputPath
+                ExitFailure rc -> throwE (ExternalCommandError "convert" rc)

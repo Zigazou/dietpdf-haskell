@@ -11,7 +11,8 @@ where
 import Codec.Compression.Predict.Entropy
   (Entropy (EntropyDeflate, EntropyRLE, EntropyShannon))
 import Codec.Compression.Predict.ImageStream
-  ( fromPredictedStream
+  ( ImageStream
+  , fromPredictedStream
   , fromUnpredictedStream
   , packStream
   , predictImageStream
@@ -52,13 +53,20 @@ predict
   -> Fallible ByteString -- ^ Encoded stream or an error
 predict entropy predictor bitmapConfig stream
   | bcLineWidth bitmapConfig < 1 = Left $ InvalidNumberOfBytes 0 0
-  | predictor == TIFFPredictor2 =
-     let rows = splitRaw (bitmapRawWidth bitmapConfig) stream
-         predictedRows = tiffPredictRow bitmapConfig <$> rows
-     in  return $ BS.concat predictedRows
-  | otherwise = do
-    imgStm <- fromUnpredictedStream bitmapConfig stream
-    return $ packStream (predictImageStream entropy predictor imgStm)
+  | predictor == TIFFPredictor2
+  = let
+      rows :: [ByteString]
+      rows = splitRaw (bitmapRawWidth bitmapConfig) stream
+
+      predictedRows :: [ByteString]
+      predictedRows = tiffPredictRow bitmapConfig <$> rows
+     in
+      return $ BS.concat predictedRows
+
+  | otherwise
+  = do
+      imgStm <- fromUnpredictedStream bitmapConfig stream
+      return $ packStream (predictImageStream entropy predictor imgStm)
 
 -- | Share PNG row predictions across fixed predictors and entropy strategies.
 -- Requests must use PNG predictors.
@@ -87,28 +95,53 @@ unpredict
   -> ByteString -- ^ Stream to decode
   -> Fallible ByteString -- ^ Decoded stream or an error
 unpredict predictor bitmapConfig stream
-  | bcLineWidth bitmapConfig < 1 = Left $ InvalidNumberOfBytes 0 0
-  | predictor == TIFFNoPrediction = Right stream
+  | bcLineWidth bitmapConfig < 1
+  = Left $ InvalidNumberOfBytes 0 0
+
+  | predictor == TIFFNoPrediction
+  = Right stream
+
   | predictor /= TIFFPredictor2
   , rowBytes > 0, pixelBytes > 0, rowBytes < maxBound
-  , BS.length stream `mod` (rowBytes + 1) == 0 = do
+  , BS.length stream `mod` (rowBytes + 1) == 0
+  = do
       validateRows 0
       return $ decodePNGRows rowBytes pixelBytes stream
-  | predictor == TIFFPredictor2 =
-     let rows = splitRaw (bitmapRawWidth bitmapConfig) stream
-         unpredictedRows = tiffUnpredictRow bitmapConfig <$> rows
-     in  return $ BS.concat unpredictedRows
-  | otherwise = do
-    imgStm <- fromPredictedStream predictor bitmapConfig stream
-    let unpredicted = unpredictImageStream predictor imgStm
-    return $ packStream unpredicted
+
+  | predictor == TIFFPredictor2
+  = let
+      rows :: [ByteString]
+      rows = splitRaw (bitmapRawWidth bitmapConfig) stream
+
+      unpredictedRows :: [ByteString]
+      unpredictedRows = tiffUnpredictRow bitmapConfig <$> rows
+    in
+      return $ BS.concat unpredictedRows
+
+  | otherwise
+  = do
+      imgStm <- fromPredictedStream predictor bitmapConfig stream
+
+      let
+        unpredicted :: ImageStream
+        unpredicted = unpredictImageStream predictor imgStm
+
+      return $ packStream unpredicted
 
  where
+  rowBytes :: Int
   rowBytes = bitmapRawWidth bitmapConfig
+
+  pixelBytes :: Int
   pixelBytes = bitmapPixelBytes bitmapConfig
+
+  validateRows :: Int -> Fallible ()
   validateRows !offset
-    | offset >= BS.length stream = Right ()
-    | otherwise = do
+    | offset >= BS.length stream
+    = Right ()
+
+    | otherwise
+    = do
         _ <- decodeRowPredictor (BSU.unsafeIndex stream offset)
         validateRows (offset + rowBytes + 1)
 
@@ -118,19 +151,26 @@ decodePNGRows :: Int -> Int -> ByteString -> ByteString
 decodePNGRows rowBytes pixelBytes stream =
   BSI.unsafeCreate outputLength $ \dst -> rows dst 0 0
  where
+  outputLength :: Int
   outputLength = BS.length stream - BS.length stream `div` (rowBytes + 1)
 
   rows :: Ptr Word8 -> Int -> Int -> IO ()
   rows dst !source !target
-    | target >= outputLength = return ()
-    | otherwise = do
+    | target >= outputLength
+    = return ()
+
+    | otherwise
+    = do
         bytes dst source target (BSU.unsafeIndex stream source) 0
         rows dst (source + rowBytes + 1) (target + rowBytes)
 
   bytes :: Ptr Word8 -> Int -> Int -> Word8 -> Int -> IO ()
   bytes dst !source !target !tag !column
-    | column >= rowBytes = return ()
-    | otherwise = do
+    | column >= rowBytes
+    = return ()
+
+    | otherwise
+    = do
         let
           offset :: Int
           offset = target + column

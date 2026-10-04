@@ -265,10 +265,13 @@ Returns the entry with 'teData' populated with either parsed or raw data.
 -}
 loadContent :: ByteString -> TableEntry -> TableEntry
 loadContent bytes entry@TableEntry { teTag = RTTFontHeader } =
-  let raw = getBytes bytes entry
-  in  case parseOnly headP raw of
-        Left  _      -> entry { teData = FTRaw raw }
-        Right teHead -> entry { teData = FTHead teHead }
+  let
+    raw :: ByteString
+    raw = getBytes bytes entry
+  in
+    case parseOnly headP raw of
+      Left  _      -> entry { teData = FTRaw raw }
+      Right teHead -> entry { teData = FTHead teHead }
 
 loadContent bytes entry@TableEntry { teTag = RTTGlyphData } =
   -- The glyf table cannot be parsed without the loca table

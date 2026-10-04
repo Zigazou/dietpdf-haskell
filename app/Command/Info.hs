@@ -63,7 +63,10 @@ showInfo document = do
 
   forM_ document $ \object -> do
     info <- evalPDFWork (objectInfo object Nothing)
-    let objectNumber = oNumber info
+
+    let
+      objectNumber :: Maybe Int
+      objectNumber = oNumber info
 
     disp
       [ show (oCategory info)

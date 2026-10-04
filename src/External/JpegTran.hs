@@ -36,9 +36,11 @@ jpegtranOptimize input = do
                   ["-optimize", "-copy", "none"]
                   input
 
-  let baselineLength = case fastCompress baseline of
-                        Right compressed -> BS.length compressed
-                        _anythingElse    -> BS.length baseline
+  let
+    baselineLength :: Int
+    baselineLength = case fastCompress baseline of
+                      Right compressed -> BS.length compressed
+                      _anythingElse    -> BS.length baseline
 
   return $ if baselineLength < BS.length progressive then baseline
                                                      else progressive

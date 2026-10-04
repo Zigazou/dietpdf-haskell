@@ -19,7 +19,7 @@ import Data.Logging (Logging)
 import Data.PDF.PDFWork (PDFWork)
 import Data.Text (Text)
 import Data.Text.Encoding (decodeLatin1, decodeUtf8')
-import Data.TranslationTable (getTranslationTable)
+import Data.TranslationTable (getTranslationTable, TranslationTable)
 
 import External.JpegTran (jpegtranOptimize)
 
@@ -56,9 +56,14 @@ parseNumber string = case reads string of
 
 optimizePrefixes :: [Content] -> [Content]
 optimizePrefixes contents =
-  let prefixes = getAllPrefixes contents
-      newPrefixes = getTranslationTable toNameBase prefixes
-  in renamePrefixes newPrefixes contents
+  let
+    prefixes :: [String]
+    prefixes = getAllPrefixes contents
+
+    newPrefixes :: TranslationTable String
+    newPrefixes = getTranslationTable toNameBase prefixes
+  in
+    renamePrefixes newPrefixes contents
 
 {-| Optimize XML stream.
 
@@ -75,12 +80,14 @@ optimizeXML
   => ByteString
   -> PDFWork IO ByteString
 optimizeXML xml = do
-  let spaceRemoved = optimizePrefixes
-                   . cleanNumbers
-                   . removeSpace
-                   . parseXML
-                   . toText
-                   $ xml
+  let
+    spaceRemoved :: [Content]
+    spaceRemoved = optimizePrefixes
+                 . cleanNumbers
+                 . removeSpace
+                 . parseXML
+                 . toText
+                 $ xml
 
   imageOptimized <- optimizeImages spaceRemoved
 
@@ -109,13 +116,16 @@ optimizeXML xml = do
 
   optimizeImage :: String -> PDFWork IO String
   optimizeImage content =
-    let content' = (toStrict . replace "&#xA;" ("" :: ByteString))
-                 $ (toStrict . replace "\n" ("" :: ByteString))
-                 $ (toStrict . replace "\r" ("" :: ByteString))
-                   (BSU.fromString content)
-    in case decode content' of
-      Right image -> lift (jpegtranOptimize image) <&> BSU.toString . encode
-      Left  _     -> return content
+    let
+      content' :: ByteString
+      content' = (toStrict . replace "&#xA;" ("" :: ByteString))
+               $ (toStrict . replace "\n" ("" :: ByteString))
+               $ (toStrict . replace "\r" ("" :: ByteString))
+                 (BSU.fromString content)
+    in
+      case decode content' of
+        Right image -> lift (jpegtranOptimize image) <&> BSU.toString . encode
+        Left  _     -> return content
 
   optimizeImages :: [Content] -> PDFWork IO [Content]
   optimizeImages [] = return []

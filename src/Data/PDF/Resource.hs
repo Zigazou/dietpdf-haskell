@@ -121,5 +121,9 @@ toNameBase resource value = rmap (const (toNameBase' value "")) resource
     toNameBase' 0 "" = "0"
     toNameBase' 0 acc = acc
     toNameBase' n acc =
-      let (quotient, remainder) = n `divMod` BS.length baseDigits
-      in toNameBase' quotient (BS.index baseDigits remainder `BS.cons` acc)
+      let
+        quotient :: Int
+        remainder :: Int
+        (quotient, remainder) = n `divMod` BS.length baseDigits
+      in
+        toNameBase' quotient (BS.index baseDigits remainder `BS.cons` acc)

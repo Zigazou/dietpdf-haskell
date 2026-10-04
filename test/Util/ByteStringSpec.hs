@@ -5,13 +5,16 @@ module Util.ByteStringSpec
 import Control.Monad (forM_)
 
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.Map (Map, fromList)
 import Data.TranslationTable (getTranslationTable)
 
 import Test.Hspec (Spec, describe, it, shouldBe)
 
 import Util.ByteString
-  ( containsOnlyGray
+  ( compactGray
+  , countGrayLevels
+  , containsOnlyGray
   , convertToGray
   , groupComponents
   , optimizeParity
@@ -176,3 +179,28 @@ spec = do
         it ("should optimize parity of RGB triplets " ++ show example)
           $          optimizeParity example
           `shouldBe` expected
+
+  describe "countGrayLevels" $ do
+    it "counts empty, repeated and all possible samples" $ do
+      countGrayLevels "" `shouldBe` 0
+      countGrayLevels "ababa" `shouldBe` 2
+      countGrayLevels (BS.pack [0 .. 255]) `shouldBe` 256
+
+  describe "compactGray" $ do
+    it "packs binary gray with independent padded rows" $
+      compactGray 3 2 (BS.pack [0,255,0,255,0,255])
+        `shouldBe` Just (1, Nothing, BS.pack [0x40,0xa0])
+    it "preserves arbitrary gray values with a palette" $
+      compactGray 3 1 "aba"
+        `shouldBe` Just (1, Just "ab", BS.pack [0x40])
+    it "uses two bits for three levels" $
+      compactGray 3 1 (BS.pack [0,85,170])
+        `shouldBe` Just (2, Nothing, BS.pack [0x18])
+    it "uses four bits for five levels and clears padding" $
+      compactGray 5 1 (BS.pack [1,2,3,4,5])
+        `shouldBe` Just (4, Just (BS.pack [1,2,3,4,5]), BS.pack [0x01,0x23,0x40])
+    it "keeps eight bits above sixteen levels" $
+      compactGray 17 1 (BS.pack [0 .. 16])
+        `shouldBe` Just (8, Nothing, BS.pack [0 .. 16])
+    it "rejects inconsistent dimensions" $
+      compactGray 2 2 "abc" `shouldBe` Nothing

@@ -84,34 +84,44 @@ maskCandidates True analysis width height alpha =
     = [ (True, w, h, 8, small)
       | factor <- [2, 4]
       , width `mod` factor == 0, height `mod` factor == 0
-      , let w = width `div` factor
-      , let h = height `div` factor
+      , let
+          w :: Int
+          w = width `div` factor
+      , let
+          h :: Int
+          h = height `div` factor
       , w > 0
       , h > 0
-      , let small = BS.pack
-              [ fromIntegral
-                ( ( sum
-                      [ fromIntegral (BS.index alpha ((y * factor + dy) * width
-                                                      + x * factor + dx)) :: Int
-                      | dy <- [0 .. factor - 1]
-                      , dx <- [0 .. factor - 1]
-                      ]
-                  + factor
-                  * factor `div` 2
-                  )
-                  `div` (factor * factor)
+      , let
+          small :: ByteString
+          small = BS.pack
+            [ fromIntegral
+              ( ( sum
+                    [ fromIntegral (BS.index alpha ((y * factor + dy) * width
+                                                    + x * factor + dx)) :: Int
+                    | dy <- [0 .. factor - 1]
+                    , dx <- [0 .. factor - 1]
+                    ]
+                + factor
+                * factor `div` 2
                 )
-              | y <- [0 .. h - 1]
-              , x <- [0 .. w - 1]
-              ]
+                `div` (factor * factor)
+              )
+            | y <- [0 .. h - 1]
+            , x <- [0 .. w - 1]
+            ]
       -- Bound both nearest-neighbor and bilinear reconstruction: every
       -- neighboring reduced sample must be close to the original sample.
       , and [ abs (fromIntegral (BS.index alpha (y * width + x))
                    - (fromIntegral (BS.index small (sy * w + sx)) :: Int)) <= 3
             | y <- [0 .. height - 1]
             , x <- [0 .. width - 1]
-            , let x0 = (2 * x + 1 - factor) `div` (2 * factor)
-            , let y0 = (2 * y + 1 - factor) `div` (2 * factor)
+            , let
+                x0 :: Int
+                x0 = (2 * x + 1 - factor) `div` (2 * factor)
+            , let
+                y0 :: Int
+                y0 = (2 * y + 1 - factor) `div` (2 * factor)
             , sx <- nub [ max 0 (min (w - 1) x0)
                         , max 0 (min (w - 1) (x0 + 1))
                         ]

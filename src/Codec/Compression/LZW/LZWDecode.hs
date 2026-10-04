@@ -98,29 +98,43 @@ Read the next LZW code from the input stream.
 lzwNextCode :: ByteString -> State DecodeStep (Fallible Int)
 lzwNextCode stream = do
   step <- get
-  let bitPosition = psBitPosition step
-      offset      = shiftR bitPosition 3
-      bitNumber   = bitPosition .&. 7
-      slice       = bitsSlices (psBitsPerCode step) bitNumber
+  let
+    bitPosition :: Int
+    bitPosition = psBitPosition step
+
+    offset :: Int
+    offset = shiftR bitPosition 3
+
+    bitNumber :: Int
+    bitNumber = bitPosition .&. 7
+
+    slice :: Maybe BitsRange
+    slice = bitsSlices (psBitsPerCode step) bitNumber
 
   case slice of
     Nothing -> return $ Left InternalError
     Just (BitsRange byteMask0 byteMask1 byteMask2 shift spanLength) -> do
-      let byte :: Int -> Int
-          byte = fromIntegral . BS.index stream . (offset +)
+      let
+        byte :: Int -> Int
+        byte = fromIntegral . BS.index stream . (offset +)
 
-          code :: Fallible Int
-          code = if
-            | offset > BS.length stream - spanLength -> Left
-            $ NotEnoughBytes spanLength (BS.length stream - offset)
-            | spanLength == 2 -> Right
-              (shiftL (byte 0 .&. byteMask0) 8 + (byte 1 .&. byteMask1))
-            | spanLength == 3 -> Right
-              ( shiftL (byte 0 .&. byteMask0) 16
-              + shiftL (byte 1 .&. byteMask1) 8
-              + (byte 2 .&. byteMask2)
-              )
-            | otherwise -> Left InternalError
+        code :: Fallible Int
+        code = if
+          | offset > BS.length stream - spanLength
+          -> Left $ NotEnoughBytes spanLength (BS.length stream - offset)
+
+          | spanLength == 2
+          -> Right (shiftL (byte 0 .&. byteMask0) 8 + (byte 1 .&. byteMask1))
+
+          | spanLength == 3
+          -> Right
+            ( shiftL (byte 0 .&. byteMask0) 16
+            + shiftL (byte 1 .&. byteMask1) 8
+            + (byte 2 .&. byteMask2)
+            )
+
+          | otherwise
+          -> Left InternalError
 
       nextBitPosition
       return (flip shiftR shift <$> code)
@@ -196,9 +210,17 @@ Check whether there are more codes to decode.
 moreToDecode :: Int -> State DecodeStep Bool
 moreToDecode totalBits = do
   step <- get
-  let bitsRemaining = psBitPosition step < totalBits
-      noError       = isNothing (psError step)
-      notTheEnd     = psPreviousWordIndex step /= endOfDataMarker
+
+  let
+    bitsRemaining :: Bool
+    bitsRemaining = psBitPosition step < totalBits
+
+    noError :: Bool
+    noError = isNothing (psError step)
+
+    notTheEnd :: Bool
+    notTheEnd = psPreviousWordIndex step /= endOfDataMarker
+
   return (notTheEnd && noError && bitsRemaining)
 
 {-|
@@ -212,32 +234,47 @@ processDecode stream = updateBitsPerCode >> lzwNextCode stream >>= \case
     previousWordIndex <- getPreviousWordIndex
 
     if
-      | currentWordIndex == endOfDataMarker -> do
+      | currentWordIndex == endOfDataMarker
+      -> do
         setPreviousWordIndex currentWordIndex
         return ""
-      | currentWordIndex == clearTableMarker -> do
+
+      | currentWordIndex == clearTableMarker
+      -> do
         setPreviousWordIndex currentWordIndex
         resetBitsPerCode
         resetDictionaryM
         return ""
-      | previousWordIndex == clearTableMarker -> do
+
+      | previousWordIndex == clearTableMarker
+      -> do
         setPreviousWordIndex currentWordIndex
         resetBitsPerCode
         resetDictionaryM
         failWith InternalError (getWordM currentWordIndex)
-      | currentWordIndex < dictionaryLength dictionary -> do
+
+      | currentWordIndex < dictionaryLength dictionary
+      -> do
         previousWord <- failWith InternalError (getWordM previousWordIndex)
         setPreviousWordIndex currentWordIndex
         currentWord <- failWith InternalError (getWordM currentWordIndex)
         addWordM (BS.snoc previousWord (BS.index currentWord 0))
         return currentWord
-      | currentWordIndex == dictionaryLength dictionary -> do
+
+      | currentWordIndex == dictionaryLength dictionary
+      -> do
         previousWord <- failWith InternalError (getWordM previousWordIndex)
         setPreviousWordIndex currentWordIndex
-        let newWord = BS.snoc previousWord (BS.index previousWord 0)
+
+        let
+          newWord :: ByteString
+          newWord = BS.snoc previousWord (BS.index previousWord 0)
+
         addWordM newWord
         return newWord
-      | otherwise -> do
+
+      | otherwise
+      -> do
         setError $ ParseError
           ( ""
           , 0
@@ -248,6 +285,7 @@ processDecode stream = updateBitsPerCode >> lzwNextCode stream >>= \case
             , show (dictionaryLength dictionary)
             ]
           )
+
         return ""
 
 {-|
@@ -272,9 +310,19 @@ decompress
   :: ByteString
   -> Fallible ByteString
 decompress stream = do
-  let (output, state) = runState
-        (whileM (moreToDecode $ BS.length stream * 8) (processDecode stream))
-        (initialDecodeStep . fromIntegral . BS.head $ stream)
+  let
+    output :: [ByteString]
+    state :: DecodeStep
+    (output, state) = runState
+      (whileM (moreToDecode $ BS.length stream * 8)
+              (processDecode stream)
+      )
+      ( initialDecodeStep
+      . fromIntegral
+      . BS.head
+      $ stream
+      )
+
   case psError state of
     Just anError -> Left anError
     Nothing      -> Right (BS.concat output)

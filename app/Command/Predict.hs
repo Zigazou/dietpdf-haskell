@@ -46,13 +46,20 @@ Behavior:
 Side effects: writes to stdout within the 'FallibleT IO' context.
 -}
 predictByteString
-  :: Predictor -> Int -> Int -> ByteString -> FallibleT IO ()
+  :: Predictor
+  -> Int
+  -> Int
+  -> ByteString
+  -> FallibleT IO ()
 predictByteString predictor columns colors binData =
-  let bitmapConfig = BitmapConfiguration
-        { bcLineWidth        = columns
-        , bcComponents       = colors
-        , bcBitsPerComponent = BC8Bits
-        }
-  in case predict EntropyShannon predictor bitmapConfig binData of
-    (Right predicted) -> lift $ BS.putStr predicted
-    (Left  err      ) -> throwE err
+  let
+    bitmapConfig :: BitmapConfiguration
+    bitmapConfig = BitmapConfiguration
+      { bcLineWidth        = columns
+      , bcComponents       = colors
+      , bcBitsPerComponent = BC8Bits
+      }
+  in
+    case predict EntropyShannon predictor bitmapConfig binData of
+      (Right predicted) -> lift $ BS.putStr predicted
+      (Left  err      ) -> throwE err

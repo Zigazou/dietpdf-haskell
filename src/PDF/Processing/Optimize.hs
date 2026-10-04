@@ -42,7 +42,8 @@ import Data.PDF.OptimizationType
   ( OptimizationType (GfxOptimization, JPGOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization)
   )
 import Data.PDF.PDFObject
-  ( PDFObject (PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream, PDFTrailer, PDFXRefStream)
+  ( PDFObject (PDFBool, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream, PDFTrailer, PDFXRefStream)
+  , mkPDFArray
   , hasStream
   )
 import Data.PDF.PDFWork
@@ -68,7 +69,7 @@ import PDF.Processing.Unfilter (unfilter)
 import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 
 import Util.ByteString
-  (containsOnlyGray, convertToGray, isNearlyGray, optimizeParity)
+  (compactGray, containsOnlyGray, convertToGray, isNearlyGray, optimizeParity)
 import Util.Dictionary (Dictionary)
 import Data.Maybe (isNothing)
 
@@ -118,35 +119,11 @@ getBitmapConfiguration object@(PDFIndirectObjectWithStream _number _version _dic
 getBitmapConfiguration _anyOtherObject = return Nothing
 
 {-|
-Optimize bitmap stream data by aligning color components and reducing color space.
-
-Performs intelligent optimization of raw bitmap streams by:
-
-1. __Unpredicting__: Reverses PNG prediction if width and components are known
-2. __Grayscale conversion__: Detects RGB images containing only gray values and
-   converts them to DeviceGray color space, reducing data size by 66%
-3. __Parity optimization__: Aligns color component bytes for better compression
-   in both RGB and other color spaces
-
-The function safely handles unprediction failures by falling back to the
-original stream data.
-
-__Optimization strategies:__
-
-- __DeviceRGB__: Check if image is actually grayscale; if so, convert to
-  DeviceGray and update color space. Otherwise, optimize RGB parity.
-- __Other color spaces__: Optimize parity if stream length is divisible by 3
-  (suggesting triplet structure).
-
-__Parameters:__
-
-- A PDF object containing bitmap stream data
-
-__Returns:__ The object with optimized stream and potentially updated color space
-dictionary entry.
-
-__Side effects:__ Logs optimization actions ("Gray bitmap optimization", "RGB
-parity optimization", "Parity optimization").
+Optimize 8-bit RGB and grayscale bitmaps. Nearly gray RGB samples are reduced
+to one component, then distinct gray levels determine a lossless 1-, 2-, 4-
+or 8-bit representation. Arbitrary levels use an Indexed DeviceGray palette.
+Rows are byte-aligned. Custom Decode arrays and color-key masks prevent
+color-space or sample remapping.
 -}
 optimizeStreamParity :: PDFObject -> PDFWork IO PDFObject
 optimizeStreamParity object = do
@@ -166,21 +143,74 @@ optimizeStreamParity object = do
                     _anyOtherCase -> stream
 
   mColorSpace <- getValue "ColorSpace" object
-  if mColorSpace == Just (PDFName "DeviceRGB")
+  mBits <- getValue "BitsPerComponent" object
+  mDecode <- getValue "Decode" object
+  mMask <- getValue "Mask" object
+  mHeight <- getValue "Height" object
+  mImageMask <- getValue "ImageMask" object
+
+  let
+    eightBit :: Bool
+    eightBit = isNothing mBits || mBits == Just (PDFNumber 8)
+
+    defaultDecode :: Bool
+    defaultDecode = isNothing mDecode
+
+    compact :: PDFObject -> ByteString -> PDFWork IO PDFObject
+    compact grayObject grayStream =
+      case (mBitmapConfig, mHeight) of
+        (Just config, Just (PDFNumber h))
+          | defaultDecode && isNothing mMask
+          , Just (bits, palette, packed) <-
+              compactGray (bcLineWidth config) (round h) grayStream -> do
+
+              let
+                colorSpace :: PDFObject
+                colorSpace = case palette of
+                  Nothing -> PDFName "DeviceGray"
+
+                  Just values -> mkPDFArray
+                    [ PDFName "Indexed"
+                    , PDFName "DeviceGray"
+                    , PDFNumber (fromIntegral (BS.length values - 1))
+                    , PDFHexString values
+                    ]
+
+              sayComparisonP "Gray bit depth optimization"
+                             (BS.length grayStream)
+                             (BS.length packed)
+
+              setValue "ColorSpace" colorSpace grayObject
+                >>= setValue "BitsPerComponent" (PDFNumber (fromIntegral bits))
+                >>= setStream packed
+
+        _other -> setStream grayStream grayObject
+
+  if not eightBit || mImageMask == Just (PDFBool True)
     then
-      if containsOnlyGray rawStream
-        then do
-          optimizedStream <- optimizeStreamOrIgnore "Gray bitmap optimization"
-                                                    object
-                                                    (return . convertToGray)
-          setValue "ColorSpace" (PDFName "DeviceGray") object
-            >>= setStream optimizedStream
-        else do
-          let optimizedStream = optimizeParity rawStream
-          sayP "RGB parity optimization"
-          setStream optimizedStream object
-    else do
       return object
+    else
+      case mColorSpace of
+        Just (PDFName "DeviceRGB")
+          | defaultDecode && isNothing mMask && containsOnlyGray rawStream -> do
+            let
+              grayStream :: ByteString
+              grayStream = convertToGray rawStream
+
+            sayComparisonP "Gray bitmap optimization"
+                          (BS.length rawStream)
+                          (BS.length grayStream)
+
+            grayObject <- setValue "ColorSpace" (PDFName "DeviceGray") object
+            compact grayObject grayStream
+
+          | defaultDecode -> do
+              sayP "RGB parity optimization"
+              setStream (optimizeParity rawStream) object
+
+        Just (PDFName "DeviceGray") -> compact object rawStream
+
+        _other -> return object
 
 {-|
 Convert an RGB JPEG stream to grayscale if it contains only gray pixel values.

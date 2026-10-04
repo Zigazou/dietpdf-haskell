@@ -190,7 +190,9 @@ b1b2 width ref a0 colour atStart =
     candidates =
       [ p
       | (i,p) <- zip [0 :: Int ..] ref
-      , let after = even i -- True = black after even-numbered change
+      , let
+          after :: Bool
+          after = even i -- True = black after even-numbered change
       , after /= colour
       ]
 
@@ -202,7 +204,9 @@ nextChangeForColour width cs a0 colour =
   case [ p
        | (i,p) <- zip [0 :: Int ..] cs
        , p >= a0
-       , let after = even i
+       , let
+           after :: Bool
+           after = even i
        , after /= colour
        ] of
     (p:_) -> p
@@ -300,7 +304,10 @@ decode2DLine width ref = go True 0 False []
                 else go False b2 colour acc br1
 
             Vert d -> do
-              let a1 = b1 + d
+              let
+                a1 :: Int
+                a1 = b1 + d
+
               if a1 < a0 || a1 > width
                 then
                   Left (InvalidChangingElement a1)

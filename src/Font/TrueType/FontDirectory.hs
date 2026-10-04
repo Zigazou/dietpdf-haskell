@@ -208,8 +208,12 @@ call it separately before serialization.
 -}
 fromFontDirectory :: FontDirectory -> ByteString
 fromFontDirectory fontDirectory =
-  let FontDirectory subtable directory = updateStructure fontDirectory
-  in fromOffsetSubtable subtable
+  let
+    subtable :: OffsetSubtable
+    directory :: TableDirectory
+    FontDirectory subtable directory = updateStructure fontDirectory
+  in
+    fromOffsetSubtable subtable
       <> fromTableDirectory directory
       <> fromTablesData directory
 
@@ -421,11 +425,19 @@ removeHintingInstructions fontDirectory =
   dehintedFontdirectory :: Maybe FontDirectory
   dehintedFontdirectory = do
     glyphs <- getGlyphs fontDirectory
-    let newGlyphs = removeHinting glyphs
-        newGlyphsEntry = makeGlyphsTableEntry newGlyphs
-        newTableDirectory = mapOnTableType (fdTableDirectory fontDirectory)
-                                           RTTGlyphData
-                                           (const newGlyphsEntry)
+
+    let
+      newGlyphs :: GlyphTable
+      newGlyphs = removeHinting glyphs
+
+      newGlyphsEntry :: TableEntry
+      newGlyphsEntry = makeGlyphsTableEntry newGlyphs
+
+      newTableDirectory :: TableDirectory
+      newTableDirectory = mapOnTableType (fdTableDirectory fontDirectory)
+                                         RTTGlyphData
+                                         (const newGlyphsEntry)
+
     return $ FontDirectory (fdOffsetSubtable fontDirectory)
                            newTableDirectory
 

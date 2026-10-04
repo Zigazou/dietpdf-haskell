@@ -75,9 +75,11 @@ externalCommandBuf
   -> ByteString
   -> FallibleT IO ByteString
 externalCommandBuf command args input = do
-  let process = (proc command args) { std_in  = CreatePipe
-                                    , std_out = CreatePipe
-                                    }
+  let
+    process :: CreateProcess
+    process = (proc command args) { std_in  = CreatePipe
+                                  , std_out = CreatePipe
+                                  }
 
   result <- lift $ withCreateProcess process (injectInput input)
 
@@ -144,8 +146,12 @@ externalCommandBuf''
   -> ByteString
   -> FallibleT IO ByteString
 externalCommandBuf'' command args inputExt outputExt input = do
-  let inputTemplate  = "dietpdf." ++ inputExt
-      outputTemplate = "dietpdf." ++ outputExt
+  let
+    inputTemplate :: String
+    inputTemplate = "dietpdf." ++ inputExt
+
+    outputTemplate :: String
+    outputTemplate = "dietpdf." ++ outputExt
 
   withSystemTempFile inputTemplate $ \tempIn tempInHandle -> do
     withSystemTempFile outputTemplate $ \tempOut tempOutHandle -> do
@@ -153,7 +159,10 @@ externalCommandBuf'' command args inputExt outputExt input = do
       lift $ hClose tempOutHandle
       lift $ BS.writeFile tempIn input
 
-      let args' = insertFileNames args [tempIn, tempOut]
+      let
+        args' :: [String]
+        args' = insertFileNames args [tempIn, tempOut]
+
       (exitCode, _, _) <- lift $ readProcessWithExitCode command args' ""
 
       case exitCode of

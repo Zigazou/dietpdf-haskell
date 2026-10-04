@@ -59,9 +59,15 @@ findBitmapConfigurations rawLineWidth =
       }
   | bitsPerComponent <- [BC2Bits, BC4Bits, BC8Bits, BC16Bits]
   , components       <- [1..4]
-  , let totalBits = rawLineWidth * 8
-        bitsPerPixel = components * fromEnum bitsPerComponent
+  , let
+      totalBits :: Int
+      totalBits = rawLineWidth * 8
+
+      bitsPerPixel :: Int
+      bitsPerPixel = components * fromEnum bitsPerComponent
   , bitsPerPixel > 0
   , totalBits `mod` bitsPerPixel == 0
-  , let lineWidth = totalBits `div` bitsPerPixel
+  , let
+      lineWidth :: Int
+      lineWidth = totalBits `div` bitsPerPixel
   ]

@@ -216,16 +216,21 @@ Convert a `ByteString` to a `Scanline` according to a `Predictor`.
 fromPredictedLine
   :: Predictor -> BitmapConfiguration -> ByteString -> Fallible Scanline
 fromPredictedLine predictor bitmapConfig raw
-  | isPNGGroup predictor = do
-    let (predictCode, bytes) = BS.splitAt 1 raw
-    linePredictor <- decodeRowPredictor (BS.head predictCode)
-    return $ Scanline { slPredictor = Just linePredictor
-                      , slStream = separateComponents
-                                    (bitmapPixelBytes bitmapConfig)
-                                    bytes
-                      }
-  | otherwise =
-    return $ Scanline { slPredictor = Just predictor
+  | isPNGGroup predictor
+  = do
+      let
+        predictCode, bytes :: ByteString
+        (predictCode, bytes) = BS.splitAt 1 raw
+
+      linePredictor <- decodeRowPredictor (BS.head predictCode)
+
+      return $ Scanline { slPredictor = Just linePredictor
+                        , slStream = separateComponents
+                                      (bitmapPixelBytes bitmapConfig)
+                                      bytes
+                        }
+  | otherwise
+  = return $ Scanline { slPredictor = Just predictor
                       , slStream = separateComponents
                                     (bitmapPixelBytes bitmapConfig)
                                     raw

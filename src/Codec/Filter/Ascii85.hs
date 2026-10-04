@@ -109,7 +109,11 @@ The result has the requested width; higher-order digits are produced first.
 baseN :: Int -> Int -> Int -> [Int]
 baseN 0 _ _ = []
 baseN width base value =
-  let (q, r) = divMod value base in baseN (width - 1) base q ++ [r]
+  let
+    quotient, remainder :: Int
+    (quotient, remainder) = divMod value base
+  in
+    baseN (width - 1) base quotient ++ [remainder]
 
 {-|
 Convert four base-256 bytes to five ASCII85 characters.
@@ -119,12 +123,15 @@ Outputs the ASCII85-encoded group (without handling the 'z' special case).
 base256ToBase85 :: Word8 -> Word8 -> Word8 -> Word8 -> Get ByteString
 base256ToBase85 b1 b2 b3 b4 =
   label "base256tobase85"
-    $ let b1' = fromIntegral b1 :: Int
-          b2' = fromIntegral b2 :: Int
-          b3' = fromIntegral b3 :: Int
-          b4' = fromIntegral b4 :: Int
-          c   = b1' * 16777216 + b2' * 65536 + b3' * 256 + b4'
-      in  return
+    $ let
+        b1', b2', b3', b4', c :: Int
+        b1' = fromIntegral b1
+        b2' = fromIntegral b2
+        b3' = fromIntegral b3
+        b4' = fromIntegral b4
+        c   = b1' * 16777216 + b2' * 65536 + b3' * 256 + b4'
+      in
+        return
           . BS.pack
           . fmap ((+ asciiEXCLAMATIONMARK) . fromIntegral)
           $ baseN 5 85 c
@@ -138,15 +145,18 @@ base85ToBase256
   :: Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Get ByteString
 base85ToBase256 c1 c2 c3 c4 c5 =
   label "base85tobase256"
-    $ let c1' = fromIntegral (c1 - asciiEXCLAMATIONMARK) :: Int
-          c2' = fromIntegral (c2 - asciiEXCLAMATIONMARK) :: Int
-          c3' = fromIntegral (c3 - asciiEXCLAMATIONMARK) :: Int
-          c4' = fromIntegral (c4 - asciiEXCLAMATIONMARK) :: Int
-          c5' = fromIntegral (c5 - asciiEXCLAMATIONMARK) :: Int
-          b   = c1' * 52200625 + c2' * 614125 + c3' * 7225 + c4' * 85 + c5'
-      in  if b >= 4294967296
-            then fail "Value too big for ASCII85"
-            else return . BS.pack . fmap fromIntegral $ baseN 4 256 b
+    $ let
+        c1', c2', c3', c4', c5', b :: Int
+        c1' = fromIntegral (c1 - asciiEXCLAMATIONMARK)
+        c2' = fromIntegral (c2 - asciiEXCLAMATIONMARK)
+        c3' = fromIntegral (c3 - asciiEXCLAMATIONMARK)
+        c4' = fromIntegral (c4 - asciiEXCLAMATIONMARK)
+        c5' = fromIntegral (c5 - asciiEXCLAMATIONMARK)
+        b   = c1' * 52200625 + c2' * 614125 + c3' * 7225 + c4' * 85 + c5'
+      in
+        if b >= 4294967296
+          then fail "Value too big for ASCII85"
+          else return . BS.pack . fmap fromIntegral $ baseN 4 256 b
 
 {-|
 Parse five ASCII85 digits and decode to four bytes.
@@ -238,8 +248,11 @@ decode
   -> Fallible ByteString
   -- ^ An `InvalidAscii85Stream` is returned if the stream is not valid
 decode stream =
-  let stream' = BS.filter (> 32) stream
-  in case parseOnly (decodeAscii85P <* endOfInput) stream' of
+  let
+    stream' :: ByteString
+    stream' = BS.filter (> 32) stream
+  in
+    case parseOnly (decodeAscii85P <* endOfInput) stream' of
       Left  msg     -> Left (InvalidAscii85Stream msg)
       Right decoded -> Right decoded
 
@@ -253,7 +266,9 @@ fourBytesP = do
   b3      <- anyWord8
   b4      <- anyWord8
   encoded <- base256ToBase85 b1 b2 b3 b4
-  if encoded == "!!!!!" then return "z" else return encoded
+  if encoded == "!!!!!"
+    then return "z"
+    else return encoded
 
 {-|
 Encodes 3 bytes of binary data into the corresponding number of ASCII base-85

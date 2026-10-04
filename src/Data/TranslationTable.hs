@@ -94,8 +94,10 @@ getTranslationTableFrom
   -> t a
   -> TranslationTable a
 getTranslationTableFrom from generator names =
-  let terms = (sortBy shortFirst . nubOrd . toList) names
-  in mkTranslationTable $ zipWith (liftM2 (.) (,) generator) terms [from..]
+  let
+    terms = (sortBy shortFirst . nubOrd . toList) names
+  in
+    mkTranslationTable $ zipWith (liftM2 (.) (,) generator) terms [from..]
 
 {-|
 Check whether a value is a key in the translation table.

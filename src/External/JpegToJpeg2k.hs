@@ -24,12 +24,17 @@ valid marker is found.
 -}
 getJpegComponents :: ByteString -> Int
 getJpegComponents jpegImage =
-  let ffc0 = indices "\xff\xc0" jpegImage
-      ffc2 = indices "\xff\xc2" jpegImage
-  in case (ffc0, ffc2) of
-       (offset:_, _) -> fromIntegral (BS.index jpegImage (offset + 9))
-       (_, offset:_) -> fromIntegral (BS.index jpegImage (offset + 9))
-       _default      -> 3
+  let
+    ffc0 :: [Int]
+    ffc0 = indices "\xff\xc0" jpegImage
+
+    ffc2 :: [Int]
+    ffc2 = indices "\xff\xc2" jpegImage
+  in
+    case (ffc0, ffc2) of
+      (offset:_, _) -> fromIntegral (BS.index jpegImage (offset + 9))
+      (_, offset:_) -> fromIntegral (BS.index jpegImage (offset + 9))
+      _default      -> 3
 
 {-|
 Converts a JPEG image to a lossy JPEG 2000 image.

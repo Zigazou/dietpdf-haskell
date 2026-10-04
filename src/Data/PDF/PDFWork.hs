@@ -272,16 +272,23 @@ loadFullObject' alreadySeen object@(PDFIndirectObjectWithStream major minor dict
   if Set.member major alreadySeen
     then return object
     else do
-      let alreadySeen' = Set.insert major alreadySeen
+      let
+        alreadySeen' :: Set Int
+        alreadySeen' = Set.insert major alreadySeen
+
       loadedDictionary <- loadDictionary alreadySeen' dict
       return (PDFIndirectObjectWithStream major minor loadedDictionary stream)
 
 loadFullObject' alreadySeen object@(PDFIndirectObject major minor value) =
   if Set.member major alreadySeen
-    then return object
+    then
+      return object
     else
-      let alreadySeen' = Set.insert major alreadySeen
-      in loadFullObject' alreadySeen' value <&> PDFIndirectObject major minor
+      let
+        alreadySeen' :: Set Int
+        alreadySeen' = Set.insert major alreadySeen
+      in
+        loadFullObject' alreadySeen' value <&> PDFIndirectObject major minor
 
 loadFullObject' _alreadySeen object = return object
 
@@ -372,7 +379,11 @@ translation table, and returns the new resource name.
 createNewName :: (Monad m) => Resource -> PDFWork m Resource
 createNewName resourceType = do
   translationTable <- getTranslationTable
-  let newName = toNameBase resourceType (Map.size translationTable)
+
+  let
+    newName :: Resource
+    newName = toNameBase resourceType (Map.size translationTable)
+
   setTranslationTable (Map.insert newName newName translationTable)
   return newName
 
@@ -402,7 +413,10 @@ addAdditionalGState additionalGState = do
           Just key -> return (ResExtGState key)
           Nothing  -> createNewName (ResExtGState "")
 
-  let newGStates = Map.insert (resName key) additionalGState currentGStates
+  let
+    newGStates :: ResourceDictionary
+    newGStates = Map.insert (resName key) additionalGState currentGStates
+
   setAdditionalGStates newGStates
 
   return key
@@ -478,14 +492,19 @@ getTrailer = do
                          )
           _anyOtherCase -> return $ PDFTrailer PDFNull
     (PDFXRefStream _ _ dict _) ->
-      let catalog = Map.lookup "Root" dict
-          info    = Map.lookup "Info" dict
-      in  case (catalog, info) of
-            (Just rCatalog, Just rInfo) -> return
-              $ PDFTrailer ( PDFDictionary
-                           $ mkDictionary [("Root", rCatalog), ("Info", rInfo)]
-                           )
-            _anyOtherCase -> return $ PDFTrailer PDFNull
+      let
+        catalog :: Maybe PDFObject
+        catalog = Map.lookup "Root" dict
+
+        info :: Maybe PDFObject
+        info    = Map.lookup "Info" dict
+      in
+        case (catalog, info) of
+          (Just rCatalog, Just rInfo) -> return
+            $ PDFTrailer ( PDFDictionary
+                          $ mkDictionary [("Root", rCatalog), ("Info", rInfo)]
+                          )
+          _anyOtherCase -> return $ PDFTrailer PDFNull
     validTrailer -> return validTrailer
 
 {-|
@@ -533,7 +552,11 @@ modifyIndirectObjectsP func = do
   applyWithProgress totalCount func' object = do
     index <- gets wCurrentIndex
     modifyWorkData nextIndex
-    let context = ContextProgress index totalCount
+
+    let
+      context :: Context
+      context = ContextProgress index totalCount
+
     withContext context (func' object)
 
 {-|
@@ -543,8 +566,13 @@ objects.
 lastObjectNumber :: Monad m => PDFWork m Int
 lastObjectNumber = do
   pdf <- gets wPDF
-  let lastWithStream    = fst . IM.findMax $ ppObjectsWithStream pdf
-      lastWithoutStream = fst . IM.findMax $ ppObjectsWithoutStream pdf
+
+  let
+    lastWithStream :: Int
+    lastWithStream = fst . IM.findMax $ ppObjectsWithStream pdf
+
+    lastWithoutStream :: Int
+    lastWithoutStream = fst . IM.findMax $ ppObjectsWithoutStream pdf
 
   return (max lastWithStream lastWithoutStream)
 

@@ -68,10 +68,14 @@ final 'GSUnknown' command is emitted to retain those objects.
 -}
 parseProgram :: GFXObjects -> Program
 parseProgram objs =
-  let (objects, program) = foldl' collectCommands (mempty, mempty) objs
-  in  if null objects
-    then program
-    else program |> Command (GSUnknown "") objects
+  let
+    objects :: GFXObjects
+    program :: Program
+    (objects, program) = foldl' collectCommands (mempty, mempty) objs
+  in
+    if null objects
+      then program
+      else program |> Command (GSUnknown "") objects
   where
     collectCommands
       :: (GFXObjects, Program)

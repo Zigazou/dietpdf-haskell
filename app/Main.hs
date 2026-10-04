@@ -142,13 +142,16 @@ runApp (OptimizeOptions inputPDF
                         lossyMasks
                         useDejpeg
                         overwriteFile) = do
-  let settings = Settings { sUseDejpeg      = useDejpeg
-                          , sLossyMasks     = lossyMasks
-                          , sOptimizeGFX    = optimizeGFX
-                          , sCompressor     = useCompressor
-                          , sUseGhostScript = useGS
-                          , sUsePDFToCairo  = usePTC
-                          }
+  let
+    settings :: Settings
+    settings = Settings { sUseDejpeg      = useDejpeg
+                        , sLossyMasks     = lossyMasks
+                        , sOptimizeGFX    = optimizeGFX
+                        , sCompressor     = useCompressor
+                        , sUseGhostScript = useGS
+                        , sUsePDFToCairo  = usePTC
+                        }
+
   case (useGS, usePTC) of
     (UseGhostScript, DoNotUsePDFToCairo) ->
       withTempFile "." (inputPDF <> ".ghostscript") $
@@ -269,7 +272,10 @@ runApp (UnpredictOptions predictor width components inputFile) =
 runApp (HumanOptions inputFile) = readByteString inputFile >>= humanByteString
 
 runApp (StatOptions inputPDF) = do
-  let filenames = takeFileName <$> inputPDF
+  let
+    filenames :: [FilePath]
+    filenames = takeFileName <$> inputPDF
+
   pdfs <- mapM readPDF inputPDF
   pdfSizes <- mapM (lift . getFileSize) inputPDF
   showStat (zip3 filenames pdfSizes pdfs)

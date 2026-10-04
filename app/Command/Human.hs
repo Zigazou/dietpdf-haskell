@@ -15,7 +15,7 @@ import Control.Monad.Trans.Except (throwE)
 
 import Data.ByteString (ByteString)
 import Data.Fallible (FallibleT)
-import Data.PDF.Program (parseProgram)
+import Data.PDF.Program (Program, parseProgram)
 import Data.Text.IO qualified as TIO
 
 import PDF.Graphics.Interpreter.Human (human)
@@ -39,5 +39,8 @@ humanByteString :: ByteString -> FallibleT IO ()
 humanByteString code = case gfxParse code of
   (Left  err       ) -> throwE err
   (Right gfxObjects) -> do
-    let program = parseProgram gfxObjects
+    let
+      program :: Program
+      program = parseProgram gfxObjects
+
     lift $ TIO.putStr (human 0 program)

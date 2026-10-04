@@ -17,7 +17,8 @@ predictors is enabled globally for the image while PNG predictors can be
 changed on every scanline.
 -}
 module Codec.Compression.Predict.ImageStream
-  ( packStream
+  ( ImageStream 
+  , packStream
   , fromPredictedStream
   , fromUnpredictedStream
   , unpredictImageStream
@@ -127,8 +128,11 @@ unpredictImageStream predictor imgStm = imgStm
   unpredictScanlines :: Scanline -> [Scanline] -> [Scanline]
   unpredictScanlines _ [] = []
   unpredictScanlines previous (current : remain) =
-    let decodedLine = applyUnpredictorToScanline predictor (previous, current)
-    in  decodedLine : unpredictScanlines decodedLine remain
+    let
+      decodedLine :: Scanline
+      decodedLine = applyUnpredictorToScanline predictor (previous, current)
+    in
+      decodedLine : unpredictScanlines decodedLine remain
 
 {-|
 Convert a `ByteString` to an `ImageStream` according to a `Predictor` and a
@@ -137,8 +141,10 @@ line width.
 fromPredictedStream
   :: Predictor -> BitmapConfiguration -> ByteString -> Fallible ImageStream
 fromPredictedStream predictor bitmapConfig raw = do
-  let rawWidth = bitmapRawWidth bitmapConfig
-               + if isPNGGroup predictor then 1 else 0
+  let
+    rawWidth :: Int
+    rawWidth = bitmapRawWidth bitmapConfig
+             + if isPNGGroup predictor then 1 else 0
 
   scanlines <- mapM (fromPredictedLine predictor bitmapConfig)
                     (splitRaw rawWidth raw)
