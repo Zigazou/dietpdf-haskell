@@ -44,16 +44,25 @@ import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Data.Word (Word8)
 
+-- | Errors reported while validating or decoding CCITT Group 4 data.
 type G4Error :: Type
 data G4Error
-  = InvalidDimensions
-  | InvalidBitmapLength !Int !Int -- expected, actual
-  | UnexpectedEndOfInput
-  | InvalidModeCode
-  | InvalidRunCode
-  | InvalidChangingElement !Int
-  | RowOverflow !Int
-  | RowDidNotTerminate
+  = -- | The width is not positive or the height is negative.
+    InvalidDimensions
+  | -- | The packed input length differs from the expected / actual byte counts.
+    InvalidBitmapLength !Int !Int
+  | -- | The encoded input ended before decoding was complete.
+    UnexpectedEndOfInput
+  | -- | The input contains an invalid 2-D mode code.
+    InvalidModeCode
+  | -- | The input contains an invalid modified-Huffman run code.
+    InvalidRunCode
+  | -- | A decoded changing element is outside the permitted row bounds.
+    InvalidChangingElement !Int
+  | -- | A decoded run extends beyond the row width.
+    RowOverflow !Int
+  | -- | A coding operation made no progress while decoding a row.
+    RowDidNotTerminate
   deriving stock (Eq, Show)
 
 -- | Encode a packed 1-bpp bitmap using pure CCITT T.6 / Group 4.
@@ -72,20 +81,25 @@ encodeG4 width height src
   = Right . finishWriter
           $ foldl encodeOne emptyWriter (zip rows (whiteLine : rows))
   where
+    -- Number of source bytes occupied by each row.
     stride :: Int
     stride = (width + 7) `div` 8
 
+    -- Exact number of bytes required by the requested bitmap dimensions.
     expected :: Int
     expected = stride * height
 
+    -- Change positions for each input row.
     rows :: [Changes]
     rows = [ changesOfRow width (BS.take stride (BS.drop (y*stride) src))
            | y <- [0 .. height-1]
            ]
 
+    -- Initial reference row, which is entirely white.
     whiteLine :: Changes
     whiteLine = []  -- no changes: white from x=0 through width
 
+    -- Encode a row against its preceding row.
     encodeOne :: BitWriter -> (Changes, Changes) -> BitWriter
     encodeOne bw (cur, ref) = encode2DLine width cur ref bw
 
@@ -107,6 +121,8 @@ decodeG4 width height src
       (rows, _) <- decodeRows height [] br0 []
       pure (BS.concat (map (packRow width) rows))
   where
+    -- Decode the requested number of rows, using each decoded row as the
+    -- reference for the next one.
     decodeRows
       :: Int
       -> Changes
@@ -125,12 +141,15 @@ decodeG4 width height src
 -- A row is represented by positions where the colour changes.  The colour
 -- immediately before x=0 is white.  Thus [0,10] means black pixels 0..9.
 
+-- | Sorted positions at which a scanline changes between white and black.
 type Changes :: Type
 type Changes = [Int]
 
+-- | Find every pixel transition in one packed, MSB-first input row.
 changesOfRow :: Int -> BS.ByteString -> Changes
 changesOfRow width bs = go 0 False []
   where
+    -- Read the pixel at a zero-based horizontal coordinate.
     pixel :: Int -> Bool
     pixel x =
       let
@@ -142,6 +161,7 @@ changesOfRow width bs = go 0 False []
       in
         w .&. m /= 0
 
+    -- Walk the row, recording positions where the pixel colour changes.
     go :: Int -> Bool -> Changes -> Changes
     go x !old acc
       | x >= width = reverse acc
@@ -154,17 +174,21 @@ changesOfRow width bs = go 0 False []
             then go (x + 1) p (x:acc)
             else go (x + 1) old acc
 
+-- | Pack change positions into an MSB-first row, leaving padding bits clear.
 packRow :: Int -> Changes -> BS.ByteString
 packRow width cs = BS.pack [mkByte b | b <- [0 .. stride-1]]
   where
+    -- Number of bytes needed for a row of the given width.
     stride :: Int
     stride = (width + 7) `div` 8
 
+    -- Determine whether the pixel at @x@ is black from preceding changes.
     blackAt :: Int -> Bool
     blackAt x
       | x >= width = False
       | otherwise  = odd (length (takeWhile (<= x) cs))
 
+    -- Construct one packed byte of the output row.
     mkByte :: Int -> Word8
     mkByte b =
       foldl (\w k ->
@@ -179,6 +203,8 @@ packRow width cs = BS.pack [mkByte b | b <- [0 .. stride-1]]
 -- First relevant changing element on the reference line. At the start of a
 -- row, a0 is the imaginary white element before x=0, so x=0 is eligible;
 -- after the first coding operation T.6 requires b1 to be strictly right of a0.
+-- | Find the first eligible reference-line changing element of the opposite
+-- colour and the changing element after it.
 b1b2 :: Int -> Changes -> Int -> Bool -> Bool -> (Int, Int)
 b1b2 width ref a0 colour atStart =
   case filter toRight candidates of
@@ -186,7 +212,10 @@ b1b2 width ref a0 colour atStart =
     (b1:_) -> (b1, nextChangeAfter width ref b1)
   where
     -- change number 0 changes white->black, number 1 black->white, ...
+    -- Select candidates at or to the right of @a0@ according to row position.
     toRight p = if atStart then p >= a0 else p > a0
+
+    -- Reference positions whose following colour differs from @colour@.
     candidates =
       [ p
       | (i,p) <- zip [0 :: Int ..] ref
@@ -196,9 +225,12 @@ b1b2 width ref a0 colour atStart =
       , after /= colour
       ]
 
+-- | Return the next changing element strictly after @x@, or the row width.
 nextChangeAfter :: Int -> Changes -> Int -> Int
 nextChangeAfter width cs x = fromMaybe width (find (> x) cs)
 
+-- | Return the next current-line changing element of the requested colour,
+-- or the row width when none remains.
 nextChangeForColour :: Int -> Changes -> Int -> Bool -> Int
 nextChangeForColour width cs a0 colour =
   case [ p
@@ -215,13 +247,19 @@ nextChangeForColour width cs a0 colour =
 --------------------------------------------------------------------------------
 -- T.6 2-D modes
 
+-- | A CCITT T.6 two-dimensional coding operation.
 type Mode :: Type
 data Mode
-  = Pass
-  | Horiz
-  | Vert !Int
+  = -- | Advance past the next two reference-line changing elements.
+    Pass
+  | -- | Encode two consecutive runs on the current line.
+    Horiz
+  | -- | Encode a changing element relative to the reference line by the
+    -- specified horizontal displacement.
+    Vert !Int
   deriving stock (Eq, Show)
 
+-- | Return the CCITT bit string for a pass, horizontal, or vertical mode.
 modeBits :: Mode -> String
 modeBits Pass        = "0001"
 modeBits Horiz       = "001"
@@ -234,9 +272,11 @@ modeBits (Vert 3)    = "0000011"
 modeBits (Vert (-3)) = "0000010"
 modeBits _           = error "modeBits: vertical displacement outside -3..3"
 
+-- | Encode one scanline using 2-D modes relative to its reference scanline.
 encode2DLine :: Int -> Changes -> Changes -> BitWriter -> BitWriter
 encode2DLine width cur ref = go True 0 False
   where
+    -- Emit coding operations until the current row reaches its width.
     go :: Bool -> Int -> Bool -> BitWriter -> BitWriter
     go !atStart !a0 !colour bw
       | a0 >= width = bw
@@ -275,6 +315,7 @@ encode2DLine width cur ref = go True 0 False
                     in
                       go False a2 colour bw3
 
+-- | Decode one scanline using CCITT T.6 modes relative to its reference row.
 decode2DLine
   :: Int
   -> Changes
@@ -282,6 +323,7 @@ decode2DLine
   -> Either G4Error (Changes, BitReader)
 decode2DLine width ref = go True 0 False []
   where
+    -- Decode mode operations and accumulate current-line changing elements.
     go !atStart !a0 !colour acc br
       | a0 == width
       = Right (reverse acc, br)
@@ -351,6 +393,8 @@ decode2DLine width ref = go True 0 False []
 -- Modified Huffman run codes used by horizontal mode
 
 -- (run length, code)
+-- | Modified-Huffman terminating codewords for white and black runs of 0-63
+-- pixels.
 whiteTerm, blackTerm :: [(Int, String)]
 whiteTerm = zip [0..63]
   [ "00110101"
@@ -486,6 +530,8 @@ blackTerm = zip [0..63]
   , "000001100111"
   ]
 
+-- | Modified-Huffman makeup codewords for white runs, black runs, and the
+-- color-independent run lengths from 1792 through 2560.
 whiteMakeup, blackMakeup, commonMakeup :: [(Int, String)]
 whiteMakeup =
   [ ( 64, "11011" )
@@ -563,6 +609,7 @@ commonMakeup =
   , ( 2560, "000000011111" )
   ]
 
+-- | Write a run using its makeup codewords followed by a terminating codeword.
 putRun :: Bool -> Int -> BitWriter -> BitWriter
 putRun black n0 bw0
   | n0 < 0
@@ -591,6 +638,7 @@ putRun black n0 bw0
     in
       putCode (lookupCode r term) bw2
   where
+    -- Emit 2560-pixel codewords repeatedly, then leave the remainder.
     putLarge n bw
       | n >= 2560
       = putLarge (n-2560) (putCode (lookupCode 2560 commonMakeup) bw)
@@ -608,19 +656,23 @@ putRun black n0 bw0
       | otherwise
       = (bw, n)
 
+-- | Look up the codeword for a run length in a code table.
 lookupCode :: Int -> [(Int, String)] -> String
 lookupCode n tab =
   case lookup n tab of
     Just s  -> s
     Nothing -> error ("missing CCITT code for run " ++ show n)
 
+-- | Read modified-Huffman codewords until a terminating run code is reached.
 getRun :: Bool -> BitReader -> Either G4Error (Int, BitReader)
 getRun black = go 0
   where
+    -- Select the codewords valid for the requested run colour.
     table :: [(Int, String)]
     table = (if black then blackTerm ++ blackMakeup
                       else whiteTerm ++ whiteMakeup) ++ commonMakeup
 
+    -- Accumulate makeup lengths until a terminating codeword is read.
     go :: Int -> BitReader -> Either G4Error (Int, BitReader)
     go !acc br = do
       ((n,isTerm), br') <- getRunSymbol table br
@@ -632,12 +684,15 @@ getRun black = go 0
         then Right (acc',br')
         else go acc' br'
 
+-- | Read one modified-Huffman codeword and identify whether it terminates
+-- the run or contributes a makeup length.
 getRunSymbol
   :: [(Int, String)]
   -> BitReader
   -> Either G4Error ((Int,Bool), BitReader)
 getRunSymbol tab = walk ""
   where
+    -- Extend a prefix until it matches a codeword or is invalid.
     walk :: String -> BitReader -> Either G4Error ((Int,Bool), BitReader)
     walk pref br
       | length pref > 13
@@ -665,9 +720,11 @@ getRunSymbol tab = walk ""
 --------------------------------------------------------------------------------
 -- Mode decoder
 
+-- | Read one CCITT T.6 two-dimensional mode codeword.
 getMode :: BitReader -> Either G4Error (Mode, BitReader)
 getMode = walk ""
   where
+    -- Mapping from valid mode codewords to their operations.
     modes :: [(String, Mode)]
     modes =
       [ ("1",       Vert 0)
@@ -681,6 +738,7 @@ getMode = walk ""
       , ("0000010", Vert (-3))
       ]
 
+    -- Extend a prefix until it identifies a valid mode or is invalid.
     walk :: String -> BitReader -> Either G4Error (Mode, BitReader)
     walk pref br
       | length pref >= 7 = Left InvalidModeCode
@@ -699,45 +757,55 @@ getMode = walk ""
 --------------------------------------------------------------------------------
 -- Bit I/O, MSB first
 
+-- | State for writing a stream of bits into a byte builder.
 type BitWriter :: Type
-data BitWriter = BitWriter
-  { _bwBytes :: !BB.Builder
-  , _bwCur   :: !Word8
-  , _bwUsed  :: !Int
+data BitWriter
+  = BitWriter
+  { _bwBytes :: !BB.Builder -- ^ Completed output bytes accumulated.
+  , _bwCur   :: !Word8 -- ^ Partially filled output byte.
+  , _bwUsed  :: !Int -- ^ Number of bits already used in the partial byte.
   }
 
+-- | Create a writer with no output and an empty partial byte.
 emptyWriter :: BitWriter
 emptyWriter = BitWriter mempty 0 0
 
+-- | Append a textual sequence of @0@ and @1@ bits to the writer.
 putCode :: String -> BitWriter -> BitWriter
 putCode s bw = foldl (flip putBit) bw (map (== '1') s)
 
+-- | Append one bit, flushing the accumulated byte whenever it becomes full.
 putBit :: Bool -> BitWriter -> BitWriter
-putBit bit' (BitWriter out cur used) =
+putBit bit' (BitWriter output current used) =
   let
-    cur' :: Word8
-    cur'  = if bit' then setBit cur (7-used) else cur
+    current' :: Word8
+    current'  = if bit' then setBit current (7-used)
+                        else current
 
     used' :: Int
     used' = used + 1
   in
     if used' == 8
-      then BitWriter (out <> BB.word8 cur') 0 0
-      else BitWriter out cur' used'
+      then BitWriter (output <> BB.word8 current') 0 0
+      else BitWriter output current' used'
 
+-- | Finish the writer, padding a partial final byte with low-order zero bits.
 finishWriter :: BitWriter -> BS.ByteString
-finishWriter (BitWriter out cur used) =
+finishWriter (BitWriter output current used) =
   BL.toStrict . BB.toLazyByteString
               $ if used == 0
-                  then out
-                  else out <> BB.word8 cur
+                  then output
+                  else output <> BB.word8 current
 
+-- | State for reading bits, most-significant bit first, from a byte string.
 type BitReader :: Type
-data BitReader = BitReader
-  { _brInput :: !BS.ByteString
-  , _brPos   :: !Int
+data BitReader
+  = BitReader
+  { _brInput :: !BS.ByteString -- ^ Encoded bytes being read.
+  , _brPos   :: !Int -- ^ Absolute bit position of the next bit to read.
   }
 
+-- | Read one bit and advance the reader, or report exhausted input.
 getBit :: BitReader -> Either G4Error (Bool, BitReader)
 getBit (BitReader bs p)
   | p >= BS.length bs * 8 = Left UnexpectedEndOfInput
@@ -751,9 +819,7 @@ getBit (BitReader bs p)
       in
         Right (b, BitReader bs (p + 1))
 
---------------------------------------------------------------------------------
--- Tiny local helper (keeps dependencies minimal)
-
+-- | Test whether the first list is a prefix of the second.
 isPrefixOf :: Eq a => [a] -> [a] -> Bool
 isPrefixOf [] _          = True
 isPrefixOf _  []         = False
