@@ -39,9 +39,14 @@ import PDF.Object.Object.Properties (getValueForKey)
 import PDF.Processing.ResizeImage (resizeImage)
 import PDF.Processing.Unfilter (unfilter)
 
+-- | Represents the maximum required dimensions (width and height in pixels)
+-- and the associated color space for an image.
 type ImageRequirement :: Type
 type ImageRequirement = (Int, Int, Maybe PDFObject)
 
+-- | A monad transformer stack used for traversing the PDF structure.
+-- It combines 'MaybeT' for early termination, 'StateT' for maintaining 'WorkData',
+-- and 'FallibleT' for error handling in 'IO'.
 type PlacementWork :: Type -> Type
 type PlacementWork = MaybeT (StateT WorkData (FallibleT IO))
 
@@ -65,7 +70,7 @@ limitImageResolution = do
                   )
       case limits of
         Nothing
-          -> sayP "Image placements are uncertain; retaining original \
+          -> sayP "Image placements are uncertain, retaining original \
                   \resolution"
 
         Just requirements
@@ -101,19 +106,16 @@ limitImageResolution = do
 
     _ -> return ()
 
--- | Pixel limits derived from page units (72 per inch by default), inherited
--- MediaBox/CropBox and each page's UserUnit. Page rotation preserves lengths.
--- Cropping does not shrink the image: the remaining pixels still have the same
--- physical pitch. All uses, including nested Forms and repeated content
--- streams, contribute to the maximum width/height requirements of a shared
--- image.
+-- | Returns a map of image object numbers to their calculated pixel
+-- dimensions (width, height) based on the provided DPI.
 imagePixelLimits :: Double -> PDFWork IO (Maybe (IntMap (Int, Int)))
 imagePixelLimits dpi =
   fmap (fmap (IM.map (\(w, h, _) -> (w, h))))
        (imageRequirements dpi)
 
--- | Color-space aliases are resolved in the invocation's resource scope.
--- Conflicting scopes for a shared image disable its resizing.
+-- | Calculates the maximum required size for all images in the document,
+-- accounting for DPI, page scaling (UserUnit), and various placements
+-- (Pages, Forms, etc.). It excludes "protected" images (like masks).
 imageRequirements :: Double -> PDFWork IO (Maybe (IntMap ImageRequirement))
 imageRequirements dpi = do
   objects <-
@@ -140,6 +142,8 @@ imageRequirements dpi = do
                                  combined
                )
  where
+  -- Merges two image requirements by taking the maximum of both width and
+  -- height. If color spaces differ, it clears the color space.
   largest :: ImageRequirement -> ImageRequirement -> ImageRequirement
   largest (w, h, color) (x, y, otherColor) =
     ( max w x
@@ -147,6 +151,7 @@ imageRequirements dpi = do
     , if color == otherColor then color else Nothing
     )
 
+  -- Calculates the image requirements for a specific PDF Page.
   pageLimits
     :: IntMap PDFObject
     -> PDFObject
@@ -169,6 +174,7 @@ imageRequirements dpi = do
       (a, b, c, d) = media
       (e, f, g, h) = crop
 
+    -- Ensure the crop box is valid and within the media box
     guard (max a e < min c g && max b f < min d h)
 
     unit <- require $ case getValueForKey "UserUnit" page of
@@ -185,6 +191,8 @@ imageRequirements dpi = do
         bytes <- contentBytes objects IS.empty entry
         placements objects IS.empty 0 unit resources identity bytes
 
+  -- Recursively extracts raw ByteString content from a PDF object, handling
+  -- references and arrays, but skipping filtered streams.
   contentBytes
     :: IntMap PDFObject
     -> IntSet
@@ -212,6 +220,8 @@ imageRequirements dpi = do
     PDFIndirectObject _ _ inner -> contentBytes objects seen inner
     _                           -> MaybeT (return Nothing)
 
+  -- Parses a content stream to find XObject references and then processes their
+  -- placements.
   placements
     :: IntMap PDFObject
     -> IntSet
@@ -222,6 +232,7 @@ imageRequirements dpi = do
     -> ByteString
     -> PlacementWork (IntMap ImageRequirement)
   placements objects seen depth unit resources initial bytes = do
+    -- Limit recursion depth to prevent infinite loops in malformed PDFs
     guard (depth <= (64 :: Int))
 
     tokens <- require (either (const Nothing) Just (gfxParse bytes))
@@ -230,6 +241,8 @@ imageRequirements dpi = do
 
     return (IM.unionsWith largest results)
 
+  -- Processes a single XObject reference. If it's an Image, it calculates
+  -- dimensions; if it's a Form, it recurses into the form's contents.
   placement
     :: IntMap PDFObject
     -> IntSet
@@ -301,6 +314,8 @@ imageRequirements dpi = do
 
       _ -> MaybeT (return Nothing)
 
+  -- Converts a physical dimension (in points) to a pixel count based on the
+  -- current DPI.
   pixels :: Double -> Maybe Int
   pixels extent = do
     let
@@ -313,17 +328,21 @@ imageRequirements dpi = do
     -- uses.
     return (max 1 (floor count))
 
+-- | Lifts a 'Maybe' value into the 'MaybeT' transformer.
 require :: Monad m => Maybe a -> MaybeT m a
 require = MaybeT . return
 
+-- | Attempts to convert a 'PDFObject' to a 'Rational'.
 numeric :: PDFObject -> Maybe Rational
 numeric (PDFNumber n) | finite n = Just (toRational n)
 numeric _ = Nothing
 
+-- | Attempts to convert a 'PDFObject' to a positive 'Double'.
 positive :: PDFObject -> Maybe Double
 positive (PDFNumber n) | finite n && n > 0 = Just n
 positive _ = Nothing
 
+-- | Extracts the four coordinates of a rectangle from a 'PDFObject' (array).
 rectangle
   :: IntMap PDFObject
   -> PDFObject
@@ -334,14 +353,18 @@ rectangle objects entry = do
   guard (a < c && b < d)
   return (a, b, c, d)
 
--- | Protect images whose physical placement is controlled by masks, patterns,
--- Type 3 fonts or annotation appearances rather than page/Form Do operators.
+-- | Identifies a set of image object numbers that should not be downsampled
+-- because they are used in contexts like masks, patterns, or specific font
+-- types (Type 3), where resizing would break the PDF structure.
 protectedImages :: IntMap PDFObject -> IntSet
 protectedImages objects = IS.unions (map (reachable IS.empty) roots)
  where
+  -- Identifies root objects that might lead to protected images.
   roots :: [PDFObject]
   roots = concatMap special (IM.elems objects)
 
+  -- Checks if an object is a special type (Mask, SMask, etc.) or uses
+  -- a specific pattern/font type.
   special :: PDFObject -> [PDFObject]
   special object =
     mapMaybe (`getValueForKey` object) ["Mask", "SMask", "Alternates", "AP"]
@@ -351,6 +374,7 @@ protectedImages objects = IS.unions (map (reachable IS.empty) roots)
          || getValueForKey "Subtype" object == Just (PDFName "Type3")
          ]
 
+  -- Recursively traverses a 'PDFReference' to find its actual object.
   reachable :: IntSet -> PDFObject -> IntSet
   reachable seen (PDFReference number _)
     | IS.member number seen
@@ -361,9 +385,12 @@ protectedImages objects = IS.unions (map (reachable IS.empty) roots)
             (reachable (IS.insert number seen))
             (IM.lookup number objects)
 
+  -- Recursively traverses indirect objects.
   reachable seen (PDFIndirectObject _ _ inner)
     = reachable seen inner
 
+  -- Recursively traverses dictionary entries to find all reachable image
+  -- objects.
   reachable seen object@(PDFIndirectObjectWithStream number _ dictionary _)
     | getValueForKey "Subtype" object == Just (PDFName "Image")
     = IS.singleton number
@@ -371,11 +398,14 @@ protectedImages objects = IS.unions (map (reachable IS.empty) roots)
     | otherwise
     = IS.unions (map (reachable seen) (Map.elems dictionary))
 
+  -- Recursively traverses dictionaries.
   reachable seen (PDFDictionary entries)
     = IS.unions (map (reachable seen) (Map.elems entries))
 
+  -- Recursively traverses arrays.
   reachable seen (PDFArray entries)
     = IS.unions (map (reachable seen) (toList entries))
 
+  -- Base case for recursion.
   reachable _ _
     = IS.empty
