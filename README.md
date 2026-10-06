@@ -51,7 +51,7 @@ content is sent to the standard output.
 
 Optimizes a PDF file.
 
-**Usage:** `dietpdf optimize <input_pdf_file> [<output_pdf_file>] [-g|--gs-optimize] [-p|--p2c-optimize] [-c <compressor>|--compressor=<compressor>] [-x|--no-gfx-optimize] [--no-lossy-masks] [--dejpeg] [-o|--overwrite]`
+**Usage:** `dietpdf optimize <input_pdf_file> [<output_pdf_file>] [-g|--gs-optimize] [-p|--p2c-optimize] [-c <compressor>|--compressor=<compressor>] [-x|--no-gfx-optimize] [--no-lossy-masks] [--dejpeg] [--limit-dpi DPI] [-o|--overwrite]`
 * *input_pdf_file*: The path to the PDF file to process.
 * *output_pdf_file*: (optional) path to the optimized PDF file to create.
 * --gs-optimize or -g: (optional) Use GhostScript before optimizing.
@@ -60,6 +60,7 @@ Optimizes a PDF file.
   compressor (deflate, zopfli, brotli, ect).
 * --dejpeg: (optional, disabled by default) Preprocess JPEG images with `dejpeg` before JPEG 2000 conversion, using quality 50 instead of 60. Requires `dejpeg` on PATH; input and output use temporary files. The smallest candidate is still selected.
 * --no-lossy-masks: (optional) Disable alpha quantization and mask downsampling; use only lossless mask optimizations.
+* --limit-dpi DPI: (optional, disabled by default) Downsample non-indexed 8/16-bit images to a positive resolution limit, after unused-object cleanup and before other optimizations. For example, `dietpdf optimize input.pdf output.pdf --limit-dpi 150`. Physical sizes use page boxes, `UserUnit` and image/Form transforms. Shared images retain enough pixels for their largest placement; smaller placements may therefore exceed the limit. Images are never enlarged. Unsupported or uncertain placements/encodings are retained. JPEG/JPX decoding for DeviceGray/DeviceRGB requires ImageMagick's `convert`. Resized samples retain their original encoding in a `Bitmap` value. Originally JPEG images are re-encoded during optimization using the source quality detected by ImageMagick's `identify`, then JPEG and JPEG2000 candidates are compared. Quality is inferred from JPEG quantization tables; nonstandard tables may only yield an estimate. Masks, patterns, Type 3 glyphs and annotation appearances are excluded.
 * --no-gfx-optimize or -x: (optional) Do not try to optimize vector elements.
 * --overwrite or -o: (optional) Overwrite the output file if it exists.
 

@@ -26,9 +26,15 @@ import Codec.Compression.Predict (unpredict)
 import Codec.Compression.Predict.Predictor (decodePredictor)
 import Codec.Compression.XML (optimizeXML)
 
-import Control.Monad.State (lift)
+import Control.Exception (IOException, try)
+import Control.Monad.State (gets, lift)
+import Control.Monad.Trans.Except (runExceptT)
 
 import Data.Binary (Word8)
+import Data.Bitmap.Bitmap
+  ( Bitmap (bitmapOriginalEncoding, bitmapSamples)
+  , BitmapEncoding (JPEGEncoding)
+  )
 import Data.Bitmap.BitmapConfiguration
   ( BitmapConfiguration (BitmapConfiguration, bcBitsPerComponent, bcComponents, bcLineWidth)
   )
@@ -36,22 +42,27 @@ import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC8Bits))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.Context (Contextual (ctx))
+import Data.IntMap.Strict qualified as IM
 import Data.Logging (Logging)
+import Data.Maybe (isNothing)
 import Data.PDF.Filter (Filter (fFilter))
 import Data.PDF.OptimizationType
   ( OptimizationType (GfxOptimization, JPGOptimization, RawBitmapOptimization, TTFOptimization, XMLOptimization)
   )
 import Data.PDF.PDFObject
   ( PDFObject (PDFBool, PDFHexString, PDFIndirectObject, PDFIndirectObjectWithStream, PDFName, PDFNumber, PDFObjectStream, PDFTrailer, PDFXRefStream)
-  , mkPDFArray
+  , getObjectNumber
   , hasStream
+  , mkPDFArray
   )
 import Data.PDF.PDFWork
   (PDFWork, sayComparisonP, sayErrorP, sayP, tryP, withContext)
+import Data.PDF.WorkData (wBitmaps)
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
+import Data.UnifiedError (UnifiedError)
 
-import External.ImageMagick (extractCbCrChannels)
+import External.ImageMagick (encodeBitmapJPEG, extractCbCrChannels)
 import External.JpegTran (jpegToGrayscale, jpegtranOptimize)
 import External.TtfAutoHint (ttfAutoHintOptimize)
 
@@ -61,7 +72,8 @@ import Font.TrueType.Parser.Font (ttfParse)
 import PDF.Graphics.Optimize (optimizeGFXWithTextState)
 import PDF.Object.Container (getFilters)
 import PDF.Object.Object.Properties (getValueForKey)
-import PDF.Object.State (getStream, getValue, setStream, setStream1, setValue)
+import PDF.Object.State
+  (getStream, getValue, removeValue, setStream, setStream1, setValue)
 import PDF.Object.String (optimizeString)
 import PDF.Processing.Filter (filterOptimize)
 import PDF.Processing.PDFWork (deepMapP)
@@ -71,7 +83,6 @@ import PDF.Processing.WhatOptimizationFor (whatOptimizationFor)
 import Util.ByteString
   (compactGray, containsOnlyGray, convertToGray, isNearlyGray, optimizeParity)
 import Util.Dictionary (Dictionary)
-import Data.Maybe (isNothing)
 
 {-|
 Extract width and color component count from a PDF image stream object.
@@ -383,10 +394,46 @@ refilter resources object = do
 
   if hasStream object
     then do
-      unfiltered <- unfilter stringOptimized
+      unfiltered <- unfilter stringOptimized >>= restoreOriginalImageEncoding
       optimization <- whatOptimizationFor unfiltered
-      streamOptimize resources unfiltered >>= filterOptimize optimization
-    else return stringOptimized
+
+      streamOptimize resources unfiltered
+        >>= filterOptimize optimization
+    else
+      return stringOptimized
+
+-- | A resized JPEG temporarily lives as lossless samples. Re-encode it with
+-- its source quality before selecting JPEG filter candidates, so the optimized
+-- resized JPEG remains available alongside JPEG2000. Read the current samples
+-- because preceding passes may have zero-filled pixels hidden by a soft mask.
+restoreOriginalImageEncoding :: PDFObject -> PDFWork IO PDFObject
+restoreOriginalImageEncoding object = do
+  bitmaps <- gets wBitmaps
+  case getObjectNumber object >>= (`IM.lookup` bitmaps) of
+    Just bitmap | JPEGEncoding _ <- bitmapOriginalEncoding bitmap
+                , isNothing (getValueForKey "Filter" object) -> do
+      samples <- getStream object
+      encoded <- lift
+               . lift
+               $ try
+               $ runExceptT (encodeBitmapJPEG bitmap{bitmapSamples = samples})
+
+      case (encoded :: Either IOException (Either UnifiedError ByteString)) of
+        Right (Right jpeg) -> do
+          sayP "Re-encoding resized JPEG with its source quality"
+          setStream jpeg object
+            >>= setValue "Filter" (PDFName "DCTDecode")
+            >>= removeValue "DecodeParms"
+
+        Right (Left err) -> do
+          sayErrorP "Cannot re-encode resized JPEG" err
+          return object
+
+        Left _ioError -> do
+          sayP "Cannot run JPEG encoder; retaining lossless bitmap samples"
+          return object
+
+    _ -> return object
 
 {-|
 Check if a PDF filter is known and supported by DietPDF.

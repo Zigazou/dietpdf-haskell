@@ -19,7 +19,7 @@ module PDF.Document.Encode
 import Control.Monad (when, (>=>))
 import Control.Monad.Extra (whenM)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.State (gets)
+import Control.Monad.State (gets, modify)
 
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
@@ -35,6 +35,7 @@ import Data.PDF.PDFObject
   , getObjectNumber
   )
 import Data.PDF.PDFObjects (toPDFDocument)
+import Data.PDF.Settings (sLimitDPI)
 import Data.PDF.PDFPartition
   (PDFPartition (ppObjectsWithStream, ppObjectsWithoutStream))
 import Data.PDF.PDFWork
@@ -56,7 +57,7 @@ import Data.PDF.PDFWork
   , withStreamCount
   , withoutStreamCount
   )
-import Data.PDF.WorkData (WorkData (wPDF))
+import Data.PDF.WorkData (WorkData (wPDF, wSettings, wBitmaps))
 import Data.Set qualified as Set
 import Data.Sequence qualified as SQ
 import Data.Text qualified as T
@@ -69,17 +70,19 @@ import GHC.IO.Handle (BufferMode (LineBuffering))
 import PDF.Document.OptimizeBitmapMasks (optimizeBitmapMasks)
 import PDF.Document.GetAllMasks (getAllMasks)
 import PDF.Document.InvisibleImages (removeInvisiblePageImages)
+import PDF.Document.LimitImageResolution (limitImageResolution)
 import PDF.Document.MergeVectorStream (mergeVectorStream)
 import PDF.Document.ObjectStream (explodeList, makeObjectStreamFromObjects)
 import PDF.Document.OptimizeNumbers (optimizeNumbers)
 import PDF.Document.OptimizeOptionalDictionaryEntries
   (optimizeOptionalDictionaryEntries)
 import PDF.Document.OptimizeResources (optimizeResources)
-import PDF.Document.ResourceContext (buildStreamResources)
+import PDF.Document.ResourceContext (buildStreamResources, resolve)
 import PDF.Document.Resources
   (removeUnusedResources, updateWithAdditionalResources)
 import PDF.Document.XRef (calcOffsets, xrefStreamTable)
 import PDF.Document.ZeroFillMaskedImages (zeroFillMaskedImages)
+import PDF.Graphics.Visibility (finite)
 import PDF.Object.Object.FromPDFObject (fromPDFObject)
 import PDF.Object.Object.Properties (getValueForKey, hasKey, isCatalog)
 import PDF.Object.State (getValue, setMaybe)
@@ -196,30 +199,53 @@ declareBrotliExtension object = object
 {-|
 Merge the contents streams of all pages into a single stream.
 -}
-mergePagesContents :: Logging m => PDFObject -> PDFWork m PDFObject
-mergePagesContents object@(PDFIndirectObject major minor (PDFDictionary dict)) = do
-  let
-    mType :: Maybe PDFObject
-    mType = getValueForKey "Type" object
+mergePagesContents :: Bool -> PDFObject -> PDFWork IO PDFObject
+mergePagesContents
+  deferPainting
+  object@(PDFIndirectObject major minor (PDFDictionary dict))
+  = do
+    let
+      mType :: Maybe PDFObject
+      mType = getValueForKey "Type" object
 
-    mContents :: Maybe PDFObject
-    mContents = getValueForKey "Contents" object
+      mContents :: Maybe PDFObject
+      mContents = getValueForKey "Contents" object
 
-  case (mType, mContents) of
-    (Just (PDFName "Page"), Just vectors) -> do
-      streamNumber <- mergeVectorStream vectors
-        >>= removeInvisiblePageImages object
-        >>= putNewObject
+    case (mType, mContents) of
+      (Just (PDFName "Page"), Just vectors) -> do
+        streamNumber <- mergeVectorStream vectors
+          >>= (if deferPainting then return
+                                else removeInvisiblePageImages object
+              )
+          >>= putNewObject
 
-      let
-        newDict :: Map.Map ByteString PDFObject
-        newDict = Map.insert "Contents" (PDFReference streamNumber 0) dict
+        let
+          newDict :: Map.Map ByteString PDFObject
+          newDict = Map.insert "Contents" (PDFReference streamNumber 0) dict
 
-      return $ PDFIndirectObject major minor (PDFDictionary newDict)
+        return $ PDFIndirectObject major minor (PDFDictionary newDict)
 
-    _anyOtherObject -> return object
+      _anyOtherObject -> return object
 
-mergePagesContents object = return object
+mergePagesContents _ object = return object
+
+-- | Apply painting optimizations after resolution limiting, using the newly
+-- merged page-specific stream rather than mutating a shared source stream.
+removePageInvisiblePainting :: PDFObject -> PDFWork IO ()
+removePageInvisiblePainting page
+  | getValueForKey "Type" page == Just (PDFName "Page") = do
+      objects <- gets
+        ( (\pdf -> ppObjectsWithoutStream pdf <> ppObjectsWithStream pdf)
+        . wPDF
+        )
+
+      case getValueForKey "Contents" page >>= resolve objects of
+        Just content@PDFIndirectObjectWithStream{} ->
+          removeInvisiblePageImages page content >>= putObject
+
+        _ -> return ()
+
+  | otherwise = return ()
 
 {-|
 Encode a 'PDFDocument' into a PDF file.
@@ -283,11 +309,23 @@ pdfEncode objects = do
 
   -- Merge page contents streams.
   sayP "Merging pages contents"
+  limitDPI <- gets (sLimitDPI . wSettings)
+
+  let
+    limitResolution :: Bool
+    limitResolution = maybe False (\dpi -> finite dpi && dpi > 0) limitDPI
+
   gets (ppObjectsWithoutStream . wPDF)
-    >>= mapM_ (mergePagesContents >=> putObject)
+    >>= mapM_ (mergePagesContents limitResolution >=> putObject)
 
   sayP "Pruning unused resources"
   pruneUnusedResources
+
+  -- Downsample before number/resource, painting, mask and stream optimizations.
+  when limitResolution $ do
+    limitImageResolution
+    gets (ppObjectsWithoutStream . wPDF) >>= mapM_ removePageInvisiblePainting
+    pruneUnusedResources
 
   -- Optimize numbers and resources.
   sayP "Optimizing numbers"
@@ -335,6 +373,8 @@ pdfEncode objects = do
         then return object
         else optimize resources object
 
+  -- Source encoding metadata is needed only until parallel image optimization.
+  modify (\state -> state {wBitmaps = IM.empty})
   updateWithAdditionalResources
   repeatedFormFragments
   pruneUnusedResources

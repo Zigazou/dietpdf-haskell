@@ -41,7 +41,7 @@ import Data.Fallible (FallibleT, tryF)
 import Data.Logging (sayComparisonF)
 import Data.PDF.PDFDocument (PDFDocument)
 import Data.PDF.Settings
-  ( Settings (Settings, sCompressor, sLossyMasks, sOptimizeGFX, sUseDejpeg, sUseGhostScript, sUsePDFToCairo)
+  ( Settings (Settings, sCompressor, sLossyMasks, sOptimizeGFX, sUseDejpeg, sUseGhostScript, sUsePDFToCairo, sLimitDPI)
   , UseGhostScript (DoNotUseGhostScript, UseGhostScript)
   , UsePDFToCairo (DoNotUsePDFToCairo, UsePDFToCairo)
   )
@@ -141,10 +141,12 @@ runApp (OptimizeOptions inputPDF
                         optimizeGFX
                         lossyMasks
                         useDejpeg
+                        limitDPI
                         overwriteFile) = do
   let
     settings :: Settings
     settings = Settings { sUseDejpeg      = useDejpeg
+                        , sLimitDPI       = limitDPI
                         , sLossyMasks     = lossyMasks
                         , sOptimizeGFX    = optimizeGFX
                         , sCompressor     = useCompressor
@@ -305,7 +307,7 @@ main = runExceptT run >>= \case
   run = do
     appOptions' <- lift (execParser options)
     case appOptions' of
-      OptimizeOptions _ _ _ _ _ _ _ True _ ->
+      OptimizeOptions _ _ _ _ _ _ _ True _ _ ->
         liftIO (findExecutable "dejpeg") >>= \case
           Just _dejpegPath -> runApp appOptions'
           Nothing -> throwE (ExternalCommandNotFound "dejpeg")

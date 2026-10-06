@@ -44,10 +44,12 @@ library
       Codec.Filter.Ascii85
       Codec.Filter.AsciiHex
       Data.Array
+      Data.Bitmap.Bitmap
       Data.Bitmap.BitmapConfiguration
       Data.Bitmap.BitsPerComponent
       Data.Bitmap.MaskAnalysis
       Data.Bitmap.OptimizeMask
+      Data.Bitmap.Resize
       Data.BitsArray
       Data.ColorSpace
       Data.Context
@@ -129,6 +131,7 @@ library
       PDF.Document.Encode
       PDF.Document.GetAllMasks
       PDF.Document.InvisibleImages
+      PDF.Document.LimitImageResolution
       PDF.Document.MergeVectorStream
       PDF.Document.ObjectStream
       PDF.Document.OptimizeBitmapMasks
@@ -145,6 +148,7 @@ library
       PDF.Document.XRef
       PDF.Document.ZeroFillMaskedImages
       PDF.Graphics.Geometry
+      PDF.Graphics.ImageBounds
       PDF.Graphics.Interpreter.Human
       PDF.Graphics.Interpreter.OptimizeCommand
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColor
@@ -235,6 +239,7 @@ library
       PDF.Processing.Optimize
       PDF.Processing.PDFWork
       PDF.Processing.RepeatedFormFragments
+      PDF.Processing.ResizeImage
       PDF.Processing.Unfilter
       PDF.Processing.WhatOptimizationFor
       Util.Ascii
@@ -380,6 +385,7 @@ test-suite dietpdf-test
       Codec.Filter.Ascii85Spec
       Data.Bitmap.BitmapConfigurationSpec
       Data.Bitmap.OptimizeMaskSpec
+      Data.Bitmap.ResizeSpec
       Data.BitsArraySpec
       Data.FoldableWithRestSpec
       Data.LoggingSpec
@@ -396,6 +402,7 @@ test-suite dietpdf-test
       PDF.Document.EncodeSpec
       PDF.Document.GetAllMasksSpec
       PDF.Document.InvisibleImagesSpec
+      PDF.Document.LimitImageResolutionSpec
       PDF.Document.ObjectStreamSpec
       PDF.Document.OptimizeBitmapMasksSpec
       PDF.Document.ResourceContextSpec
@@ -403,6 +410,7 @@ test-suite dietpdf-test
       PDF.Document.UnusedResourcesSpec
       PDF.Document.XRefSpec
       PDF.Document.ZeroFillMaskedImagesSpec
+      PDF.Graphics.ImageBoundsSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorCommandSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeColorSpec
       PDF.Graphics.Interpreter.OptimizeCommand.OptimizeGenericSpec

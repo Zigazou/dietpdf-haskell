@@ -4,16 +4,25 @@ Optimize JPEG files using JpegTran.
 Provides JPEG optimization via the `jpegtran` command-line tool, comparing and
 selecting between progressive and baseline encoding modes.
 -}
-module External.ImageMagick (extractCbCrChannels, zeroFillJPEG) where
+module External.ImageMagick (extractCbCrChannels, zeroFillJPEG, jpegQuality, jpegQualityHint, encodeBitmapJPEG) where
 
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Except (throwE)
 
+import Data.Bitmap.Bitmap
+  ( Bitmap (bitmapConfiguration, bitmapHeight, bitmapOriginalEncoding, bitmapSamples)
+  , BitmapEncoding (JPEGEncoding)
+  )
+import Data.Bitmap.BitmapConfiguration
+  (BitmapConfiguration, bcBitsPerComponent, bcComponents, bcLineWidth)
+import Data.Bitmap.BitsPerComponent (BitsPerComponent (BC8Bits))
 import Data.ByteString (ByteString)
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BSC
 import Data.Fallible (FallibleT)
-import Data.UnifiedError (UnifiedError (ExternalCommandError))
+import Data.Maybe (fromMaybe)
+import Data.UnifiedError
+  (UnifiedError (ExternalCommandError, UnsupportedFeature))
 
 import External.ExternalCommand (externalCommandBuf)
 
@@ -78,11 +87,62 @@ Detect the JPEG quality (0-100) a JPEG image was encoded with, via
 ImageMagick's `identify`. Defaults to @90@ when the value cannot be parsed.
 -}
 jpegQuality :: ByteString -> FallibleT IO Int
-jpegQuality input = do
+jpegQuality input = fromMaybe 90 <$> jpegQualityHint input
+
+-- | Detect a source quality without inventing a default for unknown tables.
+jpegQualityHint :: ByteString -> FallibleT IO (Maybe Int)
+jpegQualityHint input = do
   output <- externalCommandBuf "identify" ["-format", "%Q", "jpg:-"] input
   case reads (BSC.unpack output) of
-    [(quality, _anyOtherCase)] -> return quality
-    _anyOtherCase              -> return 90
+    [(quality, _anyOtherCase)] | quality >= 1 && quality <= 100
+      -> return (Just quality)
+
+    _anyOtherCase
+      -> return Nothing
+
+-- | Re-encode decoded 8-bit gray/RGB samples using the source JPEG quality.
+-- A temporary raw input file avoids blocking on large stdin buffers.
+encodeBitmapJPEG :: Bitmap -> FallibleT IO ByteString
+encodeBitmapJPEG bitmap = case bitmapOriginalEncoding bitmap of
+  JPEGEncoding quality
+    | quality >= 1 && quality <= 100
+    , bcBitsPerComponent config == BC8Bits
+    , Just format <- rawFormat (bcComponents config)
+    , width > 0 && height > 0
+    , toInteger (BS.length samples)
+        == toInteger width * toInteger height * toInteger (bcComponents config)
+    -> withSystemTempFile "dietpdf-reencode.raw" $ \path handle -> do
+        lift (hClose handle)
+        lift (BS.writeFile path samples)
+        externalCommandBuf "convert"
+          [ "-size", show width ++ "x" ++ show height
+          , "-depth", "8"
+          , format ++ ":" ++ path
+          , "-quality", show quality
+          , "jpg:-"
+          ]
+          BS.empty
+
+  _
+    -> throwE (UnsupportedFeature "JPEG encoding requires an 8-bit gray/RGB \
+                                  \bitmap and its source quality")
+ where
+  config :: BitmapConfiguration
+  config = bitmapConfiguration bitmap
+
+  width :: Int
+  width = bcLineWidth config
+
+  height :: Int
+  height = bitmapHeight bitmap
+
+  samples :: ByteString
+  samples = bitmapSamples bitmap
+
+  rawFormat :: Int -> Maybe String
+  rawFormat 1 = Just "gray"
+  rawFormat 3 = Just "rgb"
+  rawFormat _ = Nothing
 
 {-|
 Zero-fill the pixels of a JPEG image that are hidden by a soft mask.

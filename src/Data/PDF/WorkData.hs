@@ -8,14 +8,16 @@ settings, and a progress index for reporting.
 transformations and inspections consistent and observable.
 -}
 module Data.PDF.WorkData
-  ( WorkData(WorkData, wPDF, wContexts, wNameTranslations, wSettings, wMasks, wAdditionalGStates, wCurrentIndex)
+  ( WorkData(WorkData, wPDF, wContexts, wNameTranslations, wSettings, wMasks, wAdditionalGStates, wCurrentIndex, wBitmaps)
   , emptyWorkData
   , setSettings
   , resetCurrentIndex
   , nextIndex
   ) where
 
+import Data.Bitmap.Bitmap (Bitmap)
 import Data.Context (Context)
+import Data.IntMap.Strict (IntMap)
 import Data.Kind (Type)
 import Data.PDF.PDFPartition (PDFPartition)
 import Data.PDF.Resource (Resource)
@@ -33,6 +35,7 @@ numbers.
 type WorkData :: Type
 data WorkData = WorkData
   { wPDF               :: !PDFPartition                 -- ^ Current PDF partition under processing.
+  , wBitmaps           :: !(IntMap Bitmap)              -- ^ Resized samples and source encoding, keyed by object number.
   , wContexts          :: ![Context]                    -- ^ Context stack used to prefix logs and errors.
   , wNameTranslations  :: !(TranslationTable Resource)  -- ^ Translation table for resource names.
   , wAdditionalGStates :: !ResourceDictionary           -- ^ Additional graphics states collected/registered.
@@ -47,6 +50,7 @@ Initial empty `WorkData` used to bootstrap PDF processing.
 emptyWorkData :: WorkData
 emptyWorkData = WorkData
   { wPDF = mempty
+  , wBitmaps = mempty
   , wContexts = []
   , wNameTranslations = mempty
   , wAdditionalGStates = mempty

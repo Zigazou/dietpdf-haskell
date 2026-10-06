@@ -53,6 +53,8 @@ import Options.Applicative
   , long
   , metavar
   , optional
+  , option
+  , eitherReader
   , progDesc
   , short
   , str
@@ -112,7 +114,7 @@ Application options.
 -}
 type AppOptions :: Type
 data AppOptions
-  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseCompressor !OptimizeGFX !Bool !Bool !FileOverwrite
+  = OptimizeOptions !FilePath !(Maybe FilePath) !UseGhostScript !UsePDFToCairo !UseCompressor !OptimizeGFX !Bool !Bool !(Maybe Double) !FileOverwrite
   | InfoOptions !FilePath
   | ExtractOptions !Int !FilePath
   | HashOptions !FilePath
@@ -215,6 +217,19 @@ commandOptimize = command
           <> short 'd'
           <> help "Preprocess JPEG images with dejpeg before JPEG 2000 \
                   \conversion (this tends to smooth images)"
+          )
+    <*> optional
+          (option
+            (eitherReader $ \input -> case reads input of
+              [ (dpi, "") ] | dpi > 0 && not (isNaN dpi || isInfinite dpi)
+                -> Right dpi
+              _
+                -> Left "DPI must be a positive finite number"
+            )
+            (long "limit-dpi" <> metavar "DPI"
+              <> help "Downsample non-indexed images with at least 8 bits per \
+                      \component"
+            )
           )
     <*> (   toOverwriteFile
         <$> switch
